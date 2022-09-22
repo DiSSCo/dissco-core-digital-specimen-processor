@@ -5,6 +5,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
+import java.time.Instant;
 import java.util.List;
 import javax.xml.transform.TransformerException;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,8 @@ public class ProcessingService {
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
 
-  public DigitalSpecimenRecord handleMessages(DigitalSpecimenEvent event) throws TransformerException {
+  public DigitalSpecimenRecord handleMessages(DigitalSpecimenEvent event)
+      throws TransformerException {
     var digitalSpecimen = event.digitalSpecimen();
     log.info("ds: {}", digitalSpecimen);
     var currentDigitalSpecimenOptional = repository.getDigitalSpecimen(
@@ -53,7 +55,8 @@ public class ProcessingService {
     }
   }
 
-  private DigitalSpecimenRecord updateExistingDigitalSpecimen(DigitalSpecimenRecord currentDigitalSpecimen,
+  private DigitalSpecimenRecord updateExistingDigitalSpecimen(
+      DigitalSpecimenRecord currentDigitalSpecimen,
       DigitalSpecimen digitalSpecimen) {
     if (handleNeedsUpdate(currentDigitalSpecimen.digitalSpecimen(), digitalSpecimen)) {
       handleService.updateHandle(currentDigitalSpecimen.id(), digitalSpecimen);
@@ -61,7 +64,8 @@ public class ProcessingService {
     var id = currentDigitalSpecimen.id();
     var midsLevel = calculateMidsLevel(digitalSpecimen);
     var version = currentDigitalSpecimen.version() + 1;
-    var digitalSpecimenRecord = new DigitalSpecimenRecord(id, midsLevel, version, digitalSpecimen);
+    var digitalSpecimenRecord = new DigitalSpecimenRecord(id, midsLevel, version, Instant.now(),
+        digitalSpecimen);
     var result = repository.createDigitalSpecimenRecord(digitalSpecimenRecord);
     if (result == SUCCESS) {
       log.info("Specimen: {} has been successfully updated in the database", id);
@@ -87,7 +91,8 @@ public class ProcessingService {
     var id = handleService.createNewHandle(digitalSpecimen);
     log.info("New id has been generated: {}", id);
     var midsLevel = calculateMidsLevel(digitalSpecimen);
-    var digitalSpecimenRecord = new DigitalSpecimenRecord(id, midsLevel, 1, digitalSpecimen);
+    var digitalSpecimenRecord = new DigitalSpecimenRecord(id, midsLevel, 1, Instant.now(),
+        digitalSpecimen);
     var result = repository.createDigitalSpecimenRecord(digitalSpecimenRecord);
     if (result == SUCCESS) {
       log.info("Specimen: {} has been successfully committed to database", id);

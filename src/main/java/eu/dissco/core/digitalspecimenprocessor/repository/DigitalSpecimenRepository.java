@@ -47,8 +47,11 @@ public class DigitalSpecimenRepository {
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
-    return new DigitalSpecimenRecord(dbRecord.get(NEW_DIGITAL_SPECIMEN.ID),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.MIDSLEVEL), dbRecord.get(NEW_DIGITAL_SPECIMEN.VERSION),
+    return new DigitalSpecimenRecord(
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.ID),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.MIDSLEVEL),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.VERSION),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.CREATED),
         digitalSpecimen);
   }
 
@@ -71,7 +74,7 @@ public class DigitalSpecimenRepository {
         .set(NEW_DIGITAL_SPECIMEN.DATASET, digitalSpecimenRecord.digitalSpecimen().datasetId())
         .set(NEW_DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
             digitalSpecimenRecord.digitalSpecimen().sourceSystemId())
-        .set(NEW_DIGITAL_SPECIMEN.CREATED, Instant.now())
+        .set(NEW_DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
         .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now()).set(NEW_DIGITAL_SPECIMEN.DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().data().toString()))
         .set(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA,
