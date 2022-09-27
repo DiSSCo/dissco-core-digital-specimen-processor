@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import java.time.Instant;
@@ -25,7 +26,7 @@ public class ProcessingService {
   private final KafkaPublisherService kafkaService;
 
   public DigitalSpecimenRecord handleMessages(DigitalSpecimenEvent event)
-      throws TransformerException {
+      throws TransformerException, NoChangesFoundException {
     var digitalSpecimen = event.digitalSpecimen();
     log.info("ds: {}", digitalSpecimen);
     var currentDigitalSpecimenOptional = repository.getDigitalSpecimen(
@@ -39,7 +40,7 @@ public class ProcessingService {
         log.info("Received digital specimen is equal to digital specimen: {}",
             currentDigitalSpecimen.id());
         processEqualDigitalSpecimen(currentDigitalSpecimen);
-        return null;
+        throw new NoChangesFoundException("No changes were necessary to specimen with id: " + currentDigitalSpecimen.id());
       } else {
         log.info("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
         return updateExistingDigitalSpecimen(currentDigitalSpecimen, digitalSpecimen);
