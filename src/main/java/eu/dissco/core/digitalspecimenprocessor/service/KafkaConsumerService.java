@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
 import javax.xml.transform.TransformerException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,11 @@ public class KafkaConsumerService {
   public void getMessages(@Payload String message)
       throws JsonProcessingException, TransformerException {
     var event = mapper.readValue(message, DigitalSpecimenEvent.class);
-    processingService.handleMessages(event);
+    try {
+      processingService.handleMessages(event);
+    } catch (NoChangesFoundException e) {
+      log.info(e.getMessage());
+    }
   }
 
 }
