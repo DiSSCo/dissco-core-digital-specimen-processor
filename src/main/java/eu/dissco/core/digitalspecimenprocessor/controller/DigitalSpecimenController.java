@@ -34,7 +34,7 @@ public class DigitalSpecimenController {
       DigitalSpecimenEvent event) throws TransformerException, NoChangesFoundException {
     log.info("Received digitalSpecimen upsert: {}", event);
     var result = processingService.handleMessages(event);
-    return ResponseEntity.ok(result);
+    return ResponseEntity.status(HttpStatus.CREATED).body(result);
   }
 
   @ExceptionHandler(NoChangesFoundException.class)
