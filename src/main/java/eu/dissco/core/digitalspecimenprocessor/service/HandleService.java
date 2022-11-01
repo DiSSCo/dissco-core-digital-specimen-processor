@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
+import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +31,7 @@ public class HandleService {
 
   private static final String PREFIX = "20.5000.1025/";
   private final Random random;
-  private final char[] symbols = "ABCDEFGHJKLMNPQRSTUVWXYZ1234567890".toCharArray();
+  private final char[] symbols = "ABCDEFGHJKLMNPQRSTVWXYZ1234567890".toCharArray();
   private final char[] buffer = new char[11];
   private final ObjectMapper mapper;
   private final DocumentBuilder documentBuilder;
@@ -144,7 +145,7 @@ public class HandleService {
     return digit;
   }
 
-  public void updateHandle(String id, DigitalSpecimen digitalSpecimen) {
+  private void updateHandle(String id, DigitalSpecimen digitalSpecimen) {
     var handleAttributes = updatedHandles(digitalSpecimen);
     var recordTimestamp = Instant.now();
     repository.updateHandleAttributes(id, recordTimestamp, handleAttributes);
@@ -157,5 +158,11 @@ public class HandleService {
     handleAttributes.add(new HandleAttribute(15, "specimenHost", createPidReference(
         digitalSpecimen.organizationId(), "ROR", "Needs to be fixed!")));
     return handleAttributes;
+  }
+
+  public void updateHandles(List<UpdatedDigitalSpecimenTuple> handleUpdates) {
+    for (var handleUpdate : handleUpdates) {
+      updateHandle(handleUpdate.currentSpecimen().id(), handleUpdate.digitalSpecimen());
+    }
   }
 }

@@ -7,10 +7,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
+import org.jooq.Query;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
@@ -55,7 +58,12 @@ public class DigitalSpecimenRepository {
         digitalSpecimen);
   }
 
-  public int createDigitalSpecimenRecord(DigitalSpecimenRecord digitalSpecimenRecord) {
+  public int[] createDigitalSpecimenRecord(Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
+    var queries = digitalSpecimenRecords.stream().map(this::specimenToQuery).toList();
+    return context.batch(queries).execute();
+  }
+
+  private Query specimenToQuery(DigitalSpecimenRecord digitalSpecimenRecord) {
     return context.insertInto(NEW_DIGITAL_SPECIMEN)
         .set(NEW_DIGITAL_SPECIMEN.ID, digitalSpecimenRecord.id())
         .set(NEW_DIGITAL_SPECIMEN.TYPE, digitalSpecimenRecord.digitalSpecimen().type())
@@ -79,13 +87,22 @@ public class DigitalSpecimenRepository {
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().data().toString()))
         .set(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalData().toString()))
-        .set(NEW_DIGITAL_SPECIMEN.DWCA_ID, digitalSpecimenRecord.digitalSpecimen().dwcaId())
+        .set(NEW_DIGITAL_SPECIMEN.DWCA_ID, digitalSpecimenRecord.digitalSpecimen().dwcaId());
+  }
+
+  public int updateLastChecked(List<String> currentDigitalSpecimen) {
+    return context.update(NEW_DIGITAL_SPECIMEN)
+        .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
+        .where(NEW_DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen))
         .execute();
   }
 
-  public int updateLastChecked(DigitalSpecimenRecord currentDigitalSpecimen) {
-    return context.update(NEW_DIGITAL_SPECIMEN)
-        .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .where(NEW_DIGITAL_SPECIMEN.ID.eq(currentDigitalSpecimen.id())).execute();
+  public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList) {
+    return context.select(NEW_DIGITAL_SPECIMEN.asterisk())
+        .distinctOn(NEW_DIGITAL_SPECIMEN.ID)
+        .from(NEW_DIGITAL_SPECIMEN)
+        .where(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID.in(specimenList))
+        .orderBy(NEW_DIGITAL_SPECIMEN.ID, NEW_DIGITAL_SPECIMEN.VERSION.desc())
+        .fetch(this::mapDigitalSpecimen);
   }
 }

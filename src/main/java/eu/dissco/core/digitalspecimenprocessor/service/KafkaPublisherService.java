@@ -39,8 +39,8 @@ public class KafkaPublisherService {
     }
   }
 
-  public void publishUpdateEvent(DigitalSpecimenRecord currentDigitalSpecimen,
-      DigitalSpecimenRecord digitalSpecimenRecord) {
+  public void publishUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
+      DigitalSpecimenRecord currentDigitalSpecimen) {
     var jsonPatch = createJsonPatch(currentDigitalSpecimen, digitalSpecimenRecord);
     var event = new CreateUpdateDeleteEvent(UUID.randomUUID(), "update", "processing-service",
         digitalSpecimenRecord.id(), Instant.now(), jsonPatch,

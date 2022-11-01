@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
-import javax.xml.transform.TransformerException;
+import java.util.List;
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -23,14 +23,17 @@ public class KafkaConsumerService {
   private final ProcessingService processingService;
 
   @KafkaListener(topics = "${kafka.consumer.topic}")
-  public void getMessages(@Payload String message)
-      throws JsonProcessingException, TransformerException {
-    var event = mapper.readValue(message, DigitalSpecimenEvent.class);
-    try {
-      processingService.handleMessages(event);
-    } catch (NoChangesFoundException e) {
-      log.info(e.getMessage());
-    }
+  public void getMessages(@Payload List<String> messages) {
+    var events = messages.stream().map(message -> {
+      try {
+        return mapper.readValue(message, DigitalSpecimenEvent.class);
+      } catch (JsonProcessingException e) {
+        log.error("Failed to process message", e);
+        // TODO move message to DLQ
+        return null;
+      }
+    }).filter(Objects::nonNull).toList();
+    processingService.handleMessages(events);
   }
 
 }
