@@ -92,6 +92,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
+    then(handleService).shouldHaveNoInteractions();
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
         .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());

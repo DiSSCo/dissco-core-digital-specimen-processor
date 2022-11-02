@@ -4,7 +4,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -76,7 +75,9 @@ class HandleServiceTest {
     // Given
 
     // When
-    service.updateHandles(List.of(new UpdatedDigitalSpecimenTuple(givenUnequalDigitalSpecimenRecord(), givenDigitalSpecimen())));
+    service.updateHandles(List.of(
+        new UpdatedDigitalSpecimenTuple(givenUnequalDigitalSpecimenRecord(),
+            givenDigitalSpecimen())));
 
     // Then
     then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList());
