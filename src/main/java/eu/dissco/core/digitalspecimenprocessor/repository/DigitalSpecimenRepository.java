@@ -9,7 +9,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
@@ -49,7 +48,8 @@ public class DigitalSpecimenRepository {
         digitalSpecimen);
   }
 
-  public int[] createDigitalSpecimenRecord(Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
+  public int[] createDigitalSpecimenRecord(
+      Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
     var queries = digitalSpecimenRecords.stream().map(this::specimenToQuery).toList();
     return context.batch(queries).execute();
   }
