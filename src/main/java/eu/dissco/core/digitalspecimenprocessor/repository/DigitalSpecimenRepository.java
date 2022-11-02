@@ -9,7 +9,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
@@ -23,15 +22,6 @@ public class DigitalSpecimenRepository {
 
   private final DSLContext context;
   private final ObjectMapper mapper;
-
-  public Optional<DigitalSpecimenRecord> getDigitalSpecimen(String physicalSpecimenId) {
-    return context.select(NEW_DIGITAL_SPECIMEN.asterisk())
-        .distinctOn(NEW_DIGITAL_SPECIMEN.ID)
-        .from(NEW_DIGITAL_SPECIMEN)
-        .where(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID.eq(physicalSpecimenId))
-        .orderBy(NEW_DIGITAL_SPECIMEN.ID, NEW_DIGITAL_SPECIMEN.VERSION.desc())
-        .fetchOptional(this::mapDigitalSpecimen);
-  }
 
   private DigitalSpecimenRecord mapDigitalSpecimen(Record dbRecord) {
     DigitalSpecimen digitalSpecimen = null;
@@ -58,7 +48,8 @@ public class DigitalSpecimenRepository {
         digitalSpecimen);
   }
 
-  public int[] createDigitalSpecimenRecord(Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
+  public int[] createDigitalSpecimenRecord(
+      Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
     var queries = digitalSpecimenRecords.stream().map(this::specimenToQuery).toList();
     return context.batch(queries).execute();
   }
@@ -83,7 +74,8 @@ public class DigitalSpecimenRepository {
         .set(NEW_DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
             digitalSpecimenRecord.digitalSpecimen().sourceSystemId())
         .set(NEW_DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
-        .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now()).set(NEW_DIGITAL_SPECIMEN.DATA,
+        .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
+        .set(NEW_DIGITAL_SPECIMEN.DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().data().toString()))
         .set(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalData().toString()))

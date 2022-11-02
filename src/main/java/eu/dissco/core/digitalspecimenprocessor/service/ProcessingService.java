@@ -97,7 +97,9 @@ public class ProcessingService {
     var handleUpdates = updatedDigitalSpecimenTuples.stream().filter(
         tuple -> handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
             tuple.digitalSpecimen())).toList();
-    handleService.updateHandles(handleUpdates);
+    if (!handleUpdates.isEmpty()){
+      handleService.updateHandles(handleUpdates);
+    }
 
     var digitalSpecimenRecords = updatedDigitalSpecimenTuples.stream().collect(Collectors.toMap(
         tuple -> new DigitalSpecimenRecord(

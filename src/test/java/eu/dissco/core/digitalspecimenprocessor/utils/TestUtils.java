@@ -126,7 +126,17 @@ public class TestUtils {
         MIDS_LEVEL,
         VERSION,
         CREATED,
-        givenDigitalSpecimen("Another SpecimenName")
+        givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, "Another SpecimenName")
+    );
+  }
+
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecord(String handle, String physicalSpecimenId) {
+    return new DigitalSpecimenRecord(
+        handle,
+        MIDS_LEVEL,
+        VERSION,
+        CREATED,
+        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME)
     );
   }
 
@@ -138,13 +148,13 @@ public class TestUtils {
   }
 
   public static DigitalSpecimen givenDigitalSpecimen() {
-    return givenDigitalSpecimen(SPECIMEN_NAME);
+    return givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME);
   }
 
-  public static DigitalSpecimen givenDigitalSpecimen(String specimenName) {
+  public static DigitalSpecimen givenDigitalSpecimen(String physicalSpecimenId, String specimenName) {
     return new DigitalSpecimen(
         TYPE,
-        PHYSICAL_SPECIMEN_ID,
+        physicalSpecimenId,
         PHYSICAL_SPECIMEN_TYPE,
         specimenName,
         ORGANIZATION_ID,
