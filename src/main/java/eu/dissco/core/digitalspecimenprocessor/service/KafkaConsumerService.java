@@ -21,6 +21,7 @@ public class KafkaConsumerService {
 
   private final ObjectMapper mapper;
   private final ProcessingService processingService;
+  private final KafkaPublisherService publisherService;
 
   @KafkaListener(topics = "${kafka.consumer.topic}")
   public void getMessages(@Payload List<String> messages) {
@@ -28,8 +29,8 @@ public class KafkaConsumerService {
       try {
         return mapper.readValue(message, DigitalSpecimenEvent.class);
       } catch (JsonProcessingException e) {
-        log.error("Failed to process message", e);
-        // TODO move message to DLQ
+        log.error("Moving message to DLQ, failed to parse event message", e);
+        publisherService.deadLetterRaw(message);
         return null;
       }
     }).filter(Objects::nonNull).toList();

@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mockStatic;
 
+import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.sql.BatchUpdateException;
 import java.time.Instant;
 import java.util.List;
@@ -38,7 +39,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testGetDigitalSpecimensEmpty() {
+  void testGetDigitalSpecimensEmpty() throws DisscoRepositoryException {
     // Given
 
     // When
@@ -49,7 +50,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testGetDigitalSpecimens() {
+  void testGetDigitalSpecimens() throws DisscoRepositoryException {
     // Given
     repository.createDigitalSpecimenRecord(
         List.of(

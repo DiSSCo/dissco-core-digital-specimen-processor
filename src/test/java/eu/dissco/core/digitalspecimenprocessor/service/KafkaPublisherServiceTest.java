@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +31,7 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testPublishCreateEvent() {
+  void testPublishCreateEvent() throws JsonProcessingException {
     // Given
 
     // When
@@ -41,7 +42,7 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testPublishAnnotationRequestEvent() {
+  void testPublishAnnotationRequestEvent() throws JsonProcessingException {
     // Given
 
     // When
@@ -52,7 +53,7 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testPublishUpdateEvent() {
+  void testPublishUpdateEvent() throws JsonProcessingException {
     // Given
 
     // When

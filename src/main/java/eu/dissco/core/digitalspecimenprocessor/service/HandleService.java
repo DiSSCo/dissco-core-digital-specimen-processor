@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
@@ -30,12 +31,18 @@ import org.w3c.dom.Document;
 public class HandleService {
 
   private static final String PREFIX = "20.5000.1025/";
+  private static final String HANDLE = "Handle";
+  private static final String DIGITAL_OBJECT_SUBTYPE = "digitalObjectSubtype";
+  private static final String SPECIMEN_HOST = "specimenHost";
+  private static final String TO_BE_FIXED = "Needs to be fixed!";
+  private static final String DUMMY_HANDLE = "http://hdl.handle.net/21...";
   private final Random random;
   private final char[] symbols = "ABCDEFGHJKLMNPQRSTVWXYZ1234567890".toCharArray();
   private final char[] buffer = new char[11];
   private final ObjectMapper mapper;
   private final DocumentBuilder documentBuilder;
   private final HandleRepository repository;
+  private final TransformerFactory transformerFactory;
 
   public String createNewHandle(DigitalSpecimen digitalSpecimen)
       throws TransformerException {
@@ -56,9 +63,9 @@ public class HandleService {
     handleAttributes.add(new HandleAttribute(2, "pidIssuer",
         createPidReference("https://doi.org/10.22/10.22/2AA-GAA-E29", "DOI", "RA Issuing DOI")));
     handleAttributes.add(new HandleAttribute(3, "digitalObjectType",
-        createPidReference("http://hdl.handle.net/21...", "Handle", "Digital Specimen")));
-    handleAttributes.add(new HandleAttribute(4, "digitalObjectSubtype",
-        createPidReference("https://hdl.handle.net/21...", "Handle", digitalSpecimen.type())));
+        createPidReference(DUMMY_HANDLE, HANDLE, "Digital Specimen")));
+    handleAttributes.add(new HandleAttribute(4, DIGITAL_OBJECT_SUBTYPE,
+        createPidReference("https://hdl.handle.net/21...", HANDLE, digitalSpecimen.type())));
     handleAttributes.add(new HandleAttribute(5, "10320/loc", createLocations(handle)));
     handleAttributes.add(new HandleAttribute(6, "issueDate", createIssueDate(recordTimestamp)));
     handleAttributes.add(
@@ -70,8 +77,8 @@ public class HandleService {
             "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8)));
     handleAttributes.add(new HandleAttribute(14, "digitalOrPhysical", "physical".getBytes(
         StandardCharsets.UTF_8)));
-    handleAttributes.add(new HandleAttribute(15, "specimenHost", createPidReference(
-        digitalSpecimen.organizationId(), "ROR", "Needs to be fixed!")));
+    handleAttributes.add(new HandleAttribute(15, SPECIMEN_HOST, createPidReference(
+        digitalSpecimen.organizationId(), "ROR", TO_BE_FIXED)));
     handleAttributes.add(new HandleAttribute(100, "HS_ADMIN", decodeAdmin()));
     return handleAttributes;
   }
@@ -94,8 +101,7 @@ public class HandleService {
   }
 
   private String documentToString(Document document) throws TransformerException {
-    var tf = TransformerFactory.newInstance();
-    var transformer = tf.newTransformer();
+    var transformer = transformerFactory.newTransformer();
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
     StringWriter writer = new StringWriter();
     transformer.transform(new DOMSource(document), new StreamResult(writer));
@@ -141,28 +147,44 @@ public class HandleService {
   }
 
   private int toDigit(char hexChar) {
-    int digit = Character.digit(hexChar, 16);
-    return digit;
+    return Character.digit(hexChar, 16);
   }
 
   private void updateHandle(String id, DigitalSpecimen digitalSpecimen) {
     var handleAttributes = updatedHandles(digitalSpecimen);
     var recordTimestamp = Instant.now();
-    repository.updateHandleAttributes(id, recordTimestamp, handleAttributes);
+    repository.updateHandleAttributes(id, recordTimestamp, handleAttributes, true);
   }
 
   private List<HandleAttribute> updatedHandles(DigitalSpecimen digitalSpecimen) {
     var handleAttributes = new ArrayList<HandleAttribute>();
-    handleAttributes.add(new HandleAttribute(4, "digitalObjectSubtype",
-        createPidReference("http://hdl.handle.net/21...", "Handle", digitalSpecimen.type())));
-    handleAttributes.add(new HandleAttribute(15, "specimenHost", createPidReference(
-        digitalSpecimen.organizationId(), "ROR", "Needs to be fixed!")));
+    handleAttributes.add(new HandleAttribute(4, DIGITAL_OBJECT_SUBTYPE,
+        createPidReference(DUMMY_HANDLE, HANDLE, digitalSpecimen.type())));
+    handleAttributes.add(new HandleAttribute(15, SPECIMEN_HOST, createPidReference(
+        digitalSpecimen.organizationId(), "ROR", TO_BE_FIXED)));
     return handleAttributes;
   }
 
   public void updateHandles(List<UpdatedDigitalSpecimenTuple> handleUpdates) {
     for (var handleUpdate : handleUpdates) {
-      updateHandle(handleUpdate.currentSpecimen().id(), handleUpdate.digitalSpecimen());
+      updateHandle(handleUpdate.currentSpecimen().id(), handleUpdate.digitalSpecimenEvent()
+          .digitalSpecimen());
     }
+  }
+
+  public void rollbackHandleCreation(DigitalSpecimenRecord digitalSpecimenRecord) {
+    repository.rollbackHandleCreation(digitalSpecimenRecord.id());
+  }
+
+  public void deleteVersion(DigitalSpecimenRecord currentDigitalSpecimen) {
+    var handleAttributes = new ArrayList<HandleAttribute>();
+    handleAttributes.add(new HandleAttribute(4, DIGITAL_OBJECT_SUBTYPE,
+        createPidReference(DUMMY_HANDLE, HANDLE, currentDigitalSpecimen.digitalSpecimen().type())));
+    handleAttributes.add(new HandleAttribute(15, SPECIMEN_HOST, createPidReference(
+        currentDigitalSpecimen.digitalSpecimen().organizationId(), "ROR", TO_BE_FIXED)));
+    handleAttributes.add(
+        new HandleAttribute(6, "issueDate", createIssueDate(currentDigitalSpecimen.created())));
+    repository.updateHandleAttributes(currentDigitalSpecimen.id(), Instant.now(), handleAttributes,
+        false);
   }
 }

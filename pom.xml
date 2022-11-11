@@ -146,7 +146,7 @@
   </dependencies>
 
   <build>
-    <defaultGoal>clean package</defaultGoal>
+    <defaultGoal>-B verify</defaultGoal>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

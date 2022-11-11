@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import eu.dissco.core.digitalspecimenprocessor.domain.CreateUpdateDeleteEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import java.time.Instant;
 import java.util.UUID;
@@ -19,37 +20,39 @@ public class KafkaPublisherService {
   private final ObjectMapper mapper;
   private final KafkaTemplate<String, String> kafkaTemplate;
 
-  public void publishCreateEvent(DigitalSpecimenRecord digitalSpecimenRecord) {
-    var event = new CreateUpdateDeleteEvent(UUID.randomUUID(), "create", "digital-specimen-processing-service",
+  public void publishCreateEvent(DigitalSpecimenRecord digitalSpecimenRecord)
+      throws JsonProcessingException {
+    var event = new CreateUpdateDeleteEvent(UUID.randomUUID(), "create",
+        "digital-specimen-processing-service",
         digitalSpecimenRecord.id(), Instant.now(), mapper.valueToTree(digitalSpecimenRecord),
         "Specimen newly created");
-    try {
-      kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
   }
 
   public void publishAnnotationRequestEvent(String enrichment,
-      DigitalSpecimenRecord digitalSpecimenRecord) {
-    try {
-      kafkaTemplate.send(enrichment, mapper.writeValueAsString(digitalSpecimenRecord));
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+      DigitalSpecimenRecord digitalSpecimenRecord) throws JsonProcessingException {
+    kafkaTemplate.send(enrichment, mapper.writeValueAsString(digitalSpecimenRecord));
   }
 
   public void publishUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
-      DigitalSpecimenRecord currentDigitalSpecimen) {
+      DigitalSpecimenRecord currentDigitalSpecimen) throws JsonProcessingException {
     var jsonPatch = createJsonPatch(currentDigitalSpecimen, digitalSpecimenRecord);
     var event = new CreateUpdateDeleteEvent(UUID.randomUUID(), "update", "processing-service",
         digitalSpecimenRecord.id(), Instant.now(), jsonPatch,
         "Specimen has been updated");
-    try {
-      kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
+  }
+
+  public void republishEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
+    kafkaTemplate.send("digital-specimen", mapper.writeValueAsString(event));
+  }
+
+  public void deadLetterEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
+    kafkaTemplate.send("digital-specimen-dlq", mapper.writeValueAsString(event));
+  }
+
+  public void deadLetterRaw(String event) {
+    kafkaTemplate.send("digital-specimen-dlq", event);
   }
 
   private JsonNode createJsonPatch(DigitalSpecimenRecord currentDigitalSpecimen,

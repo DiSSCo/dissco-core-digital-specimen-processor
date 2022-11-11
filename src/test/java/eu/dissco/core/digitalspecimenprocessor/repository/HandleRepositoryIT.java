@@ -49,7 +49,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
         "anotherLicenseType".getBytes(StandardCharsets.UTF_8));
 
     // When
-    repository.updateHandleAttributes(HANDLE, CREATED, List.of(updatedHandle));
+    repository.updateHandleAttributes(HANDLE, CREATED, List.of(updatedHandle), true);
 
     // Then
     var result = context.select(HANDLES.DATA)

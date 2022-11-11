@@ -4,8 +4,10 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -22,6 +24,7 @@ import java.util.Random;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +47,9 @@ class HandleServiceTest {
   @BeforeEach
   void setup() throws ParserConfigurationException {
     var docFactory = DocumentBuilderFactory.newInstance();
-    service = new HandleService(random, MAPPER, docFactory.newDocumentBuilder(), repository);
+    var transfactory = TransformerFactory.newInstance();
+    service = new HandleService(random, MAPPER, docFactory.newDocumentBuilder(), repository,
+        transfactory);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedStatic = mockStatic(Instant.class);
@@ -77,10 +82,10 @@ class HandleServiceTest {
     // When
     service.updateHandles(List.of(
         new UpdatedDigitalSpecimenTuple(givenUnequalDigitalSpecimenRecord(),
-            givenDigitalSpecimen())));
+            givenDigitalSpecimenEvent())));
 
     // Then
-    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList());
+    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(true));
   }
 
 }
