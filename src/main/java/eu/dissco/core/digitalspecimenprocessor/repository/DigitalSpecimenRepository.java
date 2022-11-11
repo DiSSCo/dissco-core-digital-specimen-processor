@@ -115,9 +115,9 @@ public class DigitalSpecimenRepository {
     }
   }
 
-  public void rollbackSpecimen(DigitalSpecimenRecord digitalSpecimenRecord) {
+  public void rollbackSpecimen(String handle) {
     context.delete(NEW_DIGITAL_SPECIMEN)
-        .where(NEW_DIGITAL_SPECIMEN.ID.eq(digitalSpecimenRecord.id()))
+        .where(NEW_DIGITAL_SPECIMEN.ID.eq(handle))
         .execute();
   }
 

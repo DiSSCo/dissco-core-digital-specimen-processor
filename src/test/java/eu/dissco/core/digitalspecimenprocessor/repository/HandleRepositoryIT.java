@@ -60,6 +60,41 @@ class HandleRepositoryIT extends BaseRepositoryIT {
     assertThat(result).isEqualTo("2".getBytes(StandardCharsets.UTF_8));
   }
 
+  @Test
+  void testRollbackVersion(){
+    // Given
+    var handleAttributes = givenHandleAttributes();
+    repository.createHandle(HANDLE, CREATED, handleAttributes);
+    var updatedHandle = new HandleAttribute(11, "pidKernelMetadataLicense",
+        "anotherLicenseType".getBytes(StandardCharsets.UTF_8));
+    repository.updateHandleAttributes(HANDLE, CREATED, List.of(updatedHandle), true);
+    // When
+
+    repository.updateHandleAttributes(HANDLE, CREATED, handleAttributes, false);
+
+    // Then
+    var result = context.select(HANDLES.DATA)
+        .from(HANDLES)
+        .where(HANDLES.HANDLE.eq(HANDLE.getBytes(StandardCharsets.UTF_8)))
+        .and(HANDLES.TYPE.eq("issueNumber".getBytes(StandardCharsets.UTF_8)))
+        .fetchOne(Record1::value1);
+    assertThat(result).isEqualTo("1".getBytes(StandardCharsets.UTF_8));
+  }
+
+  @Test
+  void testRollbackHandle() {
+    // Given
+    var handleAttributes = givenHandleAttributes();
+    repository.createHandle(HANDLE, CREATED, handleAttributes);
+
+    // When
+    repository.rollbackHandleCreation(HANDLE);
+
+    // Then
+    var handles = context.selectFrom(HANDLES).fetch();
+    assertThat(handles).isEmpty();
+  }
+
   private List<HandleAttribute> givenHandleAttributes() {
     return List.of(
         new HandleAttribute(1, "pid",

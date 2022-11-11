@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.AAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -63,4 +64,39 @@ class KafkaPublisherServiceTest {
     then(kafkaTemplate).should().send(eq("createUpdateDeleteTopic"), anyString());
   }
 
+  @Test
+  void testRepublishEvent() throws JsonProcessingException {
+    // Given
+
+    // When
+    service.republishEvent(givenDigitalSpecimenEvent());
+
+    // Then
+    then(kafkaTemplate).should()
+        .send("digital-specimen", MAPPER.writeValueAsString(givenDigitalSpecimenEvent()));
+  }
+
+  @Test
+  void testDeadLetterEvent() throws JsonProcessingException {
+    // Given
+
+    // When
+    service.deadLetterEvent(givenDigitalSpecimenEvent());
+
+    // Then
+    then(kafkaTemplate).should()
+        .send("digital-specimen-dlq", MAPPER.writeValueAsString(givenDigitalSpecimenEvent()));
+  }
+
+  @Test
+  void testDeadLetterRaw() throws JsonProcessingException {
+    // Given
+    var rawEvent = MAPPER.writeValueAsString(givenDigitalSpecimenEvent());
+
+    // When
+    service.deadLetterRaw(rawEvent);
+
+    // Then
+    then(kafkaTemplate).should().send("digital-specimen-dlq", rawEvent);
+  }
 }

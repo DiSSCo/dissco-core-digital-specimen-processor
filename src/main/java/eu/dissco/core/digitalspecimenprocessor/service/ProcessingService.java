@@ -368,7 +368,7 @@ public class ProcessingService {
         log.error("Fatal exception, unable to roll back: " + digitalSpecimenRecord.id(), e);
       }
     }
-    repository.rollbackSpecimen(digitalSpecimenRecord);
+    repository.rollbackSpecimen(digitalSpecimenRecord.id());
     handleService.rollbackHandleCreation(digitalSpecimenRecord);
     try {
       kafkaService.deadLetterEvent(

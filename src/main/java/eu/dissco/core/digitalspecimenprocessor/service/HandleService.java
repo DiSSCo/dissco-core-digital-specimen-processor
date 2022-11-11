@@ -177,13 +177,7 @@ public class HandleService {
   }
 
   public void deleteVersion(DigitalSpecimenRecord currentDigitalSpecimen) {
-    var handleAttributes = new ArrayList<HandleAttribute>();
-    handleAttributes.add(new HandleAttribute(4, DIGITAL_OBJECT_SUBTYPE,
-        createPidReference(DUMMY_HANDLE, HANDLE, currentDigitalSpecimen.digitalSpecimen().type())));
-    handleAttributes.add(new HandleAttribute(15, SPECIMEN_HOST, createPidReference(
-        currentDigitalSpecimen.digitalSpecimen().organizationId(), "ROR", TO_BE_FIXED)));
-    handleAttributes.add(
-        new HandleAttribute(6, "issueDate", createIssueDate(currentDigitalSpecimen.created())));
+    var handleAttributes = updatedHandles(currentDigitalSpecimen.digitalSpecimen());
     repository.updateHandleAttributes(currentDigitalSpecimen.id(), Instant.now(), handleAttributes,
         false);
   }

@@ -178,7 +178,7 @@ class ProcessingServiceTest {
 
     // Then
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
-    then(repository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
+    then(repository).should().rollbackSpecimen(givenDigitalSpecimenRecord().id());
     then(handleService).should().rollbackHandleCreation(givenDigitalSpecimenRecord());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     assertThat(result).isEmpty();
@@ -206,7 +206,7 @@ class ProcessingServiceTest {
     // Then
     then(repository).should().createDigitalSpecimenRecord(anySet());
     then(handleService).should(times(3)).createNewHandle(any(DigitalSpecimen.class));
-    then(repository).should().rollbackSpecimen(secondSpecimen);
+    then(repository).should().rollbackSpecimen(secondSpecimen.id());
     then(handleService).should().rollbackHandleCreation(secondSpecimen);
     then(kafkaService).should().deadLetterEvent(secondEvent);
     assertThat(result).isEqualTo(List.of(thirdSpecimen, givenDigitalSpecimenRecord()));
@@ -231,7 +231,7 @@ class ProcessingServiceTest {
     // Then
     then(repository).should().createDigitalSpecimenRecord(anySet());
     then(elasticRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
-    then(repository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
+    then(repository).should().rollbackSpecimen(givenDigitalSpecimenRecord().id());
     then(handleService).should().rollbackHandleCreation(givenDigitalSpecimenRecord());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     assertThat(result).isEmpty();
