@@ -1,19 +1,24 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,7 +39,8 @@ public class ProcessingService {
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
-    var processResult = processSpecimens(events);
+    var uniqueBatch = removeDuplicatesInBatch(events);
+    var processResult = processSpecimens(uniqueBatch);
     var results = new ArrayList<DigitalSpecimenRecord>();
     if (!processResult.equalSpecimens().isEmpty()) {
       updateEqualSpecimen(processResult.equalSpecimens());
@@ -48,35 +54,71 @@ public class ProcessingService {
     return results;
   }
 
-  private ProcessResult processSpecimens(List<DigitalSpecimenEvent> events) {
-    var currentSpecimens = getCurrentSpecimen(events);
-    var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
-    var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
-    var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
-
-    for (DigitalSpecimenEvent event : events) {
-      var digitalSpecimen = event.digitalSpecimen();
-      log.debug("ds: {}", digitalSpecimen);
-      if (!currentSpecimens.containsKey(digitalSpecimen.physicalSpecimenId())) {
-        log.debug("Specimen with id: {} is completely new", digitalSpecimen.physicalSpecimenId());
-        newSpecimens.add(event);
-      } else {
-        var currentDigitalSpecimen = currentSpecimens.get(digitalSpecimen.physicalSpecimenId());
-        if (currentDigitalSpecimen.digitalSpecimen().equals(digitalSpecimen)) {
-          log.debug("Received digital specimen is equal to digital specimen: {}",
-              currentDigitalSpecimen.id());
-          equalSpecimens.add(currentDigitalSpecimen);
-        } else {
-          log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
-          changedSpecimens.add(
-              new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, digitalSpecimen));
+  private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(List<DigitalSpecimenEvent> events) {
+    var uniqueSet = new HashSet<DigitalSpecimenEvent>();
+    var map = events.stream()
+        .collect(Collectors.groupingBy(event -> event.digitalSpecimen().physicalSpecimenId()));
+    for (Entry<String, List<DigitalSpecimenEvent>> entry : map.entrySet()) {
+      if (entry.getValue().size() > 1) {
+        log.warn("Found {} duplicates in batch for id {}", entry.getValue().size(), entry.getKey());
+        for (int i = 0; i < entry.getValue().size(); i++) {
+          if (i == 0) {
+            uniqueSet.add(entry.getValue().get(i));
+          } else {
+            republishEvent(entry.getValue().get(i));
+          }
         }
+      } else {
+        uniqueSet.add(entry.getValue().get(0));
       }
     }
-    return new ProcessResult(equalSpecimens, changedSpecimens, newSpecimens);
+    return uniqueSet;
   }
 
-  private Map<String, DigitalSpecimenRecord> getCurrentSpecimen(List<DigitalSpecimenEvent> events) {
+  private ProcessResult processSpecimens(Set<DigitalSpecimenEvent> events) {
+    try {
+      var currentSpecimens = getCurrentSpecimen(events);
+      var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
+      var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
+      var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
+
+      for (DigitalSpecimenEvent event : events) {
+        var digitalSpecimen = event.digitalSpecimen();
+        log.debug("ds: {}", digitalSpecimen);
+        if (!currentSpecimens.containsKey(digitalSpecimen.physicalSpecimenId())) {
+          log.debug("Specimen with id: {} is completely new", digitalSpecimen.physicalSpecimenId());
+          newSpecimens.add(event);
+        } else {
+          var currentDigitalSpecimen = currentSpecimens.get(digitalSpecimen.physicalSpecimenId());
+          if (currentDigitalSpecimen.digitalSpecimen().equals(digitalSpecimen)) {
+            log.debug("Received digital specimen is equal to digital specimen: {}",
+                currentDigitalSpecimen.id());
+            equalSpecimens.add(currentDigitalSpecimen);
+          } else {
+            log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
+            changedSpecimens.add(
+                new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, event));
+          }
+        }
+      }
+      return new ProcessResult(equalSpecimens, changedSpecimens, newSpecimens);
+    } catch (DisscoRepositoryException ex) {
+      log.error("Republishing messages, Unable to retrieve current specimen from repository", ex);
+      events.forEach(this::republishEvent);
+      return new ProcessResult(List.of(), List.of(), List.of());
+    }
+  }
+
+  private void republishEvent(DigitalSpecimenEvent event) {
+    try {
+      kafkaService.republishEvent(event);
+    } catch (JsonProcessingException e) {
+      log.error("Fatal exception, unable to republish message due to invalid json", e);
+    }
+  }
+
+  private Map<String, DigitalSpecimenRecord> getCurrentSpecimen(Set<DigitalSpecimenEvent> events)
+      throws DisscoRepositoryException {
     return repository.getDigitalSpecimens(
             events.stream().map(event -> event.digitalSpecimen().physicalSpecimenId()).toList())
         .stream().collect(
@@ -94,50 +136,134 @@ public class ProcessingService {
 
   private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    var handleUpdates = updatedDigitalSpecimenTuples.stream().filter(
-        tuple -> handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
-            tuple.digitalSpecimen())).toList();
-    if (!handleUpdates.isEmpty()){
-      handleService.updateHandles(handleUpdates);
-    }
+    updateHandles(updatedDigitalSpecimenTuples);
 
-    var digitalSpecimenRecords = updatedDigitalSpecimenTuples.stream().collect(Collectors.toMap(
-        tuple -> new DigitalSpecimenRecord(
+    var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
+    log.info("Persisting to db");
+    repository.createDigitalSpecimenRecord(
+        digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
+            .toList());
+    log.info("Persisting to elastic");
+    try {
+      var bulkResponse = elasticRepository.indexDigitalSpecimen(
+          digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
+              .toList());
+      if (!bulkResponse.errors()) {
+        handleSuccessfulElasticUpdate(digitalSpecimenRecords);
+      } else {
+        handlePartiallyElasticUpdate(digitalSpecimenRecords, bulkResponse);
+      }
+      var successfullyProcessedRecords = digitalSpecimenRecords.stream()
+          .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
+              Collectors.toSet());
+      log.info("Successfully updated {} digitalSpecimen", successfullyProcessedRecords.size());
+      return successfullyProcessedRecords;
+    } catch (IOException e) {
+      log.error("Rolling back, failed to insert records in elastic", e);
+      digitalSpecimenRecords.forEach(
+          updatedDigitalSpecimenRecord -> rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord,
+              false));
+      return Set.of();
+    }
+  }
+
+  private void handleSuccessfulElasticUpdate(
+      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
+    log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
+    var failedRecords = new HashSet<UpdatedDigitalSpecimenRecord>();
+    for (var digitalSpecimenRecord : digitalSpecimenRecords) {
+      var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
+      if (!successfullyPublished) {
+        failedRecords.add(digitalSpecimenRecord);
+      }
+    }
+    digitalSpecimenRecords.removeAll(failedRecords);
+  }
+
+  private void handlePartiallyElasticUpdate(
+      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords,
+      BulkResponse bulkResponse) {
+    var digitalSpecimenMap = digitalSpecimenRecords.stream()
+        .collect(Collectors.toMap(
+            updatedDigitalSpecimenRecord -> updatedDigitalSpecimenRecord.digitalSpecimenRecord()
+                .id(), Function.identity()));
+    bulkResponse.items().forEach(
+        item -> {
+          var digitalSpecimenRecord = digitalSpecimenMap.get(item.id());
+          if (item.error() != null) {
+            log.error("Failed item to insert into elastic search: {} with errors {}",
+                digitalSpecimenRecord.digitalSpecimenRecord().id(), item.error().reason());
+            rollbackUpdatedSpecimen(digitalSpecimenRecord, false);
+            digitalSpecimenRecords.remove(digitalSpecimenRecord);
+          } else {
+            var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
+            if (!successfullyPublished) {
+              digitalSpecimenRecords.remove(digitalSpecimenRecord);
+            }
+          }
+        }
+    );
+  }
+
+  private Set<UpdatedDigitalSpecimenRecord> getSpecimenRecordMap(
+      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+    return updatedDigitalSpecimenTuples.stream().map(tuple -> new UpdatedDigitalSpecimenRecord(
+        new DigitalSpecimenRecord(
             tuple.currentSpecimen().id(),
-            calculateMidsLevel(tuple.digitalSpecimen()),
+            1,
             tuple.currentSpecimen().version() + 1,
             Instant.now(),
-            tuple.digitalSpecimen()
-        ), UpdatedDigitalSpecimenTuple::currentSpecimen));
-    log.info("Persisting to db");
-    repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
-    log.info("Persisting to elastic");
-    BulkResponse bulkResponse = null;
+            tuple.digitalSpecimenEvent().digitalSpecimen()),
+        tuple.digitalSpecimenEvent().enrichmentList(),
+        tuple.currentSpecimen()
+    )).collect(Collectors.toSet());
+  }
+
+  private void updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+    var handleUpdates = updatedDigitalSpecimenTuples.stream().filter(
+        tuple -> handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
+            tuple.digitalSpecimenEvent().digitalSpecimen())).toList();
+    if (!handleUpdates.isEmpty()) {
+      handleService.updateHandles(handleUpdates);
+    }
+  }
+
+  private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
     try {
-      bulkResponse = elasticRepository.indexDigitalSpecimen(digitalSpecimenRecords.keySet());
-      if (!bulkResponse.errors()) {
-        log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
-        digitalSpecimenRecords.forEach(kafkaService::publishUpdateEvent);
-      } else {
-        var digitalSpecimenMap = digitalSpecimenRecords.values().stream()
-            .collect(Collectors.toMap(DigitalSpecimenRecord::id, Function.identity()));
-        bulkResponse.items().forEach(
-            item -> {
-              var digitalSpecimenRecord = digitalSpecimenMap.get(item.id());
-              if (item.error() != null) {
-                // TODO Rollback database (remove version) and move message to DLQ
-                digitalSpecimenRecords.remove(digitalSpecimenRecord);
-              } else {
-                kafkaService.publishUpdateEvent(digitalSpecimenRecord,
-                    digitalSpecimenRecords.get(digitalSpecimenRecord));
-              }
-            }
-        );
+      kafkaService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
+          updatedDigitalSpecimenRecord.currentDigitalSpecimen());
+      return true;
+    } catch (JsonProcessingException e) {
+      log.error("Rolling back, failed to publish update event", e);
+      rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord, true);
+      return false;
+    }
+  }
+
+  private void rollbackUpdatedSpecimen(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord,
+      boolean elasticRollback) {
+    if (elasticRollback) {
+      try {
+        elasticRepository.rollbackVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
+      } catch (IOException e) {
+        log.error("Fatal exception, unable to roll back update for: "
+            + updatedDigitalSpecimenRecord.currentDigitalSpecimen(), e);
       }
-      log.info("Successfully updated {} digitalSpecimen", updatedDigitalSpecimenTuples.size());
-      return digitalSpecimenRecords.keySet();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    }
+    repository.deleteVersion(updatedDigitalSpecimenRecord.digitalSpecimenRecord());
+    if (handleNeedsUpdate(updatedDigitalSpecimenRecord.currentDigitalSpecimen().digitalSpecimen(),
+        updatedDigitalSpecimenRecord.digitalSpecimenRecord()
+            .digitalSpecimen())) {
+      handleService.deleteVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
+    }
+    try {
+      kafkaService.deadLetterEvent(
+          new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
+              updatedDigitalSpecimenRecord.digitalSpecimenRecord()
+                  .digitalSpecimen()));
+    } catch (JsonProcessingException e) {
+      log.error("Fatal exception, unable to dead letter queue: "
+          + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
   }
 
@@ -149,22 +275,7 @@ public class ProcessingService {
 
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
     var digitalSpecimenRecords = events.stream().collect(Collectors.toMap(
-        event -> {
-          try {
-            return new DigitalSpecimenRecord(
-                handleService.createNewHandle(event.digitalSpecimen()),
-                calculateMidsLevel(event.digitalSpecimen()),
-                1,
-                Instant.now(),
-                event.digitalSpecimen()
-            );
-          } catch (TransformerException e) {
-            log.error("Failed to process record with id: {}",
-                event.digitalSpecimen().physicalSpecimenId(),
-                e);
-            return null;
-          }
-        },
+        this::mapToDigitalSpecimenRecord,
         DigitalSpecimenEvent::enrichmentList
     ));
     digitalSpecimenRecords.remove(null);
@@ -176,38 +287,111 @@ public class ProcessingService {
     try {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(digitalSpecimenRecords.keySet());
       if (!bulkResponse.errors()) {
-        log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
-        digitalSpecimenRecords.forEach((key, value) -> {
-          kafkaService.publishCreateEvent(key);
-          value.forEach(aas -> kafkaService.publishAnnotationRequestEvent(aas, key));
-        });
+        handleSuccessfulElasticInsert(digitalSpecimenRecords);
       } else {
-        var digitalSpecimenMap = digitalSpecimenRecords.keySet().stream()
-            .collect(Collectors.toMap(DigitalSpecimenRecord::id, Function.identity()));
-        bulkResponse.items().forEach(
-            item -> {
-              var digitalSpecimenRecord = digitalSpecimenMap.get(item.id());
-              if (item.error() != null) {
-                // TODO Rollback database and handle and move message to DLQ
-                digitalSpecimenRecords.remove(digitalSpecimenRecord);
-              } else {
-                kafkaService.publishCreateEvent(digitalSpecimenRecord);
-                digitalSpecimenRecords.get(digitalSpecimenRecord).forEach(
-                    aas -> kafkaService.publishAnnotationRequestEvent(aas, digitalSpecimenRecord));
-              }
-            }
-        );
+        handlePartiallyFailedElasticInsert(digitalSpecimenRecords, bulkResponse);
       }
       log.info("Successfully created {} new digitalSpecimen", digitalSpecimenRecords.size());
       return digitalSpecimenRecords.keySet();
     } catch (IOException e) {
-      // TODO rollback all items from database and remove handles
-      throw new RuntimeException(e);
+      log.error("Rolling back, failed to insert records in elastic", e);
+      digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
+      return Set.of();
     }
-
   }
 
-  private int calculateMidsLevel(DigitalSpecimen digitalSpecimen) {
-    return 1;
+  private void handleSuccessfulElasticInsert(
+      Map<DigitalSpecimenRecord, List<String>> digitalSpecimenRecords) {
+    log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
+    for (var entry : digitalSpecimenRecords.entrySet()) {
+      var successfullyPublished = publishEvents(entry.getKey(), entry.getValue());
+      if (!successfullyPublished) {
+        digitalSpecimenRecords.remove(entry.getKey());
+      }
+    }
+  }
+
+  private void handlePartiallyFailedElasticInsert(
+      Map<DigitalSpecimenRecord, List<String>> digitalSpecimenRecords,
+      BulkResponse bulkResponse) {
+    var digitalSpecimenMap = digitalSpecimenRecords.keySet().stream()
+        .collect(Collectors.toMap(DigitalSpecimenRecord::id, Function.identity()));
+    bulkResponse.items().forEach(
+        item -> {
+          var digitalSpecimenRecord = digitalSpecimenMap.get(item.id());
+          if (item.error() != null) {
+            log.error("Failed item to insert into elastic search: {} with errors {}",
+                digitalSpecimenRecord.id(), item.error().reason());
+            rollbackNewSpecimen(digitalSpecimenRecord,
+                digitalSpecimenRecords.get(digitalSpecimenRecord));
+            digitalSpecimenRecords.remove(digitalSpecimenRecord);
+          } else {
+            var successfullyPublished = publishEvents(digitalSpecimenRecord,
+                digitalSpecimenRecords.get(digitalSpecimenRecord));
+            if (!successfullyPublished) {
+              digitalSpecimenRecords.remove(digitalSpecimenRecord);
+            }
+          }
+        }
+    );
+  }
+
+  private boolean publishEvents(DigitalSpecimenRecord key, List<String> value) {
+    try {
+      kafkaService.publishCreateEvent(key);
+    } catch (JsonProcessingException e) {
+      log.error("Rolling back, failed to publish Create event", e);
+      rollbackNewSpecimen(key, value, true);
+      return false;
+    }
+    value.forEach(aas -> {
+      try {
+        kafkaService.publishAnnotationRequestEvent(aas, key);
+      } catch (JsonProcessingException e) {
+        log.error("No action take, failed to publish annotation request event", e);
+      }
+    });
+    return true;
+  }
+
+  private void rollbackNewSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
+      List<String> enrichments) {
+    rollbackNewSpecimen(digitalSpecimenRecord, enrichments, false);
+  }
+
+  private void rollbackNewSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
+      List<String> enrichments, boolean elasticRollback) {
+    if (elasticRollback) {
+      try {
+        elasticRepository.rollbackSpecimen(digitalSpecimenRecord);
+      } catch (IOException e) {
+        log.error("Fatal exception, unable to roll back: " + digitalSpecimenRecord.id(), e);
+      }
+    }
+    repository.rollbackSpecimen(digitalSpecimenRecord.id());
+    handleService.rollbackHandleCreation(digitalSpecimenRecord);
+    try {
+      kafkaService.deadLetterEvent(
+          new DigitalSpecimenEvent(enrichments, digitalSpecimenRecord.digitalSpecimen()));
+    } catch (JsonProcessingException e) {
+      log.error("Fatal exception, unable to dead letter queue: " + digitalSpecimenRecord.id(), e);
+    }
+  }
+
+  private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event) {
+    try {
+      return new DigitalSpecimenRecord(
+          handleService.createNewHandle(event.digitalSpecimen()),
+          1,
+          1,
+          Instant.now(),
+          event.digitalSpecimen()
+      );
+    } catch (TransformerException e) {
+      log.error("Failed to process record with id: {}",
+          event.digitalSpecimen().physicalSpecimenId(),
+          e);
+      return null;
+    }
   }
 }

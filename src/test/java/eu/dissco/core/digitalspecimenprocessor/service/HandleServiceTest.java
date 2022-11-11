@@ -3,25 +3,32 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mockStatic;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +51,9 @@ class HandleServiceTest {
   @BeforeEach
   void setup() throws ParserConfigurationException {
     var docFactory = DocumentBuilderFactory.newInstance();
-    service = new HandleService(random, MAPPER, docFactory.newDocumentBuilder(), repository);
+    var transfactory = TransformerFactory.newInstance();
+    service = new HandleService(random, MAPPER, docFactory.newDocumentBuilder(), repository,
+        transfactory);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedStatic = mockStatic(Instant.class);
@@ -77,10 +86,33 @@ class HandleServiceTest {
     // When
     service.updateHandles(List.of(
         new UpdatedDigitalSpecimenTuple(givenUnequalDigitalSpecimenRecord(),
-            givenDigitalSpecimen())));
+            givenDigitalSpecimenEvent())));
 
     // Then
-    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList());
+    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(true));
   }
+
+  @Test
+  void testRollbackHandleCreation() {
+    // Given
+
+    // When
+    service.rollbackHandleCreation(givenDigitalSpecimenRecord());
+
+    // Then
+    then(repository).should().rollbackHandleCreation(HANDLE);
+  }
+
+  @Test
+  void testDeleteVersion() {
+    // Given
+
+    // When
+    service.deleteVersion(givenDigitalSpecimenRecord());
+
+    // Then
+    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(false));
+  }
+
 
 }

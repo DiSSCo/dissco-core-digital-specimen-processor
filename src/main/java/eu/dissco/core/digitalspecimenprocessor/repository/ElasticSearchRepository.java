@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.repository;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
+import co.elastic.clients.elasticsearch.core.DeleteResponse;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ElasticSearchProperties;
 import java.io.IOException;
@@ -29,5 +30,15 @@ public class ElasticSearchRepository {
       );
     }
     return client.bulk(bulkRequest.build());
+  }
+
+  public DeleteResponse rollbackSpecimen(DigitalSpecimenRecord digitalSpecimenRecord)
+      throws IOException {
+    return client.delete(d -> d.index(properties.getIndexName()).id(digitalSpecimenRecord.id()));
+  }
+
+  public void rollbackVersion(DigitalSpecimenRecord currentDigitalSpecimen) throws IOException {
+    client.index(i -> i.index(properties.getIndexName()).id(currentDigitalSpecimen.id())
+        .document(currentDigitalSpecimen));
   }
 }

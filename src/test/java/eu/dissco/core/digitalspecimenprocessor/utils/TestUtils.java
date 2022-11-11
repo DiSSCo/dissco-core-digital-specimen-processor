@@ -13,6 +13,8 @@ public class TestUtils {
 
   public static ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
   public static String HANDLE = "20.5000.1025/V1Z-176-LL4";
+  public static String SECOND_HANDLE = "20.5000.1025/XXX-XXX-XXX";
+  public static String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
   public static int MIDS_LEVEL = 1;
   public static int VERSION = 1;
   public static Instant CREATED = Instant.parse("2022-11-01T09:59:24.00Z");
@@ -21,7 +23,9 @@ public class TestUtils {
   public static String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
   public static String PHYSICAL_SPECIMEN_TYPE = "cetaf";
   public static String SPECIMEN_NAME = "Biota";
+  public static String ANOTHER_SPECIMEN_NAME = "Another SpecimenName";
   public static String ORGANIZATION_ID = "https://ror.org/0443cwa12";
+  public static String ANOTHER_ORGANISATION = "Another organisation";
   public static String DATASET_ID = null;
   public static String PHYSICAL_SPECIMEN_COLLECTION = null;
   public static String SOURCE_SYSTEM_ID = "20.5000.1025/MN0-5XP-FFD";
@@ -121,24 +125,52 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord() {
-    return new DigitalSpecimenRecord(
-        HANDLE,
-        MIDS_LEVEL,
-        VERSION,
-        CREATED,
-        givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, "Another SpecimenName")
-    );
+    return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANIZATION_ID);
   }
 
-  public static DigitalSpecimenRecord givenDigitalSpecimenRecord(String handle, String physicalSpecimenId) {
+  public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String organisation) {
+    return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, organisation);
+  }
+
+  public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String handle,
+      String specimenName, String organisation) {
     return new DigitalSpecimenRecord(
         handle,
         MIDS_LEVEL,
         VERSION,
         CREATED,
-        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME)
+        givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, specimenName, organisation)
     );
   }
+
+  public static DigitalSpecimenRecord givenDifferentUnequalSpecimen(String handle,
+      String physicalIdentifier) {
+    return new DigitalSpecimenRecord(
+        handle,
+        MIDS_LEVEL,
+        VERSION,
+        CREATED,
+        givenDigitalSpecimen(physicalIdentifier, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION));
+  }
+
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecord(String handle,
+      String physicalSpecimenId) {
+    return new DigitalSpecimenRecord(
+        handle,
+        MIDS_LEVEL,
+        VERSION,
+        CREATED,
+        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME, ORGANIZATION_ID)
+    );
+  }
+
+  public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId) {
+    return new DigitalSpecimenEvent(
+        List.of(AAS),
+        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME, ORGANIZATION_ID)
+    );
+  }
+
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent() {
     return new DigitalSpecimenEvent(
@@ -148,16 +180,17 @@ public class TestUtils {
   }
 
   public static DigitalSpecimen givenDigitalSpecimen() {
-    return givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME);
+    return givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANIZATION_ID);
   }
 
-  public static DigitalSpecimen givenDigitalSpecimen(String physicalSpecimenId, String specimenName) {
+  public static DigitalSpecimen givenDigitalSpecimen(String physicalSpecimenId, String specimenName,
+      String organisation) {
     return new DigitalSpecimen(
         TYPE,
         physicalSpecimenId,
         PHYSICAL_SPECIMEN_TYPE,
         specimenName,
-        ORGANIZATION_ID,
+        organisation,
         DATASET_ID,
         PHYSICAL_SPECIMEN_COLLECTION,
         SOURCE_SYSTEM_ID,

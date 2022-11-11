@@ -16,12 +16,14 @@ class KafkaConsumerServiceTest {
 
   @Mock
   private ProcessingService processingService;
+  @Mock
+  private KafkaPublisherService publisherService;
 
   private KafkaConsumerService service;
 
   @BeforeEach
   void setup() {
-    service = new KafkaConsumerService(MAPPER, processingService);
+    service = new KafkaConsumerService(MAPPER, processingService, publisherService);
   }
 
   @Test

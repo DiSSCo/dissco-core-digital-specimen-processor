@@ -4,11 +4,14 @@ import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.NEW_D
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mockStatic;
 
+import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.sql.BatchUpdateException;
 import java.time.Instant;
 import java.util.List;
@@ -38,7 +41,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testGetDigitalSpecimensEmpty() {
+  void testGetDigitalSpecimensEmpty() throws DisscoRepositoryException {
     // Given
 
     // When
@@ -49,7 +52,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testGetDigitalSpecimens() {
+  void testGetDigitalSpecimens() throws DisscoRepositoryException {
     // Given
     repository.createDigitalSpecimenRecord(
         List.of(
@@ -86,8 +89,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     repository.createDigitalSpecimenRecord(
         List.of(
             givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
-            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
+            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
+            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
 
     // When
     try (MockedStatic<Instant> mockedStatic = mockStatic(Instant.class)) {
@@ -107,8 +110,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     // Given
     var records = List.of(
         givenDigitalSpecimenRecord(),
-        givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
-        givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_2"));
+        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
+        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2"));
 
     // When
     var exception = assertThrows(DataAccessException.class, () -> {
@@ -118,6 +121,41 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     // Then
     assertThat(exception).hasCauseInstanceOf(BatchUpdateException.class).hasRootCauseInstanceOf(
         PSQLException.class);
+  }
+
+  @Test
+  void testRollbackSpecimen() throws DisscoRepositoryException {
+    // Given
+    repository.createDigitalSpecimenRecord(
+        List.of(
+            givenDigitalSpecimenRecord(),
+            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
+            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
+
+    // When
+    repository.rollbackSpecimen(HANDLE);
+
+    // Then
+    var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void testRollbackVersion() throws DisscoRepositoryException {
+    // Given
+    repository.createDigitalSpecimenRecord(
+        List.of(
+            givenDigitalSpecimenRecord(),
+            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
+            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
+    repository.createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord(2)));
+
+    // When
+    repository.deleteVersion(givenDigitalSpecimenRecord(2));
+
+    // Then
+    var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
+    assertThat(result.get(0)).isEqualTo(givenDigitalSpecimenRecord());
   }
 
 }

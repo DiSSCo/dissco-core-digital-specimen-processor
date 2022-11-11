@@ -3,9 +3,12 @@ package eu.dissco.core.digitalspecimenprocessor.repository;
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.NEW_DIGITAL_SPECIMEN;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingException;
+import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -14,6 +17,7 @@ import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Query;
 import org.jooq.Record;
+import org.jooq.exception.DataAccessException;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -25,21 +29,18 @@ public class DigitalSpecimenRepository {
 
   private DigitalSpecimenRecord mapDigitalSpecimen(Record dbRecord) {
     DigitalSpecimen digitalSpecimen = null;
-    try {
-      digitalSpecimen = new DigitalSpecimen(dbRecord.get(NEW_DIGITAL_SPECIMEN.TYPE),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.ORGANIZATION_ID),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.DATASET),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_COLLECTION),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID),
-          mapper.readTree(dbRecord.get(NEW_DIGITAL_SPECIMEN.DATA).data()),
-          mapper.readTree(dbRecord.get(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA).data()),
-          dbRecord.get(NEW_DIGITAL_SPECIMEN.DWCA_ID));
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    digitalSpecimen = new DigitalSpecimen(dbRecord.get(NEW_DIGITAL_SPECIMEN.TYPE),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.ORGANIZATION_ID),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.DATASET),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_COLLECTION),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID),
+        mapToJson(dbRecord.get(NEW_DIGITAL_SPECIMEN.DATA)),
+        mapToJson(dbRecord.get(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA)),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.DWCA_ID));
+
     return new DigitalSpecimenRecord(
         dbRecord.get(NEW_DIGITAL_SPECIMEN.ID),
         dbRecord.get(NEW_DIGITAL_SPECIMEN.MIDSLEVEL),
@@ -47,6 +48,16 @@ public class DigitalSpecimenRepository {
         dbRecord.get(NEW_DIGITAL_SPECIMEN.CREATED),
         digitalSpecimen);
   }
+
+  private JsonNode mapToJson(JSONB jsonb) {
+    try {
+      return mapper.readTree(jsonb.data());
+    } catch (JsonProcessingException e) {
+      throw new DisscoJsonBMappingException(
+          "Failed to parse jsonb field to json: " + jsonb.data(), e);
+    }
+  }
+
 
   public int[] createDigitalSpecimenRecord(
       Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
@@ -89,12 +100,31 @@ public class DigitalSpecimenRepository {
         .execute();
   }
 
-  public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList) {
-    return context.select(NEW_DIGITAL_SPECIMEN.asterisk())
-        .distinctOn(NEW_DIGITAL_SPECIMEN.ID)
-        .from(NEW_DIGITAL_SPECIMEN)
-        .where(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID.in(specimenList))
-        .orderBy(NEW_DIGITAL_SPECIMEN.ID, NEW_DIGITAL_SPECIMEN.VERSION.desc())
-        .fetch(this::mapDigitalSpecimen);
+  public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList)
+      throws DisscoRepositoryException {
+    try {
+      return context.select(NEW_DIGITAL_SPECIMEN.asterisk())
+          .distinctOn(NEW_DIGITAL_SPECIMEN.ID)
+          .from(NEW_DIGITAL_SPECIMEN)
+          .where(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID.in(specimenList))
+          .orderBy(NEW_DIGITAL_SPECIMEN.ID, NEW_DIGITAL_SPECIMEN.VERSION.desc())
+          .fetch(this::mapDigitalSpecimen);
+    } catch (DataAccessException ex) {
+      throw new DisscoRepositoryException(
+          "Failed to get specimen from repository: " + specimenList);
+    }
+  }
+
+  public void rollbackSpecimen(String handle) {
+    context.delete(NEW_DIGITAL_SPECIMEN)
+        .where(NEW_DIGITAL_SPECIMEN.ID.eq(handle))
+        .execute();
+  }
+
+  public void deleteVersion(DigitalSpecimenRecord digitalSpecimenRecord) {
+    context.delete(NEW_DIGITAL_SPECIMEN)
+        .where(NEW_DIGITAL_SPECIMEN.ID.eq(digitalSpecimenRecord.id()))
+        .and(NEW_DIGITAL_SPECIMEN.VERSION.eq(digitalSpecimenRecord.version()))
+        .execute();
   }
 }

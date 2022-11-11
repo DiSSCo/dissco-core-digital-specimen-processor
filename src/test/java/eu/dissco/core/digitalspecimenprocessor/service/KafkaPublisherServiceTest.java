@@ -2,12 +2,14 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.AAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +32,7 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testPublishCreateEvent() {
+  void testPublishCreateEvent() throws JsonProcessingException {
     // Given
 
     // When
@@ -41,7 +43,7 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testPublishAnnotationRequestEvent() {
+  void testPublishAnnotationRequestEvent() throws JsonProcessingException {
     // Given
 
     // When
@@ -52,7 +54,7 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testPublishUpdateEvent() {
+  void testPublishUpdateEvent() throws JsonProcessingException {
     // Given
 
     // When
@@ -62,4 +64,39 @@ class KafkaPublisherServiceTest {
     then(kafkaTemplate).should().send(eq("createUpdateDeleteTopic"), anyString());
   }
 
+  @Test
+  void testRepublishEvent() throws JsonProcessingException {
+    // Given
+
+    // When
+    service.republishEvent(givenDigitalSpecimenEvent());
+
+    // Then
+    then(kafkaTemplate).should()
+        .send("digital-specimen", MAPPER.writeValueAsString(givenDigitalSpecimenEvent()));
+  }
+
+  @Test
+  void testDeadLetterEvent() throws JsonProcessingException {
+    // Given
+
+    // When
+    service.deadLetterEvent(givenDigitalSpecimenEvent());
+
+    // Then
+    then(kafkaTemplate).should()
+        .send("digital-specimen-dlq", MAPPER.writeValueAsString(givenDigitalSpecimenEvent()));
+  }
+
+  @Test
+  void testDeadLetterRaw() throws JsonProcessingException {
+    // Given
+    var rawEvent = MAPPER.writeValueAsString(givenDigitalSpecimenEvent());
+
+    // When
+    service.deadLetterRaw(rawEvent);
+
+    // Then
+    then(kafkaTemplate).should().send("digital-specimen-dlq", rawEvent);
+  }
 }

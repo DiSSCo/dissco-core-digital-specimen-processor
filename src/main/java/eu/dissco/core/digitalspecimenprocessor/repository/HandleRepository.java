@@ -39,7 +39,7 @@ public class HandleRepository {
   }
 
   public void updateHandleAttributes(String id, Instant recordTimestamp,
-      List<HandleAttribute> handleAttributes) {
+      List<HandleAttribute> handleAttributes, boolean versionIncrement) {
     var queryList = new ArrayList<Query>();
     for (var handleAttribute : handleAttributes) {
       var query = context.update(HANDLES)
@@ -49,11 +49,11 @@ public class HandleRepository {
           .and(HANDLES.IDX.eq(handleAttribute.index()));
       queryList.add(query);
     }
-    queryList.add(versionIncrement(id, recordTimestamp));
+    queryList.add(versionIncrement(id, recordTimestamp, versionIncrement));
     context.batch(queryList).execute();
   }
 
-  private Query versionIncrement(String pid, Instant recordTimestamp) {
+  private Query versionIncrement(String pid, Instant recordTimestamp, boolean versionIncrement) {
     var currentVersion =
         Integer.parseInt(context.select(HANDLES.DATA)
             .from(HANDLES)
@@ -61,7 +61,13 @@ public class HandleRepository {
                 StandardCharsets.UTF_8)))
             .and(HANDLES.TYPE.eq("issueNumber".getBytes(StandardCharsets.UTF_8)))
             .fetchOne(dbRecord -> new String(dbRecord.value1())));
-    var version = currentVersion + 1;
+    int version;
+    if (versionIncrement){
+       version = currentVersion + 1;
+    } else {
+      version = currentVersion - 1;
+    }
+
     return context.update(HANDLES)
         .set(HANDLES.DATA, String.valueOf(version).getBytes(StandardCharsets.UTF_8))
         .set(HANDLES.TIMESTAMP, recordTimestamp.getEpochSecond())
@@ -69,4 +75,11 @@ public class HandleRepository {
             StandardCharsets.UTF_8)))
         .and(HANDLES.TYPE.eq("issueNumber".getBytes(StandardCharsets.UTF_8)));
   }
+
+  public void rollbackHandleCreation(String id) {
+    context.delete(HANDLES)
+        .where(HANDLES.HANDLE.eq(id.getBytes(StandardCharsets.UTF_8)))
+        .execute();
+  }
+
 }

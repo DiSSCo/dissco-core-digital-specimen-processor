@@ -1,0 +1,29 @@
+<configuration xmlns="http://www.jooq.org/xsd/jooq-codegen-3.16.6.xsd">
+  <jdbc>
+    <driver>org.postgresql.Driver</driver>
+    <url></url>
+    <user></user>
+    <password></password>
+  </jdbc>
+  <generator>
+    <generate>
+      <javaTimeTypes>true</javaTimeTypes>
+      <deprecationOnUnknownTypes>false</deprecationOnUnknownTypes>
+    </generate>
+    <database>
+      <name>org.jooq.meta.postgres.PostgresDatabase</name>
+      <inputSchema>public</inputSchema>
+      <includes>new_digital_specimen | handles</includes>
+      <forcedTypes>
+        <forcedType>
+          <name>INSTANT</name>
+          <includeTypes>TIMESTAMPTZ</includeTypes>
+        </forcedType>
+      </forcedTypes>
+    </database>
+    <target>
+      <packageName>eu.dissco.core.digitalspecimenprocessor.database.jooq</packageName>
+      <directory>src/main/java</directory>
+    </target>
+  </generator>
+</configuration>
