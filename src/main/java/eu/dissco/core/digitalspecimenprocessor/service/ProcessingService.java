@@ -170,12 +170,14 @@ public class ProcessingService {
   private void handleSuccessfulElasticUpdate(
       Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
     log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
+    var failedRecords = new HashSet<UpdatedDigitalSpecimenRecord>();
     for (var digitalSpecimenRecord : digitalSpecimenRecords) {
       var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
       if (!successfullyPublished) {
-        digitalSpecimenRecords.remove(digitalSpecimenRecord);
+        failedRecords.add(digitalSpecimenRecord);
       }
     }
+    digitalSpecimenRecords.removeAll(failedRecords);
   }
 
   private void handlePartiallyElasticUpdate(
