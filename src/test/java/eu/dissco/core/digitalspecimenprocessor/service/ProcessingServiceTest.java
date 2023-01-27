@@ -63,13 +63,17 @@ class ProcessingServiceTest {
   private KafkaPublisherService kafkaService;
   @Mock
   private BulkResponse bulkResponse;
+  @Mock
+  private MidsService midsService;
+
   private MockedStatic<Instant> mockedStatic;
 
   private ProcessingService service;
 
   @BeforeEach
   void setup() {
-    service = new ProcessingService(repository, handleService, elasticRepository, kafkaService);
+    service = new ProcessingService(repository, handleService, elasticRepository, kafkaService,
+        midsService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedStatic = mockStatic(Instant.class);
@@ -106,6 +110,7 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(expected)).willReturn(
         bulkResponse);
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -127,6 +132,7 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -150,6 +156,7 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(
@@ -172,6 +179,7 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -193,9 +201,9 @@ class ProcessingServiceTest {
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
     var thirdSpecimen = givenDigitalSpecimenRecord(THIRD_HANDLE, "A third Specimen");
     given(repository.getDigitalSpecimens(anyList())).willReturn(List.of());
-    given(handleService.createNewHandle(any(DigitalSpecimen.class))).willReturn(THIRD_HANDLE)
-        .willReturn(SECOND_HANDLE).willReturn(HANDLE);
-
+    given(handleService.createNewHandle(any(DigitalSpecimen.class))).willReturn(HANDLE)
+        .willReturn(SECOND_HANDLE).willReturn(THIRD_HANDLE);
+    given(midsService.calculateMids(any(DigitalSpecimen.class))).willReturn(1);
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
 
@@ -224,6 +232,7 @@ class ProcessingServiceTest {
         bulkResponse);
     doThrow(JsonProcessingException.class).when(kafkaService)
         .publishCreateEvent(any(DigitalSpecimenRecord.class));
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -255,13 +264,14 @@ class ProcessingServiceTest {
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
     given(repository.getDigitalSpecimens(
-        List.of("A third Specimen", "Another Specimen", PHYSICAL_SPECIMEN_ID)))
+        List.of(PHYSICAL_SPECIMEN_ID, "Another Specimen", "A third Specimen")))
         .willReturn(List.of(givenUnequalDigitalSpecimenRecord(),
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
             givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen")));
 
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(
@@ -280,7 +290,7 @@ class ProcessingServiceTest {
   void testUpdateSpecimenKafkaFailed() throws DisscoRepositoryException, IOException {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord()));
-
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(List.of(givenDigitalSpecimenRecord(2)))).willReturn(
@@ -308,6 +318,7 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(List.of(givenDigitalSpecimenRecord(2)))).willThrow(
         IOException.class);
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));

@@ -1,12 +1,14 @@
 package eu.dissco.core.digitalspecimenprocessor.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEventOld;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
 import eu.dissco.core.digitalspecimenprocessor.service.ProcessingService;
 import java.util.List;
-import javax.xml.transform.TransformerException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -28,17 +30,44 @@ import org.springframework.web.bind.annotation.RestController;
 public class DigitalSpecimenController {
 
   private final ProcessingService processingService;
+  private final ObjectMapper mapper;
 
   @PreAuthorize("isAuthenticated()")
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
-      DigitalSpecimenEvent event) throws NoChangesFoundException {
+  DigitalSpecimenEventOld event) throws NoChangesFoundException {
+    log.info("Received digitalSpecimen upsert on old endpoint: {}", event);
+    return upsertDigitalSpecimen(mapToNewDigitalSpecimenFormat(event));
+  }
+
+  @PreAuthorize("isAuthenticated()")
+  @PostMapping(value = "/new", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
+  DigitalSpecimenEvent event) throws NoChangesFoundException {
     log.info("Received digitalSpecimen upsert: {}", event);
     var result = processingService.handleMessages(List.of(event));
-    if (result.isEmpty()){
+    if (result.isEmpty()) {
       throw new NoChangesFoundException("No changes found for specimen");
     }
     return ResponseEntity.status(HttpStatus.CREATED).body(result.get(0));
+  }
+
+  private DigitalSpecimenEvent mapToNewDigitalSpecimenFormat(DigitalSpecimenEventOld event) {
+    var digtalSpecimenOld = event.digitalSpecimen();
+    var attributes = mapper.createObjectNode();
+    attributes.put("ods:physicalSpecimenIdType", digtalSpecimenOld.physicalSpecimenIdType());
+    attributes.put("ods:organizationId", digtalSpecimenOld.organizationId());
+    attributes.put("ods:specimenName", digtalSpecimenOld.specimenName());
+    attributes.put("ods:datasetId", digtalSpecimenOld.datasetId());
+    attributes.put("ods:physicalSpecimenCollection",
+        digtalSpecimenOld.physicalSpecimenCollection());
+    attributes.put("ods:sourceSystemId", digtalSpecimenOld.sourceSystemId());
+    return new DigitalSpecimenEvent(event.enrichmentList(), new DigitalSpecimen(
+        digtalSpecimenOld.physicalSpecimenId(),
+        digtalSpecimenOld.type(),
+        attributes,
+        digtalSpecimenOld.originalData()
+    ));
   }
 
   @ExceptionHandler(NoChangesFoundException.class)

@@ -29,32 +29,23 @@ public class DigitalSpecimenRepository {
 
   private DigitalSpecimenRecord mapDigitalSpecimen(Record dbRecord) {
     DigitalSpecimen digitalSpecimen = null;
-    digitalSpecimen = new DigitalSpecimen(dbRecord.get(NEW_DIGITAL_SPECIMEN.TYPE),
+    digitalSpecimen = new DigitalSpecimen(
         dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.ORGANIZATION_ID),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.DATASET),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_COLLECTION),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.TYPE),
         mapToJson(dbRecord.get(NEW_DIGITAL_SPECIMEN.DATA)),
-        mapToJson(dbRecord.get(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA)),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.DWCA_ID));
+        mapToJson(dbRecord.get(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA)));
 
-    return new DigitalSpecimenRecord(
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.ID),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.MIDSLEVEL),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.VERSION),
-        dbRecord.get(NEW_DIGITAL_SPECIMEN.CREATED),
-        digitalSpecimen);
+    return new DigitalSpecimenRecord(dbRecord.get(NEW_DIGITAL_SPECIMEN.ID),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.MIDSLEVEL), dbRecord.get(NEW_DIGITAL_SPECIMEN.VERSION),
+        dbRecord.get(NEW_DIGITAL_SPECIMEN.CREATED), digitalSpecimen);
   }
 
   private JsonNode mapToJson(JSONB jsonb) {
     try {
       return mapper.readTree(jsonb.data());
     } catch (JsonProcessingException e) {
-      throw new DisscoJsonBMappingException(
-          "Failed to parse jsonb field to json: " + jsonb.data(), e);
+      throw new DisscoJsonBMappingException("Failed to parse jsonb field to json: " + jsonb.data(),
+          e);
     }
   }
 
@@ -74,30 +65,30 @@ public class DigitalSpecimenRepository {
         .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID,
             digitalSpecimenRecord.digitalSpecimen().physicalSpecimenId())
         .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE,
-            digitalSpecimenRecord.digitalSpecimen().physicalSpecimenIdType())
-        .set(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME,
-            digitalSpecimenRecord.digitalSpecimen().specimenName())
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:physicalSpecimenIdType")
+                .asText()).set(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:specimenName").asText())
         .set(NEW_DIGITAL_SPECIMEN.ORGANIZATION_ID,
-            digitalSpecimenRecord.digitalSpecimen().organizationId())
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:organizationId").asText())
         .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_COLLECTION,
-            digitalSpecimenRecord.digitalSpecimen().physicalSpecimenCollection())
-        .set(NEW_DIGITAL_SPECIMEN.DATASET, digitalSpecimenRecord.digitalSpecimen().datasetId())
+            digitalSpecimenRecord.digitalSpecimen().attributes()
+                .get("ods:physicalSpecimenCollection").asText()).set(NEW_DIGITAL_SPECIMEN.DATASET,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:datasetId").asText())
         .set(NEW_DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
-            digitalSpecimenRecord.digitalSpecimen().sourceSystemId())
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:sourceSystemId").asText())
         .set(NEW_DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
-        .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .set(NEW_DIGITAL_SPECIMEN.DATA,
-            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().data().toString()))
+        .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now()).set(NEW_DIGITAL_SPECIMEN.DATA,
+            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().attributes().toString()))
         .set(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA,
-            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalData().toString()))
-        .set(NEW_DIGITAL_SPECIMEN.DWCA_ID, digitalSpecimenRecord.digitalSpecimen().dwcaId());
+            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalAttributes().toString()))
+        .set(NEW_DIGITAL_SPECIMEN.DWCA_ID,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("dwca:id").asText());
   }
 
   public int updateLastChecked(List<String> currentDigitalSpecimen) {
     return context.update(NEW_DIGITAL_SPECIMEN)
         .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .where(NEW_DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen))
-        .execute();
+        .where(NEW_DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen)).execute();
   }
 
   public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList)
@@ -116,15 +107,12 @@ public class DigitalSpecimenRepository {
   }
 
   public void rollbackSpecimen(String handle) {
-    context.delete(NEW_DIGITAL_SPECIMEN)
-        .where(NEW_DIGITAL_SPECIMEN.ID.eq(handle))
-        .execute();
+    context.delete(NEW_DIGITAL_SPECIMEN).where(NEW_DIGITAL_SPECIMEN.ID.eq(handle)).execute();
   }
 
   public void deleteVersion(DigitalSpecimenRecord digitalSpecimenRecord) {
     context.delete(NEW_DIGITAL_SPECIMEN)
         .where(NEW_DIGITAL_SPECIMEN.ID.eq(digitalSpecimenRecord.id()))
-        .and(NEW_DIGITAL_SPECIMEN.VERSION.eq(digitalSpecimenRecord.version()))
-        .execute();
+        .and(NEW_DIGITAL_SPECIMEN.VERSION.eq(digitalSpecimenRecord.version())).execute();
   }
 }
