@@ -32,7 +32,7 @@ public class TestUtils {
   public static JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static String DWCA_ID = null;
 
-  private static JsonNode generateSpecimenOriginalData() {
+  public static JsonNode generateSpecimenOriginalData() {
     try {
       return MAPPER.readTree(
           """
