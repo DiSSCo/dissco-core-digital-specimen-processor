@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -36,6 +37,7 @@ public class ProcessingService {
   private final HandleService handleService;
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
+  private final MidsService midsService;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -210,7 +212,7 @@ public class ProcessingService {
     return updatedDigitalSpecimenTuples.stream().map(tuple -> new UpdatedDigitalSpecimenRecord(
         new DigitalSpecimenRecord(
             tuple.currentSpecimen().id(),
-            1,
+            midsService.calculateMids(tuple.digitalSpecimenEvent().digitalSpecimen()),
             tuple.currentSpecimen().version() + 1,
             Instant.now(),
             tuple.digitalSpecimenEvent().digitalSpecimen()),
@@ -269,8 +271,19 @@ public class ProcessingService {
 
   private boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
       DigitalSpecimen digitalSpecimen) {
-    return !currentDigitalSpecimen.type().equals(digitalSpecimen.type()) ||
-        !currentDigitalSpecimen.organizationId().equals(digitalSpecimen.organizationId());
+    if (!currentDigitalSpecimen.type().equals(digitalSpecimen.type())) {
+      return true;
+    }
+    return !Objects.equals(getOrganisation(currentDigitalSpecimen),
+        getOrganisation(digitalSpecimen));
+  }
+
+  private String getOrganisation(DigitalSpecimen digitalSpecimen) {
+    if (digitalSpecimen.attributes().get("ods:organizationId") != null) {
+      return digitalSpecimen.attributes().get("ods:organizationId").asText();
+    } else {
+      return null;
+    }
   }
 
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
@@ -382,7 +395,7 @@ public class ProcessingService {
     try {
       return new DigitalSpecimenRecord(
           handleService.createNewHandle(event.digitalSpecimen()),
-          1,
+          midsService.calculateMids(event.digitalSpecimen()),
           1,
           Instant.now(),
           event.digitalSpecimen()

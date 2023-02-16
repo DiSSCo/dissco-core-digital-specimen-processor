@@ -27,7 +27,6 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
   private static final Instant UPDATED_TIMESTAMP = Instant.parse("2022-11-02T13:05:24.00Z");
 
-
   private DigitalSpecimenRepository repository;
 
   @BeforeEach
