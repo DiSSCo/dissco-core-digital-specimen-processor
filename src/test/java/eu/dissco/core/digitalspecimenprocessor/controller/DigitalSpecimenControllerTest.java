@@ -82,6 +82,7 @@ class DigitalSpecimenControllerTest {
     attributes.put("ods:datasetId", DATASET_ID);
     attributes.put("ods:physicalSpecimenCollection", PHYSICAL_SPECIMEN_COLLECTION);
     attributes.put("ods:sourceSystemId", SOURCE_SYSTEM_ID);
+    attributes.put("dwca:id", DWCA_ID);
     return attributes;
   }
 
