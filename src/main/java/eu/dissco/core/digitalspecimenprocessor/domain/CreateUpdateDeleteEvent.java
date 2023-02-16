@@ -10,7 +10,8 @@ public record CreateUpdateDeleteEvent(
     String agent,
     String subject,
     Instant timestamp,
-    JsonNode data,
+    JsonNode digitalSpecimenRecord,
+    JsonNode change,
     String comment) {
 
 }
