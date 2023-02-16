@@ -62,6 +62,7 @@ public class DigitalSpecimenController {
     attributes.put("ods:physicalSpecimenCollection",
         digtalSpecimenOld.physicalSpecimenCollection());
     attributes.put("ods:sourceSystemId", digtalSpecimenOld.sourceSystemId());
+    attributes.put("dwca:id", digtalSpecimenOld.dwcaId());
     return new DigitalSpecimenEvent(event.enrichmentList(), new DigitalSpecimen(
         digtalSpecimenOld.physicalSpecimenId(),
         digtalSpecimenOld.type(),

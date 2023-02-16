@@ -22,9 +22,13 @@ public class KafkaPublisherService {
 
   public void publishCreateEvent(DigitalSpecimenRecord digitalSpecimenRecord)
       throws JsonProcessingException {
-    var event = new CreateUpdateDeleteEvent(UUID.randomUUID(), "create",
+    var event = new CreateUpdateDeleteEvent(UUID.randomUUID(),
+        "create",
         "digital-specimen-processing-service",
-        digitalSpecimenRecord.id(), Instant.now(), mapper.valueToTree(digitalSpecimenRecord),
+        digitalSpecimenRecord.id(),
+        Instant.now(),
+        mapper.valueToTree(digitalSpecimenRecord),
+        null,
         "Specimen newly created");
     kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
   }
@@ -37,8 +41,14 @@ public class KafkaPublisherService {
   public void publishUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
       DigitalSpecimenRecord currentDigitalSpecimen) throws JsonProcessingException {
     var jsonPatch = createJsonPatch(currentDigitalSpecimen, digitalSpecimenRecord);
-    var event = new CreateUpdateDeleteEvent(UUID.randomUUID(), "update", "processing-service",
-        digitalSpecimenRecord.id(), Instant.now(), jsonPatch,
+    var event = new CreateUpdateDeleteEvent(
+        UUID.randomUUID(),
+        "update",
+        "processing-service",
+        digitalSpecimenRecord.id(),
+        Instant.now(),
+        mapper.valueToTree(digitalSpecimenRecord),
+        jsonPatch,
         "Specimen has been updated");
     kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
   }
