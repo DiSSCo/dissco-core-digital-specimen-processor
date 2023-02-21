@@ -28,8 +28,7 @@ public class DigitalSpecimenRepository {
   private final ObjectMapper mapper;
 
   private DigitalSpecimenRecord mapDigitalSpecimen(Record dbRecord) {
-    DigitalSpecimen digitalSpecimen = null;
-    digitalSpecimen = new DigitalSpecimen(
+    var digitalSpecimen = new DigitalSpecimen(
         dbRecord.get(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID),
         dbRecord.get(NEW_DIGITAL_SPECIMEN.TYPE),
         mapToJson(dbRecord.get(NEW_DIGITAL_SPECIMEN.DATA)),
@@ -49,7 +48,6 @@ public class DigitalSpecimenRepository {
     }
   }
 
-
   public int[] createDigitalSpecimenRecord(
       Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
     var queries = digitalSpecimenRecords.stream().map(this::specimenToQuery).toList();
@@ -59,6 +57,31 @@ public class DigitalSpecimenRepository {
   private Query specimenToQuery(DigitalSpecimenRecord digitalSpecimenRecord) {
     return context.insertInto(NEW_DIGITAL_SPECIMEN)
         .set(NEW_DIGITAL_SPECIMEN.ID, digitalSpecimenRecord.id())
+        .set(NEW_DIGITAL_SPECIMEN.TYPE, digitalSpecimenRecord.digitalSpecimen().type())
+        .set(NEW_DIGITAL_SPECIMEN.VERSION, digitalSpecimenRecord.version())
+        .set(NEW_DIGITAL_SPECIMEN.MIDSLEVEL, (short) digitalSpecimenRecord.midsLevel())
+        .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID,
+            digitalSpecimenRecord.digitalSpecimen().physicalSpecimenId())
+        .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:physicalSpecimenIdType")
+                .asText()).set(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:specimenName").asText())
+        .set(NEW_DIGITAL_SPECIMEN.ORGANIZATION_ID,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:organizationId").asText())
+        .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_COLLECTION,
+            digitalSpecimenRecord.digitalSpecimen().attributes()
+                .get("ods:physicalSpecimenCollection").asText()).set(NEW_DIGITAL_SPECIMEN.DATASET,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:datasetId").asText())
+        .set(NEW_DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:sourceSystemId").asText())
+        .set(NEW_DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
+        .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now()).set(NEW_DIGITAL_SPECIMEN.DATA,
+            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().attributes().toString()))
+        .set(NEW_DIGITAL_SPECIMEN.ORIGINAL_DATA,
+            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalAttributes().toString()))
+        .set(NEW_DIGITAL_SPECIMEN.DWCA_ID,
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("dwca:id").asText())
+        .onConflict(NEW_DIGITAL_SPECIMEN.ID).doUpdate()
         .set(NEW_DIGITAL_SPECIMEN.TYPE, digitalSpecimenRecord.digitalSpecimen().type())
         .set(NEW_DIGITAL_SPECIMEN.VERSION, digitalSpecimenRecord.version())
         .set(NEW_DIGITAL_SPECIMEN.MIDSLEVEL, (short) digitalSpecimenRecord.midsLevel())
@@ -95,10 +118,8 @@ public class DigitalSpecimenRepository {
       throws DisscoRepositoryException {
     try {
       return context.select(NEW_DIGITAL_SPECIMEN.asterisk())
-          .distinctOn(NEW_DIGITAL_SPECIMEN.ID)
           .from(NEW_DIGITAL_SPECIMEN)
           .where(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID.in(specimenList))
-          .orderBy(NEW_DIGITAL_SPECIMEN.ID, NEW_DIGITAL_SPECIMEN.VERSION.desc())
           .fetch(this::mapDigitalSpecimen);
     } catch (DataAccessException ex) {
       throw new DisscoRepositoryException(
@@ -110,9 +131,4 @@ public class DigitalSpecimenRepository {
     context.delete(NEW_DIGITAL_SPECIMEN).where(NEW_DIGITAL_SPECIMEN.ID.eq(handle)).execute();
   }
 
-  public void deleteVersion(DigitalSpecimenRecord digitalSpecimenRecord) {
-    context.delete(NEW_DIGITAL_SPECIMEN)
-        .where(NEW_DIGITAL_SPECIMEN.ID.eq(digitalSpecimenRecord.id()))
-        .and(NEW_DIGITAL_SPECIMEN.VERSION.eq(digitalSpecimenRecord.version())).execute();
-  }
 }

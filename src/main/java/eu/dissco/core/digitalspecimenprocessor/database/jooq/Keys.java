@@ -27,6 +27,5 @@ public class Keys {
     // -------------------------------------------------------------------------
 
     public static final UniqueKey<HandlesRecord> HANDLES_PKEY = Internal.createUniqueKey(Handles.HANDLES, DSL.name("handles_pkey"), new TableField[] { Handles.HANDLES.HANDLE, Handles.HANDLES.IDX }, true);
-    public static final UniqueKey<NewDigitalSpecimenRecord> NEW_DIGITAL_SPECIMEN_PHYSICAL_SPECIMEN_ID_KEY = Internal.createUniqueKey(NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN, DSL.name("new_digital_specimen_physical_specimen_id_key"), new TableField[] { NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID }, true);
-    public static final UniqueKey<NewDigitalSpecimenRecord> NEW_DIGITAL_SPECIMEN_PKEY = Internal.createUniqueKey(NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN, DSL.name("new_digital_specimen_pkey"), new TableField[] { NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN.ID, NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN.VERSION }, true);
+    public static final UniqueKey<NewDigitalSpecimenRecord> NEW_DIGITAL_SPECIMEN_PK = Internal.createUniqueKey(NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN, DSL.name("new_digital_specimen_pk"), new TableField[] { NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN.ID }, true);
 }
