@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KafkaPublisherService {
 
+  private static final String SUBJECT_TYPE = "DigitalSpecimen";
+
   private final ObjectMapper mapper;
   private final KafkaTemplate<String, String> kafkaTemplate;
 
@@ -26,6 +28,7 @@ public class KafkaPublisherService {
         "create",
         "digital-specimen-processing-service",
         digitalSpecimenRecord.id(),
+        SUBJECT_TYPE,
         Instant.now(),
         mapper.valueToTree(digitalSpecimenRecord),
         null,
@@ -46,6 +49,7 @@ public class KafkaPublisherService {
         "update",
         "processing-service",
         digitalSpecimenRecord.id(),
+        SUBJECT_TYPE,
         Instant.now(),
         mapper.valueToTree(digitalSpecimenRecord),
         jsonPatch,
