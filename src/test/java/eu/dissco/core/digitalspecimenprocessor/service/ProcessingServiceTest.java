@@ -279,7 +279,7 @@ class ProcessingServiceTest {
 
     // Then
     then(handleService).should().updateHandles(anyList());
-    then(repository).should().createDigitalSpecimenRecord(anyList());
+    then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(handleService).should()
         .deleteVersion(givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"));
     then(kafkaService).should().deadLetterEvent(secondEvent);
@@ -302,9 +302,8 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    then(repository).should().createDigitalSpecimenRecord(anyList());
+    then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(elasticRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
-    then(repository).should().deleteVersion(givenDigitalSpecimenRecord(2));
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     assertThat(result).isEmpty();
   }
@@ -327,8 +326,7 @@ class ProcessingServiceTest {
     then(handleService).should().updateHandles(List.of(
         new UpdatedDigitalSpecimenTuple(unequalCurrentDigitalSpecimen,
             givenDigitalSpecimenEvent())));
-    then(repository).should().createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord(2)));
-    then(repository).should().deleteVersion(givenDigitalSpecimenRecord(2));
+    then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(handleService).should().deleteVersion(unequalCurrentDigitalSpecimen);
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     assertThat(result).isEmpty();

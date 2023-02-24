@@ -4,6 +4,7 @@
 package eu.dissco.core.digitalspecimenprocessor.database.jooq.tables;
 
 
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.Indexes;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Keys;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.NewDigitalSpecimenRecord;
@@ -14,6 +15,7 @@ import java.util.List;
 
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.JSONB;
 import org.jooq.Name;
 import org.jooq.Record;
@@ -173,13 +175,18 @@ public class NewDigitalSpecimen extends TableImpl<NewDigitalSpecimenRecord> {
     }
 
     @Override
+    public List<Index> getIndexes() {
+        return Arrays.<Index>asList(Indexes.NEW_DIGITAL_SPECIMEN_CREATED_IDX, Indexes.NEW_DIGITAL_SPECIMEN_ID_IDX, Indexes.NEW_DIGITAL_SPECIMEN_PHYSICAL_SPECIMEN_ID_IDX);
+    }
+
+    @Override
     public UniqueKey<NewDigitalSpecimenRecord> getPrimaryKey() {
-        return Keys.NEW_DIGITAL_SPECIMEN_PKEY;
+        return Keys.NEW_DIGITAL_SPECIMEN_PK;
     }
 
     @Override
     public List<UniqueKey<NewDigitalSpecimenRecord>> getKeys() {
-        return Arrays.<UniqueKey<NewDigitalSpecimenRecord>>asList(Keys.NEW_DIGITAL_SPECIMEN_PKEY, Keys.NEW_DIGITAL_SPECIMEN_PHYSICAL_SPECIMEN_ID_KEY);
+        return Arrays.<UniqueKey<NewDigitalSpecimenRecord>>asList(Keys.NEW_DIGITAL_SPECIMEN_PK);
     }
 
     @Override

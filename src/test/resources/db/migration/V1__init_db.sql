@@ -16,7 +16,7 @@ CREATE TABLE public.new_digital_specimen (
 	"data" jsonb NULL,
 	original_data jsonb NULL,
 	dwca_id text NULL,
-	CONSTRAINT new_digital_specimen_pkey PRIMARY KEY (id, version)
+	CONSTRAINT new_digital_specimen_pkey PRIMARY KEY (id)
 );
 CREATE INDEX new_digital_specimen_created_idx ON public.new_digital_specimen USING btree (created);
 CREATE INDEX new_digital_specimen_id_idx ON public.new_digital_specimen USING btree (id, created);

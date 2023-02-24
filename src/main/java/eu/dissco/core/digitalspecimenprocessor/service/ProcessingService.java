@@ -252,7 +252,7 @@ public class ProcessingService {
             + updatedDigitalSpecimenRecord.currentDigitalSpecimen(), e);
       }
     }
-    repository.deleteVersion(updatedDigitalSpecimenRecord.digitalSpecimenRecord());
+    rollBackToEarlierVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
     if (handleNeedsUpdate(updatedDigitalSpecimenRecord.currentDigitalSpecimen().digitalSpecimen(),
         updatedDigitalSpecimenRecord.digitalSpecimenRecord()
             .digitalSpecimen())) {
@@ -267,6 +267,10 @@ public class ProcessingService {
       log.error("Fatal exception, unable to dead letter queue: "
           + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
+  }
+
+  private void rollBackToEarlierVersion(DigitalSpecimenRecord currentDigitalSpecimen) {
+    repository.createDigitalSpecimenRecord(List.of(currentDigitalSpecimen));
   }
 
   private boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,

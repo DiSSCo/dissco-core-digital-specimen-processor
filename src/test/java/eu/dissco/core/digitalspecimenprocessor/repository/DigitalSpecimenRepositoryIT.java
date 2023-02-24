@@ -8,20 +8,16 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mockStatic;
 
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
-import java.sql.BatchUpdateException;
 import java.time.Instant;
 import java.util.List;
 import org.jooq.Record1;
-import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.postgresql.util.PSQLException;
 
 class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
@@ -105,7 +101,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testInsertDuplicateSpecimens() {
+  void testUpsertSpecimens() {
     // Given
     var records = List.of(
         givenDigitalSpecimenRecord(),
@@ -113,13 +109,13 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
         givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2"));
 
     // When
-    var exception = assertThrows(DataAccessException.class, () -> {
-      repository.createDigitalSpecimenRecord(records);
-    });
+    repository.createDigitalSpecimenRecord(records);
 
     // Then
-    assertThat(exception).hasCauseInstanceOf(BatchUpdateException.class).hasRootCauseInstanceOf(
-        PSQLException.class);
+    var result = context.select(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
+        .from(NEW_DIGITAL_SPECIMEN).where(NEW_DIGITAL_SPECIMEN.ID.eq(SECOND_HANDLE))
+        .fetchOne(Record1::value1);
+    assertThat(result).isEqualTo("TEST_2");
   }
 
   @Test
@@ -137,24 +133,6 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     // Then
     var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
     assertThat(result).isEmpty();
-  }
-
-  @Test
-  void testRollbackVersion() throws DisscoRepositoryException {
-    // Given
-    repository.createDigitalSpecimenRecord(
-        List.of(
-            givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
-            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
-    repository.createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord(2)));
-
-    // When
-    repository.deleteVersion(givenDigitalSpecimenRecord(2));
-
-    // Then
-    var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
-    assertThat(result.get(0)).isEqualTo(givenDigitalSpecimenRecord());
   }
 
 }
