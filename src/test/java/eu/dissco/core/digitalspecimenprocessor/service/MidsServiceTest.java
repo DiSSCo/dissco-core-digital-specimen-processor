@@ -48,6 +48,7 @@ class MidsServiceTest {
         Arguments.of(MAPPER.readValue(MISSING_LONGITUDE, DigitalSpecimen.class), 1),
         Arguments.of(MAPPER.readValue(MISSING_QUALITATIVE_LOCATION, DigitalSpecimen.class), 1),
         Arguments.of(MAPPER.readValue(UNKNOWN_SPECIMEN_TYPE, DigitalSpecimen.class), 1),
+        Arguments.of(MAPPER.readValue(BIO_LACKS_MEDIA, DigitalSpecimen.class), 1),
         Arguments.of(MAPPER.readValue(BIO_MIDS_2, DigitalSpecimen.class), 2),
         Arguments.of(MAPPER.readValue(MIDS_2, DigitalSpecimen.class), 2));
   }
@@ -56,7 +57,7 @@ class MidsServiceTest {
   private final static String MISSING_LONGITUDE = """
       {
         "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-        "ods:type": "MycologySpecimen",
+        "ods:type": "GeologyRockSpecimen",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "cetaf",
           "ods:organizationId": "https://ror.org/0443cwa12",
@@ -102,6 +103,35 @@ class MidsServiceTest {
           "ods:collector": "Winkler, H. (Hans) K.A.",
           "ods:dateCollected": "1924-12-10",
           "ods:hasMedia": "true",
+          "dwc:typeStatus": "Known not a type"
+        },
+        "ods:originalAttributes": {}
+      }
+      """;
+
+  private final static String BIO_LACKS_MEDIA = """
+      {
+        "ods:physicalSpecimenId": "HBG500000:00g30e956",
+        "ods:type": "BotanySpecimen",
+        "ods:attributes": {
+          "ods:physicalSpecimenIdType": "combined",
+          "ods:organizationId": "https://ror.org/00g30e956",
+          "ods:specimenName": "Calanthe crenulata",
+          "ods:datasetId": null,
+          "ods:physicalSpecimenCollection": null,
+          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
+          "dwca:id": null,
+          "dcterms:license": "https://creativecommons.org/licenses/by/4.0/",
+          "ods:objectType": "single specimen",
+          "ods:modified": "2017-09-26T12:27:21.000+00:00",
+          "dwc:country": "Indonesia",
+          "dwc:countryCode": "ID",
+          "dwc:decimalLatitude": "-4.066340",
+          "dwc:decimalLongitude": "104.096684",
+          "ods:collectingNumber": "612",
+          "ods:collector": "Winkler, H. (Hans) K.A.",
+          "ods:dateCollected": "1924-12-10",
+          "ods:hasMedia": "false",
           "dwc:typeStatus": "Known not a type"
         },
         "ods:originalAttributes": {}
