@@ -48,12 +48,12 @@ public class MidsService {
   private boolean doesNotComplyTo(List<MIDSFields> fields, JsonNode attributes) {
     for (var field : fields) {
       if (field.equals(MIDSFields.QUANTITATIVE_LOCATION)) {
-        if (isLackingQuantitativeLocation(attributes, field)) {
+        if (hasInvalidField(attributes, field, null)) {
           log.debug(MISSING_MESSAGE, field);
           return true;
         }
       } else if (field.equals(MIDSFields.HAS_MEDIA)) {
-        if (isLackingMedia(attributes, field)) {
+        if (hasInvalidField(attributes, field, "true")) {
           log.debug(MISSING_MESSAGE, field);
           return true;
         }
@@ -79,26 +79,12 @@ public class MidsService {
     return true;
   }
 
-  private boolean isLackingMedia(JsonNode attributes, MIDSFields field) {
+  private boolean hasInvalidField(JsonNode attributes, MIDSFields field, String expectedValue) {
     for (var term : field.getTerm()) {
       if (attributes.get(term) != null) {
         var data = attributes.get(term).asText();
-        if (data == null || data.trim().equals("") || data.equals("null")
-            || data.equalsIgnoreCase("false")) {
-          return true;
-        }
-      } else {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean isLackingQuantitativeLocation(JsonNode attributes, MIDSFields field) {
-    for (var term : field.getTerm()) {
-      if (attributes.get(term) != null) {
-        var data = attributes.get(term).asText();
-        if (data == null || data.trim().equals("") || data.equals("null")) {
+        if (data == null || data.trim().equals("") || data.equals("null") ||
+            (expectedValue != null && !data.equalsIgnoreCase(expectedValue))) {
           return true;
         }
       } else {

@@ -1,9 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.util.stream.Stream;
@@ -16,8 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class MidsServiceTest {
-
-  private static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
 
   private MidsService midsService;
 
