@@ -10,7 +10,7 @@ public enum MIDSFields {
 
   // MIDS_1
   LICENSE(List.of("dcterms:license"), 1),
-  MODIFIED(List.of("ods:modified"), 1),
+  MODIFIED(List.of("dcterms:modified"), 1),
   OBJECT_TYPE(List.of("ods:objectType"), 1),
   SPECIMEN_TYPE(List.of("ods:type"), 1),
   NAME(List.of("ods:specimenName"), 1),
