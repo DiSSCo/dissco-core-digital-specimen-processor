@@ -66,7 +66,7 @@ class MidsServiceTest {
           "dwca:id": null,
           "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
           "ods:objectType": "single specimen",
-          "ods:modified": "2017-09-26T12:27:21.000+00:00",
+          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
           "dwc:earliestAgeOrLowestStage": "Pakerort Stage",
           "dwc:latestAgeOrHighestStage": "Pakerort Stage",
           "dwc:country": "Estonia",
@@ -92,7 +92,7 @@ class MidsServiceTest {
           "dwca:id": null,
           "dcterms:license": "https://creativecommons.org/licenses/by/4.0/",
           "ods:objectType": "single specimen",
-          "ods:modified": "2017-09-26T12:27:21.000+00:00",
+          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
           "dwc:country": "Indonesia",
           "dwc:countryCode": "ID",
           "dwc:decimalLatitude": "-4.066340",
@@ -121,7 +121,7 @@ class MidsServiceTest {
           "dwca:id": null,
           "dcterms:license": "https://creativecommons.org/licenses/by/4.0/",
           "ods:objectType": "single specimen",
-          "ods:modified": "2017-09-26T12:27:21.000+00:00",
+          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
           "dwc:country": "Indonesia",
           "dwc:countryCode": "ID",
           "dwc:decimalLatitude": "-4.066340",
@@ -150,7 +150,7 @@ class MidsServiceTest {
           "dwca:id": null,
           "dcterms:license": "https://creativecommons.org/licenses/by/4.0/",
           "ods:objectType": "single specimen",
-          "ods:modified": "2017-09-26T12:27:21.000+00:00",
+          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
           "dwc:country": "Indonesia",
           "dwc:countryCode": "ID",
           "dwc:decimalLatitude": "-4.066340",
@@ -179,7 +179,7 @@ class MidsServiceTest {
           "dwca:id": null,
           "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
           "ods:objectType": "single specimen",
-          "ods:modified": "2017-09-26T12:27:21.000+00:00",
+          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
           "dwc:earliestAgeOrLowestStage": "Pakerort Stage",
           "dwc:latestAgeOrHighestStage": "Pakerort Stage",
           "dwc:decimalLatitude": "59.465625",
@@ -203,7 +203,7 @@ class MidsServiceTest {
           "dwca:id": null,
           "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
           "ods:objectType": "single specimen",
-          "ods:modified": "2017-09-26T12:27:21.000+00:00",
+          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
           "dwc:earliestAgeOrLowestStage": "Pakerort Stage",
           "dwc:latestAgeOrHighestStage": "Pakerort Stage",
           "dwc:country": "Estonia",
@@ -230,7 +230,7 @@ class MidsServiceTest {
           "dwca:id": null,
           "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
           "ods:objectType": "single specimen",
-          "ods:modified": "2017-09-26T12:27:21.000+00:00"
+          "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
         },
         "ods:originalAttributes": {}
       }
@@ -250,7 +250,7 @@ class MidsServiceTest {
               "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
               "dwca:id": null,
               "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-              "ods:modified": "2017-09-26T12:27:21.000+00:00"
+              "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
             },
             "ods:originalAttributes": {}
           }
@@ -271,7 +271,7 @@ class MidsServiceTest {
               "dwca:id": null,
               "ods:objectType": "single specimen",
               "dcterms:license": "    ",
-              "ods:modified": "2017-09-26T12:27:21.000+00:00"
+              "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
             },
             "ods:originalAttributes": {}
           }
@@ -292,7 +292,7 @@ class MidsServiceTest {
               "dwca:id": null,
               "ods:objectType": "single specimen",
               "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-              "ods:modified": "2017-09-26T12:27:21.000+00:00"
+              "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
             },
             "ods:originalAttributes": {}
           }
