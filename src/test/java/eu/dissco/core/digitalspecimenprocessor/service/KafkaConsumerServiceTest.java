@@ -62,7 +62,7 @@ class KafkaConsumerServiceTest {
             "physicalSpecimenId": "https://geocollections.info/specimen/23602",
             "physicalSpecimenIdType": "cetaf",
             "specimenName": "Biota,
-            "organizationId": "https://ror.org/0443cwa12",
+            "organisationId": "https://ror.org/0443cwa12",
             "datasetId": null,
             "physicalSpecimenCollection": null,
             "sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
@@ -84,7 +84,7 @@ class KafkaConsumerServiceTest {
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
               "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organizationId": "https://ror.org/0443cwa12",
+              "ods:organisationId": "https://ror.org/0443cwa12",
               "ods:specimenName": "Biota",
               "ods:datasetId": null,
               "ods:physicalSpecimenCollection": null,

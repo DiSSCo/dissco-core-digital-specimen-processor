@@ -201,8 +201,8 @@ class ProcessingServiceTest {
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
     var thirdSpecimen = givenDigitalSpecimenRecord(THIRD_HANDLE, "A third Specimen");
     given(repository.getDigitalSpecimens(anyList())).willReturn(List.of());
-    given(handleService.createNewHandle(any(DigitalSpecimen.class))).willReturn(HANDLE)
-        .willReturn(SECOND_HANDLE).willReturn(THIRD_HANDLE);
+    given(handleService.createNewHandle(any(DigitalSpecimen.class))).willReturn(THIRD_HANDLE)
+        .willReturn(SECOND_HANDLE).willReturn(HANDLE);
     given(midsService.calculateMids(any(DigitalSpecimen.class))).willReturn(1);
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
@@ -217,12 +217,13 @@ class ProcessingServiceTest {
     then(repository).should().rollbackSpecimen(secondSpecimen.id());
     then(handleService).should().rollbackHandleCreation(secondSpecimen);
     then(kafkaService).should().deadLetterEvent(secondEvent);
-    assertThat(result).isEqualTo(List.of(thirdSpecimen, givenDigitalSpecimenRecord()));
+    assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(), thirdSpecimen));
   }
 
   @Test
   void testNewSpecimenKafkaFailed()
       throws DisscoRepositoryException, TransformerException, IOException {
+    // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(handleService.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
 
@@ -264,14 +265,14 @@ class ProcessingServiceTest {
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
     given(repository.getDigitalSpecimens(
-        List.of(PHYSICAL_SPECIMEN_ID, "Another Specimen", "A third Specimen")))
-        .willReturn(List.of(givenUnequalDigitalSpecimenRecord(),
+        List.of("A third Specimen", "Another Specimen", PHYSICAL_SPECIMEN_ID)))
+        .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
-            givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen")));
-
+            givenUnequalDigitalSpecimenRecord()
+            ));
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(thirdEvent.digitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(

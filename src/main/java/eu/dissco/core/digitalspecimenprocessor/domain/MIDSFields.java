@@ -6,7 +6,7 @@ public enum MIDSFields {
 
   // MIDS_0
   PHYSICAL_SPECIMEN_ID(List.of("ods:physicalSpecimenId"), 0),
-  ORGANISATION_ID(List.of("ods:organizationId"), 0),
+  ORGANISATION_ID(List.of("ods:organisationId"), 0),
 
   // MIDS_1
   LICENSE(List.of("dcterms:license"), 1),
