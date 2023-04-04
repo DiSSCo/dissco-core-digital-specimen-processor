@@ -1,8 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import java.text.SimpleDateFormat;
 import java.util.Random;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -19,8 +17,6 @@ public class ApplicationConfiguration {
   public ObjectMapper objectMapper() {
     var mapper = new ObjectMapper();
     mapper.findAndRegisterModules();
-    mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS"));
-    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     return mapper;
   }
 
