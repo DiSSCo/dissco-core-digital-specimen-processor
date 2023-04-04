@@ -5,7 +5,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DATASET_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DWCA_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANIZATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_COLLECTION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_TYPE;
@@ -77,7 +77,7 @@ class DigitalSpecimenControllerTest {
   private JsonNode givenAttributes() {
     var attributes = mapper.createObjectNode();
     attributes.put("ods:physicalSpecimenIdType", PHYSICAL_SPECIMEN_TYPE);
-    attributes.put("ods:organizationId", ORGANIZATION_ID);
+    attributes.put("ods:organisationId", ORGANISATION_ID);
     attributes.put("ods:specimenName", SPECIMEN_NAME);
     attributes.put("ods:datasetId", DATASET_ID);
     attributes.put("ods:physicalSpecimenCollection", PHYSICAL_SPECIMEN_COLLECTION);
@@ -92,7 +92,7 @@ class DigitalSpecimenControllerTest {
         PHYSICAL_SPECIMEN_ID,
         PHYSICAL_SPECIMEN_TYPE,
         SPECIMEN_NAME,
-        ORGANIZATION_ID,
+        ORGANISATION_ID,
         DATASET_ID,
         PHYSICAL_SPECIMEN_COLLECTION,
         SOURCE_SYSTEM_ID,

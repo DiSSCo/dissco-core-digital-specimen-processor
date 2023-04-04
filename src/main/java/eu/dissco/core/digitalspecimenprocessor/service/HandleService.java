@@ -78,7 +78,7 @@ public class HandleService {
     handleAttributes.add(new HandleAttribute(14, "digitalOrPhysical", "physical".getBytes(
         StandardCharsets.UTF_8)));
     handleAttributes.add(new HandleAttribute(15, SPECIMEN_HOST, createPidReference(
-        digitalSpecimen.attributes().get("ods:organizationId").asText(), "ROR", TO_BE_FIXED)));
+        digitalSpecimen.attributes().get("ods:organisationId").asText(), "ROR", TO_BE_FIXED)));
     handleAttributes.add(new HandleAttribute(100, "HS_ADMIN", decodeAdmin()));
     return handleAttributes;
   }
@@ -161,7 +161,7 @@ public class HandleService {
     handleAttributes.add(new HandleAttribute(4, DIGITAL_OBJECT_SUBTYPE,
         createPidReference(DUMMY_HANDLE, HANDLE, digitalSpecimen.type())));
     handleAttributes.add(new HandleAttribute(15, SPECIMEN_HOST, createPidReference(
-        digitalSpecimen.attributes().get("ods:organizationId").asText(), "ROR", TO_BE_FIXED)));
+        digitalSpecimen.attributes().get("ods:organisationId").asText(), "ROR", TO_BE_FIXED)));
     return handleAttributes;
   }
 

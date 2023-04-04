@@ -56,7 +56,7 @@ public class DigitalSpecimenController {
     var digtalSpecimenOld = event.digitalSpecimen();
     var attributes = mapper.createObjectNode();
     attributes.put("ods:physicalSpecimenIdType", digtalSpecimenOld.physicalSpecimenIdType());
-    attributes.put("ods:organizationId", digtalSpecimenOld.organizationId());
+    attributes.put("ods:organisationId", digtalSpecimenOld.organizationId());
     attributes.put("ods:specimenName", digtalSpecimenOld.specimenName());
     attributes.put("ods:datasetId", digtalSpecimenOld.datasetId());
     attributes.put("ods:physicalSpecimenCollection",

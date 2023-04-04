@@ -67,7 +67,7 @@ public class DigitalSpecimenRepository {
                 .asText()).set(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME,
             digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:specimenName").asText())
         .set(NEW_DIGITAL_SPECIMEN.ORGANIZATION_ID,
-            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:organizationId").asText())
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:organisationId").asText())
         .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_COLLECTION,
             digitalSpecimenRecord.digitalSpecimen().attributes()
                 .get("ods:physicalSpecimenCollection").asText()).set(NEW_DIGITAL_SPECIMEN.DATASET,
@@ -92,7 +92,7 @@ public class DigitalSpecimenRepository {
                 .asText()).set(NEW_DIGITAL_SPECIMEN.SPECIMEN_NAME,
             digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:specimenName").asText())
         .set(NEW_DIGITAL_SPECIMEN.ORGANIZATION_ID,
-            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:organizationId").asText())
+            digitalSpecimenRecord.digitalSpecimen().attributes().get("ods:organisationId").asText())
         .set(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_COLLECTION,
             digitalSpecimenRecord.digitalSpecimen().attributes()
                 .get("ods:physicalSpecimenCollection").asText()).set(NEW_DIGITAL_SPECIMEN.DATASET,

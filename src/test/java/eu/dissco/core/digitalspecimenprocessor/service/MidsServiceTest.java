@@ -58,7 +58,7 @@ class MidsServiceTest {
         "ods:type": "GeologyRockSpecimen",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organizationId": "https://ror.org/0443cwa12",
+          "ods:organisationId": "https://ror.org/0443cwa12",
           "ods:specimenName": "Biota",
           "ods:datasetId": null,
           "ods:physicalSpecimenCollection": null,
@@ -84,7 +84,7 @@ class MidsServiceTest {
         "ods:type": "BotanySpecimen",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "combined",
-          "ods:organizationId": "https://ror.org/00g30e956",
+          "ods:organisationId": "https://ror.org/00g30e956",
           "ods:specimenName": "Calanthe crenulata",
           "ods:datasetId": null,
           "ods:physicalSpecimenCollection": null,
@@ -113,7 +113,7 @@ class MidsServiceTest {
         "ods:type": "BotanySpecimen",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "combined",
-          "ods:organizationId": "https://ror.org/00g30e956",
+          "ods:organisationId": "https://ror.org/00g30e956",
           "ods:specimenName": "Calanthe crenulata",
           "ods:datasetId": null,
           "ods:physicalSpecimenCollection": null,
@@ -142,7 +142,7 @@ class MidsServiceTest {
         "ods:type": "UnknownType",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "combined",
-          "ods:organizationId": "https://ror.org/00g30e956",
+          "ods:organisationId": "https://ror.org/00g30e956",
           "ods:specimenName": "Calanthe crenulata",
           "ods:datasetId": null,
           "ods:physicalSpecimenCollection": null,
@@ -171,7 +171,7 @@ class MidsServiceTest {
         "ods:type": "GeologyRockSpecimen",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organizationId": "https://ror.org/0443cwa12",
+          "ods:organisationId": "https://ror.org/0443cwa12",
           "ods:specimenName": "Biota",
           "ods:datasetId": null,
           "ods:physicalSpecimenCollection": null,
@@ -195,7 +195,7 @@ class MidsServiceTest {
         "ods:type": "GeologyRockSpecimen",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organizationId": "https://ror.org/0443cwa12",
+          "ods:organisationId": "https://ror.org/0443cwa12",
           "ods:specimenName": "Biota",
           "ods:datasetId": null,
           "ods:physicalSpecimenCollection": null,
@@ -222,7 +222,7 @@ class MidsServiceTest {
         "ods:type": "GeologyRockSpecimen",
         "ods:attributes": {
           "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organizationId": "https://ror.org/0443cwa12",
+          "ods:organisationId": "https://ror.org/0443cwa12",
           "ods:specimenName": "Biota",
           "ods:datasetId": null,
           "ods:physicalSpecimenCollection": null,
@@ -243,7 +243,7 @@ class MidsServiceTest {
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
               "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organizationId": "https://ror.org/0443cwa12",
+              "ods:organisationId": "https://ror.org/0443cwa12",
               "ods:specimenName": "Biota",
               "ods:datasetId": null,
               "ods:physicalSpecimenCollection": null,
@@ -263,7 +263,7 @@ class MidsServiceTest {
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
               "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organizationId": "https://ror.org/0443cwa12",
+              "ods:organisationId": "https://ror.org/0443cwa12",
               "ods:specimenName": "Biota",
               "ods:datasetId": null,
               "ods:physicalSpecimenCollection": null,
@@ -284,7 +284,7 @@ class MidsServiceTest {
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
               "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organizationId": "https://ror.org/0443cwa12",
+              "ods:organisationId": "https://ror.org/0443cwa12",
               "ods:specimenName": "null",
               "ods:datasetId": null,
               "ods:physicalSpecimenCollection": null,

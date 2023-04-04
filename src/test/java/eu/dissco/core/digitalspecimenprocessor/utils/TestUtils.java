@@ -24,7 +24,7 @@ public class TestUtils {
   public static String PHYSICAL_SPECIMEN_TYPE = "cetaf";
   public static String SPECIMEN_NAME = "Biota";
   public static String ANOTHER_SPECIMEN_NAME = "Another SpecimenName";
-  public static String ORGANIZATION_ID = "https://ror.org/0443cwa12";
+  public static String ORGANISATION_ID = "https://ror.org/0443cwa12";
   public static String ANOTHER_ORGANISATION = "Another organisation";
   public static String DATASET_ID = null;
   public static String PHYSICAL_SPECIMEN_COLLECTION = null;
@@ -86,7 +86,7 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord() {
-    return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANIZATION_ID);
+    return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID);
   }
 
   public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String organisation) {
@@ -121,14 +121,14 @@ public class TestUtils {
         MIDS_LEVEL,
         VERSION,
         CREATED,
-        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME, ORGANIZATION_ID)
+        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID)
     );
   }
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId) {
     return new DigitalSpecimenEvent(
         List.of(AAS),
-        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME, ORGANIZATION_ID)
+        givenDigitalSpecimen(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID)
     );
   }
 
@@ -141,7 +141,7 @@ public class TestUtils {
   }
 
   public static DigitalSpecimen givenDigitalSpecimen() {
-    return givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANIZATION_ID);
+    return givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANISATION_ID);
   }
 
   public static DigitalSpecimen givenDigitalSpecimen(String physicalSpecimenId, String specimenName,
@@ -157,7 +157,7 @@ public class TestUtils {
   private static JsonNode givenAttributes(String specimenName, String organisation) {
     var attributes = new ObjectMapper().createObjectNode();
     attributes.put("ods:physicalSpecimenIdType", PHYSICAL_SPECIMEN_TYPE);
-    attributes.put("ods:organizationId", organisation);
+    attributes.put("ods:organisationId", organisation);
     attributes.put("ods:specimenName", specimenName);
     attributes.put("ods:datasetId", DATASET_ID);
     attributes.put("ods:physicalSpecimenCollection", PHYSICAL_SPECIMEN_COLLECTION);

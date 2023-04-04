@@ -283,8 +283,8 @@ public class ProcessingService {
   }
 
   private String getOrganisation(DigitalSpecimen digitalSpecimen) {
-    if (digitalSpecimen.attributes().get("ods:organizationId") != null) {
-      return digitalSpecimen.attributes().get("ods:organizationId").asText();
+    if (digitalSpecimen.attributes().get("ods:organisationId") != null) {
+      return digitalSpecimen.attributes().get("ods:organisationId").asText();
     } else {
       return null;
     }
@@ -313,7 +313,7 @@ public class ProcessingService {
     } catch (IOException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
-      return Set.of();
+      return Collections.emptySet();
     }
   }
 
@@ -365,7 +365,9 @@ public class ProcessingService {
       try {
         kafkaService.publishAnnotationRequestEvent(aas, key);
       } catch (JsonProcessingException e) {
-        log.error("No action take, failed to publish annotation request event", e);
+        log.error(
+            "No action taken, failed to publish annotation request event for aas: {} digital specimen: {}",
+            aas, key.id(), e);
       }
     });
     return true;
