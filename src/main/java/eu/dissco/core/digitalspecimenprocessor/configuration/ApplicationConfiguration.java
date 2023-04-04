@@ -19,8 +19,6 @@ public class ApplicationConfiguration {
   public ObjectMapper objectMapper() {
     var mapper = new ObjectMapper();
     mapper.findAndRegisterModules();
-    mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS"));
-    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     return mapper;
   }
 
