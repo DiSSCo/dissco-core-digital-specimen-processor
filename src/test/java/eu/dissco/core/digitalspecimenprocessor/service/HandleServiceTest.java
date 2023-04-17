@@ -2,8 +2,9 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.LOCAL_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
@@ -18,6 +19,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
@@ -30,7 +32,6 @@ import java.util.Optional;
 import java.util.Random;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import org.jooq.Field;
 import org.jooq.Record;
@@ -85,6 +86,26 @@ class HandleServiceTest {
     // Then
     then(repository).should().createHandle(eq(expected), eq(CREATED), anyList());
     assertThat(result).isEqualTo(expected);
+  }
+
+  @Test
+  void testCreateNewHandleEmptySpecimen() throws Exception {
+    // Given
+    given(random.nextInt(33)).willReturn(21);
+    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
+
+    var expected = "20.5000.1025/YYY-YYY-YYY";
+
+    // When
+    var result = service.createNewHandle(givenEmptyDigitalSpecimen());
+
+    // Then
+    then(repository).should().createHandle(eq(expected), eq(CREATED), anyList());
+    assertThat(result).isEqualTo(expected);
+  }
+
+  private DigitalSpecimen givenEmptyDigitalSpecimen(){
+    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, MAPPER.createObjectNode(), MAPPER.createObjectNode());
   }
 
   @Test
