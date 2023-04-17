@@ -71,7 +71,7 @@ public class HandleService {
       HANDLE_PROXY + "21.T11148/894b1e6cad57e921764e";
   private static final byte[] DIGITAL_OBJECT_TYPE_VALUE = "digitalSpecimen".getBytes(
       StandardCharsets.UTF_8);
-  private static final byte[] FDO_RECORD_LICS_LOC = "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(
+  private static final byte[] FDO_RECORD_LICENSE_LOC = "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(
       StandardCharsets.UTF_8);
   private static final HashSet<String> notTypes = new HashSet<>(
       Arrays.asList("false", "specimen", "type"));
@@ -120,8 +120,15 @@ public class HandleService {
     }
   }
 
-
   private List<HandleAttribute> fillFdoRecord(DigitalSpecimen digitalSpecimen, String handle, Instant recordTimeStamp)
+      throws TransformerException {
+    List<HandleAttribute> fdoRecord = new ArrayList<>();
+    fdoRecord.addAll(fillFdoRecordGeneratedAttributes(handle, recordTimeStamp));
+    fdoRecord.addAll(fillFdoRecordSpecimenAttributes(digitalSpecimen));
+    return fdoRecord;
+  }
+
+  private List<HandleAttribute> fillFdoRecordGeneratedAttributes(String handle, Instant recordTimeStamp)
       throws TransformerException {
     List<HandleAttribute> fdoRecord = new ArrayList<>();
 
@@ -140,7 +147,7 @@ public class HandleService {
 
     // 2: FDO Record License
     fdoRecord.add(new HandleAttribute(FIELD_IDX.get(FDO_RECORD_LICENSE),
-        FDO_RECORD_LICENSE, FDO_RECORD_LICS_LOC));
+        FDO_RECORD_LICENSE, FDO_RECORD_LICENSE_LOC));
 
     // 3: DigitalObjectType
     fdoRecord.add(
@@ -202,11 +209,6 @@ public class HandleService {
         new HandleAttribute(FIELD_IDX.get(REFERENT_DOI_NAME), REFERENT_DOI_NAME, handle.getBytes(
             StandardCharsets.UTF_8)));
 
-    // 42: referentName
-    fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(REFERENT_NAME), REFERENT_NAME,
-            getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "specimenName",
-                UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
     // 43: primaryReferentType
     fdoRecord.add(
@@ -216,6 +218,22 @@ public class HandleService {
     // 44: referent
     fdoRecord.add(new HandleAttribute(FIELD_IDX.get(REFERENT), REFERENT,
         TO_BE_FIXED.getBytes(StandardCharsets.UTF_8)));
+
+    // 210: objectType
+    fdoRecord.add(
+        new HandleAttribute(FIELD_IDX.get(OBJECT_TYPE), OBJECT_TYPE,
+            "Digital Specimen".getBytes(StandardCharsets.UTF_8)));
+
+    return fdoRecord;
+  }
+
+  private List<HandleAttribute> fillFdoRecordSpecimenAttributes(DigitalSpecimen digitalSpecimen){
+    List<HandleAttribute> fdoRecord = new ArrayList<>();
+    // 42: referentName
+    fdoRecord.add(
+        new HandleAttribute(FIELD_IDX.get(REFERENT_NAME), REFERENT_NAME,
+            getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "specimenName",
+                UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
     // 200: SpecimenHost
     fdoRecord.add(
@@ -265,11 +283,6 @@ public class HandleService {
               StandardCharsets.UTF_8)));
     }
 
-    // 210: objectType
-    fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(OBJECT_TYPE), OBJECT_TYPE,
-            "Digital Specimen".getBytes(StandardCharsets.UTF_8)));
-
     // 211: livingOrPreserved
     var livingOrPreserved = getUnharmonisedAttributeFromDigitalSpecimen(digitalSpecimen, "dwca:basisOfRecord",
         "");
@@ -283,7 +296,7 @@ public class HandleService {
     var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX+"typeStatus", "");
     if (!(specimenType.isEmpty() && notTypes.contains(specimenType))){
       fdoRecord.add(new HandleAttribute(FIELD_IDX.get(MARKED_AS_TYPE), MARKED_AS_TYPE,
-         "TRUE".getBytes(StandardCharsets.UTF_8)));
+          "TRUE".getBytes(StandardCharsets.UTF_8)));
     }
     else {
       fdoRecord.add(new HandleAttribute(FIELD_IDX.get(MARKED_AS_TYPE), MARKED_AS_TYPE,
@@ -335,14 +348,6 @@ public class HandleService {
     return writer.getBuffer().toString();
   }
 
-  private byte[] createPidReference(String pid, String pidType, String primaryNameFromPid) {
-    var objectNode = mapper.createObjectNode();
-    objectNode.put("id", pid);
-    objectNode.put("pidType", pidType);
-    objectNode.put("primaryNameFromPid", primaryNameFromPid);
-    return objectNode.toString().getBytes(StandardCharsets.UTF_8);
-  }
-
   private String generateHandle() {
     return PREFIX + newSuffix();
   }
@@ -378,18 +383,9 @@ public class HandleService {
   }
 
   private void updateHandle(String id, DigitalSpecimen digitalSpecimen) {
-    var handleAttributes = updatedHandles(digitalSpecimen);
+    var handleAttributes = fillFdoRecordSpecimenAttributes(digitalSpecimen);
     var recordTimestamp = Instant.now();
     repository.updateHandleAttributes(id, recordTimestamp, handleAttributes, true);
-  }
-
-  private List<HandleAttribute> updatedHandles(DigitalSpecimen digitalSpecimen) {
-    var handleAttributes = new ArrayList<HandleAttribute>();
-    handleAttributes.add(new HandleAttribute(4, DIGITAL_OBJECT_SUBTYPE,
-        createPidReference(DUMMY_HANDLE, HANDLE, digitalSpecimen.type())));
-    handleAttributes.add(new HandleAttribute(15, SPECIMEN_HOST, createPidReference(
-        digitalSpecimen.attributes().get("ods:organisationId").asText(), "ROR", TO_BE_FIXED)));
-    return handleAttributes;
   }
 
   public void updateHandles(List<UpdatedDigitalSpecimenTuple> handleUpdates) {
@@ -404,7 +400,7 @@ public class HandleService {
   }
 
   public void deleteVersion(DigitalSpecimenRecord currentDigitalSpecimen) {
-    var handleAttributes = updatedHandles(currentDigitalSpecimen.digitalSpecimen());
+    var handleAttributes = fillFdoRecordSpecimenAttributes(currentDigitalSpecimen.digitalSpecimen());
     repository.updateHandleAttributes(currentDigitalSpecimen.id(), Instant.now(), handleAttributes,
         false);
   }
