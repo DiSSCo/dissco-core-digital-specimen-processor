@@ -8,6 +8,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -43,15 +44,16 @@ class HandleServiceTest {
   private MockedStatic<Instant> mockedStatic;
 
   private HandleService service;
+  Instant instant;
 
   @BeforeEach
   void setup() throws ParserConfigurationException {
     var docFactory = DocumentBuilderFactory.newInstance();
-    var transfactory = TransformerFactory.newInstance();
+    var transFactory = TransformerFactory.newInstance();
     service = new HandleService(random, MAPPER, docFactory.newDocumentBuilder(), repository,
-        transfactory);
+        transFactory);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
-    Instant instant = Instant.now(clock);
+    instant = Instant.now(clock);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
   }
@@ -62,9 +64,11 @@ class HandleServiceTest {
   }
 
   @Test
-  void testCreateNewHandle() throws TransformerException {
+  void testCreateNewHandle() throws Exception {
     // Given
     given(random.nextInt(33)).willReturn(21);
+    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
+
     var expected = "20.5000.1025/YYY-YYY-YYY";
 
     // When

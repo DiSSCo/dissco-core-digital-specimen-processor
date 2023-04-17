@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 public class TestUtils {
@@ -17,7 +19,7 @@ public class TestUtils {
   public static String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
   public static int MIDS_LEVEL = 1;
   public static int VERSION = 1;
-  public static Instant CREATED = Instant.parse("2022-11-01T09:59:24.00Z");
+  public static Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
   public static String AAS = "OCR";
   public static String TYPE = "GeologyRockSpecimen";
   public static String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";

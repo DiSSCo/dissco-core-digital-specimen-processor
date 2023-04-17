@@ -124,7 +124,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testNewSpecimen() throws TransformerException, IOException, DisscoRepositoryException {
+  void testNewSpecimen() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(handleService.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
@@ -146,7 +146,7 @@ class ProcessingServiceTest {
 
   @Test
   void testDuplicateNewSpecimen()
-      throws TransformerException, IOException, DisscoRepositoryException {
+      throws Exception {
     // Given
     var duplicateSpecimen = new DigitalSpecimenEvent(List.of(AAS),
         givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION));
@@ -172,7 +172,7 @@ class ProcessingServiceTest {
 
   @Test
   void testNewSpecimenIOException()
-      throws TransformerException, IOException, DisscoRepositoryException {
+      throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(handleService.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
@@ -194,7 +194,7 @@ class ProcessingServiceTest {
 
   @Test
   void testNewSpecimenPartialElasticFailed()
-      throws TransformerException, IOException, DisscoRepositoryException {
+      throws Exception {
     // Given
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var secondSpecimen = givenDigitalSpecimenRecord(SECOND_HANDLE, "Another Specimen");
@@ -222,7 +222,7 @@ class ProcessingServiceTest {
 
   @Test
   void testNewSpecimenKafkaFailed()
-      throws DisscoRepositoryException, TransformerException, IOException {
+      throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(handleService.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
@@ -334,7 +334,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testNewSpecimenError() throws TransformerException, DisscoRepositoryException {
+  void testNewSpecimenError() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(handleService.createNewHandle(givenDigitalSpecimen())).willThrow(

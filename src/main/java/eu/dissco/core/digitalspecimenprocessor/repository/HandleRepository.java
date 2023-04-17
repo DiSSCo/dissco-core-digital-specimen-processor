@@ -1,15 +1,18 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.HANDLES;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_SPECIMEN_OBJECT_ID;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.Query;
+import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -36,6 +39,14 @@ public class HandleRepository {
       queryList.add(query);
     }
     context.batch(queryList).execute();
+  }
+
+  public Optional<Record> searchByPrimarySpecimenObjectId(byte[] primarySpecimenObjectId){
+    return context.select(HANDLES.asterisk())
+        .from(HANDLES)
+        .where(HANDLES.TYPE.eq(PRIMARY_SPECIMEN_OBJECT_ID.getBytes(StandardCharsets.UTF_8)))
+        .and(HANDLES.DATA.eq(primarySpecimenObjectId))
+        .fetchOptional();
   }
 
   public void updateHandleAttributes(String id, Instant recordTimestamp,
