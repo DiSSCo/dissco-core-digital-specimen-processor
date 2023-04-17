@@ -1,11 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.HANDLES;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.FIELD_IDX;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_SPECIMEN_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static org.assertj.core.api.Assertions.as;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.LOCAL_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleAttributes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
@@ -19,8 +18,6 @@ import org.junit.jupiter.api.Test;
 class HandleRepositoryIT extends BaseRepositoryIT {
 
   private HandleRepository repository;
-
-  private static final byte[] OBJECT_ID = "0x12:RMNH.QW99".getBytes(StandardCharsets.UTF_8);
 
   @BeforeEach
   void setup() {
@@ -107,7 +104,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
     repository.createHandle(HANDLE, CREATED, handleAttributes);
 
     // When
-    var result = repository.searchByPrimarySpecimenObjectId(OBJECT_ID);
+    var result = repository.searchByPrimarySpecimenObjectId(LOCAL_OBJECT_ID);
     var resultHandle = result.map(
         record -> new String(record.get(HANDLES.HANDLE), StandardCharsets.UTF_8)).orElse("");
 
@@ -126,20 +123,6 @@ class HandleRepositoryIT extends BaseRepositoryIT {
 
     // Then
     assertThat(result).isNotPresent();
-  }
-
-  private List<HandleAttribute> givenHandleAttributes() {
-    return List.of(
-        new HandleAttribute(1, "pid",
-            ("https://hdl.handle.net/" + HANDLE).getBytes(StandardCharsets.UTF_8)),
-        new HandleAttribute(11, "pidKernelMetadataLicense",
-            "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8)),
-        new HandleAttribute(FIELD_IDX.get(PRIMARY_SPECIMEN_OBJECT_ID),
-            PRIMARY_SPECIMEN_OBJECT_ID,
-            OBJECT_ID),
-        new HandleAttribute(7, "issueNumber", "1".getBytes(StandardCharsets.UTF_8)),
-        new HandleAttribute(100, "HS_ADMIN", "TEST_ADMIN_STRING".getBytes(StandardCharsets.UTF_8))
-    );
   }
 
 }

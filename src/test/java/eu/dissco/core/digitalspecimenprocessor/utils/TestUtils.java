@@ -1,5 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.FIELD_IDX;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_SPECIMEN_OBJECT_ID;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,8 +10,8 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 public class TestUtils {
@@ -33,6 +36,9 @@ public class TestUtils {
   public static String SOURCE_SYSTEM_ID = "20.5000.1025/MN0-5XP-FFD";
   public static JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static String DWCA_ID = null;
+
+  public static final byte[] LOCAL_OBJECT_ID = "0x12:RMNH.QW99".getBytes(StandardCharsets.UTF_8);
+
 
   public static JsonNode generateSpecimenOriginalData() {
     try {
@@ -169,6 +175,20 @@ public class TestUtils {
     attributes.put("ods:objectType", "");
     attributes.put("ods:modified","2017-09-26T12:27:21.000+00:00");
     return attributes;
+  }
+
+  public static List<HandleAttribute> givenHandleAttributes() {
+    return List.of(
+        new HandleAttribute(1, "pid",
+            ("https://hdl.handle.net/" + HANDLE).getBytes(StandardCharsets.UTF_8)),
+        new HandleAttribute(11, "pidKernelMetadataLicense",
+            "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8)),
+        new HandleAttribute(FIELD_IDX.get(PRIMARY_SPECIMEN_OBJECT_ID),
+            PRIMARY_SPECIMEN_OBJECT_ID,
+            LOCAL_OBJECT_ID),
+        new HandleAttribute(7, "issueNumber", "1".getBytes(StandardCharsets.UTF_8)),
+        new HandleAttribute(100, "HS_ADMIN", "TEST_ADMIN_STRING".getBytes(StandardCharsets.UTF_8))
+    );
   }
 
 }

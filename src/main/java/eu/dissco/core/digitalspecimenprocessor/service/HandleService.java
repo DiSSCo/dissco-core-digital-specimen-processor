@@ -31,7 +31,6 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.REFERENT_T
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.SPECIMEN_HOST_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.STRUCTURAL_TYPE;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
@@ -81,15 +80,11 @@ public class HandleService {
   private static final String UNKNOWN = "Unknown";
 
   private static final String PREFIX = "20.5000.1025/";
-  private static final String HANDLE = "Handle";
-  private static final String DIGITAL_OBJECT_SUBTYPE = "digitalObjectSubtype";
   private static final String SPECIMEN_HOST = "specimenHost";
   private static final String TO_BE_FIXED = "Needs to be fixed!";
-  private static final String DUMMY_HANDLE = "http://hdl.handle.net/21...";
   private final Random random;
   private final char[] symbols = "ABCDEFGHJKLMNPQRSTVWXYZ1234567890".toCharArray();
   private final char[] buffer = new char[11];
-  private final ObjectMapper mapper;
   private final DocumentBuilder documentBuilder;
   private final HandleRepository repository;
   private final TransformerFactory transformerFactory;
@@ -120,7 +115,8 @@ public class HandleService {
     }
   }
 
-  private List<HandleAttribute> fillFdoRecord(DigitalSpecimen digitalSpecimen, String handle, Instant recordTimeStamp)
+  private List<HandleAttribute> fillFdoRecord(DigitalSpecimen digitalSpecimen, String handle,
+      Instant recordTimeStamp)
       throws TransformerException {
     List<HandleAttribute> fdoRecord = new ArrayList<>();
     fdoRecord.addAll(fillFdoRecordGeneratedAttributes(handle, recordTimeStamp));
@@ -128,7 +124,8 @@ public class HandleService {
     return fdoRecord;
   }
 
-  private List<HandleAttribute> fillFdoRecordGeneratedAttributes(String handle, Instant recordTimeStamp)
+  private List<HandleAttribute> fillFdoRecordGeneratedAttributes(String handle,
+      Instant recordTimeStamp)
       throws TransformerException {
     List<HandleAttribute> fdoRecord = new ArrayList<>();
 
@@ -209,7 +206,6 @@ public class HandleService {
         new HandleAttribute(FIELD_IDX.get(REFERENT_DOI_NAME), REFERENT_DOI_NAME, handle.getBytes(
             StandardCharsets.UTF_8)));
 
-
     // 43: primaryReferentType
     fdoRecord.add(
         new HandleAttribute(FIELD_IDX.get(PRIMARY_REFERENT_TYPE), PRIMARY_REFERENT_TYPE,
@@ -227,7 +223,7 @@ public class HandleService {
     return fdoRecord;
   }
 
-  private List<HandleAttribute> fillFdoRecordSpecimenAttributes(DigitalSpecimen digitalSpecimen){
+  private List<HandleAttribute> fillFdoRecordSpecimenAttributes(DigitalSpecimen digitalSpecimen) {
     List<HandleAttribute> fdoRecord = new ArrayList<>();
     // 42: referentName
     fdoRecord.add(
@@ -263,8 +259,6 @@ public class HandleService {
             getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "organisationName",
                 UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
-    // 204-217 are optional
-
     // 204: primarySpecimenObjectIdName
     var collectionId = getAttributeFromDigitalSpecimen(digitalSpecimen,
         ODS_PREFIX + "physicalSpecimenCollection", "");
@@ -284,7 +278,8 @@ public class HandleService {
     }
 
     // 211: livingOrPreserved
-    var livingOrPreserved = getUnharmonisedAttributeFromDigitalSpecimen(digitalSpecimen, "dwca:basisOfRecord",
+    var livingOrPreserved = getUnharmonisedAttributeFromDigitalSpecimen(digitalSpecimen,
+        "dwca:basisOfRecord",
         "");
     if (!livingOrPreserved.isEmpty()) {
       fdoRecord.add(new HandleAttribute(FIELD_IDX.get(LIVING_OR_PRESERVED), LIVING_OR_PRESERVED,
@@ -293,16 +288,15 @@ public class HandleService {
     }
 
     // 216: markedAsType
-    var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX+"typeStatus", "");
-    if (!(specimenType.isEmpty() && notTypes.contains(specimenType))){
+    var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "typeStatus",
+        "");
+    if (!(specimenType.isEmpty() && notTypes.contains(specimenType))) {
       fdoRecord.add(new HandleAttribute(FIELD_IDX.get(MARKED_AS_TYPE), MARKED_AS_TYPE,
           "TRUE".getBytes(StandardCharsets.UTF_8)));
-    }
-    else {
+    } else {
       fdoRecord.add(new HandleAttribute(FIELD_IDX.get(MARKED_AS_TYPE), MARKED_AS_TYPE,
           "FALSE".getBytes(StandardCharsets.UTF_8)));
     }
-
     return fdoRecord;
   }
 
@@ -400,7 +394,8 @@ public class HandleService {
   }
 
   public void deleteVersion(DigitalSpecimenRecord currentDigitalSpecimen) {
-    var handleAttributes = fillFdoRecordSpecimenAttributes(currentDigitalSpecimen.digitalSpecimen());
+    var handleAttributes = fillFdoRecordSpecimenAttributes(
+        currentDigitalSpecimen.digitalSpecimen());
     repository.updateHandleAttributes(currentDigitalSpecimen.id(), Instant.now(), handleAttributes,
         false);
   }

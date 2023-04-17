@@ -2,30 +2,38 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.LOCAL_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
+import org.jooq.Field;
+import org.jooq.Record;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +58,7 @@ class HandleServiceTest {
   void setup() throws ParserConfigurationException {
     var docFactory = DocumentBuilderFactory.newInstance();
     var transFactory = TransformerFactory.newInstance();
-    service = new HandleService(random, MAPPER, docFactory.newDocumentBuilder(), repository,
+    service = new HandleService(random, docFactory.newDocumentBuilder(), repository,
         transFactory);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     instant = Instant.now(clock);
@@ -114,5 +122,16 @@ class HandleServiceTest {
     then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(false));
   }
 
+  @Test
+  void testCheckForPrimarySpecimenObjectIdIsPresent() {
+    // Given
+    var mockRecord = mock(Record.class);
+    given(mockRecord.get((Field<Object>) any())).willReturn("".getBytes(StandardCharsets.UTF_8));
+    var specimen = givenDigitalSpecimen();
+    given(repository.searchByPrimarySpecimenObjectId(specimen.physicalSpecimenId().getBytes(
+        StandardCharsets.UTF_8))).willReturn(Optional.of(mockRecord));
 
+    // Then
+    assertThrows(PidCreationException.class, () ->service.createNewHandle(specimen));
+  }
 }
