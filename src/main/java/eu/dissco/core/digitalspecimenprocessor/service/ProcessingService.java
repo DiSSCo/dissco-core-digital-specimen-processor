@@ -407,13 +407,11 @@ public class ProcessingService {
           Instant.now(),
           event.digitalSpecimen()
       );
-    } catch (TransformerException e) {
+    } catch (TransformerException | PidCreationException e) {
       log.error("Failed to process record with id: {}",
           event.digitalSpecimen().physicalSpecimenId(),
           e);
       return null;
-    } catch (PidCreationException e){
-      throw new RuntimeException(e);
     }
   }
 }
