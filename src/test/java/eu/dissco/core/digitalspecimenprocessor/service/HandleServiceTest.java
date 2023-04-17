@@ -97,15 +97,35 @@ class HandleServiceTest {
     var expected = "20.5000.1025/YYY-YYY-YYY";
 
     // When
-    var result = service.createNewHandle(givenEmptyDigitalSpecimen());
+    var result = service.createNewHandle(givenEmptyDigitalSpecimen("false"));
 
     // Then
     then(repository).should().createHandle(eq(expected), eq(CREATED), anyList());
     assertThat(result).isEqualTo(expected);
   }
 
-  private DigitalSpecimen givenEmptyDigitalSpecimen(){
-    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, MAPPER.createObjectNode(), MAPPER.createObjectNode());
+  @Test
+  void testCreateNewHandleEmptySpecimenHolotype() throws Exception {
+    // Given
+    given(random.nextInt(33)).willReturn(21);
+    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
+
+    var expected = "20.5000.1025/YYY-YYY-YYY";
+
+    // When
+    var result = service.createNewHandle(givenEmptyDigitalSpecimen("holotype"));
+
+    // Then
+    then(repository).should().createHandle(eq(expected), eq(CREATED), anyList());
+    assertThat(result).isEqualTo(expected);
+  }
+
+
+  private DigitalSpecimen givenEmptyDigitalSpecimen(String typeStatus){
+    var unharmonisedAttributes = MAPPER.createObjectNode();
+    unharmonisedAttributes.put("dwc:typeStatus",typeStatus);
+
+    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, MAPPER.createObjectNode(), unharmonisedAttributes);
   }
 
   @Test
