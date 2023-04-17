@@ -248,15 +248,14 @@ public class HandleService {
     fdoRecord.add(
         new HandleAttribute(FIELD_IDX.get(PRIMARY_SPECIMEN_OBJECT_ID),
             PRIMARY_SPECIMEN_OBJECT_ID,
-            getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "physicalSpecimenId",
-                UNKNOWN).getBytes(
+            digitalSpecimen.physicalSpecimenId().getBytes(
                 StandardCharsets.UTF_8)));
 
     // 203: primarySpecimenObjectIdType
     fdoRecord.add(
         new HandleAttribute(FIELD_IDX.get(PRIMARY_SPECIMEN_OBJECT_ID_TYPE),
             PRIMARY_SPECIMEN_OBJECT_ID_TYPE,
-            getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "organisationName",
+            getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "physicalSpecimenIdType",
                 UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
     // 204: primarySpecimenObjectIdName
@@ -288,7 +287,7 @@ public class HandleService {
     }
 
     // 216: markedAsType
-    var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "typeStatus",
+    var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, "dwc:typeStatus",
         "");
     if (!(specimenType.isEmpty() && notTypes.contains(specimenType))) {
       fdoRecord.add(new HandleAttribute(FIELD_IDX.get(MARKED_AS_TYPE), MARKED_AS_TYPE,
