@@ -101,6 +101,7 @@ class HandleServiceTest {
   private static final String ORG_NAME = "National Museum of Natural History";
   private static final String TYPE_STATUS = "holotype";
   private static final String DWCA_ID = "ZMA.V.POL.1296.2@CRS";
+  private static final String COLL_ID = "NAT.123XYZ.AVES";
 
   private HandleService service;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
@@ -208,16 +209,19 @@ class HandleServiceTest {
   }
 
   @Test
-  void testCheckForPrimarySpecimenObjectIdIsPresent() {
+  void testCheckForPrimarySpecimenObjectIdIsPresent() throws Exception{
     // Given
     var mockRecord = mock(Record.class);
-    given(mockRecord.get((Field<Object>) any())).willReturn("".getBytes(StandardCharsets.UTF_8));
-    var specimen = givenDigitalSpecimen();
+    given(mockRecord.get((Field<Object>) any())).willReturn(GENERATED_HANDLE.getBytes(StandardCharsets.UTF_8));
+    var specimen = givenDigitalSpecimenAdditionalAttributes();
     given(repository.searchByPrimarySpecimenObjectId(specimen.physicalSpecimenId().getBytes(
         StandardCharsets.UTF_8))).willReturn(Optional.of(mockRecord));
 
+    service.createNewHandle(specimen);
+
     // Then
-    assertThrows(PidCreationException.class, () ->service.createNewHandle(specimen));
+    then(repository).should().updateHandleAttributes(
+        GENERATED_HANDLE, CREATED,givenFdoRecordSpecimenAttributesFull(), true);
   }
 
   @Test
@@ -288,7 +292,7 @@ class HandleServiceTest {
     fdoRecord.add(new HandleAttribute(201, SPECIMEN_HOST_NAME.getAttribute(), ORG_NAME.getBytes(StandardCharsets.UTF_8)));
     fdoRecord.add(new HandleAttribute(202, PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(), PHYSICAL_SPECIMEN_ID.getBytes(StandardCharsets.UTF_8)));
     fdoRecord.add(new HandleAttribute(203, PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(), PHYSICAL_SPECIMEN_TYPE.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(204, PRIMARY_SPECIMEN_OBJECT_ID_NAME.getAttribute(), ("Local identifier for collection "+DATASET_ID).getBytes(StandardCharsets.UTF_8)));
+    fdoRecord.add(new HandleAttribute(204, PRIMARY_SPECIMEN_OBJECT_ID_NAME.getAttribute(), ("Local identifier for collection "+COLL_ID).getBytes(StandardCharsets.UTF_8)));
     fdoRecord.add(new HandleAttribute(206, OTHER_SPECIMEN_IDS.getAttribute(), DWCA_ID.getBytes(StandardCharsets.UTF_8)));
     fdoRecord.add(new HandleAttribute(216, MARKED_AS_TYPE.getAttribute(), "TRUE".getBytes(StandardCharsets.UTF_8)));
         return fdoRecord;
@@ -308,7 +312,7 @@ class HandleServiceTest {
   private DigitalSpecimen givenDigitalSpecimenAdditionalAttributes(){
     var attributes = (ObjectNode) givenAttributes(SPECIMEN_NAME, ORGANISATION_ID);
     attributes.put("ods:organisationName", ORG_NAME);
-    attributes.put("physicalSpecimenCollection", DATASET_ID);
+    attributes.put("ods:physicalSpecimenCollection", COLL_ID);
     attributes.put("dwc:typeStatus", TYPE_STATUS);
     attributes.remove("dwca:id");
     attributes.put("dwca:id", DWCA_ID);

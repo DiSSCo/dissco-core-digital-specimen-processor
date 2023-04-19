@@ -80,9 +80,9 @@ public class HandleService {
 
   private static final String PREFIX = "20.5000.1025/";
   private static final String TO_BE_FIXED = "Needs to be fixed!";
-  private final Random random;
   private final char[] symbols = "ABCDEFGHJKLMNPQRSTVWXYZ1234567890".toCharArray();
   private final char[] buffer = new char[11];
+  private final Random random;
   private final DocumentBuilder documentBuilder;
   private final HandleRepository repository;
   private final TransformerFactory transformerFactory;
