@@ -21,9 +21,9 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_DOI_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.SPECIMEN_HOST;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.SPECIMEN_HOST_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.STRUCTURAL_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.SPECIMEN_HOST;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -101,12 +101,12 @@ public class HandleService {
     }
 
     if (existingPhysicalIds.size()==digitalSpecimens.size()){
-      log.info("No new handles created. These handles were updated");
+      log.info("No new handles created");
       return existingRecords.stream().map(IdentifierTuple::handle).toList();
     }
 
     var newDigitalSpecimens = digitalSpecimens.stream().filter(digitalSpecimen -> !existingPhysicalIds.contains(digitalSpecimen.physicalSpecimenId())).toList();
-    // Warning! does not verify there are no collisions with existing handles
+    // Warning! This method of handle generation does not verify there are no collisions with existing handles. Possible override
     List<String> handles = new ArrayList<>(generateHandles(newDigitalSpecimens.size()));
     List<String> handlesCopy = new ArrayList<>(handles);
 
@@ -147,7 +147,6 @@ public class HandleService {
     }
     return handles;
   }
-
 
   private List<IdentifierTuple> checkForPrimarySpecimenObjectId(DigitalSpecimen digitalSpecimen) {
     var primarySpecimenObjectId = digitalSpecimen.physicalSpecimenId()
