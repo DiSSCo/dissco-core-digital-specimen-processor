@@ -8,9 +8,13 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.jooq.Record1;
@@ -24,6 +28,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   private static final Instant UPDATED_TIMESTAMP = Instant.parse("2022-11-02T13:05:24.00Z");
 
   private DigitalSpecimenRepository repository;
+
+  private MockedStatic<Clock> clockMock;
 
   @BeforeEach
   void setup() {
@@ -88,10 +94,16 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
 
     // When
+    // TODO Mocked static only workes on the original thread
+    // Somehow, we're calling 2 threads in this class
+    // Does it have anything to do with changing pool size?
+
     try (MockedStatic<Instant> mockedStatic = mockStatic(Instant.class)) {
       mockedStatic.when(Instant::now).thenReturn(UPDATED_TIMESTAMP);
+      var a = Instant.now();
       repository.updateLastChecked(List.of(HANDLE));
     }
+
 
     // Then
     var result = context.select(NEW_DIGITAL_SPECIMEN.LAST_CHECKED)
@@ -99,6 +111,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
         .where(NEW_DIGITAL_SPECIMEN.ID.eq(HANDLE)).fetchOne(Record1::value1);
     assertThat(result).isEqualTo(UPDATED_TIMESTAMP);
   }
+
 
   @Test
   void testUpsertSpecimens() {
