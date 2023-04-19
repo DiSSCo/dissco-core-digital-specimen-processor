@@ -92,17 +92,24 @@ public class HandleService {
       throws TransformerException {
     var recordTimestamp = Instant.now();
     var existingRecords = new HashSet<>(checkForPrimarySpecimenObjectIds(digitalSpecimens));
-    List<String> physicalIds = existingRecords.stream().map(IdentifierTuple::physicalSpecimenId).toList();
+    List<String> existingPhysicalIds = existingRecords.stream().map(IdentifierTuple::physicalSpecimenId).toList();
+
     if(!existingRecords.isEmpty()){
-      var existingSpecimens = digitalSpecimens.stream().filter(digitalSpecimen -> physicalIds.contains(digitalSpecimen.physicalSpecimenId())).toList();
+      log.info("One or more provided Digital Specimens already have FDO records. Updating existing records");
+      log.info("FDO Records being updated: " + existingRecords);
+      var existingSpecimens = digitalSpecimens.stream().filter(digitalSpecimen -> existingPhysicalIds.contains(digitalSpecimen.physicalSpecimenId())).toList();
       updateExistingHandles(existingSpecimens, existingRecords, recordTimestamp);
     }
 
-    var newDigitalSpecimens = digitalSpecimens.stream().filter(digitalSpecimen -> !physicalIds.contains(digitalSpecimen.physicalSpecimenId())).toList();
+    if (existingPhysicalIds.size()==digitalSpecimens.size()){
+      log.info("No new handles created. These handles were updated");
+      return existingRecords.stream().map(IdentifierTuple::handle).toList();
+    }
+
+    var newDigitalSpecimens = digitalSpecimens.stream().filter(digitalSpecimen -> !existingPhysicalIds.contains(digitalSpecimen.physicalSpecimenId())).toList();
     // Warning! does not verify there are no collisions with existing handles
     List<String> handles = new ArrayList<>(generateHandles(newDigitalSpecimens.size()));
-    List<String> handlesCopy = new ArrayList<>();
-    Collections.copy(handlesCopy, handles);
+    List<String> handlesCopy = new ArrayList<>(handles);
 
     List<HandleAttribute> attributes = new ArrayList<>();
     for (var digitalSpecimen:newDigitalSpecimens){
@@ -123,10 +130,10 @@ public class HandleService {
       throws TransformerException, PidCreationException {
     var recordTimestamp = Instant.now();
     var existingHandle = checkForPrimarySpecimenObjectId(digitalSpecimen);
-    if(existingHandle.isPresent()){
-      log.info("Digital specimen with id {} already exists under handle {}. Updating FDO Record.", digitalSpecimen.physicalSpecimenId(), existingHandle.get());
-      updateHandle(existingHandle.get(), digitalSpecimen);
-      return existingHandle.get();
+    if(!existingHandle.isEmpty()){
+      log.info("Digital specimen with id {} already exists under handle {}. Updating FDO Record.", digitalSpecimen.physicalSpecimenId(), existingHandle.get(0).handle());
+      updateHandle(existingHandle.get(0).handle(), digitalSpecimen);
+      return existingHandle.get(0).handle();
     }
     var handle = generateHandle();
     var handleAttributes = fillFdoRecord(digitalSpecimen, handle, recordTimestamp);
@@ -143,12 +150,10 @@ public class HandleService {
   }
 
 
-  private Optional<String> checkForPrimarySpecimenObjectId(DigitalSpecimen digitalSpecimen) {
+  private List<IdentifierTuple> checkForPrimarySpecimenObjectId(DigitalSpecimen digitalSpecimen) {
     var primarySpecimenObjectId = digitalSpecimen.physicalSpecimenId()
         .getBytes(StandardCharsets.UTF_8);
-    var optionalRecord = repository.searchByPrimarySpecimenObjectId(primarySpecimenObjectId);
-    return optionalRecord.map(
-        attribute -> new String(attribute, StandardCharsets.UTF_8));
+    return repository.searchByPrimarySpecimenObjectId(List.of(primarySpecimenObjectId));
   }
 
   private List<HandleAttribute> fillFdoRecord(DigitalSpecimen digitalSpecimen, String handle,

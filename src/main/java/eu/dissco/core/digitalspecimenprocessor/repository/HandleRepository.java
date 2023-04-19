@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.Query;
@@ -21,6 +20,7 @@ import org.springframework.stereotype.Repository;
 public class HandleRepository {
 
   private final DSLContext context;
+  private static final int TTL = 86400;
 
   public void createHandle(Instant recordTimestamp,
       List<HandleAttribute> handleAttributes) {
@@ -31,7 +31,7 @@ public class HandleRepository {
           .set(HANDLES.IDX, handleAttribute.index())
           .set(HANDLES.TYPE, handleAttribute.type().getBytes(StandardCharsets.UTF_8))
           .set(HANDLES.DATA, handleAttribute.data())
-          .set(HANDLES.TTL, 86400)
+          .set(HANDLES.TTL, TTL)
           .set(HANDLES.TIMESTAMP, recordTimestamp.getEpochSecond())
           .set(HANDLES.ADMIN_READ, true)
           .set(HANDLES.ADMIN_WRITE, true)
@@ -40,15 +40,6 @@ public class HandleRepository {
       queryList.add(query);
     }
     context.batch(queryList).execute();
-  }
-
-  public Optional<byte[]> searchByPrimarySpecimenObjectId(byte[] primarySpecimenObjectId) {
-    return context.select(HANDLES.asterisk())
-        .from(HANDLES)
-        .where(HANDLES.TYPE.eq(
-            PRIMARY_SPECIMEN_OBJECT_ID.getAttribute().getBytes(StandardCharsets.UTF_8)))
-        .and(HANDLES.DATA.eq(primarySpecimenObjectId))
-        .fetchOptional(HANDLES.HANDLE);
   }
 
   public List<IdentifierTuple> searchByPrimarySpecimenObjectId(List<byte[]> primarySpecimenObjectId) {
@@ -83,13 +74,32 @@ public class HandleRepository {
       List<HandleAttribute> handleAttributes, boolean versionIncrement) {
     var queryList = new ArrayList<Query>();
     for (var handleAttribute : handleAttributes) {
-      var query = context.update(HANDLES)
+      var query = context.insertInto(HANDLES)
+          .set(HANDLES.HANDLE, handleAttribute.handle().getBytes(StandardCharsets.UTF_8))
+          .set(HANDLES.IDX, handleAttribute.index())
+          .set(HANDLES.TYPE, handleAttribute.type().getBytes(StandardCharsets.UTF_8))
           .set(HANDLES.DATA, handleAttribute.data())
+          .set(HANDLES.TTL, TTL)
           .set(HANDLES.TIMESTAMP, recordTimestamp.getEpochSecond())
-          .where(HANDLES.HANDLE.eq(id.getBytes(StandardCharsets.UTF_8))
-          .and(HANDLES.IDX.eq(handleAttribute.index())));
+          .set(HANDLES.ADMIN_READ, true)
+          .set(HANDLES.ADMIN_WRITE, true)
+          .set(HANDLES.PUB_READ, true)
+          .set(HANDLES.PUB_WRITE, false)
+          .onDuplicateKeyUpdate()
+          .set(HANDLES.HANDLE, handleAttribute.handle().getBytes(StandardCharsets.UTF_8))
+          .set(HANDLES.IDX, handleAttribute.index())
+          .set(HANDLES.TYPE, handleAttribute.type().getBytes(StandardCharsets.UTF_8))
+          .set(HANDLES.DATA, handleAttribute.data())
+          .set(HANDLES.TTL, TTL)
+          .set(HANDLES.TIMESTAMP, recordTimestamp.getEpochSecond())
+          .set(HANDLES.ADMIN_READ, true)
+          .set(HANDLES.ADMIN_WRITE, true)
+          .set(HANDLES.PUB_READ, true)
+          .set(HANDLES.PUB_WRITE, false);
       queryList.add(query);
     }
+    // If we move this query elsewhere, we won't need "id" as an argument
+    // Batching would be a bit simpler, i.e. List<attributes> instead of List<List<attributes>>
     queryList.add(versionIncrement(id, recordTimestamp, versionIncrement));
     return queryList;
   }

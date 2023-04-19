@@ -50,12 +50,14 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
+import eu.dissco.core.digitalspecimenprocessor.domain.IdentifierTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
 import java.nio.charset.StandardCharsets;
@@ -68,6 +70,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerFactory;
@@ -108,6 +111,7 @@ class HandleServiceTest {
         transFactory);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
+    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
   }
 
   @AfterEach
@@ -119,7 +123,6 @@ class HandleServiceTest {
   void testCreateNewHandle() throws Exception {
     // Given
     given(random.nextInt(33)).willReturn(21);
-    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
 
     // When
     var result = service.createNewHandle(givenDigitalSpecimen());
@@ -168,8 +171,8 @@ class HandleServiceTest {
   void testCheckForPrimarySpecimenObjectIdIsPresent() throws Exception{
     // Given
     var specimen = givenDigitalSpecimenAdditionalAttributes();
-    given(repository.searchByPrimarySpecimenObjectId(specimen.physicalSpecimenId().getBytes(
-        StandardCharsets.UTF_8))).willReturn(Optional.of(GENERATED_HANDLE.getBytes(StandardCharsets.UTF_8)));
+    var idTuple = new IdentifierTuple(GENERATED_HANDLE, specimen.physicalSpecimenId());
+    given(repository.searchByPrimarySpecimenObjectId(anyList())).willReturn(List.of(idTuple));
 
     service.createNewHandle(specimen);
 
@@ -183,10 +186,8 @@ class HandleServiceTest {
     // Given
     var specimen = givenDigitalSpecimenAdditionalAttributes();
     given(random.nextInt(33)).willReturn(21);
-    List<HandleAttribute> expected = new ArrayList<>();
-    expected.addAll(givenFdoRecordGeneratedElements(GENERATED_HANDLE));
-    expected.addAll(givenFdoRecordSpecimenAttributesFull(GENERATED_HANDLE));
-    given(repository.searchByPrimarySpecimenObjectId(any(byte[].class))).willReturn(Optional.empty());
+    List<HandleAttribute> expected = givenFdoRecordElements(GENERATED_HANDLE, true);
+    given(repository.searchByPrimarySpecimenObjectId(any())).willReturn(new ArrayList<>());
 
     // When
     service.createNewHandle(specimen);
@@ -200,20 +201,57 @@ class HandleServiceTest {
     // Given
     var specimen = givenDigitalSpecimenMinimalAttributes();
     given(random.nextInt(33)).willReturn(21);
-    List<HandleAttribute> expected = new ArrayList<>();
-    expected.addAll(givenFdoRecordGeneratedElements(GENERATED_HANDLE));
-    expected.addAll(givenFdoRecordSpecimenAttributesMinimalAttributes(GENERATED_HANDLE));
-    given(repository.searchByPrimarySpecimenObjectId(any(byte[].class))).willReturn(Optional.empty());
+    List<HandleAttribute> expected = givenFdoRecordElements(GENERATED_HANDLE, false);
+    given(repository.searchByPrimarySpecimenObjectId(any())).willReturn(new ArrayList<>());
 
     // When
-    service.createNewHandle(specimen);
+   service.createNewHandle(specimen);
 
     // Then
     then(repository).should().createHandle(CREATED, expected);
   }
 
+  @Test
+  void testCreateHandles() throws Exception{
+    // Given
+    given(repository.searchByPrimarySpecimenObjectId(anyList())).willReturn(new ArrayList<>());
+    given(random.nextInt(33)).willReturn(21);
+
+    // When
+    var specimenList = List.of(givenDigitalSpecimenAdditionalAttributes());
+    service.createNewHandles(specimenList);
+    var expectedAttributes = givenFdoRecordElements(GENERATED_HANDLE, true);
+
+    // Then
+    then(repository).should().createHandle(CREATED, expectedAttributes);
+  }
+
+  @Test
+  void testCreateHandlesUpdateRequired() throws Exception{
+    // Given
+    var specimenList = List.of(givenDigitalSpecimenAdditionalAttributes());
+    var expectedAttributes = givenFdoRecordSpecimenAttributesFull(HANDLE);
+    given(repository.searchByPrimarySpecimenObjectId(anyList())).willReturn(List.of(new IdentifierTuple(HANDLE, specimenList.get(0).physicalSpecimenId())));
+
+    // When
+    var result = service.createNewHandles(specimenList);
+
+    // Then
+    then(repository).should().updateHandleAttributesBatch(CREATED, List.of(expectedAttributes));
+    assertThat(result).isEqualTo(List.of(HANDLE));
+  }
+
+  private List<HandleAttribute> givenFdoRecordElements(String handle, boolean fullElements){
+    List<HandleAttribute> fdoRecord = new ArrayList<>();
+    fdoRecord.addAll(givenFdoRecordGeneratedElements(handle));
+    if (fullElements){
+      fdoRecord.addAll(givenFdoRecordSpecimenAttributesFull(handle));
+    }
+    else fdoRecord.addAll(givenFdoRecordSpecimenAttributesMinimalAttributes(handle));
+    return fdoRecord;
+  }
+
   private List<HandleAttribute> givenFdoRecordGeneratedElements(String handle){
-    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
     List<HandleAttribute> fdoRecord = new ArrayList<>();
     fdoRecord.add(new HandleAttribute(100, HS_ADMIN.getAttribute(), decodeAdmin(), handle));
     fdoRecord.add(new HandleAttribute(101, LOC.getAttribute(), givenLocString(handle), handle));

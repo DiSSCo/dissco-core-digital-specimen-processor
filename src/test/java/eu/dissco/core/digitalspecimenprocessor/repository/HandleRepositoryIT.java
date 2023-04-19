@@ -1,13 +1,17 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.HANDLES;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.LOCAL_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleAttributes;
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
+import eu.dissco.core.digitalspecimenprocessor.domain.IdentifierTuple;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.jooq.Record1;
@@ -98,31 +102,50 @@ class HandleRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testDSearchByPrimarySpecimenObjectIdIsPresent(){
+  void testSearchByPrimarySpecimenObjectIdBatchIsPresent(){
     // Given
-    var handleAttributes = givenHandleAttributes();
-    repository.createHandle(CREATED, handleAttributes);
+    var attribute = List.of(new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID.getIndex(), PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(), LOCAL_OBJECT_ID, HANDLE));
+    repository.createHandle(CREATED, attribute);
+    var expected = List.of(new IdentifierTuple(HANDLE, new String(LOCAL_OBJECT_ID, StandardCharsets.UTF_8)));
 
     // When
-    var result = repository.searchByPrimarySpecimenObjectId(LOCAL_OBJECT_ID);
-    var resultHandle = result.map(
-        handle -> new String(handle, StandardCharsets.UTF_8)).orElse("");
+    var result = repository.searchByPrimarySpecimenObjectId(List.of(LOCAL_OBJECT_ID));
 
     // Then
-    assertThat(resultHandle).isEqualTo(HANDLE);
+    assertThat(result).isEqualTo(expected);
   }
 
   @Test
-  void testSearchByPrimarySpecimenObjectIdNotPresent(){
+  void testSearchByPrimarySpecimenObjectIdBatchNotPresent(){
     // Given
-    var handleAttributes = givenHandleAttributes();
-    repository.createHandle(CREATED, handleAttributes);
+    var attribute = List.of(new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID.getIndex(), PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(), LOCAL_OBJECT_ID, HANDLE));
+    repository.createHandle(CREATED, attribute);
 
     // When
-    var result = repository.searchByPrimarySpecimenObjectId("a".getBytes(StandardCharsets.UTF_8));
+    var result = repository.searchByPrimarySpecimenObjectId(List.of("Not an Identifier".getBytes(
+        StandardCharsets.UTF_8)));
 
     // Then
-    assertThat(result).isNotPresent();
+    assertThat(result).isEmpty();
   }
+
+  @Test
+  void TestUpdateHandleAttributesBatch(){
+    // Given
+    repository.createHandle(CREATED, givenHandleAttributes());
+    var newAttributes = List.of(
+        new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID.getIndex(),PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),"New value".getBytes(
+            StandardCharsets.UTF_8), HANDLE),
+        new HandleAttribute(400, "test", "test".getBytes(StandardCharsets.UTF_8), HANDLE)
+    );
+
+    // When
+    repository.updateHandleAttributesBatch(CREATED, List.of(newAttributes));
+    var result = context.select(HANDLES.asterisk()).from(HANDLES).fetch();
+
+    // Then
+    assertThat(result).hasSize(6);
+  }
+
 
 }
