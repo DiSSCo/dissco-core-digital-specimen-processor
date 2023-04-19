@@ -1,7 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.HANDLES;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import java.nio.charset.StandardCharsets;
@@ -44,7 +44,7 @@ public class HandleRepository {
   public Optional<Record> searchByPrimarySpecimenObjectId(byte[] primarySpecimenObjectId){
     return context.select(HANDLES.asterisk())
         .from(HANDLES)
-        .where(HANDLES.TYPE.eq(PRIMARY_SPECIMEN_OBJECT_ID.getBytes(StandardCharsets.UTF_8)))
+        .where(HANDLES.TYPE.eq(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute().getBytes(StandardCharsets.UTF_8)))
         .and(HANDLES.DATA.eq(primarySpecimenObjectId))
         .fetchOptional();
   }

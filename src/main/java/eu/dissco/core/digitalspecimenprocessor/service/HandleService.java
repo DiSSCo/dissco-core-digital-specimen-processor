@@ -1,38 +1,35 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.HANDLES;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.DIGITAL_OBJECT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.DIGITAL_OBJECT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.FDO_PROFILE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.FDO_RECORD_LICENSE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.FIELD_IDX;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.HS_ADMIN;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.ISSUED_FOR_AGENT;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.ISSUED_FOR_AGENT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.LIVING_OR_PRESERVED;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.LOC;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.MARKED_AS_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.OBJECT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.OTHER_SPECIMEN_IDS;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PID_ISSUER;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PID_ISSUER_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PID_RECORD_ISSUE_DATE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PID_RECORD_ISSUE_NUMBER;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PID_STATUS;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_REFERENT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_SPECIMEN_OBJECT_ID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_SPECIMEN_OBJECT_ID_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.PRIMARY_SPECIMEN_OBJECT_ID_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.REFERENT;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.REFERENT_DOI_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.REFERENT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.REFERENT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.SPECIMEN_HOST_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoUtils.STRUCTURAL_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.DIGITAL_OBJECT_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.FDO_PROFILE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.FDO_RECORD_LICENSE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.HS_ADMIN;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.ISSUED_FOR_AGENT_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.LIVING_OR_PRESERVED;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.LOC;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.MARKED_AS_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.OBJECT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.OTHER_SPECIMEN_IDS;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_ISSUER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_ISSUER_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_STATUS;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_REFERENT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_DOI_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.SPECIMEN_HOST_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.STRUCTURAL_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.SPECIMEN_HOST;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
@@ -47,7 +44,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.TransformerException;
@@ -72,7 +71,7 @@ public class HandleService {
       StandardCharsets.UTF_8);
   private static final byte[] FDO_RECORD_LICENSE_LOC = "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(
       StandardCharsets.UTF_8);
-  private static final HashSet<String> notTypes = new HashSet<>(
+  private static final Set<String> notTypes = new HashSet<>(
       Arrays.asList("false", "specimen", "type"));
 
   private static final String ODS_PREFIX = "ods:";
@@ -80,7 +79,6 @@ public class HandleService {
   private static final String UNKNOWN = "Unknown";
 
   private static final String PREFIX = "20.5000.1025/";
-  private static final String SPECIMEN_HOST = "specimenHost";
   private static final String TO_BE_FIXED = "Needs to be fixed!";
   private final Random random;
   private final char[] symbols = "ABCDEFGHJKLMNPQRSTVWXYZ1234567890".toCharArray();
@@ -88,12 +86,16 @@ public class HandleService {
   private final DocumentBuilder documentBuilder;
   private final HandleRepository repository;
   private final TransformerFactory transformerFactory;
-  private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS",
-      Locale.ENGLISH).withZone(ZoneId.of("UTC"));
+  private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneId.of("UTC"));
 
   public String createNewHandle(DigitalSpecimen digitalSpecimen)
       throws TransformerException, PidCreationException {
-    checkForPrimarySpecimenObjectId(digitalSpecimen);
+    var existingHandle = checkForPrimarySpecimenObjectId(digitalSpecimen);
+    if(existingHandle.isPresent()){
+      log.info("Digital specimen with id {} already exists under handle {}. Updating FDO Record.", digitalSpecimen.physicalSpecimenId(), existingHandle.get());
+      updateHandle(existingHandle.get(), digitalSpecimen);
+      return existingHandle.get();
+    }
     var handle = generateHandle();
     var recordTimestamp = Instant.now();
     var handleAttributes = fillFdoRecord(digitalSpecimen, handle, recordTimestamp);
@@ -101,18 +103,12 @@ public class HandleService {
     return handle;
   }
 
-  private void checkForPrimarySpecimenObjectId(DigitalSpecimen digitalSpecimen)
-      throws PidCreationException {
+  private Optional<String> checkForPrimarySpecimenObjectId(DigitalSpecimen digitalSpecimen) {
     var primarySpecimenObjectId = digitalSpecimen.physicalSpecimenId()
         .getBytes(StandardCharsets.UTF_8);
     var optionalRecord = repository.searchByPrimarySpecimenObjectId(primarySpecimenObjectId);
-    if (optionalRecord.isPresent()) {
-      throw new PidCreationException(
-          String.format("Unable to create handle record for specimen with local identifier %s. "
-                  + "Local identifier already has persistent identifier: %s",
-              digitalSpecimen.physicalSpecimenId(),
-              new String(optionalRecord.get().get(HANDLES.HANDLE), StandardCharsets.UTF_8)));
-    }
+    return optionalRecord.map(
+        attribute -> new String(attribute.get(HANDLES.HANDLE), StandardCharsets.UTF_8));
   }
 
   private List<HandleAttribute> fillFdoRecord(DigitalSpecimen digitalSpecimen, String handle,
@@ -131,93 +127,95 @@ public class HandleService {
 
     // 100: Admin Handle
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(HS_ADMIN), HS_ADMIN, decodeAdmin()));
+        new HandleAttribute(HS_ADMIN.getIndex(), HS_ADMIN.getAttribute(), decodeAdmin()));
 
     // 101: 10320/loc
     byte[] loc = createLocations(handle);
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(LOC), LOC, loc));
+    fdoRecord.add(new HandleAttribute(LOC.getIndex(), LOC.getAttribute(), loc));
 
     // 1: FDO Profile
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(FDO_PROFILE), FDO_PROFILE, FDO_PROFILE_LOC.getBytes(
+        new HandleAttribute(FDO_PROFILE.getIndex(), FDO_PROFILE.getAttribute(), FDO_PROFILE_LOC.getBytes(
             StandardCharsets.UTF_8)));
 
     // 2: FDO Record License
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(FDO_RECORD_LICENSE),
-        FDO_RECORD_LICENSE, FDO_RECORD_LICENSE_LOC));
+    fdoRecord.add(new HandleAttribute(FDO_RECORD_LICENSE.getIndex(),
+        FDO_RECORD_LICENSE.getAttribute(), FDO_RECORD_LICENSE_LOC));
 
     // 3: DigitalObjectType
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(DIGITAL_OBJECT_TYPE), DIGITAL_OBJECT_TYPE,
+        new HandleAttribute(FdoProfile.DIGITAL_OBJECT_TYPE.getIndex(),
+            FdoProfile.DIGITAL_OBJECT_TYPE.getAttribute(),
             DIGITAL_OBJECT_TYPE_LOC.getBytes(
                 StandardCharsets.UTF_8)));
 
     // 4: DigitalObjectName
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(DIGITAL_OBJECT_NAME), DIGITAL_OBJECT_NAME,
+        new HandleAttribute(DIGITAL_OBJECT_NAME.getIndex(), DIGITAL_OBJECT_NAME.getAttribute(),
             DIGITAL_OBJECT_TYPE_VALUE));
 
     // 5: Pid
     byte[] pid = (HANDLE_PROXY + handle).getBytes(StandardCharsets.UTF_8);
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(PID), PID, pid));
+    fdoRecord.add(new HandleAttribute(PID.getIndex(), PID.getAttribute(), pid));
 
     // 6: PidIssuer
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(PID_ISSUER), PID_ISSUER,
+    fdoRecord.add(new HandleAttribute(PID_ISSUER.getIndex(), PID_ISSUER.getAttribute(),
         TO_BE_FIXED.getBytes(StandardCharsets.UTF_8)));
 
     // 7: pidIssuerName
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(PID_ISSUER_NAME), PID_ISSUER_NAME, TO_BE_FIXED.getBytes(
+        new HandleAttribute(PID_ISSUER_NAME.getIndex(), PID_ISSUER_NAME.getAttribute(), TO_BE_FIXED.getBytes(
             StandardCharsets.UTF_8)));
 
     // 8: issuedForAgent -> DiSSCo PID (None Defined atm)
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(ISSUED_FOR_AGENT), ISSUED_FOR_AGENT, TO_BE_FIXED.getBytes(
+        new HandleAttribute(FdoProfile.ISSUED_FOR_AGENT.getIndex(),
+            FdoProfile.ISSUED_FOR_AGENT.getAttribute(), TO_BE_FIXED.getBytes(
             StandardCharsets.UTF_8)));
 
     // 9: issuedForAgentName -> DiSSCO
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(ISSUED_FOR_AGENT_NAME), ISSUED_FOR_AGENT_NAME,
+        new HandleAttribute(ISSUED_FOR_AGENT_NAME.getIndex(), ISSUED_FOR_AGENT_NAME.getAttribute(),
             "DiSSCo".getBytes(StandardCharsets.UTF_8)));
 
     // 10: pidRecordIssueDate
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(PID_RECORD_ISSUE_DATE),
-        PID_RECORD_ISSUE_DATE, getDate(recordTimeStamp).getBytes(StandardCharsets.UTF_8)));
+    fdoRecord.add(new HandleAttribute(FdoProfile.PID_RECORD_ISSUE_DATE.getIndex(),
+        FdoProfile.PID_RECORD_ISSUE_DATE.getAttribute(), getDate(recordTimeStamp).getBytes(StandardCharsets.UTF_8)));
 
     // 11: pidRecordIssueNumber
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(PID_RECORD_ISSUE_NUMBER),
-        PID_RECORD_ISSUE_NUMBER, "1".getBytes(StandardCharsets.UTF_8)));
+    fdoRecord.add(new HandleAttribute(FdoProfile.PID_RECORD_ISSUE_NUMBER.getIndex(),
+        FdoProfile.PID_RECORD_ISSUE_NUMBER.getAttribute(), "1".getBytes(StandardCharsets.UTF_8)));
 
     // 12: structuralType
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(STRUCTURAL_TYPE),
-        STRUCTURAL_TYPE, "digital".getBytes(StandardCharsets.UTF_8)));
+    fdoRecord.add(new HandleAttribute(STRUCTURAL_TYPE.getIndex(),
+        STRUCTURAL_TYPE.getAttribute(), "digital".getBytes(StandardCharsets.UTF_8)));
 
     // 13: PidStatus
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(PID_STATUS), PID_STATUS,
+    fdoRecord.add(new HandleAttribute(PID_STATUS.getIndex(), PID_STATUS.getAttribute(),
         "DRAFT".getBytes(StandardCharsets.UTF_8)));
 
     // 40: referentType
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(REFERENT_TYPE), REFERENT_TYPE, TO_BE_FIXED.getBytes(
+        new HandleAttribute(REFERENT_TYPE.getIndex(), REFERENT_TYPE.getAttribute(), TO_BE_FIXED.getBytes(
             StandardCharsets.UTF_8)));
 
     // 41: referentDoiName
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(REFERENT_DOI_NAME), REFERENT_DOI_NAME, handle.getBytes(
+        new HandleAttribute(REFERENT_DOI_NAME.getIndex(), REFERENT_DOI_NAME.getAttribute(), handle.getBytes(
             StandardCharsets.UTF_8)));
 
     // 43: primaryReferentType
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(PRIMARY_REFERENT_TYPE), PRIMARY_REFERENT_TYPE,
+        new HandleAttribute(PRIMARY_REFERENT_TYPE.getIndex(), PRIMARY_REFERENT_TYPE.getAttribute(),
             "creation".getBytes(StandardCharsets.UTF_8)));
 
     // 44: referent
-    fdoRecord.add(new HandleAttribute(FIELD_IDX.get(REFERENT), REFERENT,
+    fdoRecord.add(new HandleAttribute(REFERENT.getIndex(), REFERENT.getAttribute(),
         TO_BE_FIXED.getBytes(StandardCharsets.UTF_8)));
 
     // 210: objectType
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(OBJECT_TYPE), OBJECT_TYPE,
+        new HandleAttribute(OBJECT_TYPE.getIndex(), OBJECT_TYPE.getAttribute(),
             "Digital Specimen".getBytes(StandardCharsets.UTF_8)));
 
     return fdoRecord;
@@ -227,34 +225,34 @@ public class HandleService {
     List<HandleAttribute> fdoRecord = new ArrayList<>();
     // 42: referentName
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(REFERENT_NAME), REFERENT_NAME,
+        new HandleAttribute(REFERENT_NAME.getIndex(), REFERENT_NAME.getAttribute(),
             getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "specimenName",
                 UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
     // 200: SpecimenHost
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(SPECIMEN_HOST),
-            SPECIMEN_HOST,
+        new HandleAttribute(SPECIMEN_HOST.getIndex(),
+            SPECIMEN_HOST.getAttribute(),
             getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "organisationId",
                 UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
     // 201: Specimen Host Name
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(SPECIMEN_HOST_NAME), SPECIMEN_HOST_NAME,
+        new HandleAttribute(SPECIMEN_HOST_NAME.getIndex(), SPECIMEN_HOST_NAME.getAttribute(),
             getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "organisationName",
                 UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
     // 202: PrimarySpecimenObjectId
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(PRIMARY_SPECIMEN_OBJECT_ID),
-            PRIMARY_SPECIMEN_OBJECT_ID,
+        new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID.getIndex(),
+            PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
             digitalSpecimen.physicalSpecimenId().getBytes(
                 StandardCharsets.UTF_8)));
 
     // 203: primarySpecimenObjectIdType
     fdoRecord.add(
-        new HandleAttribute(FIELD_IDX.get(PRIMARY_SPECIMEN_OBJECT_ID_TYPE),
-            PRIMARY_SPECIMEN_OBJECT_ID_TYPE,
+        new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getIndex(),
+            PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
             getAttributeFromDigitalSpecimen(digitalSpecimen, ODS_PREFIX + "physicalSpecimenIdType",
                 UNKNOWN).getBytes(StandardCharsets.UTF_8)));
 
@@ -264,36 +262,26 @@ public class HandleService {
     if (!collectionId.isEmpty()) {
       var idName = ("Local identifier for collection " + collectionId).getBytes(
           StandardCharsets.UTF_8);
-      fdoRecord.add(new HandleAttribute(FIELD_IDX.get(PRIMARY_SPECIMEN_OBJECT_ID_NAME),
-          PRIMARY_SPECIMEN_OBJECT_ID_NAME, idName));
+      fdoRecord.add(new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID_NAME.getIndex(),
+          PRIMARY_SPECIMEN_OBJECT_ID_NAME.getAttribute(), idName));
     }
 
     // 206: otherSpecimenIds
     var otherSpecimenIds = getAttributeFromDigitalSpecimen(digitalSpecimen, "dwca:id", "");
     if (!otherSpecimenIds.isEmpty()) {
-      fdoRecord.add(new HandleAttribute(FIELD_IDX.get(OTHER_SPECIMEN_IDS), OTHER_SPECIMEN_IDS,
+      fdoRecord.add(new HandleAttribute(OTHER_SPECIMEN_IDS.getIndex(), OTHER_SPECIMEN_IDS.getAttribute(),
           otherSpecimenIds.getBytes(
-              StandardCharsets.UTF_8)));
-    }
-
-    // 211: livingOrPreserved
-    var livingOrPreserved = getUnharmonisedAttributeFromDigitalSpecimen(digitalSpecimen,
-        "dwca:basisOfRecord",
-        "");
-    if (!livingOrPreserved.isEmpty()) {
-      fdoRecord.add(new HandleAttribute(FIELD_IDX.get(LIVING_OR_PRESERVED), LIVING_OR_PRESERVED,
-          livingOrPreserved.getBytes(
               StandardCharsets.UTF_8)));
     }
 
     // 216: markedAsType
     var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, "dwc:typeStatus",
         "");
-    if (!(specimenType.isEmpty() && notTypes.contains(specimenType))) {
-      fdoRecord.add(new HandleAttribute(FIELD_IDX.get(MARKED_AS_TYPE), MARKED_AS_TYPE,
+    if (!(specimenType.isEmpty() || notTypes.contains(specimenType))) {
+      fdoRecord.add(new HandleAttribute(MARKED_AS_TYPE.getIndex(), MARKED_AS_TYPE.getAttribute(),
           "TRUE".getBytes(StandardCharsets.UTF_8)));
     } else {
-      fdoRecord.add(new HandleAttribute(FIELD_IDX.get(MARKED_AS_TYPE), MARKED_AS_TYPE,
+      fdoRecord.add(new HandleAttribute(MARKED_AS_TYPE.getIndex(), MARKED_AS_TYPE.getAttribute(),
           "FALSE".getBytes(StandardCharsets.UTF_8)));
     }
     return fdoRecord;
@@ -302,16 +290,8 @@ public class HandleService {
   private String getAttributeFromDigitalSpecimen(DigitalSpecimen digitalSpecimen, String fieldName,
       String notFoundDefault) {
     if (digitalSpecimen.attributes().get(fieldName) != null) {
-      return digitalSpecimen.attributes().get(fieldName).asText();
-    } else {
-      return notFoundDefault;
-    }
-  }
-
-  private String getUnharmonisedAttributeFromDigitalSpecimen(DigitalSpecimen digitalSpecimen,
-      String fieldName, String notFoundDefault) {
-    if (digitalSpecimen.originalAttributes().get(fieldName) != null) {
-      return digitalSpecimen.attributes().get(fieldName).asText();
+      var attributeVal = digitalSpecimen.attributes().get(fieldName);
+      return attributeVal.isNull() ? notFoundDefault : attributeVal.asText();
     } else {
       return notFoundDefault;
     }
@@ -325,11 +305,18 @@ public class HandleService {
     var document = documentBuilder.newDocument();
     var locations = document.createElement("locations");
     document.appendChild(locations);
-    var firstLocation = document.createElement("location");
-    firstLocation.setAttribute("id", "0");
-    firstLocation.setAttribute("href", "https://sandbox.dissco.tech/api/v1/specimens/" + handle);
-    firstLocation.setAttribute("weight", "0");
-    locations.appendChild(firstLocation);
+    String[] defaultLocations = new String[]{
+      "https://sandbox.dissco.tech/api/v1/specimens/" + handle,
+          "https://sandbox.dissco.tech/ds/" + handle
+    };
+    for (int i = 0; i< defaultLocations.length; i++){
+      var locs = document.createElement("location");
+      locs.setAttribute("id", String.valueOf(i));
+      locs.setAttribute("href", defaultLocations[i]);
+      String weight = i < 1 ? "1" : "0";
+      locs.setAttribute("weight", weight);
+      locations.appendChild(locs);
+    }
     return documentToString(document).getBytes(StandardCharsets.UTF_8);
   }
 
@@ -356,7 +343,7 @@ public class HandleService {
     return new String(buffer);
   }
 
-  private byte[] decodeAdmin() {
+  private static byte[] decodeAdmin() {
     var admin = "0fff000000153330303a302e4e412f32302e353030302e31303235000000c8";
     byte[] adminByte = new byte[admin.length() / 2];
     for (int i = 0; i < admin.length(); i += 2) {
@@ -365,13 +352,13 @@ public class HandleService {
     return adminByte;
   }
 
-  private byte hexToByte(String hexString) {
+  private static byte hexToByte(String hexString) {
     int firstDigit = toDigit(hexString.charAt(0));
     int secondDigit = toDigit(hexString.charAt(1));
     return (byte) ((firstDigit << 4) + secondDigit);
   }
 
-  private int toDigit(char hexChar) {
+  private static int toDigit(char hexChar) {
     return Character.digit(hexChar, 16);
   }
 

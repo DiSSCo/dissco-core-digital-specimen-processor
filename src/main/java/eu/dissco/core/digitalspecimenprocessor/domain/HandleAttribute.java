@@ -1,5 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.domain;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -30,7 +31,7 @@ public record HandleAttribute(int index, String type, byte[] data) {
     return "HandleAttribute{" +
         "index=" + index +
         ", type='" + type + '\'' +
-        ", data=" + Arrays.toString(data) +
+        ", data=" + new String(data, StandardCharsets.UTF_8) +
         '}';
   }
 }

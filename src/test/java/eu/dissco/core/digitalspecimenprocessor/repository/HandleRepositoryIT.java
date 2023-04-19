@@ -113,7 +113,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testDSearchByPrimarySpecimenObjectIdNotPresent(){
+  void testSearchByPrimarySpecimenObjectIdNotPresent(){
     // Given
     var handleAttributes = givenHandleAttributes();
     repository.createHandle(HANDLE, CREATED, handleAttributes);
