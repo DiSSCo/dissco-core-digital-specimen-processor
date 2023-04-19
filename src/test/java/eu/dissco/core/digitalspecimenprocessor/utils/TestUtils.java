@@ -30,11 +30,11 @@ public class TestUtils {
   public static String ANOTHER_SPECIMEN_NAME = "Another SpecimenName";
   public static String ORGANISATION_ID = "https://ror.org/0443cwa12";
   public static String ANOTHER_ORGANISATION = "Another organisation";
-  public static String DATASET_ID = null;
-  public static String PHYSICAL_SPECIMEN_COLLECTION = null;
+  public static String DATASET_ID = HANDLE;
+  public static String PHYSICAL_SPECIMEN_COLLECTION = HANDLE;
   public static String SOURCE_SYSTEM_ID = "20.5000.1025/MN0-5XP-FFD";
   public static JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
-  public static String DWCA_ID = null;
+  public static String DWCA_ID = HANDLE;
   public static final String GENERATED_HANDLE = "20.5000.1025/YYY-YYY-YYY";
 
   public static final byte[] LOCAL_OBJECT_ID = " 002b51e5-b8e1-4b2b-a841-86c34dca9ef6:040ck2b86".getBytes(StandardCharsets.UTF_8);
@@ -180,14 +180,16 @@ public class TestUtils {
   public static List<HandleAttribute> givenHandleAttributes() {
     return List.of(
         new HandleAttribute(1, "pid",
-            ("https://hdl.handle.net/" + HANDLE).getBytes(StandardCharsets.UTF_8)),
+            ("https://hdl.handle.net/" + HANDLE).getBytes(StandardCharsets.UTF_8), HANDLE),
         new HandleAttribute(11, "pidKernelMetadataLicense",
-            "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8)),
+            "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8),
+            HANDLE),
         new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID.getIndex(),
             PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
-            LOCAL_OBJECT_ID),
-        new HandleAttribute(7, "issueNumber", "1".getBytes(StandardCharsets.UTF_8)),
-        new HandleAttribute(100, "HS_ADMIN", "TEST_ADMIN_STRING".getBytes(StandardCharsets.UTF_8))
+            LOCAL_OBJECT_ID, HANDLE),
+        new HandleAttribute(7, "issueNumber", "1".getBytes(StandardCharsets.UTF_8), HANDLE),
+        new HandleAttribute(100, "HS_ADMIN", "TEST_ADMIN_STRING".getBytes(StandardCharsets.UTF_8),
+            HANDLE)
     );
   }
 

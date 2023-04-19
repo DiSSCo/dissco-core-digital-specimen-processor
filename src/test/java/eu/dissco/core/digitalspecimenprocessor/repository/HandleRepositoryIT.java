@@ -35,7 +35,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
     var handleAttributes = givenHandleAttributes();
 
     // When
-    repository.createHandle(HANDLE, CREATED, handleAttributes);
+    repository.createHandle(CREATED, handleAttributes);
 
     // Then
     var handles = context.selectFrom(HANDLES).fetch();
@@ -46,9 +46,9 @@ class HandleRepositoryIT extends BaseRepositoryIT {
   void testUpdateHandleAttributes(){
     // Given
     var handleAttributes = givenHandleAttributes();
-    repository.createHandle(HANDLE, CREATED, handleAttributes);
+    repository.createHandle(CREATED, handleAttributes);
     var updatedHandle = new HandleAttribute(11, "pidKernelMetadataLicense",
-        "anotherLicenseType".getBytes(StandardCharsets.UTF_8));
+        "anotherLicenseType".getBytes(StandardCharsets.UTF_8), null);
 
     // When
     repository.updateHandleAttributes(HANDLE, CREATED, List.of(updatedHandle), true);
@@ -66,9 +66,9 @@ class HandleRepositoryIT extends BaseRepositoryIT {
   void testRollbackVersion(){
     // Given
     var handleAttributes = givenHandleAttributes();
-    repository.createHandle(HANDLE, CREATED, handleAttributes);
+    repository.createHandle(CREATED, handleAttributes);
     var updatedHandle = new HandleAttribute(11, "pidKernelMetadataLicense",
-        "anotherLicenseType".getBytes(StandardCharsets.UTF_8));
+        "anotherLicenseType".getBytes(StandardCharsets.UTF_8), null);
     repository.updateHandleAttributes(HANDLE, CREATED, List.of(updatedHandle), true);
     // When
 
@@ -87,7 +87,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
   void testRollbackHandle() {
     // Given
     var handleAttributes = givenHandleAttributes();
-    repository.createHandle(HANDLE, CREATED, handleAttributes);
+    repository.createHandle(CREATED, handleAttributes);
 
     // When
     repository.rollbackHandleCreation(HANDLE);
@@ -101,12 +101,12 @@ class HandleRepositoryIT extends BaseRepositoryIT {
   void testDSearchByPrimarySpecimenObjectIdIsPresent(){
     // Given
     var handleAttributes = givenHandleAttributes();
-    repository.createHandle(HANDLE, CREATED, handleAttributes);
+    repository.createHandle(CREATED, handleAttributes);
 
     // When
     var result = repository.searchByPrimarySpecimenObjectId(LOCAL_OBJECT_ID);
     var resultHandle = result.map(
-        record -> new String(record.get(HANDLES.HANDLE), StandardCharsets.UTF_8)).orElse("");
+        handle -> new String(handle, StandardCharsets.UTF_8)).orElse("");
 
     // Then
     assertThat(resultHandle).isEqualTo(HANDLE);
@@ -116,7 +116,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
   void testSearchByPrimarySpecimenObjectIdNotPresent(){
     // Given
     var handleAttributes = givenHandleAttributes();
-    repository.createHandle(HANDLE, CREATED, handleAttributes);
+    repository.createHandle(CREATED, handleAttributes);
 
     // When
     var result = repository.searchByPrimarySpecimenObjectId("a".getBytes(StandardCharsets.UTF_8));

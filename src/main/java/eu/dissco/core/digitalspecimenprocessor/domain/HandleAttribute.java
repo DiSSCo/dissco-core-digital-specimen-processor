@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 
-public record HandleAttribute(int index, String type, byte[] data) {
+public record HandleAttribute(int index, String type, byte[] data, String handle) {
 
   @Override
   public boolean equals(Object o) {
