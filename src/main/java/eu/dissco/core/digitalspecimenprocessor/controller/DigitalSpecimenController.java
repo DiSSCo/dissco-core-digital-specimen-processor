@@ -32,7 +32,6 @@ public class DigitalSpecimenController {
   private final ProcessingService processingService;
   private final ObjectMapper mapper;
 
-  @PreAuthorize("isAuthenticated()")
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
   DigitalSpecimenEventOld event) throws NoChangesFoundException {
@@ -40,7 +39,6 @@ public class DigitalSpecimenController {
     return upsertDigitalSpecimen(mapToNewDigitalSpecimenFormat(event));
   }
 
-  @PreAuthorize("isAuthenticated()")
   @PostMapping(value = "/new", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
   DigitalSpecimenEvent event) throws NoChangesFoundException {
