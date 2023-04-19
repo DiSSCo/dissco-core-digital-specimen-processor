@@ -59,18 +59,18 @@ public class HandleRepository {
     List<Query> queryList = new ArrayList<>();
     for (List<HandleAttribute> handleRecord : handleRecords) {
       queryList.addAll(
-          prepareUpdateQuery(handleRecord.get(0).handle(), recordTimestamp, handleRecord, true));
+          prepareUpsertQuery(handleRecord.get(0).handle(), recordTimestamp, handleRecord, true));
     }
     context.batch(queryList).execute();
   }
 
   public void updateHandleAttributes(String id, Instant recordTimestamp,
       List<HandleAttribute> handleAttributes, boolean versionIncrement) {
-    var queryList = prepareUpdateQuery(id, recordTimestamp, handleAttributes, versionIncrement);
+    var queryList = prepareUpsertQuery(id, recordTimestamp, handleAttributes, versionIncrement);
     context.batch(queryList).execute();
   }
 
-  private ArrayList<Query> prepareUpdateQuery(String id, Instant recordTimestamp,
+  private ArrayList<Query> prepareUpsertQuery(String id, Instant recordTimestamp,
       List<HandleAttribute> handleAttributes, boolean versionIncrement) {
     var queryList = new ArrayList<Query>();
     for (var handleAttribute : handleAttributes) {

@@ -5,9 +5,7 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.LOCAL_OBJECT_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleAttributes;
-import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
@@ -52,7 +50,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
     var handleAttributes = givenHandleAttributes();
     repository.createHandle(CREATED, handleAttributes);
     var updatedHandle = new HandleAttribute(11, "pidKernelMetadataLicense",
-        "anotherLicenseType".getBytes(StandardCharsets.UTF_8), null);
+        "anotherLicenseType".getBytes(StandardCharsets.UTF_8), HANDLE);
 
     // When
     repository.updateHandleAttributes(HANDLE, CREATED, List.of(updatedHandle), true);
@@ -72,7 +70,7 @@ class HandleRepositoryIT extends BaseRepositoryIT {
     var handleAttributes = givenHandleAttributes();
     repository.createHandle(CREATED, handleAttributes);
     var updatedHandle = new HandleAttribute(11, "pidKernelMetadataLicense",
-        "anotherLicenseType".getBytes(StandardCharsets.UTF_8), null);
+        "anotherLicenseType".getBytes(StandardCharsets.UTF_8), HANDLE);
     repository.updateHandleAttributes(HANDLE, CREATED, List.of(updatedHandle), true);
     // When
 

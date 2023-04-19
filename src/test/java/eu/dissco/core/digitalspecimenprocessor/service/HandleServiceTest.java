@@ -31,7 +31,6 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.STRUCTUR
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.GENERATED_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
@@ -50,7 +49,6 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
@@ -68,9 +66,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
-import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerFactory;
@@ -142,7 +138,8 @@ class HandleServiceTest {
             givenDigitalSpecimenEvent())));
 
     // Then
-    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(true));
+    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(true)
+    );
   }
 
   @Test
@@ -164,7 +161,8 @@ class HandleServiceTest {
     service.deleteVersion(givenDigitalSpecimenRecord());
 
     // Then
-    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(false));
+    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(false)
+    );
   }
 
   @Test
@@ -178,7 +176,8 @@ class HandleServiceTest {
 
     // Then
     then(repository).should().updateHandleAttributes(
-        GENERATED_HANDLE, CREATED,givenFdoRecordSpecimenAttributesFull(GENERATED_HANDLE), true);
+        GENERATED_HANDLE, CREATED,givenFdoRecordSpecimenAttributesFull(GENERATED_HANDLE), true
+    );
   }
 
   @Test

@@ -43,7 +43,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -98,7 +97,7 @@ public class HandleService {
       log.info("One or more provided Digital Specimens already have FDO records. Updating existing records");
       log.info("FDO Records being updated: " + existingRecords);
       var existingSpecimens = digitalSpecimens.stream().filter(digitalSpecimen -> existingPhysicalIds.contains(digitalSpecimen.physicalSpecimenId())).toList();
-      updateExistingHandles(existingSpecimens, existingRecords, recordTimestamp);
+      updateHandlesOnCreateOperation(existingSpecimens, existingRecords, recordTimestamp);
     }
 
     if (existingPhysicalIds.size()==digitalSpecimens.size()){
@@ -415,7 +414,13 @@ public class HandleService {
     repository.updateHandleAttributes(id, recordTimestamp, handleAttributes, true);
   }
 
-  private void updateExistingHandles(List<DigitalSpecimen> digitalSpecimens, Set<IdentifierTuple> identifierTuples, Instant recordTimestamp){
+  public void updateHandles(List<UpdatedDigitalSpecimenTuple> handleUpdates) {
+    for (var handleUpdate : handleUpdates) {
+      updateHandle(handleUpdate.currentSpecimen().id(), handleUpdate.digitalSpecimenEvent()
+          .digitalSpecimen());
+    }
+  }
+  private void updateHandlesOnCreateOperation(List<DigitalSpecimen> digitalSpecimens, Set<IdentifierTuple> identifierTuples, Instant recordTimestamp){
     List<List<HandleAttribute>> handleAttributes = new ArrayList<>();
     for (var digitalSpecimen: digitalSpecimens){
       handleAttributes.add(fillFdoRecordSpecimenAttributes(digitalSpecimen, matchIdentifiers(digitalSpecimen, identifierTuples)));
@@ -426,13 +431,6 @@ public class HandleService {
   private String matchIdentifiers(DigitalSpecimen digitalSpecimen, Set<IdentifierTuple> identifierTuples){
     var targetId = digitalSpecimen.physicalSpecimenId();
     return identifierTuples.stream().filter(tup -> tup.physicalSpecimenId().equals(targetId)).map(IdentifierTuple::handle).toList().get(0);
-  }
-
-  public void updateHandles(List<UpdatedDigitalSpecimenTuple> handleUpdates) {
-    for (var handleUpdate : handleUpdates) {
-      updateHandle(handleUpdate.currentSpecimen().id(), handleUpdate.digitalSpecimenEvent()
-          .digitalSpecimen());
-    }
   }
 
   public void rollbackHandleCreation(DigitalSpecimenRecord digitalSpecimenRecord) {
