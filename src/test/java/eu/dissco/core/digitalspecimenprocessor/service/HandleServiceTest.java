@@ -31,6 +31,7 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.STRUCTUR
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.GENERATED_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
@@ -197,7 +198,7 @@ class HandleServiceTest {
   @Test
   void testFdoRecordMinimal() throws Exception{
     // Given
-    var specimen = givenDigitalSpecimen();
+    var specimen = givenDigitalSpecimenMinimalAttributes();
     given(random.nextInt(33)).willReturn(21);
     List<HandleAttribute> expected = new ArrayList<>();
     expected.addAll(givenFdoRecordGeneratedElements(GENERATED_HANDLE));
@@ -210,7 +211,6 @@ class HandleServiceTest {
     // Then
     then(repository).should().createHandle(CREATED, expected);
   }
-
 
   private List<HandleAttribute> givenFdoRecordGeneratedElements(String handle){
     mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
@@ -304,7 +304,12 @@ class HandleServiceTest {
     return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
   }
 
-
+  private DigitalSpecimen givenDigitalSpecimenMinimalAttributes(){
+    var attributes = (ObjectNode) givenAttributes(SPECIMEN_NAME, ORGANISATION_ID);
+    attributes.remove("ods:physicalSpecimenCollection");
+    attributes.remove("dwca:id");
+    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
+  }
 
   private byte[] givenLocString(String handle){
     return ("<locations><location href=\"https://sandbox.dissco.tech/api/v1/specimens/"+handle+"\" "

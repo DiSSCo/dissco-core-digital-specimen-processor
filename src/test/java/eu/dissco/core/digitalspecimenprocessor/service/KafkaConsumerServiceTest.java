@@ -86,10 +86,10 @@ class KafkaConsumerServiceTest {
               "ods:physicalSpecimenIdType": "cetaf",
               "ods:organisationId": "https://ror.org/0443cwa12",
               "ods:specimenName": "Biota",
-              "ods:datasetId": null,
-              "ods:physicalSpecimenCollection": null,
+              "ods:datasetId": "20.5000.1025/V1Z-176-LL4",
+              "ods:physicalSpecimenCollection": "20.5000.1025/V1Z-176-LL4",
               "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-              "dwca:id": null,
+              "dwca:id": "20.5000.1025/V1Z-176-LL4",
               "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
               "ods:objectType": "",
               "ods:modified": "2017-09-26T12:27:21.000+00:00"
