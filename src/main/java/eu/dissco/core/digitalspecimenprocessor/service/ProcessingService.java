@@ -276,16 +276,24 @@ public class ProcessingService {
 
   private boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
       DigitalSpecimen digitalSpecimen) {
-    if (!currentDigitalSpecimen.type().equals(digitalSpecimen.type())) {
-      return true;
-    }
-    return !Objects.equals(getOrganisation(currentDigitalSpecimen),
-        getOrganisation(digitalSpecimen));
+    return !currentDigitalSpecimen.physicalSpecimenId().equals(digitalSpecimen.physicalSpecimenId())
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:organisationId")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:specimenName")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenIdType")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenCollection")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "dwc:typeStatus")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "dwca:id");
   }
 
-  private String getOrganisation(DigitalSpecimen digitalSpecimen) {
-    if (digitalSpecimen.attributes().get("ods:organisationId") != null) {
-      return digitalSpecimen.attributes().get("ods:organisationId").asText();
+  private boolean isUnEqual(DigitalSpecimen currentDigitalSpecimen, DigitalSpecimen digitalSpecimen,
+      String fieldName) {
+    return !Objects.equals(getValueFromAttributes(currentDigitalSpecimen, fieldName),
+        getValueFromAttributes(digitalSpecimen, fieldName));
+  }
+
+  private String getValueFromAttributes(DigitalSpecimen digitalSpecimen, String fieldName) {
+    if (digitalSpecimen.attributes().get(fieldName) != null) {
+      return digitalSpecimen.attributes().get(fieldName).asText();
     } else {
       return null;
     }

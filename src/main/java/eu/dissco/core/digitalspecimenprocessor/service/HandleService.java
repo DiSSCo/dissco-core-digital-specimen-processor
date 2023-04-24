@@ -86,7 +86,7 @@ public class HandleService {
   private final DocumentBuilder documentBuilder;
   private final HandleRepository repository;
   private final TransformerFactory transformerFactory;
-  private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneId.of("UTC"));
+  private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").withZone(ZoneId.of("UTC"));
 
   public String createNewHandle(DigitalSpecimen digitalSpecimen)
       throws TransformerException, PidCreationException {
