@@ -1,11 +1,15 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 
@@ -17,7 +21,7 @@ public class TestUtils {
   public static String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
   public static int MIDS_LEVEL = 1;
   public static int VERSION = 1;
-  public static Instant CREATED = Instant.parse("2022-11-01T09:59:24.00Z");
+  public static Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
   public static String AAS = "OCR";
   public static String TYPE = "GeologyRockSpecimen";
   public static String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
@@ -31,6 +35,10 @@ public class TestUtils {
   public static String SOURCE_SYSTEM_ID = "20.5000.1025/MN0-5XP-FFD";
   public static JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static String DWCA_ID = null;
+  public static final String GENERATED_HANDLE = "20.5000.1025/YYY-YYY-YYY";
+
+  public static final byte[] LOCAL_OBJECT_ID = " 002b51e5-b8e1-4b2b-a841-86c34dca9ef6:040ck2b86".getBytes(StandardCharsets.UTF_8);
+
 
   public static JsonNode generateSpecimenOriginalData() {
     try {
@@ -154,7 +162,7 @@ public class TestUtils {
     );
   }
 
-  private static JsonNode givenAttributes(String specimenName, String organisation) {
+  public static JsonNode givenAttributes(String specimenName, String organisation) {
     var attributes = new ObjectMapper().createObjectNode();
     attributes.put("ods:physicalSpecimenIdType", PHYSICAL_SPECIMEN_TYPE);
     attributes.put("ods:organisationId", organisation);
@@ -167,6 +175,20 @@ public class TestUtils {
     attributes.put("ods:objectType", "");
     attributes.put("ods:modified","2017-09-26T12:27:21.000+00:00");
     return attributes;
+  }
+
+  public static List<HandleAttribute> givenHandleAttributes() {
+    return List.of(
+        new HandleAttribute(1, "pid",
+            ("https://hdl.handle.net/" + HANDLE).getBytes(StandardCharsets.UTF_8)),
+        new HandleAttribute(11, "pidKernelMetadataLicense",
+            "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8)),
+        new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID.getIndex(),
+            PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
+            LOCAL_OBJECT_ID),
+        new HandleAttribute(7, "issueNumber", "1".getBytes(StandardCharsets.UTF_8)),
+        new HandleAttribute(100, "HS_ADMIN", "TEST_ADMIN_STRING".getBytes(StandardCharsets.UTF_8))
+    );
   }
 
 }

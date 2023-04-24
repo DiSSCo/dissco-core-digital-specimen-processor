@@ -1,5 +1,6 @@
 target/
 .mvn
+src/main/resources/application.properties
 
 ### IntelliJ IDEA ###
 .idea
