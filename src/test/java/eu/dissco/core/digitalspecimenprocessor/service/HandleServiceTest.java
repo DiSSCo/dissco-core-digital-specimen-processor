@@ -217,7 +217,11 @@ class HandleServiceTest {
     given(repository.searchByPrimarySpecimenObjectId(specimen.physicalSpecimenId().getBytes(
         StandardCharsets.UTF_8))).willReturn(Optional.of(mockRecord));
 
-    service.createNewHandle(specimen);
+    Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
+    try(MockedStatic<Clock> mockedClock = mockStatic(Clock.class)){
+      mockedClock.when(Clock::systemUTC).thenReturn(clock);
+      service.createNewHandle(specimen);
+    }
 
     // Then
     then(repository).should().updateHandleAttributes(
