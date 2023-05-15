@@ -94,22 +94,13 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
 
     // When
-    // TODO Mocked static only workes on the original thread
-    // Somehow, we're calling 2 threads in this class
-    // Does it have anything to do with changing pool size?
-
-    try (MockedStatic<Instant> mockedStatic = mockStatic(Instant.class)) {
-      mockedStatic.when(Instant::now).thenReturn(UPDATED_TIMESTAMP);
-      var a = Instant.now();
-      repository.updateLastChecked(List.of(HANDLE));
-    }
-
-
-    // Then
+    repository.updateLastChecked(List.of(HANDLE));
     var result = context.select(NEW_DIGITAL_SPECIMEN.LAST_CHECKED)
         .from(NEW_DIGITAL_SPECIMEN)
         .where(NEW_DIGITAL_SPECIMEN.ID.eq(HANDLE)).fetchOne(Record1::value1);
-    assertThat(result).isEqualTo(UPDATED_TIMESTAMP);
+
+    // Then
+    assertThat(result).isAfter(UPDATED_TIMESTAMP);
   }
 
 

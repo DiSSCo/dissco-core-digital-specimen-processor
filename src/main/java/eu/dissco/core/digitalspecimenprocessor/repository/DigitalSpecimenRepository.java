@@ -109,7 +109,6 @@ public class DigitalSpecimenRepository {
   }
 
   public int updateLastChecked(List<String> currentDigitalSpecimen) {
-
     var query = context.update(NEW_DIGITAL_SPECIMEN)
         .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .where(NEW_DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen));
