@@ -9,6 +9,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import java.io.IOException;
@@ -275,16 +276,24 @@ public class ProcessingService {
 
   private boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
       DigitalSpecimen digitalSpecimen) {
-    if (!currentDigitalSpecimen.type().equals(digitalSpecimen.type())) {
-      return true;
-    }
-    return !Objects.equals(getOrganisation(currentDigitalSpecimen),
-        getOrganisation(digitalSpecimen));
+    return !currentDigitalSpecimen.physicalSpecimenId().equals(digitalSpecimen.physicalSpecimenId())
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:organisationId")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:specimenName")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenIdType")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenCollection")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "dwc:typeStatus")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "dwca:id");
   }
 
-  private String getOrganisation(DigitalSpecimen digitalSpecimen) {
-    if (digitalSpecimen.attributes().get("ods:organisationId") != null) {
-      return digitalSpecimen.attributes().get("ods:organisationId").asText();
+  private boolean isUnEqual(DigitalSpecimen currentDigitalSpecimen, DigitalSpecimen digitalSpecimen,
+      String fieldName) {
+    return !Objects.equals(getValueFromAttributes(currentDigitalSpecimen, fieldName),
+        getValueFromAttributes(digitalSpecimen, fieldName));
+  }
+
+  private String getValueFromAttributes(DigitalSpecimen digitalSpecimen, String fieldName) {
+    if (digitalSpecimen.attributes().get(fieldName) != null) {
+      return digitalSpecimen.attributes().get(fieldName).asText();
     } else {
       return null;
     }
@@ -406,7 +415,7 @@ public class ProcessingService {
           Instant.now(),
           event.digitalSpecimen()
       );
-    } catch (TransformerException e) {
+    } catch (TransformerException | PidCreationException e) {
       log.error("Failed to process record with id: {}",
           event.digitalSpecimen().physicalSpecimenId(),
           e);

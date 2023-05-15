@@ -39,7 +39,7 @@ public class DigitalSpecimenController {
     return upsertDigitalSpecimen(mapToNewDigitalSpecimenFormat(event));
   }
 
-  @PostMapping(value = "/new", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping(value = "new", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
   DigitalSpecimenEvent event) throws NoChangesFoundException {
     log.info("Received digitalSpecimen upsert: {}", event);
