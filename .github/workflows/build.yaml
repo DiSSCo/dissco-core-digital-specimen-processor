@@ -37,13 +37,6 @@ jobs:
                   -Dsonar.projectKey=DiSSCo_${{ github.event.repository.name }}
                   -Dsonar.exclusions=**/jooq/**
                   -Dsonar.coverage.exclusions=**/properties/**,**/configuration/**,**/domain/**,**/exception/**
-      - name: Login to Public ECR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v1
-        with:
-          registry: public.ecr.aws
-          username: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Build image
         run: |
           docker build -t ${{ github.event.repository.name }} .
