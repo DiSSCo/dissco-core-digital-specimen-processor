@@ -4,10 +4,3 @@
 # Note: Updating spring boot did not fix this
 # Status: Jira DD-243
 CVE-2022-1471
-
-# Date: May 15, 2023
-# Package: Spring framework core
-# Issue: update from 6.0.7 -> 6.0.8
-# Severity: Critical
-# Note: Updating spring boot caused this
-CVE-2023-20863
