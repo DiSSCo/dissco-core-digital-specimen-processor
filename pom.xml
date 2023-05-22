@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.0.6</version>
+    <version>3.1.0</version>
     <relativePath/> <!-- lookup parent from repository -->
   </parent>
   <groupId>eu.dissco.core</groupId>
@@ -22,6 +22,7 @@
     <json-patch.version>1.13</json-patch.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <testcontainers.version>1.17.6</testcontainers.version>
+    <springdoc.version>2.1.0</springdoc.version>
     <sonar.organization>dissco</sonar.organization>
     <apache.collections.version>4.2</apache.collections.version>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
@@ -70,6 +71,12 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-jooq</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>${springdoc.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
