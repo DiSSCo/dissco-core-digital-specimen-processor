@@ -1,6 +1,0 @@
-# Date: May 15, 2023
-# Package: Snakeyaml
-# Severity: Critical
-# Note: Updating spring boot did not fix this
-# Status: Jira DD-243
-CVE-2022-1471
