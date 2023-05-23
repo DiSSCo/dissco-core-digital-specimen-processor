@@ -1,7 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.HANDLES;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import java.nio.charset.StandardCharsets;

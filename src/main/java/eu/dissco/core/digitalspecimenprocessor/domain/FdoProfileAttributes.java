@@ -1,13 +1,13 @@
 package eu.dissco.core.digitalspecimenprocessor.domain;
 
-public enum FdoProfile {
+public enum FdoProfileAttributes {
 
   // Handle: 1-19
   FDO_PROFILE("fdoProfile", 1),
   FDO_RECORD_LICENSE("fdoRecordLicense", 2), 
   DIGITAL_OBJECT_TYPE("digitalObjectType", 3),
   DIGITAL_OBJECT_NAME("digitalObjectName",4),
-  PID("pid", 5), //5
+  PID("pid", 5),
   PID_ISSUER("pidIssuer", 6),
   PID_ISSUER_NAME("pidIssuerName", 7),
   ISSUED_FOR_AGENT ("issuedForAgent", 8),
@@ -62,7 +62,7 @@ public enum FdoProfile {
     return this.attribute;
   }
 
-  private FdoProfile(String attribute, int index){
+  private FdoProfileAttributes(String attribute, int index){
     this.attribute = attribute;
     this.index = index;
   }

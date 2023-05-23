@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
 public class ProcessingService {
 
   private final DigitalSpecimenRepository repository;
-  private final HandleService handleService;
+  private final FdoRecordService fdoRecordService;
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
@@ -227,7 +227,7 @@ public class ProcessingService {
         tuple -> handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
             tuple.digitalSpecimenEvent().digitalSpecimen())).toList();
     if (!handleUpdates.isEmpty()) {
-      handleService.updateHandles(handleUpdates);
+      fdoRecordService.updateHandles(handleUpdates);
     }
   }
 
@@ -257,7 +257,7 @@ public class ProcessingService {
     if (handleNeedsUpdate(updatedDigitalSpecimenRecord.currentDigitalSpecimen().digitalSpecimen(),
         updatedDigitalSpecimenRecord.digitalSpecimenRecord()
             .digitalSpecimen())) {
-      handleService.deleteVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
+      fdoRecordService.deleteVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
     }
     try {
       kafkaService.deadLetterEvent(
@@ -397,7 +397,7 @@ public class ProcessingService {
       }
     }
     repository.rollbackSpecimen(digitalSpecimenRecord.id());
-    handleService.rollbackHandleCreation(digitalSpecimenRecord);
+    fdoRecordService.rollbackHandleCreation(digitalSpecimenRecord);
     try {
       kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(enrichments, digitalSpecimenRecord.digitalSpecimen()));
@@ -409,7 +409,7 @@ public class ProcessingService {
   private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event) {
     try {
       return new DigitalSpecimenRecord(
-          handleService.createNewHandle(event.digitalSpecimen()),
+          fdoRecordService.createNewHandle(event.digitalSpecimen()),
           midsService.calculateMids(event.digitalSpecimen()),
           1,
           Instant.now(),
