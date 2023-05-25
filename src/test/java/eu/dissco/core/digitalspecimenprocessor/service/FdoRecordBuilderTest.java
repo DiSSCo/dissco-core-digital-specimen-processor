@@ -82,7 +82,7 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class FdoRecordServiceTest {
+class FdoRecordBuilderTest {
 
   @Mock
   private Random random;
@@ -99,14 +99,14 @@ class FdoRecordServiceTest {
   private static final String DWCA_ID = "ZMA.V.POL.1296.2@CRS";
   private static final String COLL_ID = "NAT.123XYZ.AVES";
 
-  private FdoRecordService service;
+  private FdoRecordBuilder service;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
 
   @BeforeEach
   void setup() throws ParserConfigurationException {
     var docFactory = DocumentBuilderFactory.newInstance();
     var transFactory = TransformerFactory.newInstance();
-    service = new FdoRecordService(MAPPER, random, docFactory.newDocumentBuilder(), repository,
+    service = new FdoRecordBuilder(MAPPER, random, docFactory.newDocumentBuilder(), repository,
         transFactory);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);

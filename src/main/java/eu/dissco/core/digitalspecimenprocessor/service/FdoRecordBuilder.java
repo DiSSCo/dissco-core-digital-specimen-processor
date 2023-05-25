@@ -58,13 +58,13 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class FdoRecordService {
+public class FdoRecordBuilder {
 
   private final ObjectMapper mapper;
   private static final String HANDLE_PROXY = "https://hdl.handle.net/";
