@@ -18,7 +18,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`sandbox.dissco.tech`) && PathPrefix(`/processing/digitalmedia`)
+    - match: Host(`sandbox.dissco.tech`) && PathPrefix(`/processing/digtalspecimen`)
       kind: Rule
       services:
         - name: dissco-digital-media-object-processor-service

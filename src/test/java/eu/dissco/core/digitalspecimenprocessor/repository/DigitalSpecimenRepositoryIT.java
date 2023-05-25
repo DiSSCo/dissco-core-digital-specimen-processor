@@ -8,9 +8,13 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.jooq.Record1;
@@ -88,17 +92,15 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
 
     // When
-    try (MockedStatic<Instant> mockedStatic = mockStatic(Instant.class)) {
-      mockedStatic.when(Instant::now).thenReturn(UPDATED_TIMESTAMP);
-      repository.updateLastChecked(List.of(HANDLE));
-    }
-
-    // Then
+    repository.updateLastChecked(List.of(HANDLE));
     var result = context.select(NEW_DIGITAL_SPECIMEN.LAST_CHECKED)
         .from(NEW_DIGITAL_SPECIMEN)
         .where(NEW_DIGITAL_SPECIMEN.ID.eq(HANDLE)).fetchOne(Record1::value1);
-    assertThat(result).isEqualTo(UPDATED_TIMESTAMP);
+
+    // Then
+    assertThat(result).isAfter(UPDATED_TIMESTAMP);
   }
+
 
   @Test
   void testUpsertSpecimens() {

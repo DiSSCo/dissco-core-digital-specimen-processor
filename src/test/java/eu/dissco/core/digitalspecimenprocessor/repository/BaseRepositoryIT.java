@@ -31,7 +31,7 @@ public class BaseRepositoryIT {
     dataSource.setJdbcUrl(CONTAINER.getJdbcUrl());
     dataSource.setUsername(CONTAINER.getUsername());
     dataSource.setPassword(CONTAINER.getPassword());
-    dataSource.setMaximumPoolSize(1);
+    dataSource.setMaximumPoolSize(2);
     dataSource.setConnectionInitSql(CONTAINER.getTestQueryString());
     Flyway.configure().mixed(true).dataSource(dataSource).load().migrate();
     context = new DefaultDSLContext(dataSource, SQLDialect.POSTGRES);

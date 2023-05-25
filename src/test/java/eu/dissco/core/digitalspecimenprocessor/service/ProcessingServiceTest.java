@@ -66,7 +66,8 @@ class ProcessingServiceTest {
   @Mock
   private MidsService midsService;
 
-  private MockedStatic<Instant> mockedStatic;
+  private MockedStatic<Instant> mockedInstant;
+  private MockedStatic<Clock> mockedClock;
 
   private ProcessingService service;
 
@@ -76,13 +77,16 @@ class ProcessingServiceTest {
         midsService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
-    mockedStatic = mockStatic(Instant.class);
-    mockedStatic.when(Instant::now).thenReturn(instant);
+    mockedInstant = mockStatic(Instant.class);
+    mockedInstant.when(Instant::now).thenReturn(instant);
+    mockedClock = mockStatic(Clock.class);
+    mockedClock.when(Clock::systemUTC).thenReturn(clock);
   }
 
   @AfterEach
   void destroy() {
-    mockedStatic.close();
+    mockedInstant.close();
+    mockedClock.close();
   }
 
   @Test

@@ -1,45 +1,33 @@
 package eu.dissco.core.digitalspecimenprocessor.security;
 
-import org.keycloak.adapters.springsecurity.KeycloakSecurityComponents;
-import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
-import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
+import org.springframework.boot.actuate.health.HealthEndpoint;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
-import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
-import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
 
+@RequiredArgsConstructor
 @Configuration
 @EnableWebSecurity
-@ComponentScan(basePackageClasses = KeycloakSecurityComponents.class)
-public class WebSecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
+public class WebSecurityConfig {
 
-  @Autowired
-  public void configureGlobal(AuthenticationManagerBuilder auth) {
-    KeycloakAuthenticationProvider keycloakAuthenticationProvider =
-        keycloakAuthenticationProvider();
-    SimpleAuthorityMapper grantedAuthorityMapper = new SimpleAuthorityMapper();
-    grantedAuthorityMapper.setConvertToUpperCase(true);
-    keycloakAuthenticationProvider.setGrantedAuthoritiesMapper(grantedAuthorityMapper);
-    auth.authenticationProvider(keycloakAuthenticationProvider);
-  }
+    private final JwtAuthConverter jwtAuthConverter;
 
-  @Bean
-  @Override
-  protected SessionAuthenticationStrategy sessionAuthenticationStrategy() {
-    return new NullAuthenticatedSessionStrategy();
-  }
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
+                .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll().anyRequest().authenticated());
 
+        http.oauth2ResourceServer(jwtoauth2ResourceServer -> jwtoauth2ResourceServer.jwt((
+                jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter)
+                )));
 
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
-    super.configure(http);
-    http.csrf().disable();
-    http.authorizeRequests().antMatchers("/*").permitAll();
-  }
+        http.sessionManagement(sessionManagement -> sessionManagement
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        return http.build();
+    }
 }

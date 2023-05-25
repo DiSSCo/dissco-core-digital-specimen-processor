@@ -109,9 +109,10 @@ public class DigitalSpecimenRepository {
   }
 
   public int updateLastChecked(List<String> currentDigitalSpecimen) {
-    return context.update(NEW_DIGITAL_SPECIMEN)
+    var query = context.update(NEW_DIGITAL_SPECIMEN)
         .set(NEW_DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .where(NEW_DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen)).execute();
+        .where(NEW_DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen));
+    return query.execute();
   }
 
   public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList)
