@@ -25,10 +25,8 @@ import static org.mockito.BDDMockito.given;
 class TokenAuthenticatorTest {
     @Mock
     private WebClient webClient;
-
     @Mock
     private WebClient.RequestBodyUriSpec bodySpec;
-
     @Mock
     private WebClient.RequestHeadersSpec headerSpec;
     @Mock
@@ -69,7 +67,6 @@ class TokenAuthenticatorTest {
 
     private void givenWebclient() {
         given(properties.getFromFormData()).willReturn(testFromFormData);
-
         given(webClient.post()).willReturn(bodySpec);
         given(bodySpec.body(any())).willReturn(headerSpec);
         given(headerSpec.acceptCharset(StandardCharsets.UTF_8)).willReturn(headerSpec);
