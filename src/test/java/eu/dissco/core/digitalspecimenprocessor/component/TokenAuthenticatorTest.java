@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.component;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
 import eu.dissco.core.digitalspecimenprocessor.property.TokenProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,12 +15,15 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class TokenAuthenticatorTest {
@@ -77,6 +81,24 @@ class TokenAuthenticatorTest {
         assertThat(response).isNull();
     }
 
+    @Test
+    void testGetTokenIsUnauthenticated() throws Exception {
+        // Given
+        var ex = mock(ExecutionException.class);
+        given(jsonFuture.get()).willThrow(ex);
+
+        // Then
+        assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
+    }
+
+    @Test
+    void testGetTokenIsNull() throws Exception {
+        given(jsonFuture.get()).willReturn(MAPPER.createObjectNode());
+
+        // When
+        assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
+    }
+
     private void givenWebclient() {
         given(properties.getFromFormData()).willReturn(testFromFormData);
         given(webClient.post()).willReturn(bodySpec);
@@ -84,6 +106,7 @@ class TokenAuthenticatorTest {
         given(headerSpec.acceptCharset(StandardCharsets.UTF_8)).willReturn(headerSpec);
         given(headerSpec.retrieve()).willReturn(responseSpec);
         given(responseSpec.bodyToMono(any(Class.class))).willReturn(jsonNodeMono);
+        given(responseSpec.onStatus(any(), any())).willReturn(responseSpec);
         given(jsonNodeMono.toFuture()).willReturn(jsonFuture);
     }
 
