@@ -2,6 +2,8 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -39,6 +41,69 @@ public class ProcessingService {
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
+  private final HandleService handleService;
+  private final ObjectMapper mapper; // Todo delete
+
+  public JsonNode postHandle(){
+    var specimen = new DigitalSpecimen(
+            "12344",
+            "digitalSpecimen",
+            givenAttributes(),
+            generateSpecimenOriginalData()
+    );
+
+    return handleService.postHandle(specimen);
+  }
+
+  // Todo delete
+  private static JsonNode givenAttributes() {
+    var attributes = new ObjectMapper().createObjectNode();
+    attributes.put("ods:physicalSpecimenIdType", "cetaf");
+    attributes.put("ods:organisationId", "https://ror.org/0566bfb96");
+    attributes.put("ods:specimenName", "biota");
+    attributes.put("dwca:id", "aaaaaaaaaaaaaaaaaaaaaaaa");
+    attributes.put("ods:objectType", "");
+    attributes.put("ods:modified","2017-09-26T12:27:21.000+00:00");
+    return attributes;
+  }
+  private JsonNode generateSpecimenOriginalData() {
+    try {
+      return mapper.readTree(
+              """
+                  {"abcd:unitID": "152-4972",
+                    "abcd:sourceID": "GIT",
+                    "abcd:unitGUID": "https://geocollections.info/specimen/23646",
+                    "abcd:recordURI": "https://geocollections.info/specimen/23646",
+                    "abcd:recordBasis": "FossilSpecimen",
+                    "abcd:unitIDNumeric": 23646,
+                    "abcd:dateLastEdited": "2004-06-09T10:17:54.000+00:00",
+                    "abcd:kindOfUnit/0/value": "",
+                    "abcd:sourceInstitutionID": "Department of Geology, TalTech",
+                    "abcd:kindOfUnit/0/language": "en",
+                    "abcd:gathering/country/name/value": "Estonia",
+                    "abcd:gathering/localityText/value": "Laeva 297 borehole",
+                    "abcd:gathering/country/iso3166Code": "EE",
+                    "abcd:gathering/localityText/language": "en",
+                    "abcd:gathering/altitude/measurementOrFactText/value": "39.9",
+                    "abcd:identifications/identification/0/preferredFlag": true,
+                    "abcd:gathering/depth/measurementOrFactAtomised/lowerValue/value": "165",
+                    "abcd:gathering/depth/measurementOrFactAtomised/unitOfMeasurement": "m",
+                    "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/spatialDatum": "WGS84",
+                    "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/0/term": "Pirgu Stage",
+                    "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/1/term": "Katian",
+                    "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/latitudeDecimal": 58.489269,
+                    "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/longitudeDecimal": 26.385719,
+                    "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/0/language": "en",
+                    "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/1/language": "en",
+                    "abcd:identifications/identification/0/result/taxonIdentified/scientificName/fullScientificNameString": "Biota",
+                    "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronostratigraphicName": "Pirgu Stage",
+                    "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronoStratigraphicDivision": "Stage"
+                  }"""
+      );
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
