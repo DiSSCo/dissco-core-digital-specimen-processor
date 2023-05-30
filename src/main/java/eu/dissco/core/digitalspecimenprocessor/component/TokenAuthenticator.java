@@ -20,7 +20,7 @@ public class TokenAuthenticator {
     @Qualifier("tokenClient")
     private final WebClient tokenClient;
 
-    public JsonNode getToken() throws ExecutionException {
+    public String getToken() throws ExecutionException {
         var responseSpec = tokenClient
                 .post()
                 .body(BodyInserters.fromFormData(properties.getFromFormData()))
@@ -29,7 +29,8 @@ public class TokenAuthenticator {
 
         var response = responseSpec.bodyToMono(JsonNode.class);
         try {
-            return response.toFuture().get();
+            var responseJson= response.toFuture().get();
+            return responseJson.get("access_token").asText();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;
