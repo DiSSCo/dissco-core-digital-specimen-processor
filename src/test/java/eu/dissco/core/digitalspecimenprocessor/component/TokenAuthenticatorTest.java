@@ -65,6 +65,18 @@ class TokenAuthenticatorTest {
         assertThat(response).isEqualTo(expected);
     }
 
+    @Test
+    void testGetTokenInterrupted() throws Exception {
+        // Given
+        given(jsonFuture.get()).willThrow(new InterruptedException());
+
+        // When
+        var response = authenticator.getToken();
+
+        // Then
+        assertThat(response).isNull();
+    }
+
     private void givenWebclient() {
         given(properties.getFromFormData()).willReturn(testFromFormData);
         given(webClient.post()).willReturn(bodySpec);
