@@ -37,7 +37,7 @@ If the indexing in Elasticsearch fails, we will roll back the database insert an
 If the publication of the CreateUpdateDelete event fails, we will roll back the database insert, the handle creation as well as the indexing.
 
 ## Updated digital specimen
-For updated digital specimen we need to check whether we also need to update the FDO Profile.
+For updated digital specimen, we need to check whether we also need to update the FDO Profile.
 If we need to update the FDO Profile, we will update the FDO Profile and increment the profile's version.
 Next we will recalculate the MidsLevel, as the changed information might have modified the level, and increment the version of the digital specimen.
 We will update the information in the database, overriding the previous information.
