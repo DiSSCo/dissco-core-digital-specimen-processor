@@ -29,12 +29,6 @@ public class DigitalSpecimenController {
   private final ProcessingService processingService;
   private final ObjectMapper mapper;
 
-  @GetMapping
-  public ResponseEntity<JsonNode> testHandle(){
-    log.info("controller");
-    return ResponseEntity.ok(processingService.postHandle());
-  }
-
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
   DigitalSpecimenEventOld event) throws NoChangesFoundException {

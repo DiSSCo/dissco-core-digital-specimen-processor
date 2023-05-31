@@ -50,20 +50,6 @@ public class HandleService {
             Thread.currentThread().interrupt();
             return null;
         }
-                /*
-                .exchangeToMono(response -> {
-                    if (response.statusCode().equals(HttpStatus.CREATED)) {
-                        log.info(response.toString());
-                        return response.bodyToMono(JsonNode.class);
-                    } else if (response.statusCode().is4xxClientError()) {
-                        log.info(response.toString());
-                        return Mono.just("Error response");
-                    } else {
-                        log.info(response.toString());
-                        return response.createException()
-                                .flatMap(Mono::error);
-                    }
-                });*/
     }
 
 

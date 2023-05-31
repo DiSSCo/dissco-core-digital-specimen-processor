@@ -15,7 +15,7 @@ public class WebClientConfig {
     @Value("${auth.tokenEndpoint}")
     private String tokenEndpoint;
 
-    private static final String HANDLE_ENDPOINT = "http://localhost:8081";
+    private static final String HANDLE_ENDPOINT = "sandbox.dissco.tech/handle-manager/api/v1/pids";
 
     @Bean(name = "tokenClient")
     public WebClient tokenClient() {
