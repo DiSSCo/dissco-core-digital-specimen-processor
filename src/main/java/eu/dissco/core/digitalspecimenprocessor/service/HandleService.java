@@ -8,6 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHeaders;
@@ -29,13 +31,12 @@ public class HandleService {
 
     private final TokenAuthenticator tokenAuthenticator;
 
-    private final FdoRecordBuilder recordBuilder;
 
-    public JsonNode postHandle(DigitalSpecimen specimen) {
+    public JsonNode postHandle(JsonNode requestBody)throws PidAuthenticationException, PidCreationException {
         var token = "Bearer " + tokenAuthenticator.getToken();
-        var requestBody = recordBuilder.genRequest(List.of(specimen));
 
-        var response = handleClient.post().uri("api/v1/pids/batch")
+        var response = handleClient.post()
+                .uri(uriBuilder -> uriBuilder.path("batch").build())
                 .body(BodyInserters.fromValue(requestBody))
                 .header("Authorization", token)
                 .acceptCharset(StandardCharsets.UTF_8)
@@ -43,14 +44,11 @@ public class HandleService {
                 .bodyToMono(JsonNode.class);
 
         try {
-            var r = response.toFuture().get();
-            log.info(r.toPrettyString());
-            return  r;
+            return response.toFuture().get();
         } catch (InterruptedException | ExecutionException e) {
             Thread.currentThread().interrupt();
-            return null;
+            log.info(response.toString());
+            throw new PidCreationException("An error has occurred in creating a PID. More information: " + e.getMessage());
         }
     }
-
-
 }
