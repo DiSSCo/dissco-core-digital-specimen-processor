@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.service;
+package eu.dissco.core.digitalspecimenprocessor.component;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.DIGITAL_OBJECT_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.DIGITAL_OBJECT_TYPE;
