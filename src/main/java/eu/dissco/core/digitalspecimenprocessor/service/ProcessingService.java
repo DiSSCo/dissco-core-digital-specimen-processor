@@ -44,13 +44,6 @@ public class ProcessingService {
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
-  private final ObjectMapper mapper;
-  private final HandleService handleService;
-
-  public static String loadResourceFile(String fileName) throws IOException {
-    return new String(new ClassPathResource(fileName).getInputStream()
-            .readAllBytes(), StandardCharsets.UTF_8);
-  }
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());

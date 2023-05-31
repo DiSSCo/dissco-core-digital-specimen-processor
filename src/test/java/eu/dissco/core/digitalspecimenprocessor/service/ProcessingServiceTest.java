@@ -17,6 +17,7 @@ import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.component.FdoRecordBuilder;
+import eu.dissco.core.digitalspecimenprocessor.component.HandleComponent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -56,7 +57,7 @@ class ProcessingServiceTest {
   private MidsService midsService;
 
   @Mock
-  private HandleService handleService;
+  private HandleComponent handleComponent;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -66,7 +67,7 @@ class ProcessingServiceTest {
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, fdoRecordBuilder, elasticRepository, kafkaService,
-        midsService, MAPPER, handleService);
+        midsService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
