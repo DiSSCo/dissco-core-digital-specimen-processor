@@ -4,56 +4,57 @@ The digital specimen procesor can receive data from two different sources:
 - Through a Kafka queue to register a digital specimen
 
 ## Preparation
-The digital specimen processor received objects as a batch. 
+The digital specimen processor receives objects as a batch. 
 The first step in the processing is to make sure there are no conflicts inside the batch.
-We only want unique objects in the batch (based on physicalSpecimenId), so all duplicates will be pushed back to the queue.
+We only want unique objects (based on physicalSpecimenId), so all duplicates will be pushed back to the queue.
 
 ## Evaluation with existing objects
-The next step is to get the existing information for the specimen in the batch.
+The next step is to get the existing specimen information from the database.
 We will then evaluate if the received objects are new, updated or equal to the existing object.
 This evaluation is based on the physicalSpecimenId and the full information.
 - If the objects was not found in the database, it is seen as new.
 - If the object was found but is an exact match, it is seen as equal.
 - If the object was found but differs, it is seen as updated.
 
-This will result in three lists with specimen: new, equal and updated.
+This will result in three lists of specimens: new, equal and updated.
 
 ## New digital specimen
-For new digital specimens, we create a new Handle and FDO Profile, and transfer the object to a record.
+For new digital specimens, we create a new PID and FDO Profile, and transfer the object to a record.
 Changing the object to a record means we will add a version (`1`), a timestamp and calculate a MidsLevel.
 The logic behind the calculation of the MidsLevel can be found [here] (https://github.com/DiSSCo/openDS/blob/master/mids-calculation/intro.md).
 After the transfer to a record, we bulk insert the records into the Postgres database.
 Next we bulk index the records into Elasticsearch.
-If this indexation has been successful, we will publish a CreateUpdateDelete message for each new specimen.
-This message will contain the full newly create object.
+If this indexation has been successful, we will publish a CreateUpdateDelete event for each new specimen.
+This message will contain the full newly created object.
 The last step is to notify any requested automated annotation services.
-If everything is successful, we return the created objects, this is used as response object for the web version.
+If everything is successful, we return the created objects.
+These are used as response object if the application is running in the `web` profile (see below).
 ### Exception handling
 There are several moments that the creation of a new specimen could fail.
-The creation of the Handle might fail, which will mean we won't be able to process the specimen.
+The creation of the PID and FDO Profile might fail, which will mean we won't be able to process the specimen.
 We will then publish the specimen to the dead letter queue.
 If the indexing in Elasticsearch fails, we will roll back the database insert and the handle creation.
-If the publishing of the CreateUpdateDelete message fails, we will roll back the database insert, the handle creation as well as the indexing.
+If the publication of the CreateUpdateDelete event fails, we will roll back the database insert, the handle creation as well as the indexing.
 
 ## Updated digital specimen
 For updated digital specimen we need to check whether we also need to update the FDO Profile.
 If we need to update the FDO Profile, we will update the FDO Profile and increment the profile's version.
-Next we will recalculate the MidsLevel, as the changed information might have modified the level and increment the version of the digital specimen.
+Next we will recalculate the MidsLevel, as the changed information might have modified the level, and increment the version of the digital specimen.
 We will update the information in the database, overriding the previous information.
 After successful database insert, we bulk index the digital specimen, overwriting the old data.
 If everything is successful we will publish a CreateDeleteUpdate event to Kafka.
 This event will hold both the new digital specimen and a JsonPatch with the changes.
-We will return the updated records.
+We will return the updated records which will be used as response object when the application is running the `web` profile.
 ### Exception handling
 There are several point where errors could occur.
-If the indexing to Elasticsearch fails we will roll back to the previous version.
+If the indexing to Elasticsearch fails, we will roll back to the previous version.
 This means that we will reinsert the old version of the FDO Profile, and reinsert the old digital specimen to the database.
 If the publishing of the CreateUpdateDelete event fails, we will roll back the FDO Profile, digital specimen and the indexing.
 
 ## Equal digital specimen
 When the stored digital specimen and the received digital specimen are equal, we will only update the `last_checked` timestamp.
-We will do a batch update to the particular field with the current timestamp to indicate the object were checked and equal at this moment.
-We will not return the equal objects as we didn't change the data.
+We will do a batch update on the particular field with the current timestamp to indicate the object were checked and equal at this moment.
+We will not return the equal objects as we did not change the data.
 
 ## Run locally
 To run the system locally, it can be run from an IDEA.
@@ -83,13 +84,13 @@ This listens to an API which has two endpoint:
   The result of the processing will be returned to the user.
   It can only be called with a single digital specimen and does not support batches.
 
-If an exception occurs during processing, it will be published to the Kafka Dead Letter queue.
+If an exception occurs during processing, the message will be published to the Kafka Dead Letter queue.
 We can than later evaluate why the exception was thrown and if needed, retry the object.
 
 ### Kafka
 `spring.profiles.active=kafka`
 This will make the application listen to a specified queue and process the digital specimen events from the queue.
-We collect the objects in batches of between 300-500 (depending on amount in queue).
+We collect the objects in batches of between 300-500 (depending on the length of the queue).
 If any exception occurs we publish the event to a Dead Letter Queue where we can evaluate the failure and if needed retry the messages.
 
 ## Environmental variables
