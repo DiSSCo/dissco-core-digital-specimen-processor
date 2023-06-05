@@ -417,8 +417,13 @@ public class ProcessingService {
       );
     } catch (TransformerException | PidCreationException e) {
       log.error("Failed to process record with id: {}",
-          event.digitalSpecimen().physicalSpecimenId(),
-          e);
+          event.digitalSpecimen().physicalSpecimenId(), e);
+      try {
+        kafkaService.deadLetterEvent(event);
+      } catch (JsonProcessingException ex) {
+        log.error("Failed to dead letter specimen with id: {}",
+            event.digitalSpecimen().physicalSpecimenId(), e);
+      }
       return null;
     }
   }
