@@ -17,34 +17,37 @@ import java.util.concurrent.ExecutionException;
 @RequiredArgsConstructor
 public class TokenAuthenticator {
 
-    private final TokenProperties properties;
+  private final TokenProperties properties;
 
-    @Qualifier("tokenClient")
-    private final WebClient tokenClient;
+  @Qualifier("tokenClient")
+  private final WebClient tokenClient;
 
-    public String getToken() throws PidAuthenticationException {
-        var responseSpec = tokenClient
-                .post()
-                .body(BodyInserters.fromFormData(properties.getFromFormData()))
-                .acceptCharset(StandardCharsets.UTF_8)
-                .retrieve()
-                .onStatus(HttpStatus.UNAUTHORIZED::equals,
-                        r -> r.bodyToMono(String.class).map(PidAuthenticationException::new));
+  public String getToken() throws PidAuthenticationException {
+    var responseSpec = tokenClient
+        .post()
+        .body(BodyInserters.fromFormData(properties.getFromFormData()))
+        .acceptCharset(StandardCharsets.UTF_8)
+        .retrieve()
+        .onStatus(HttpStatus.UNAUTHORIZED::equals,
+            r -> r.bodyToMono(String.class).map(PidAuthenticationException::new));
 
-        var response = responseSpec.bodyToMono(JsonNode.class);
-        try {
-            var tokenNode = response.toFuture().get();
-            var token = tokenNode.get("access_token");
-            if(token==null){
-                throw new PidAuthenticationException("Unable to authenticate processing service with Keycloak. An error has occurred connecting with the keycloak server.");
-            }
-            return token.asText();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return null;
-        } catch (ExecutionException e) {
-            throw new PidAuthenticationException("Unable to authenticate processing service with Keycloak. More information: " + e.getMessage());
-        }
+    var response = responseSpec.bodyToMono(JsonNode.class);
+    try {
+      var tokenNode = response.toFuture().get();
+      var token = tokenNode.get("access_token");
+      if (token == null) {
+        throw new PidAuthenticationException(
+            "Unable to authenticate processing service with Keycloak. An error has occurred connecting with the keycloak server.");
+      }
+      return token.asText();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    } catch (ExecutionException e) {
+      throw new PidAuthenticationException(
+          "Unable to authenticate processing service with Keycloak. More information: "
+              + e.getMessage());
     }
+  }
 
 }

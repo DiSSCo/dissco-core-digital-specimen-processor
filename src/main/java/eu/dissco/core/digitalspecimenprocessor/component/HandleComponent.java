@@ -11,36 +11,42 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class HandleComponent {
 
-    @Qualifier("handleClient")
-    private final WebClient handleClient;
+  @Qualifier("handleClient")
+  private final WebClient handleClient;
 
-    private final TokenAuthenticator tokenAuthenticator;
+  private final TokenAuthenticator tokenAuthenticator;
 
-    public JsonNode postHandle(List<JsonNode> requestBody)throws PidAuthenticationException, PidCreationException {
-        var token = "Bearer " + tokenAuthenticator.getToken();
-        var response = handleClient.post()
-                .uri(uriBuilder -> uriBuilder.path("batch").build())
-                .body(BodyInserters.fromValue(requestBody))
-                .header("Authorization", token)
-                .acceptCharset(StandardCharsets.UTF_8)
-                .retrieve()
-                .bodyToMono(JsonNode.class);
-
-        try {
-            return response.toFuture().get();
-        } catch (InterruptedException | ExecutionException e) {
-            Thread.currentThread().interrupt();
-            log.info(response.toString());
-            throw new PidCreationException("An error has occurred in creating a PID. More information: " + e.getMessage());
-        }
+  public JsonNode postHandle(List<JsonNode> requestBody)
+      throws PidAuthenticationException, PidCreationException {
+    var token = "Bearer " + tokenAuthenticator.getToken();
+    var response = handleClient.post()
+        .uri(uriBuilder -> uriBuilder.path("batch").build())
+        .body(BodyInserters.fromValue(requestBody))
+        .header("Authorization", token)
+        .acceptCharset(StandardCharsets.UTF_8)
+        .retrieve()
+        .onStatus(HttpStatusCode::isError, r-> r.bodyToMono(String.class).map(PidAuthenticationException::new))
+        .bodyToMono(JsonNode.class)
+        .retry(3);
+    try {
+      return response.toFuture().get();
+    } catch (InterruptedException | ExecutionException e) {
+      Thread.currentThread().interrupt();
+      log.info(response.toString());
+      throw new PidCreationException(
+          "An error has occurred in creating a PID. More information: " + e.getMessage());
     }
+  }
 }

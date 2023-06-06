@@ -29,8 +29,6 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
   private DigitalSpecimenRepository repository;
 
-  private MockedStatic<Clock> clockMock;
-
   @BeforeEach
   void setup() {
     repository = new DigitalSpecimenRepository(context, MAPPER);

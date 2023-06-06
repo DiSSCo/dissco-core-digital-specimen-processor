@@ -1,6 +1,5 @@
 package eu.dissco.core.digitalspecimenprocessor.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
