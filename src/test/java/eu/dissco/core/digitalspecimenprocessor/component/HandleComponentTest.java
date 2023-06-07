@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.component;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -81,16 +82,15 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var digitalSpecimen = givenDigitalSpecimen();
-    var expectedEvent = List.of(new DigitalSpecimenEvent(new ArrayList<>(), digitalSpecimen));
+    var event = List.of(givenDigitalSpecimenEvent());
 
     mockHandleServer.enqueue(new MockResponse()
         .setResponseCode(HttpStatus.UNAUTHORIZED.value())
         .addHeader("Content-Type", "application/json"));
 
     // Then
-    assertThrows(PidAuthenticationException.class, () -> handleComponent.postHandle(requestBody, List.of(digitalSpecimen)));
-    then(kafkaService).should().deadLetterEvent(expectedEvent);
+    assertThrows(PidAuthenticationException.class, () -> handleComponent.postHandle(requestBody, event));
+    then(kafkaService).should().deadLetterEvent(event);
   }
 
   @Test
@@ -98,16 +98,15 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var digitalSpecimen = givenDigitalSpecimen();
-    var expectedEvent = List.of(new DigitalSpecimenEvent(new ArrayList<>(), digitalSpecimen));
+    var event = List.of(givenDigitalSpecimenEvent());
 
     mockHandleServer.enqueue(new MockResponse()
         .setResponseCode(HttpStatus.BAD_REQUEST.value())
         .addHeader("Content-Type", "application/json"));
 
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody, List.of(digitalSpecimen)));
-    then(kafkaService).should().deadLetterEvent(expectedEvent);
+    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody, event));
+    then(kafkaService).should().deadLetterEvent(event);
   }
 
   @Test
@@ -115,7 +114,7 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var digitalSpecimen = givenDigitalSpecimen();
+    var event = givenDigitalSpecimenEvent();
     var expected = requestBody.get(0);
     int requestCount = mockHandleServer.getRequestCount();
 
@@ -126,7 +125,7 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // When
-    var response = handleComponent.postHandle(requestBody, List.of(digitalSpecimen));
+    var response = handleComponent.postHandle(requestBody, List.of(event));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -138,8 +137,7 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var digitalSpecimen = givenDigitalSpecimen();
-    var expectedEvent = List.of(new DigitalSpecimenEvent(new ArrayList<>(), digitalSpecimen));
+    var event = List.of(givenDigitalSpecimenEvent());
     int requestCount = mockHandleServer.getRequestCount();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
@@ -148,9 +146,9 @@ class HandleComponentTest {
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
 
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody, List.of(digitalSpecimen)));
+    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody, event));
     assertThat(mockHandleServer.getRequestCount() - requestCount).isEqualTo(4);
-    then(kafkaService).should().deadLetterEvent(expectedEvent);
+    then(kafkaService).should().deadLetterEvent(event);
   }
 
 }

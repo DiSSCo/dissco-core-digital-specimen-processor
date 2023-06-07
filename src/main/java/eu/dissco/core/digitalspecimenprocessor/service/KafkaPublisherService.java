@@ -68,7 +68,9 @@ public class KafkaPublisherService {
   }
 
   public void deadLetterEvent(List<DigitalSpecimenEvent> events) throws JsonProcessingException {
-    kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(events));
+    for (var event : events) {
+      kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(event));
+    }
   }
 
   public void deadLetterRaw(String event) {

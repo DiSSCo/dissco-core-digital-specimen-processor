@@ -3,12 +3,10 @@ package eu.dissco.core.digitalspecimenprocessor.component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.service.KafkaPublisherService;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -35,7 +33,7 @@ public class HandleComponent {
   private final TokenAuthenticator tokenAuthenticator;
   private final KafkaPublisherService kafkaService;
 
-  public JsonNode postHandle(List<JsonNode> requestBody, List<DigitalSpecimen> digitalSpecimenList)
+  public JsonNode postHandle(List<JsonNode> requestBody, List<DigitalSpecimenEvent> digitalSpecimenEvents)
       throws PidAuthenticationException, PidCreationException, JsonProcessingException {
     var token = "Bearer " + tokenAuthenticator.getToken();
     var response = handleClient.post()
@@ -61,24 +59,16 @@ public class HandleComponent {
       Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
       if (e.getCause().getClass().equals(PidAuthenticationException.class)) {
-        sendKafkaEvents(digitalSpecimenList);
+        kafkaService.deadLetterEvent(digitalSpecimenEvents);
         throw new PidAuthenticationException(e.getCause().getMessage());
       }
       if (e.getCause().getClass().equals(PidCreationException.class)) {
-        sendKafkaEvents(digitalSpecimenList);
+        kafkaService.deadLetterEvent(digitalSpecimenEvents);
         throw new PidCreationException(e.getCause().getMessage());
       }
     }
-    sendKafkaEvents(digitalSpecimenList);
+    kafkaService.deadLetterEvent(digitalSpecimenEvents);
     throw new PidCreationException("An unknown error has occurred in creating a handle.");
   }
 
-  private void sendKafkaEvents(List<DigitalSpecimen> digitalSpecimenList)
-      throws JsonProcessingException {
-    var eventList = digitalSpecimenList.stream()
-        .map(specimen -> new DigitalSpecimenEvent(new ArrayList<>(), specimen)).toList();
-
-    kafkaService.deadLetterEvent(eventList);
-
-  }
 }
