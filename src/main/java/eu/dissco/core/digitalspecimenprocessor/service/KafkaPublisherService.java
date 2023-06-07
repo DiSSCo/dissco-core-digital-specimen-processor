@@ -8,6 +8,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.CreateUpdateDeleteEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 public class KafkaPublisherService {
 
   private static final String SUBJECT_TYPE = "DigitalSpecimen";
+  private static final String DLQ_SUBJECT = "digital-specimen-dlq";
 
   private final ObjectMapper mapper;
   private final KafkaTemplate<String, String> kafkaTemplate;
@@ -62,11 +64,15 @@ public class KafkaPublisherService {
   }
 
   public void deadLetterEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
-    kafkaTemplate.send("digital-specimen-dlq", mapper.writeValueAsString(event));
+    kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(event));
+  }
+
+  public void deadLetterEvent(List<DigitalSpecimenEvent> events) throws JsonProcessingException {
+    kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(events));
   }
 
   public void deadLetterRaw(String event) {
-    kafkaTemplate.send("digital-specimen-dlq", event);
+    kafkaTemplate.send(DLQ_SUBJECT, event);
   }
 
   private JsonNode createJsonPatch(DigitalSpecimenRecord currentDigitalSpecimen,

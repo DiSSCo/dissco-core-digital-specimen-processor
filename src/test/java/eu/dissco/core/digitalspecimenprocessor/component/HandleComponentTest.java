@@ -1,97 +1,156 @@
 package eu.dissco.core.digitalspecimenprocessor.component;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.BDDMockito.then;
+
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
-import eu.dissco.core.digitalspecimenprocessor.property.TokenProperties;
-import org.assertj.core.api.Assertions;
+import eu.dissco.core.digitalspecimenprocessor.service.KafkaPublisherService;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriBuilder;
-import reactor.core.publisher.Mono;
-
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.BDDMockito.given;
-import static reactor.core.publisher.Mono.when;
 
 @ExtendWith(MockitoExtension.class)
 class HandleComponentTest {
-    @Mock
-    private WebClient webClient;
-    @Mock
-    private WebClient.RequestBodyUriSpec bodySpec;
-    @Mock
-    private WebClient.RequestHeadersSpec headerSpec;
-    @Mock
-    private WebClient.ResponseSpec responseSpec;
-    @Mock
-    private Mono<JsonNode> jsonNodeMono;
-    @Mock
-    private CompletableFuture<JsonNode> jsonFuture;
-    @Mock
-    TokenAuthenticator tokenAuthenticator;
-    @Mock
-    UriBuilder uriBuilder;
-    private HandleComponent handleComponent;
-    private static final String TOKEN = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  @Mock
+  TokenAuthenticator tokenAuthenticator;
+  @Mock
+  KafkaPublisherService kafkaService;
+  private HandleComponent handleComponent;
 
-    @BeforeEach
-    void setup() throws Exception {
-        handleComponent = new HandleComponent(webClient, tokenAuthenticator);
-        givenWebclient();
-    }
+  private static MockWebServer mockHandleServer;
 
-    @Test
-    void testPostHandle() throws Exception {
-        // Given
-        var requestBody = List.of(MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-        var expected = requestBody.get(0);
-        given(jsonFuture.get()).willReturn(expected);
+  @BeforeAll
+  static void init() throws IOException {
+    mockHandleServer = new MockWebServer();
+    mockHandleServer.start();
+  }
 
-        // When
-        var response = handleComponent.postHandle(requestBody);
+  @BeforeEach
+  void setup()  {
+    WebClient webClient = WebClient.create(
+        String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
+    handleComponent = new HandleComponent(webClient, tokenAuthenticator, kafkaService);
 
-        // Then
-        Assertions.assertThat(response).isEqualTo(expected);
-    }
+  }
 
-    @Test
-    void testPostHandleInterrupted() throws Exception {
-        // Given
-        given(jsonFuture.get()).willThrow(new InterruptedException());
-        var requestBody = List.of(MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+  @AfterAll
+  static void destroy() throws IOException {
+    mockHandleServer.shutdown();
+  }
 
-        // Then
-        assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
-    }
+  @Test
+  void testPostHandle() throws Exception {
+    // Given
+    var requestBody = List.of(
+        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+    var expected = requestBody.get(0);
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.CREATED.value())
+        .setBody(MAPPER.writeValueAsString(expected))
+        .addHeader("Content-Type", "application/json"));
 
+    // When
+    var response = handleComponent.postHandle(requestBody, new ArrayList<>());
 
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
 
-    private void givenWebclient() throws Exception {
-        given(tokenAuthenticator.getToken()).willReturn(TOKEN);
-        given(webClient.post()).willReturn(bodySpec);
-        given(bodySpec.uri(any(Function.class))).willReturn(bodySpec);
-        given(bodySpec.body(any())).willReturn(headerSpec);
-        given(headerSpec.header("Authorization", ("Bearer " + TOKEN))).willReturn(headerSpec);
-        given(headerSpec.acceptCharset(StandardCharsets.UTF_8)).willReturn(headerSpec);
-        given(headerSpec.retrieve()).willReturn(responseSpec);
-        given(responseSpec.bodyToMono(any(Class.class))).willReturn(jsonNodeMono);
-        given(jsonNodeMono.toFuture()).willReturn(jsonFuture);
-    }
+  @Test
+  void testUnauthorized() throws Exception {
+    // Given
+    var requestBody = List.of(
+        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+    var digitalSpecimen = givenDigitalSpecimen();
+    var expectedEvent = List.of(new DigitalSpecimenEvent(new ArrayList<>(), digitalSpecimen));
+
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.UNAUTHORIZED.value())
+        .addHeader("Content-Type", "application/json"));
+
+    // Then
+    assertThrows(PidAuthenticationException.class, () -> handleComponent.postHandle(requestBody, List.of(digitalSpecimen)));
+    then(kafkaService).should().deadLetterEvent(expectedEvent);
+  }
+
+  @Test
+  void testBadRequest() throws Exception {
+    // Given
+    var requestBody = List.of(
+        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+    var digitalSpecimen = givenDigitalSpecimen();
+    var expectedEvent = List.of(new DigitalSpecimenEvent(new ArrayList<>(), digitalSpecimen));
+
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.BAD_REQUEST.value())
+        .addHeader("Content-Type", "application/json"));
+
+    // Then
+    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody, List.of(digitalSpecimen)));
+    then(kafkaService).should().deadLetterEvent(expectedEvent);
+  }
+
+  @Test
+  void testRetriesSuccess() throws Exception {
+    // Given
+    var requestBody = List.of(
+        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+    var digitalSpecimen = givenDigitalSpecimen();
+    var expected = requestBody.get(0);
+    int requestCount = mockHandleServer.getRequestCount();
+
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.CREATED.value())
+        .setBody(MAPPER.writeValueAsString(expected))
+        .addHeader("Content-Type", "application/json"));
+
+    // When
+    var response = handleComponent.postHandle(requestBody, List.of(digitalSpecimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+    assertThat(mockHandleServer.getRequestCount()-requestCount).isEqualTo(2);
+  }
+
+  @Test
+  void testRetriesFail() throws Exception {
+    // Given
+    var requestBody = List.of(
+        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+    var digitalSpecimen = givenDigitalSpecimen();
+    var expectedEvent = List.of(new DigitalSpecimenEvent(new ArrayList<>(), digitalSpecimen));
+    int requestCount = mockHandleServer.getRequestCount();
+
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
+
+    // Then
+    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody, List.of(digitalSpecimen)));
+    assertThat(mockHandleServer.getRequestCount() - requestCount).isEqualTo(4);
+    then(kafkaService).should().deadLetterEvent(expectedEvent);
+  }
 
 }

@@ -1,8 +1,14 @@
 package eu.dissco.core.digitalspecimenprocessor.component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.service.KafkaPublisherService;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -17,6 +23,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 @Component
 @RequiredArgsConstructor
@@ -25,11 +32,11 @@ public class HandleComponent {
 
   @Qualifier("handleClient")
   private final WebClient handleClient;
-
   private final TokenAuthenticator tokenAuthenticator;
+  private final KafkaPublisherService kafkaService;
 
-  public JsonNode postHandle(List<JsonNode> requestBody)
-      throws PidAuthenticationException, PidCreationException {
+  public JsonNode postHandle(List<JsonNode> requestBody, List<DigitalSpecimen> digitalSpecimenList)
+      throws PidAuthenticationException, PidCreationException, JsonProcessingException {
     var token = "Bearer " + tokenAuthenticator.getToken();
     var response = handleClient.post()
         .uri(uriBuilder -> uriBuilder.path("batch").build())
@@ -37,16 +44,41 @@ public class HandleComponent {
         .header("Authorization", token)
         .acceptCharset(StandardCharsets.UTF_8)
         .retrieve()
-        .onStatus(HttpStatusCode::isError, r-> r.bodyToMono(String.class).map(PidAuthenticationException::new))
+        .onStatus(HttpStatus.UNAUTHORIZED::equals, r -> Mono.error(
+            new PidAuthenticationException("Unable to authenticate with Handle Service.")))
+        .onStatus(HttpStatusCode::is4xxClientError,
+            r -> Mono.error(new PidCreationException("Unable to create PID")))
         .bodyToMono(JsonNode.class)
-        .retry(3);
+        .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(2))
+            .filter(WebClientUtils::is5xxServerError)
+            .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) ->
+                new PidCreationException(
+                    "External Service failed to process after max retries")
+            ));
     try {
       return response.toFuture().get();
-    } catch (InterruptedException | ExecutionException e) {
+    } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.info(response.toString());
-      throw new PidCreationException(
-          "An error has occurred in creating a PID. More information: " + e.getMessage());
+    } catch (ExecutionException e) {
+      if (e.getCause().getClass().equals(PidAuthenticationException.class)) {
+        sendKafkaEvents(digitalSpecimenList);
+        throw new PidAuthenticationException(e.getCause().getMessage());
+      }
+      if (e.getCause().getClass().equals(PidCreationException.class)) {
+        sendKafkaEvents(digitalSpecimenList);
+        throw new PidCreationException(e.getCause().getMessage());
+      }
     }
+    sendKafkaEvents(digitalSpecimenList);
+    throw new PidCreationException("An unknown error has occurred in creating a handle.");
+  }
+
+  private void sendKafkaEvents(List<DigitalSpecimen> digitalSpecimenList)
+      throws JsonProcessingException {
+    var eventList = digitalSpecimenList.stream()
+        .map(specimen -> new DigitalSpecimenEvent(new ArrayList<>(), specimen)).toList();
+
+    kafkaService.deadLetterEvent(eventList);
+
   }
 }
