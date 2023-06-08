@@ -8,7 +8,6 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.Handles;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.NewDigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.HandlesRecord;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.NewDigitalSpecimenRecord;
-
 import org.jooq.TableField;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
