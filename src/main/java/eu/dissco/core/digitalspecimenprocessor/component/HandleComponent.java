@@ -1,10 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.service.KafkaPublisherService;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -31,10 +28,9 @@ public class HandleComponent {
   @Qualifier("handleClient")
   private final WebClient handleClient;
   private final TokenAuthenticator tokenAuthenticator;
-  private final KafkaPublisherService kafkaService;
 
-  public JsonNode postHandle(List<JsonNode> requestBody, List<DigitalSpecimenEvent> digitalSpecimenEvents)
-      throws PidAuthenticationException, PidCreationException, JsonProcessingException {
+  public JsonNode postHandle(List<JsonNode> requestBody)
+      throws PidAuthenticationException, PidCreationException {
     var token = "Bearer " + tokenAuthenticator.getToken();
     var response = handleClient.post()
         .uri(uriBuilder -> uriBuilder.path("batch").build())
@@ -45,7 +41,8 @@ public class HandleComponent {
         .onStatus(HttpStatus.UNAUTHORIZED::equals, r -> Mono.error(
             new PidAuthenticationException("Unable to authenticate with Handle Service.")))
         .onStatus(HttpStatusCode::is4xxClientError,
-            r -> Mono.error(new PidCreationException("Unable to create PID")))
+            r -> Mono.error(new PidCreationException(
+                "Unable to create PID. Response from Handle API: " + r.statusCode())))
         .bodyToMono(JsonNode.class)
         .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(2))
             .filter(WebClientUtils::is5xxServerError)
@@ -57,18 +54,17 @@ public class HandleComponent {
       return response.toFuture().get();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+      log.debug("Interrupted exception has occurred.");
+      throw new PidCreationException("An error has occurred in creating a handle.");
     } catch (ExecutionException e) {
       if (e.getCause().getClass().equals(PidAuthenticationException.class)) {
-        kafkaService.deadLetterEvent(digitalSpecimenEvents);
+        log.debug(
+            "Token obtained from Keycloak not accepted by Handle Server. Check Keycloak configuration.");
         throw new PidAuthenticationException(e.getCause().getMessage());
       }
-      if (e.getCause().getClass().equals(PidCreationException.class)) {
-        kafkaService.deadLetterEvent(digitalSpecimenEvents);
-        throw new PidCreationException(e.getCause().getMessage());
-      }
+      throw new PidCreationException(e.getCause().getMessage());
     }
-    kafkaService.deadLetterEvent(digitalSpecimenEvents);
-    throw new PidCreationException("An unknown error has occurred in creating a handle.");
   }
+
 
 }
