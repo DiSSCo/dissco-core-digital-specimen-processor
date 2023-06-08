@@ -183,6 +183,21 @@ class HandleComponentTest {
     assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
   }
 
+  @Test
+  void testEmptyResponse() throws Exception {
+    // Given
+    var requestBody = List.of(
+        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+    var responseBody = MAPPER.createObjectNode();
+
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.CREATED.value())
+        .setBody(MAPPER.writeValueAsString(responseBody))
+        .addHeader("Content-Type", "application/json"));
+    // Then
+    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
+  }
+
   private HashMap<String, String> givenHandleNameResponse(JsonNode responseBody){
     HashMap<String, String> handleNames = new HashMap<>();
     for (var node : responseBody.get("data")){
