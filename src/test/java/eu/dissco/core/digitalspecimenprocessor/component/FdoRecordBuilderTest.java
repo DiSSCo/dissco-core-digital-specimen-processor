@@ -1,51 +1,34 @@
-package eu.dissco.core.digitalspecimenprocessor.service;
+package eu.dissco.core.digitalspecimenprocessor.component;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.DIGITAL_OBJECT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.DIGITAL_OBJECT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.FDO_PROFILE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.FDO_RECORD_LICENSE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.HS_ADMIN;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.ISSUED_FOR_AGENT;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.ISSUED_FOR_AGENT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.LOC;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.MARKED_AS_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.OBJECT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.OTHER_SPECIMEN_IDS;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_ISSUER;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_ISSUER_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_RECORD_ISSUE_DATE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_RECORD_ISSUE_NUMBER;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PID_STATUS;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_REFERENT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_DOI_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.REFERENT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.SPECIMEN_HOST;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.SPECIMEN_HOST_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.STRUCTURAL_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DATASET_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DWCA_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.GENERATED_HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleAttributes;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.DIGITAL_OBJECT_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.DIGITAL_OBJECT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.FDO_PROFILE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.FDO_RECORD_LICENSE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.HS_ADMIN;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.ISSUED_FOR_AGENT;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.ISSUED_FOR_AGENT_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LOC;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MARKED_AS_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.OBJECT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.OTHER_SPECIMEN_IDS;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_ISSUER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_ISSUER_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_RECORD_ISSUE_DATE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_RECORD_ISSUE_NUMBER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_STATUS;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_REFERENT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_DOI_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.STRUCTURAL_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,11 +39,12 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import eu.dissco.core.digitalspecimenprocessor.component.FdoRecordBuilder;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -70,23 +54,23 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerFactory;
-import org.jooq.Field;
-import org.jooq.Record;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class HandleServiceTest {
+class FdoRecordBuilderTest {
 
   @Mock
   private Random random;
@@ -103,14 +87,14 @@ class HandleServiceTest {
   private static final String DWCA_ID = "ZMA.V.POL.1296.2@CRS";
   private static final String COLL_ID = "NAT.123XYZ.AVES";
 
-  private HandleService service;
+  private FdoRecordBuilder builder;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
 
   @BeforeEach
   void setup() throws ParserConfigurationException {
     var docFactory = DocumentBuilderFactory.newInstance();
     var transFactory = TransformerFactory.newInstance();
-    service = new HandleService(random, docFactory.newDocumentBuilder(), repository,
+    builder = new FdoRecordBuilder(MAPPER, random, docFactory.newDocumentBuilder(), repository,
         transFactory);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
@@ -122,63 +106,85 @@ class HandleServiceTest {
   }
 
   @Test
+  void testGenRequestMinimal() throws Exception {
+    // Given
+    var specimen = new DigitalSpecimen(
+            PHYSICAL_SPECIMEN_ID,
+            TYPE,
+            givenDigitalSpecimenAttributesMinimal(),
+            givenDigitalSpecimenAttributesMinimal()
+    );
+    var expected = new ArrayList(List.of(MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestMin.json"))));
+
+    // When
+    var response = builder.genCreateHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"false", "holotype", ""})
+  void testGenRequestFull(String typeStatus) throws Exception {
+    // Given
+    var specimen = new DigitalSpecimen(
+            PHYSICAL_SPECIMEN_ID,
+            TYPE,
+            givenDigitalSpecimenAttributesFull(typeStatus),
+            givenDigitalSpecimenAttributesFull(typeStatus)
+    );
+    var expectedFile = typeStatus.equals("holotype") ? "handlerequests/TestHandleRequestFullTypeStatus.json" : "handlerequests/TestHandleRequestFullNoTypeStatus.json";
+
+    var expected = new ArrayList(List.of(MAPPER.readTree(loadResourceFile(expectedFile))));
+
+    // When
+    var response = builder.genCreateHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  private static JsonNode givenDigitalSpecimenAttributesMinimal(){
+    var attributeNode = MAPPER.createObjectNode();
+    attributeNode.put("ods:organisationId", ORGANISATION_ID);
+    return attributeNode;
+  }
+
+  private static JsonNode givenDigitalSpecimenAttributesFull(String typeStatus){
+    var attributeNode = MAPPER.createObjectNode();
+    attributeNode.put("ods:organisationId", ORGANISATION_ID);
+    attributeNode.put("ods:organisationName", ORG_NAME);
+    attributeNode.put("ods:specimenName", SPECIMEN_NAME);
+    attributeNode.put("ods:topicDiscipline", TOPIC_DISCIPLINE);
+    attributeNode.put("ods:physicalSpecimenIdType", "cetaf");
+    attributeNode.put("ods:livingOrPreserved", "Living");
+    if(!typeStatus.isEmpty()){
+      attributeNode.put("dwc:typeStatus", typeStatus);
+    }
+    return attributeNode;
+  }
+
+  @Test
   void testCreateNewHandle() throws Exception {
     // Given
     given(random.nextInt(33)).willReturn(21);
     mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
 
     // When
-    var result = service.createNewHandle(givenDigitalSpecimen());
+    var result = builder.createNewHandle(givenDigitalSpecimen());
 
     // Then
     then(repository).should().createHandle(eq(GENERATED_HANDLE), eq(CREATED), anyList());
     assertThat(result).isEqualTo(GENERATED_HANDLE);
   }
 
-  /*
-  @Test
-  void testCreateNewHandleEmptySpecimen() throws Exception {
-    // Given
-    given(random.nextInt(33)).willReturn(21);
-    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
-
-    // When
-    var result = service.createNewHandle(givenEmptyDigitalSpecimen("false"));
-
-    // Then
-    then(repository).should().createHandle(eq(GENERATED_HANDLE), eq(CREATED), anyList());
-    assertThat(result).isEqualTo(GENERATED_HANDLE);
-  }*/
-
-  /*
-  @Test
-  void testCreateNewHandleEmptySpecimenHolotype() throws Exception {
-    // Given
-    given(random.nextInt(33)).willReturn(21);
-    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
-
-    // When
-    var result = service.createNewHandle(givenEmptyDigitalSpecimen("holotype"));
-
-    // Then
-    then(repository).should().createHandle(eq(GENERATED_HANDLE), eq(CREATED), anyList());
-    assertThat(result).isEqualTo(GENERATED_HANDLE);
-  }
-
-
-  private DigitalSpecimen givenEmptyDigitalSpecimen(String typeStatus){
-    var unharmonisedAttributes = MAPPER.createObjectNode();
-    unharmonisedAttributes.put("dwc:typeStatus",typeStatus);
-
-    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, MAPPER.createObjectNode(), unharmonisedAttributes);
-  }*/
 
   @Test
   void testUpdateHandle() {
     // Given
 
     // When
-    service.updateHandles(List.of(
+    builder.updateHandles(List.of(
         new UpdatedDigitalSpecimenTuple(givenUnequalDigitalSpecimenRecord(),
             givenDigitalSpecimenEvent())));
 
@@ -191,7 +197,7 @@ class HandleServiceTest {
     // Given
 
     // When
-    service.rollbackHandleCreation(givenDigitalSpecimenRecord());
+    builder.rollbackHandleCreation(givenDigitalSpecimenRecord());
 
     // Then
     then(repository).should().rollbackHandleCreation(HANDLE);
@@ -202,12 +208,13 @@ class HandleServiceTest {
     // Given
 
     // When
-    service.deleteVersion(givenDigitalSpecimenRecord());
+    builder.deleteVersion(givenDigitalSpecimenRecord());
 
     // Then
     then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(false));
   }
 
+/*
   @Test
   void testCheckForPrimarySpecimenObjectIdIsPresent() throws Exception{
     // Given
@@ -220,14 +227,15 @@ class HandleServiceTest {
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     try(MockedStatic<Clock> mockedClock = mockStatic(Clock.class)){
       mockedClock.when(Clock::systemUTC).thenReturn(clock);
-      service.createNewHandle(specimen);
+      builder.createNewHandle(specimen);
     }
 
     // Then
     then(repository).should().updateHandleAttributes(
         GENERATED_HANDLE, CREATED,givenFdoRecordSpecimenAttributesFull(), true);
-  }
+  } */
 
+  /*
   @Test
   void testFdoRecordFull() throws Exception{
     // Given
@@ -239,12 +247,13 @@ class HandleServiceTest {
     given(repository.searchByPrimarySpecimenObjectId(any())).willReturn(Optional.empty());
 
     // When
-    service.createNewHandle(specimen);
+    builder.createNewHandle(specimen);
 
     // Then
     then(repository).should().createHandle(GENERATED_HANDLE, CREATED, expected);
-  }
+  }*/
 
+  /*
   @Test
   void testFdoRecordMinimal() throws Exception{
     // Given
@@ -256,11 +265,11 @@ class HandleServiceTest {
     given(repository.searchByPrimarySpecimenObjectId(any())).willReturn(Optional.empty());
 
     // When
-    service.createNewHandle(specimen);
+    builder.createNewHandle(specimen);
 
     // Then
     then(repository).should().createHandle(GENERATED_HANDLE, CREATED, expected);
-  }
+  }*/
 
 
   private List<HandleAttribute> givenFdoRecordGeneratedElements(String handle){

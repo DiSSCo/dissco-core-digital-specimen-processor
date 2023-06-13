@@ -1,0 +1,4 @@
+# Date: June 7, 2023
+# Issue: libcrypto3/libssl3 out of date. Alpine needs to fix this.
+# Solution: Wait for Alpine to fix. Github issue has been opened.
+CVE-2023-2650

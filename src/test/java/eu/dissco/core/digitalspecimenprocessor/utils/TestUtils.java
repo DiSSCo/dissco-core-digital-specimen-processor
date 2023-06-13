@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfile.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,6 +38,7 @@ public class TestUtils {
   public static String SOURCE_SYSTEM_ID = "20.5000.1025/MN0-5XP-FFD";
   public static JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static String DWCA_ID = null;
+  public static String TOPIC_DISCIPLINE = "Earth Systems";
   public static final String GENERATED_HANDLE = "20.5000.1025/YYY-YYY-YYY";
 
   public static final byte[] LOCAL_OBJECT_ID = " 002b51e5-b8e1-4b2b-a841-86c34dca9ef6:040ck2b86".getBytes(StandardCharsets.UTF_8);

@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.component.FdoRecordBuilder;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -35,7 +36,7 @@ import org.springframework.stereotype.Service;
 public class ProcessingService {
 
   private final DigitalSpecimenRepository repository;
-  private final HandleService handleService;
+  private final FdoRecordBuilder fdoRecordBuilder;
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
@@ -227,7 +228,7 @@ public class ProcessingService {
         tuple -> handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
             tuple.digitalSpecimenEvent().digitalSpecimen())).toList();
     if (!handleUpdates.isEmpty()) {
-      handleService.updateHandles(handleUpdates);
+      fdoRecordBuilder.updateHandles(handleUpdates);
     }
   }
 
@@ -257,7 +258,7 @@ public class ProcessingService {
     if (handleNeedsUpdate(updatedDigitalSpecimenRecord.currentDigitalSpecimen().digitalSpecimen(),
         updatedDigitalSpecimenRecord.digitalSpecimenRecord()
             .digitalSpecimen())) {
-      handleService.deleteVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
+      fdoRecordBuilder.deleteVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
     }
     try {
       kafkaService.deadLetterEvent(
@@ -397,7 +398,7 @@ public class ProcessingService {
       }
     }
     repository.rollbackSpecimen(digitalSpecimenRecord.id());
-    handleService.rollbackHandleCreation(digitalSpecimenRecord);
+    fdoRecordBuilder.rollbackHandleCreation(digitalSpecimenRecord);
     try {
       kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(enrichments, digitalSpecimenRecord.digitalSpecimen()));
@@ -409,7 +410,7 @@ public class ProcessingService {
   private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event) {
     try {
       return new DigitalSpecimenRecord(
-          handleService.createNewHandle(event.digitalSpecimen()),
+          fdoRecordBuilder.createNewHandle(event.digitalSpecimen()),
           midsService.calculateMids(event.digitalSpecimen()),
           1,
           Instant.now(),

@@ -1,114 +1,159 @@
 package eu.dissco.core.digitalspecimenprocessor.component;
 
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
 import eu.dissco.core.digitalspecimenprocessor.property.TokenProperties;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class TokenAuthenticatorTest {
-    @Mock
-    private WebClient webClient;
-    @Mock
-    private WebClient.RequestBodyUriSpec bodySpec;
-    @Mock
-    private WebClient.RequestHeadersSpec headerSpec;
-    @Mock
-    private WebClient.ResponseSpec responseSpec;
-    @Mock
-    private Mono<JsonNode> jsonNodeMono;
-    @Mock
-    private TokenProperties properties;
-    private final MultiValueMap<String, String> testFromFormData = new LinkedMultiValueMap<>() {{
-        add("grant_type", "grantType");
-        add("client_id", "clientId");
-        add("client_secret", "secret");
-    }};
 
-    @Mock
-    private CompletableFuture<JsonNode> jsonFuture;
-    private TokenAuthenticator authenticator;
 
-    @BeforeEach
-    void setup() {
-        authenticator = new TokenAuthenticator(properties, webClient);
-        givenWebclient();
-    }
+  private static MockWebServer mockTokenServer;
 
-    @Test
-    void testGetToken() throws Exception {
-        // Given
-        var expectedJson = MAPPER.readTree(loadResourceFile("webclientresponse/tokenResponse.json"));
-        given(jsonFuture.get()).willReturn(expectedJson);
-        var expected = expectedJson.get("access_token").asText();
+  @Mock
+  private TokenProperties properties;
+  private final MultiValueMap<String, String> testFromFormData = new LinkedMultiValueMap<>() {{
+    add("grant_type", "grantType");
+    add("client_id", "clientId");
+    add("client_secret", "secret");
+  }};
 
-        // When
-        var response = authenticator.getToken();
+  @Mock
+  private CompletableFuture<JsonNode> jsonFuture;
+  private TokenAuthenticator authenticator;
 
-        // Then
-        assertThat(response).isEqualTo(expected);
-    }
+  @BeforeAll
+  static void init() throws IOException {
+    mockTokenServer = new MockWebServer();
+    mockTokenServer.start();
+  }
 
-    @Test
-    void testGetTokenInterrupted() throws Exception {
-        // Given
-        given(jsonFuture.get()).willThrow(new InterruptedException());
+  @BeforeEach
+  void setup() {
+    WebClient webClient = WebClient.create(
+        String.format("http://%s:%s", mockTokenServer.getHostName(), mockTokenServer.getPort()));
+    authenticator = new TokenAuthenticator(properties, webClient);
+  }
 
-        // When
-        var response = authenticator.getToken();
+  @AfterAll
+  static void destroy() throws IOException {
+    mockTokenServer.shutdown();
+  }
 
-        // Then
-        assertThat(response).isNull();
-    }
+  @Test
+  void testGetToken() throws Exception {
+    // Given
+    var expectedJson = MAPPER.readTree(loadResourceFile("webclientresponse/tokenResponse.json"));
+    var expected = expectedJson.get("access_token").asText();
+    given(properties.getFromFormData()).willReturn(testFromFormData);
 
-    @Test
-    void testGetTokenIsUnauthenticated() throws Exception {
-        // Given
-        var ex = mock(ExecutionException.class);
-        given(jsonFuture.get()).willThrow(ex);
+    mockTokenServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.OK.value())
+        .setBody(MAPPER.writeValueAsString(expectedJson))
+        .addHeader("Content-Type", "application/json"));
 
-        // Then
-        assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
-    }
+    // When
+    var response = authenticator.getToken();
 
-    @Test
-    void testGetTokenIsNull() throws Exception {
-        given(jsonFuture.get()).willReturn(MAPPER.createObjectNode());
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
 
-        // When
-        assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
-    }
+  @Test
+  void testGetTokenUnauthorized() {
+    // Given
+    given(properties.getFromFormData()).willReturn(testFromFormData);
+    mockTokenServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.UNAUTHORIZED.value())
+        .addHeader("Content-Type", "application/json"));
 
-    private void givenWebclient() {
-        given(properties.getFromFormData()).willReturn(testFromFormData);
-        given(webClient.post()).willReturn(bodySpec);
-        given(bodySpec.body(any())).willReturn(headerSpec);
-        given(headerSpec.acceptCharset(StandardCharsets.UTF_8)).willReturn(headerSpec);
-        given(headerSpec.retrieve()).willReturn(responseSpec);
-        given(responseSpec.bodyToMono(any(Class.class))).willReturn(jsonNodeMono);
-        given(responseSpec.onStatus(any(), any())).willReturn(responseSpec);
-        given(jsonNodeMono.toFuture()).willReturn(jsonFuture);
-    }
+    // Then
+    assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
+  }
 
+  @Test
+  void testRetriesSuccess() throws Exception {
+    // Given
+    int requestCount = mockTokenServer.getRequestCount();
+    var expectedJson = MAPPER.readTree(loadResourceFile("webclientresponse/tokenResponse.json"));
+    var expected = expectedJson.get("access_token").asText();
+    given(properties.getFromFormData()).willReturn(testFromFormData);
+    mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
+    mockTokenServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.OK.value())
+        .setBody(MAPPER.writeValueAsString(expectedJson))
+        .addHeader("Content-Type", "application/json"));
+
+    // Then
+    // When
+    var response = authenticator.getToken();
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+    assertThat(mockTokenServer.getRequestCount() - requestCount).isEqualTo(2);
+  }
+
+  @Test
+  void testRetriesFailure() throws Exception {
+    // Given
+    int requestCount = mockTokenServer.getRequestCount();
+    var expectedJson = MAPPER.readTree(loadResourceFile("webclientresponse/tokenResponse.json"));
+    var expected = expectedJson.get("access_token").asText();
+    given(properties.getFromFormData()).willReturn(testFromFormData);
+    mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
+    mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
+    mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
+    mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
+
+    // Then
+    assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
+    assertThat(mockTokenServer.getRequestCount() - requestCount).isEqualTo(4);
+  }
+
+  @Test
+  void testGetResponseIsNull() {
+    given(properties.getFromFormData()).willReturn(testFromFormData);
+    mockTokenServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.OK.value())
+        .addHeader("Content-Type", "application/json"));
+
+    // When
+    assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
+  }
+
+  @Test
+  void testGetTokenIsNull() {
+    given(properties.getFromFormData()).willReturn(testFromFormData);
+    mockTokenServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.OK.value())
+        .addHeader("Content-Type", "application/json")
+        .setBody("{}"));
+
+    // When
+    assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
+  }
 
 }
