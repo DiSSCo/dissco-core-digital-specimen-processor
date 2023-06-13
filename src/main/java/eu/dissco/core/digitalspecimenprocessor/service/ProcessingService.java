@@ -11,6 +11,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
@@ -142,8 +143,12 @@ public class ProcessingService {
 
   private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    updateHandles(updatedDigitalSpecimenTuples);
-
+    try {
+      updateHandles(updatedDigitalSpecimenTuples);
+    } catch (PidCreationException | PidAuthenticationException e){
+      log.info("Unable to update Handle record. Not proceeding with update");
+      return Set.of();
+    }
     var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
     log.info("Persisting to db");
     repository.createDigitalSpecimenRecord(
@@ -225,12 +230,17 @@ public class ProcessingService {
     )).collect(Collectors.toSet());
   }
 
-  private void updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    var handleUpdates = updatedDigitalSpecimenTuples.stream().filter(
-        tuple -> handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
-            tuple.digitalSpecimenEvent().digitalSpecimen())).toList();
-    if (!handleUpdates.isEmpty()) {
-      fdoRecordBuilder.updateHandles(handleUpdates);
+  private void updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples)
+      throws PidCreationException, PidAuthenticationException {
+    var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream().filter(
+        tuple -> fdoRecordBuilder.handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
+            tuple.digitalSpecimenEvent().digitalSpecimen()))
+        .map(tuple -> tuple.digitalSpecimenEvent().digitalSpecimen())
+        .toList();
+
+    if (!digitalSpecimensToUpdate.isEmpty()) {
+      var requests = fdoRecordBuilder.genCreateHandleRequest(digitalSpecimensToUpdate);
+      handleComponent.postHandle(requests);
     }
   }
 
@@ -257,7 +267,7 @@ public class ProcessingService {
       }
     }
     rollBackToEarlierVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
-    if (handleNeedsUpdate(updatedDigitalSpecimenRecord.currentDigitalSpecimen().digitalSpecimen(),
+    if (fdoRecordBuilder.handleNeedsUpdate(updatedDigitalSpecimenRecord.currentDigitalSpecimen().digitalSpecimen(),
         updatedDigitalSpecimenRecord.digitalSpecimenRecord()
             .digitalSpecimen())) {
       fdoRecordBuilder.deleteVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
@@ -277,30 +287,6 @@ public class ProcessingService {
     repository.createDigitalSpecimenRecord(List.of(currentDigitalSpecimen));
   }
 
-  private boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
-      DigitalSpecimen digitalSpecimen) {
-    return !currentDigitalSpecimen.physicalSpecimenId().equals(digitalSpecimen.physicalSpecimenId())
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:organisationId")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:specimenName")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenIdType")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenCollection")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "dwc:typeStatus")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "dwca:id");
-  }
-
-  private boolean isUnEqual(DigitalSpecimen currentDigitalSpecimen, DigitalSpecimen digitalSpecimen,
-      String fieldName) {
-    return !Objects.equals(getValueFromAttributes(currentDigitalSpecimen, fieldName),
-        getValueFromAttributes(digitalSpecimen, fieldName));
-  }
-
-  private String getValueFromAttributes(DigitalSpecimen digitalSpecimen, String fieldName) {
-    if (digitalSpecimen.attributes().get(fieldName) != null) {
-      return digitalSpecimen.attributes().get(fieldName).asText();
-    } else {
-      return null;
-    }
-  }
 
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
     var digitalSpecimenRecords = events.stream().collect(Collectors.toMap(
@@ -425,4 +411,9 @@ public class ProcessingService {
       return null;
     }
   }
+
+  private String matchPidToDs(Map<String, String> pidMap, String physicalSpecimenId){
+    return pidMap.get(physicalSpecimenId);
+  }
+
 }

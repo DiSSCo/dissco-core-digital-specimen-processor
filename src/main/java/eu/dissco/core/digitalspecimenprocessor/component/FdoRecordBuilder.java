@@ -28,8 +28,10 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
@@ -47,6 +49,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
@@ -68,6 +71,7 @@ public class FdoRecordBuilder {
 
   private final ObjectMapper mapper;
   private static final String HANDLE_PROXY = "https://hdl.handle.net/";
+  private static final String DWC_TYPE_STATUS = "dwc:typeStatus";
   private static final byte[] FDO_RECORD_LICENSE_LOC = "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(
       StandardCharsets.UTF_8);
   private static final Set<String> NOT_TYPE_STATUS = new HashSet<>(
@@ -104,6 +108,15 @@ public class FdoRecordBuilder {
       requestBody.add(genCreateHandleRequest(specimen));
     }
     return requestBody;
+  }
+
+  public JsonNode genRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens){
+    var handles = digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
+    var dataNode = handles.stream()
+        .map(handle -> mapper.createObjectNode().put("id", handle))
+        .toList();
+    ArrayNode dataArray = mapper.valueToTree(dataNode);
+    return mapper.createObjectNode().set("data", dataArray);
   }
 
 
@@ -156,9 +169,35 @@ public class FdoRecordBuilder {
 
   private void setMarkedAsType(DigitalSpecimen specimen, ObjectNode attributeNode) {
     // If typeStatus is present and NOT ["false", "specimen", "type"], this is to true, otherwise left blank.
-    var markedAsType = getTerm(specimen, "dwc:typeStatus");
+    var markedAsType = getTerm(specimen, DWC_TYPE_STATUS);
     if (markedAsType.isPresent() && !NOT_TYPE_STATUS.contains(markedAsType.get())) {
       attributeNode.put(FdoProfileAttributes.MARKED_AS_TYPE.getAttribute(), true);
+    }
+  }
+
+  public boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
+      DigitalSpecimen digitalSpecimen) {
+    return !currentDigitalSpecimen.physicalSpecimenId().equals(digitalSpecimen.physicalSpecimenId())
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:organisationId")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:organisationName")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:specimenName")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:topicDiscipline")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenIdType")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:livingOrPreserved")
+        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, DWC_TYPE_STATUS);
+  }
+
+  private boolean isUnEqual(DigitalSpecimen currentDigitalSpecimen, DigitalSpecimen digitalSpecimen,
+      String fieldName) {
+    return !Objects.equals(getValueFromAttributes(currentDigitalSpecimen, fieldName),
+        getValueFromAttributes(digitalSpecimen, fieldName));
+  }
+
+  private String getValueFromAttributes(DigitalSpecimen digitalSpecimen, String fieldName) {
+    if (digitalSpecimen.attributes().get(fieldName) != null) {
+      return digitalSpecimen.attributes().get(fieldName).asText();
+    } else {
+      return null;
     }
   }
 
@@ -377,7 +416,7 @@ public class FdoRecordBuilder {
             s.getBytes(StandardCharsets.UTF_8))));
 
     // 216: markedAsType
-    var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, "dwc:typeStatus");
+    var specimenType = getAttributeFromDigitalSpecimen(digitalSpecimen, DWC_TYPE_STATUS);
     if ((specimenType.isPresent() && !NOT_TYPE_STATUS.contains(specimenType.get()))) {
       fdoRecord.add(new HandleAttribute(MARKED_AS_TYPE.getIndex(), MARKED_AS_TYPE.getAttribute(),
           "TRUE".getBytes(StandardCharsets.UTF_8)));

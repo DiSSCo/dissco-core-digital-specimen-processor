@@ -54,6 +54,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
@@ -226,62 +227,21 @@ class FdoRecordBuilderTest {
     then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(false));
   }
 
-/*
   @Test
-  void testCheckForPrimarySpecimenObjectIdIsPresent() throws Exception{
+  void testGenRollbackCreationRequest(){
     // Given
-    var mockRecord = mock(Record.class);
-    given(mockRecord.get((Field<Object>) any())).willReturn(GENERATED_HANDLE.getBytes(StandardCharsets.UTF_8));
-    var specimen = givenDigitalSpecimenAdditionalAttributes();
-    given(repository.searchByPrimarySpecimenObjectId(specimen.physicalSpecimenId().getBytes(
-        StandardCharsets.UTF_8))).willReturn(Optional.of(mockRecord));
-
-    Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
-    try(MockedStatic<Clock> mockedClock = mockStatic(Clock.class)){
-      mockedClock.when(Clock::systemUTC).thenReturn(clock);
-      builder.createNewHandle(specimen);
-    }
-
-    // Then
-    then(repository).should().updateHandleAttributes(
-        GENERATED_HANDLE, CREATED,givenFdoRecordSpecimenAttributesFull(), true);
-  } */
-
-  /*
-  @Test
-  void testFdoRecordFull() throws Exception{
-    // Given
-    var specimen = givenDigitalSpecimenAdditionalAttributes();
-    given(random.nextInt(33)).willReturn(21);
-    List<HandleAttribute> expected = new ArrayList<>();
-    expected.addAll(givenFdoRecordGeneratedElements(GENERATED_HANDLE));
-    expected.addAll(givenFdoRecordSpecimenAttributesFull());
-    given(repository.searchByPrimarySpecimenObjectId(any())).willReturn(Optional.empty());
+    var digitalSpecimenRecords = List.of(givenDigitalSpecimenRecord());
+    var id = digitalSpecimenRecords.get(0).id();
+    var dataNode = List.of(MAPPER.createObjectNode().put("id", id));
+    var dataArr = MAPPER.valueToTree(dataNode);
+    var expected = MAPPER.createObjectNode().set("data", dataArr);
 
     // When
-    builder.createNewHandle(specimen);
+    var response = builder.genRollbackCreationRequest(digitalSpecimenRecords);
 
     // Then
-    then(repository).should().createHandle(GENERATED_HANDLE, CREATED, expected);
-  }*/
-
-  /*
-  @Test
-  void testFdoRecordMinimal() throws Exception{
-    // Given
-    var specimen = givenDigitalSpecimen();
-    given(random.nextInt(33)).willReturn(21);
-    List<HandleAttribute> expected = new ArrayList<>();
-    expected.addAll(givenFdoRecordGeneratedElements(GENERATED_HANDLE));
-    expected.addAll(givenFdoRecordSpecimenAttributesMinimalAttributes());
-    given(repository.searchByPrimarySpecimenObjectId(any())).willReturn(Optional.empty());
-
-    // When
-    builder.createNewHandle(specimen);
-
-    // Then
-    then(repository).should().createHandle(GENERATED_HANDLE, CREATED, expected);
-  }*/
+    assertThat(response).isEqualTo(expected);
+  }
 
 
   private List<HandleAttribute> givenFdoRecordGeneratedElements(String handle){

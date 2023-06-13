@@ -81,7 +81,7 @@ public class HandleComponent {
           log.debug(UNEXPECTED_LOG, handleResponse.toPrettyString());
           throw new PidCreationException(UNEXPECTED_MSG);
         }
-        handleNames.put(handle.asText(), primarySpecimenObjectId.asText());
+        handleNames.put(primarySpecimenObjectId.asText(), handle.asText());
       }
       return handleNames;
     } catch (NullPointerException e) {
