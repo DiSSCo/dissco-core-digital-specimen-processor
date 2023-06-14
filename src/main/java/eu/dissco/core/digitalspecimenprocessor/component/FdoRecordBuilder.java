@@ -1,30 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.component;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.HANDLES;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.DIGITAL_OBJECT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.FDO_PROFILE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.FDO_RECORD_LICENSE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.HS_ADMIN;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.ISSUED_FOR_AGENT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LOC;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MARKED_AS_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.OBJECT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_ISSUER;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_ISSUER_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PID_STATUS;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_REFERENT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_DOI_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.STRUCTURAL_TYPE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_DISCIPLINE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -161,6 +138,86 @@ public class FdoRecordBuilder {
       attributeNode.put(FdoProfileAttributes.MARKED_AS_TYPE.getAttribute(), true);
     }
   }
+  private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+      .withZone(ZoneId.of("UTC"));
+
+  public List<JsonNode> genCreateHandleRequest(List<DigitalSpecimen> digitalSpecimens)
+      throws PidCreationException {
+    List<JsonNode> requestBody = new ArrayList<>();
+    for (var specimen : digitalSpecimens) {
+      requestBody.add(genCreateHandleRequest(specimen));
+    }
+    return requestBody;
+  }
+
+
+  private JsonNode genCreateHandleRequest(DigitalSpecimen specimen) throws PidCreationException {
+    var request = mapper.createObjectNode();
+    var data = mapper.createObjectNode();
+    data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    var attributes = genRequestAttributes(specimen);
+    data.set("attributes", attributes);
+    request.set("data", data);
+    return request;
+  }
+
+  private JsonNode genRequestAttributes(DigitalSpecimen specimen) throws PidCreationException {
+    var attributes = mapper.createObjectNode();
+    // Defaults
+    attributes.put(FdoProfileAttributes.FDO_PROFILE.getAttribute(),
+        FdoProfileConstants.FDO_PROFILE.getValue());
+    attributes.put(FdoProfileAttributes.DIGITAL_OBJECT_TYPE.getAttribute(),
+        FdoProfileConstants.DIGITAL_OBJECT_TYPE.getValue());
+    attributes.put(FdoProfileAttributes.ISSUED_FOR_AGENT.getAttribute(),
+        FdoProfileConstants.ISSUED_FOR_AGENT_PID.getValue());
+
+    // Mandatory
+    attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
+        specimen.physicalSpecimenId());
+    var organisationId = getTerm(specimen, "ods:organisationId");
+    organisationId.ifPresent(orgId -> attributes.put(SPECIMEN_HOST.getAttribute(), orgId));
+    if (organisationId.isEmpty()) {
+      throw new PidCreationException(
+          "Digital Specimen missing ods:organisationId. Unable to create PID. Check specimen"
+              + specimen.physicalSpecimenId());
+    }
+
+    // Optional
+    odsMap.forEach(
+        (odsTerm, fdoAttribute) -> updateOptionalAttribute(specimen, odsTerm, fdoAttribute,
+            attributes));
+
+    //Must be lower case
+    var livingOrPreserved = getTerm(specimen, "ods:livingOrPreserved");
+    livingOrPreserved.ifPresent(
+        foundTerm -> attributes.put(FdoProfileAttributes.LIVING_OR_PRESERVED.getAttribute(),
+            foundTerm.toLowerCase()));
+
+    setMarkedAsType(specimen, attributes);
+
+    return attributes;
+  }
+
+  private void setMarkedAsType(DigitalSpecimen specimen, ObjectNode attributeNode) {
+    // If typeStatus is present and NOT ["false", "specimen", "type"], this is to true, otherwise left blank.
+    var markedAsType = getTerm(specimen, "dwc:typeStatus");
+    if (markedAsType.isPresent() && !NOT_TYPE_STATUS.contains(markedAsType.get())) {
+      attributeNode.put(FdoProfileAttributes.MARKED_AS_TYPE.getAttribute(), true);
+    }
+  }
+
+  private void updateOptionalAttribute(DigitalSpecimen specimen, String term, String fdoAttribute,
+      ObjectNode attributeNode) {
+    var optionalAttribute = getTerm(specimen, term);
+    optionalAttribute.ifPresent(foundTerm -> attributeNode.put(fdoAttribute, foundTerm));
+  }
+
+  private Optional<String> getTerm(DigitalSpecimen specimen, String term) {
+    var val = specimen.attributes().get(term);
+    return val == null ? Optional.empty() : Optional.of(val.asText());
+  }
+
+  //  The following functions will be depreciated in next PR
 
   private void updateOptionalAttribute(DigitalSpecimen specimen, String term, String fdoAttribute,
       ObjectNode attributeNode) {
