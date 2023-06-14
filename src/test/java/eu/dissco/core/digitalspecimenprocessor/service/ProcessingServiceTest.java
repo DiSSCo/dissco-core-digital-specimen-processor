@@ -68,16 +68,13 @@ class ProcessingServiceTest {
   @Mock
   private MidsService midsService;
 
-  @Mock
-  private HandleComponent handleComponent;
-
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
   private ProcessingService service;
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, fdoRecordBuilder, elasticRepository, kafkaService,
-        midsService, handleComponent);
+        midsService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);

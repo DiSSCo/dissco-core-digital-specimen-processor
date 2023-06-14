@@ -41,7 +41,6 @@ public class ProcessingService {
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
-  private final HandleComponent handleComponent;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());

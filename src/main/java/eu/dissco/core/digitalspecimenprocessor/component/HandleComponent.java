@@ -37,9 +37,12 @@ public class HandleComponent {
   public Map<String, String> postHandle(List<JsonNode> requestBody)
       throws PidAuthenticationException, PidCreationException {
     var token = "Bearer " + tokenAuthenticator.getToken();
-    var response = handleClient.post().uri(uriBuilder -> uriBuilder.path("batch").build())
+    var response = handleClient.post()
+        .uri(uriBuilder -> uriBuilder.path("batch").build())
         .body(BodyInserters.fromValue(requestBody)).header("Authorization", token)
-        .acceptCharset(StandardCharsets.UTF_8).retrieve().onStatus(HttpStatus.UNAUTHORIZED::equals,
+        .acceptCharset(StandardCharsets.UTF_8)
+        .retrieve()
+        .onStatus(HttpStatus.UNAUTHORIZED::equals,
             r -> Mono.error(
                 new PidAuthenticationException("Unable to authenticate with Handle Service.")))
         .onStatus(HttpStatusCode::is4xxClientError, r -> Mono.error(new PidCreationException(
@@ -52,11 +55,11 @@ public class HandleComponent {
       return getHandleName(response.toFuture().get());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.debug("Interrupted exception has occurred.");
+      log.error("Interrupted exception has occurred.");
       throw new PidCreationException("An error has occurred in creating a handle.");
     } catch (ExecutionException e) {
       if (e.getCause().getClass().equals(PidAuthenticationException.class)) {
-        log.debug(
+        log.error(
             "Token obtained from Keycloak not accepted by Handle Server. Check Keycloak configuration.");
         throw new PidAuthenticationException(e.getCause().getMessage());
       }
