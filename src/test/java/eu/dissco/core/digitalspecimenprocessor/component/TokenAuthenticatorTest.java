@@ -105,7 +105,6 @@ class TokenAuthenticatorTest {
         .setBody(MAPPER.writeValueAsString(expectedJson))
         .addHeader("Content-Type", "application/json"));
 
-    // Then
     // When
     var response = authenticator.getToken();
 
