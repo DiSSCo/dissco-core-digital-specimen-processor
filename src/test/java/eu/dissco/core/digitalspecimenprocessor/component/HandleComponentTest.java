@@ -27,7 +27,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @ExtendWith(MockitoExtension.class)
 class HandleComponentTest {
   @Mock
-  TokenAuthenticator tokenAuthenticator;
+  private TokenAuthenticator tokenAuthenticator;
   private HandleComponent handleComponent;
 
   private static MockWebServer mockHandleServer;
