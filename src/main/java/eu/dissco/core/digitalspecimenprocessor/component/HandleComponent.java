@@ -39,7 +39,8 @@ public class HandleComponent {
     var token = "Bearer " + tokenAuthenticator.getToken();
     var response = handleClient.post()
         .uri(uriBuilder -> uriBuilder.path("batch").build())
-        .body(BodyInserters.fromValue(requestBody)).header("Authorization", token)
+        .body(BodyInserters.fromValue(requestBody))
+        .header("Authorization", token)
         .acceptCharset(StandardCharsets.UTF_8)
         .retrieve()
         .onStatus(HttpStatus.UNAUTHORIZED::equals,
@@ -84,7 +85,7 @@ public class HandleComponent {
           log.debug(UNEXPECTED_LOG, handleResponse.toPrettyString());
           throw new PidCreationException(UNEXPECTED_MSG);
         }
-        handleNames.put(primarySpecimenObjectId.asText(), handle.asText());
+        handleNames.put(handle.asText(), primarySpecimenObjectId.asText());
       }
       return handleNames;
     } catch (NullPointerException e) {
