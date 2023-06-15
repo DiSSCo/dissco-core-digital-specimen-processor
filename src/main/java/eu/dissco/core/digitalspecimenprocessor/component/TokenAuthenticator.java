@@ -3,7 +3,9 @@ package eu.dissco.core.digitalspecimenprocessor.component;
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
 import eu.dissco.core.digitalspecimenprocessor.property.TokenProperties;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.concurrent.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -11,9 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutionException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 

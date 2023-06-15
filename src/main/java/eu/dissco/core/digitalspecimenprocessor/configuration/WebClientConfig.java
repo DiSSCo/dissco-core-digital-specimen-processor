@@ -15,7 +15,8 @@ public class WebClientConfig {
     @Value("${auth.tokenEndpoint}")
     private String tokenEndpoint;
 
-    private static final String HANDLE_ENDPOINT = "https://sandbox.dissco.tech/handle-manager/api/v1/pids/";
+    @Value("${handle.endpoint}")
+    private String handleEndpoint;
 
     @Bean(name = "tokenClient")
     public WebClient tokenClient() {
@@ -30,7 +31,7 @@ public class WebClientConfig {
     public WebClient handleClient(){
         return WebClient.builder()
                 .clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true)))
-                .baseUrl(HANDLE_ENDPOINT)
+                .baseUrl(handleEndpoint)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }

@@ -5,7 +5,6 @@ package eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records;
 
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.Handles;
-
 import org.jooq.Field;
 import org.jooq.Record12;
 import org.jooq.Record2;

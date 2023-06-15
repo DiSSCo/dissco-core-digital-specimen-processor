@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.component.FdoRecordBuilder;
+import eu.dissco.core.digitalspecimenprocessor.component.HandleComponent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -418,13 +419,8 @@ public class ProcessingService {
       );
     } catch (TransformerException | PidCreationException e) {
       log.error("Failed to process record with id: {}",
-          event.digitalSpecimen().physicalSpecimenId(), e);
-      try {
-        kafkaService.deadLetterEvent(event);
-      } catch (JsonProcessingException ex) {
-        log.error("Failed to dead letter specimen with id: {}",
-            event.digitalSpecimen().physicalSpecimenId(), e);
-      }
+          event.digitalSpecimen().physicalSpecimenId(),
+          e);
       return null;
     }
   }

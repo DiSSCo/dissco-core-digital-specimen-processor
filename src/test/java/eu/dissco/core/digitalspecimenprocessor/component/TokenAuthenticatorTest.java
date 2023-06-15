@@ -5,14 +5,12 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResour
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
 import eu.dissco.core.digitalspecimenprocessor.property.TokenProperties;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
@@ -107,7 +105,6 @@ class TokenAuthenticatorTest {
         .setBody(MAPPER.writeValueAsString(expectedJson))
         .addHeader("Content-Type", "application/json"));
 
-    // Then
     // When
     var response = authenticator.getToken();
 
