@@ -31,7 +31,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
@@ -75,14 +74,14 @@ public class FdoRecordBuilder {
   private static final byte[] FDO_RECORD_LICENSE_LOC = "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(
       StandardCharsets.UTF_8);
   private static final Set<String> NOT_TYPE_STATUS = new HashSet<>(
-      Arrays.asList("false", "specimen", "type"));
+      Arrays.asList("false", "specimen", "type", ""));
 
   private static final HashMap<String, String> odsMap;
 
   static {
     HashMap<String, String> map = new HashMap<>();
-    map.put("ods:specimenName", FdoProfileAttributes.REFERENT_NAME.getAttribute());
-    map.put("ods:organisationName", FdoProfileAttributes.SPECIMEN_HOST_NAME.getAttribute());
+    map.put("ods:specimenName", REFERENT_NAME.getAttribute());
+    map.put("ods:organisationName", SPECIMEN_HOST_NAME.getAttribute());
     map.put("ods:topicDiscipline", TOPIC_DISCIPLINE.getAttribute());
     map.put("ods:physicalSpecimenIdType",
         FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute());
@@ -101,16 +100,7 @@ public class FdoRecordBuilder {
   private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
       .withZone(ZoneId.of("UTC"));
 
-  public List<JsonNode> genCreateHandleRequest(List<DigitalSpecimen> digitalSpecimens)
-      throws PidCreationException {
-    List<JsonNode> requestBody = new ArrayList<>();
-    for (var specimen : digitalSpecimens) {
-      requestBody.add(genCreateHandleRequest(specimen));
-    }
-    return requestBody;
-  }
-
-  public JsonNode genRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens){
+  public JsonNode genRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
     var handles = digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
     var dataNode = handles.stream()
         .map(handle -> mapper.createObjectNode().put("id", handle))
@@ -119,8 +109,17 @@ public class FdoRecordBuilder {
     return mapper.createObjectNode().set("data", dataArray);
   }
 
+  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimen> digitalSpecimens)
+      throws PidCreationException {
+    List<JsonNode> requestBody = new ArrayList<>();
+    for (var specimen : digitalSpecimens) {
+      requestBody.add(buildSinglePostHandleRequest(specimen));
+    }
+    return requestBody;
+  }
 
-  private JsonNode genCreateHandleRequest(DigitalSpecimen specimen) throws PidCreationException {
+  private JsonNode buildSinglePostHandleRequest(DigitalSpecimen specimen)
+      throws PidCreationException {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
@@ -170,9 +169,9 @@ public class FdoRecordBuilder {
   private void setMarkedAsType(DigitalSpecimen specimen, ObjectNode attributeNode) {
     // If typeStatus is present and NOT ["false", "specimen", "type"], this is to true, otherwise left blank.
     var markedAsType = getTerm(specimen, DWC_TYPE_STATUS);
-    if (markedAsType.isPresent() && !NOT_TYPE_STATUS.contains(markedAsType.get())) {
-      attributeNode.put(FdoProfileAttributes.MARKED_AS_TYPE.getAttribute(), true);
-    }
+    markedAsType.ifPresent(
+        s -> attributeNode.put(FdoProfileAttributes.MARKED_AS_TYPE.getAttribute(),
+            !NOT_TYPE_STATUS.contains(s)));
   }
 
   public boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
@@ -209,7 +208,11 @@ public class FdoRecordBuilder {
 
   private Optional<String> getTerm(DigitalSpecimen specimen, String term) {
     var val = specimen.attributes().get(term);
-    return val == null ? Optional.empty() : Optional.of(val.asText());
+    return jsonNodeIsNull(val) ? Optional.empty() : Optional.of(val.asText());
+  }
+
+  private boolean jsonNodeIsNull(JsonNode val) {
+    return val == null || val.isNull();
   }
 
   //  The following functions will be depreciated in next PR

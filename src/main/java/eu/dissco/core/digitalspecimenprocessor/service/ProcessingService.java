@@ -4,7 +4,6 @@ import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.component.FdoRecordBuilder;
 import eu.dissco.core.digitalspecimenprocessor.component.HandleComponent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
@@ -231,14 +230,15 @@ public class ProcessingService {
 
   private void updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples)
       throws PidCreationException, PidAuthenticationException {
-    var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream().filter(
-        tuple -> fdoRecordBuilder.handleNeedsUpdate(tuple.currentSpecimen().digitalSpecimen(),
+    var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream()
+        .filter(tuple -> fdoRecordBuilder.handleNeedsUpdate(
+            tuple.currentSpecimen().digitalSpecimen(),
             tuple.digitalSpecimenEvent().digitalSpecimen()))
         .map(tuple -> tuple.digitalSpecimenEvent().digitalSpecimen())
         .toList();
 
     if (!digitalSpecimensToUpdate.isEmpty()) {
-      var requests = fdoRecordBuilder.genCreateHandleRequest(digitalSpecimensToUpdate);
+      var requests = fdoRecordBuilder.buildPostHandleRequest(digitalSpecimensToUpdate);
       handleComponent.postHandle(requests);
     }
   }
@@ -409,10 +409,6 @@ public class ProcessingService {
           e);
       return null;
     }
-  }
-
-  private String matchPidToDs(Map<String, String> pidMap, String physicalSpecimenId){
-    return pidMap.get(physicalSpecimenId);
   }
 
 }

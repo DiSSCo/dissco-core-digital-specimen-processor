@@ -46,6 +46,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,7 +55,6 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
@@ -69,6 +69,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerFactory;
@@ -77,6 +78,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -99,6 +102,7 @@ class FdoRecordBuilderTest {
   private static final String TYPE_STATUS = "holotype";
   private static final String DWCA_ID = "ZMA.V.POL.1296.2@CRS";
   private static final String COLL_ID = "NAT.123XYZ.AVES";
+  private static final String REPLACEMENT_ATTRIBUTE = "this is different";
 
   private FdoRecordBuilder builder;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
@@ -130,7 +134,7 @@ class FdoRecordBuilderTest {
     var expected = new ArrayList(List.of(MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestMin.json"))));
 
     // When
-    var response = builder.genCreateHandleRequest(List.of(specimen));
+    var response = builder.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -146,15 +150,21 @@ class FdoRecordBuilderTest {
             givenDigitalSpecimenAttributesFull(typeStatus),
             givenDigitalSpecimenAttributesFull(typeStatus)
     );
-    var expectedFile = typeStatus.equals("holotype") ? "handlerequests/TestHandleRequestFullTypeStatus.json" : "handlerequests/TestHandleRequestFullNoTypeStatus.json";
+    var expectedFile =getExpectedFile(typeStatus);
 
-    var expected = new ArrayList(List.of(MAPPER.readTree(loadResourceFile(expectedFile))));
+    var expected = new ArrayList<>(List.of(MAPPER.readTree(loadResourceFile(expectedFile))));
 
     // When
-    var response = builder.genCreateHandleRequest(List.of(specimen));
+    var response = builder.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
+  }
+
+  private String getExpectedFile(String typeStatus){
+    if (typeStatus.equals("holotype")) return "handlerequests/TestHandleRequestFullTypeStatus.json";
+    if (typeStatus.equals("false")) return "handlerequests/TestHandleRequestFullTypeStatusFalse.json";
+    return "handlerequests/TestHandleRequestFullNoTypeStatus.json";
   }
 
   private static JsonNode givenDigitalSpecimenAttributesMinimal(){
@@ -243,6 +253,39 @@ class FdoRecordBuilderTest {
     assertThat(response).isEqualTo(expected);
   }
 
+  @ParameterizedTest
+  @MethodSource("digitalSpecimensNeedToBeChanged")
+  void testHandleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen){
+    // Then
+    assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimen())).isTrue();
+  }
+
+  @Test
+  void testHandleDoesNotNeedsUpdate(){
+    // Given
+    var currentDigitalSpecimen = makeOneFieldUnique("ods:collectingNumber");
+
+    // Then
+    assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimen())).isFalse();
+  }
+
+  private static Stream<Arguments> digitalSpecimensNeedToBeChanged(){
+    return Stream.of(
+        Arguments.of(makeOneFieldUnique("ods:organisationId")),
+        Arguments.of(makeOneFieldUnique("ods:organisationName")),
+        Arguments.of(makeOneFieldUnique("ods:specimenName")),
+        Arguments.of(makeOneFieldUnique("ods:topicDiscipline")),
+        Arguments.of(makeOneFieldUnique("ods:physicalSpecimenIdType")),
+        Arguments.of(makeOneFieldUnique("ods:livingOrPreserved")),
+        Arguments.of(makeOneFieldUnique("dwc:typeStatus"))
+    );
+  }
+
+  private static DigitalSpecimen makeOneFieldUnique(String field){
+    ObjectNode attributes = (ObjectNode) givenAttributes(SPECIMEN_NAME, ORGANISATION_ID);
+    attributes.put(field, REPLACEMENT_ATTRIBUTE);
+    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
+  }
 
   private List<HandleAttribute> givenFdoRecordGeneratedElements(String handle){
     mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);

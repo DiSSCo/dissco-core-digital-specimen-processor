@@ -11,6 +11,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import co.elastic.clients.elasticsearch._types.ErrorCause;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
@@ -21,7 +23,6 @@ import eu.dissco.core.digitalspecimenprocessor.component.HandleComponent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
@@ -91,12 +92,14 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenEvent()));
 
     // Then
+    verifyNoInteractions(handleComponent);
+    verifyNoInteractions(fdoRecordBuilder);
     then(repository).should().updateLastChecked(List.of(HANDLE));
     assertThat(result).isEmpty();
   }
 
   @Test
-  void testUnequalSpecimen() throws IOException, DisscoRepositoryException {
+  void testUnequalSpecimen() throws Exception {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
@@ -106,14 +109,39 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(expected)).willReturn(
         bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    then(fdoRecordBuilder).should()
-        .updateHandles(List.of(new UpdatedDigitalSpecimenTuple(givenUnequalDigitalSpecimenRecord(),
-            givenDigitalSpecimenEvent())));
+    then(fdoRecordBuilder).should().buildPostHandleRequest(List.of(expected.get(0).digitalSpecimen()));
+    then(handleComponent).should().postHandle(any());
+    then(repository).should().createDigitalSpecimenRecord(expected);
+    then(kafkaService).should()
+        .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
+    assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
+  }
+
+  @Test
+  void testHandleRecordDoesNotNeedUpdate() throws Exception{
+    // Given
+    var expected = List.of(givenDigitalSpecimenRecord(2));
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenUnequalDigitalSpecimenRecord()));
+    given(bulkResponse.errors()).willReturn(false);
+    given(
+        elasticRepository.indexDigitalSpecimen(expected)).willReturn(
+        bulkResponse);
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(false);
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    verifyNoMoreInteractions(fdoRecordBuilder);
+    verifyNoMoreInteractions(handleComponent);
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
         .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
@@ -257,7 +285,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testUpdateSpecimenPartialElasticFailed() throws IOException, DisscoRepositoryException {
+  void testUpdateSpecimenPartialElasticFailed() throws Exception {
     // Given
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
@@ -268,6 +296,7 @@ class ProcessingServiceTest {
             givenUnequalDigitalSpecimenRecord()
         ));
     givenBulkResponse();
+    given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(thirdEvent.digitalSpecimen())).willReturn(1);
 
@@ -276,7 +305,7 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent));
 
     // Then
-    then(fdoRecordBuilder).should().updateHandles(anyList());
+    then(handleComponent).should().postHandle(anyList());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(fdoRecordBuilder).should()
         .deleteVersion(givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"));
@@ -307,7 +336,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testUpdateSpecimenIOException() throws IOException, DisscoRepositoryException {
+  void testUpdateSpecimenIOException() throws Exception {
     // Given
     var unequalCurrentDigitalSpecimen = givenUnequalDigitalSpecimenRecord(ANOTHER_ORGANISATION);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
@@ -315,15 +344,15 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(List.of(givenDigitalSpecimenRecord(2)))).willThrow(
         IOException.class);
+    given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    then(fdoRecordBuilder).should().updateHandles(List.of(
-        new UpdatedDigitalSpecimenTuple(unequalCurrentDigitalSpecimen,
-            givenDigitalSpecimenEvent())));
+    then(fdoRecordBuilder).should().buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimen()));
+    then(handleComponent).should().postHandle(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(fdoRecordBuilder).should().deleteVersion(unequalCurrentDigitalSpecimen);
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());

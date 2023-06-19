@@ -37,8 +37,9 @@ public class HandleComponent {
   public Map<String, String> postHandle(List<JsonNode> requestBody)
       throws PidAuthenticationException, PidCreationException {
     var token = "Bearer " + tokenAuthenticator.getToken();
-    var response = handleClient.post()
-        .uri(uriBuilder -> uriBuilder.path("batch").build())
+
+    var response = handleClient.patch()
+        .uri(uriBuilder -> uriBuilder.path("upsert").build())
         .body(BodyInserters.fromValue(requestBody))
         .header("Authorization", token)
         .acceptCharset(StandardCharsets.UTF_8)
