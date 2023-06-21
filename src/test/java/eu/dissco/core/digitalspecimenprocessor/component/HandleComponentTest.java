@@ -201,7 +201,7 @@ class HandleComponentTest {
   private HashMap<String, String> givenHandleNameResponse(JsonNode responseBody){
     HashMap<String, String> handleNames = new HashMap<>();
     for (var node : responseBody.get("data")){
-      handleNames.put(node.get("id").asText(), node.get("attributes").get(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText());
+      handleNames.put(node.get("attributes").get(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(), node.get("id").asText());
     }
     return handleNames;
   }

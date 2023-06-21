@@ -91,19 +91,6 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testDeadLetterEventList() throws JsonProcessingException {
-    // Given
-    var expectedEvents = List.of(givenDigitalSpecimenEvent(), givenDigitalSpecimenEvent());
-
-    // When
-    service.deadLetterEvent(expectedEvents);
-
-    // Then
-    then(kafkaTemplate).should(times(2))
-        .send("digital-specimen-dlq", MAPPER.writeValueAsString(expectedEvents.get(0)));
-  }
-
-  @Test
   void testDeadLetterRaw() throws JsonProcessingException {
     // Given
     var rawEvent = MAPPER.writeValueAsString(givenDigitalSpecimenEvent());

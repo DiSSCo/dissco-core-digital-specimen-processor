@@ -11,6 +11,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
@@ -30,7 +31,10 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.xml.transform.TransformerException;
 import org.junit.jupiter.api.AfterEach;
@@ -63,6 +67,7 @@ class ProcessingServiceTest {
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
   private ProcessingService service;
+
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, fdoRecordBuilder, elasticRepository, kafkaService,
@@ -115,7 +120,8 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    then(fdoRecordBuilder).should().buildPostHandleRequest(List.of(expected.get(0).digitalSpecimen()));
+    then(fdoRecordBuilder).should()
+        .buildPostHandleRequest(List.of(expected.get(0).digitalSpecimen()));
     then(handleComponent).should().postHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
@@ -124,7 +130,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testHandleRecordDoesNotNeedUpdate() throws Exception{
+  void testHandleRecordDoesNotNeedUpdate() throws Exception {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
@@ -152,12 +158,15 @@ class ProcessingServiceTest {
   void testNewSpecimen() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(fdoRecordBuilder.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(fdoRecordBuilder.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
+        List.of(MAPPER.createObjectNode()));
+    given(handleComponent.postHandle(anyList()))
+        .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -176,18 +185,22 @@ class ProcessingServiceTest {
     var duplicateSpecimen = new DigitalSpecimenEvent(List.of(AAS),
         givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(fdoRecordBuilder.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(fdoRecordBuilder.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
+        List.of(MAPPER.createObjectNode()));
+    given(handleComponent.postHandle(anyList()))
+        .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
     var result = service.handleMessages(
         List.of(givenDigitalSpecimenEvent(), duplicateSpecimen));
 
     // Then
+    verify(handleComponent, times(1)).postHandle(anyList());
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
     then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
     then(kafkaService).should().publishAnnotationRequestEvent(AAS, givenDigitalSpecimenRecord());
@@ -200,11 +213,14 @@ class ProcessingServiceTest {
       throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(fdoRecordBuilder.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(fdoRecordBuilder.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
+        List.of(MAPPER.createObjectNode()));
+    given(handleComponent.postHandle(anyList()))
+        .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -212,7 +228,7 @@ class ProcessingServiceTest {
     // Then
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
     then(repository).should().rollbackSpecimen(givenDigitalSpecimenRecord().id());
-    then(fdoRecordBuilder).should().rollbackHandleCreation(givenDigitalSpecimenRecord());
+    then(handleComponent).should().rollbackHandleCreation(any());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     assertThat(result).isEmpty();
   }
@@ -221,16 +237,25 @@ class ProcessingServiceTest {
   void testNewSpecimenPartialElasticFailed()
       throws Exception {
     // Given
-    var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
-    var secondSpecimen = givenDigitalSpecimenRecord(SECOND_HANDLE, "Another Specimen");
-    var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
-    var thirdSpecimen = givenDigitalSpecimenRecord(THIRD_HANDLE, "A third Specimen");
+    String secondPhysicalId = "Another Specimen";
+    String thirdPhysicalId = "A third Specimen";
+    var secondEvent = givenDigitalSpecimenEvent(secondPhysicalId);
+    var secondSpecimen = givenDigitalSpecimenRecord(SECOND_HANDLE, secondPhysicalId);
+    var thirdEvent = givenDigitalSpecimenEvent(thirdPhysicalId);
+    var thirdSpecimen = givenDigitalSpecimenRecord(THIRD_HANDLE, thirdPhysicalId);
+    var specimenRecordList = List.of(
+        givenDigitalSpecimenRecord(),
+        givenDigitalSpecimenRecord(SECOND_HANDLE, secondPhysicalId),
+        givenDigitalSpecimenRecord(THIRD_HANDLE, thirdPhysicalId)
+    );
+
     given(repository.getDigitalSpecimens(anyList())).willReturn(List.of());
-    given(fdoRecordBuilder.createNewHandle(any(DigitalSpecimen.class))).willReturn(THIRD_HANDLE)
-        .willReturn(SECOND_HANDLE).willReturn(HANDLE);
     given(midsService.calculateMids(any(DigitalSpecimen.class))).willReturn(1);
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
+    given(fdoRecordBuilder.buildPostHandleRequest(anyList())).willReturn(List.of(MAPPER.createObjectNode()));
+    given(handleComponent.postHandle(anyList()))
+        .willReturn(givenHandleComponentResponse(specimenRecordList));
 
     // When
     var result = service.handleMessages(
@@ -238,9 +263,10 @@ class ProcessingServiceTest {
 
     // Then
     then(repository).should().createDigitalSpecimenRecord(anySet());
-    then(fdoRecordBuilder).should(times(3)).createNewHandle(any(DigitalSpecimen.class));
     then(repository).should().rollbackSpecimen(secondSpecimen.id());
-    then(fdoRecordBuilder).should().rollbackHandleCreation(secondSpecimen);
+    then(fdoRecordBuilder).should().buildRollbackCreationRequest(List.of(secondSpecimen));
+    then(handleComponent).should().rollbackHandleCreation(any());
+    then(handleComponent).should().postHandle(any());
     then(kafkaService).should().deadLetterEvent(secondEvent);
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(), thirdSpecimen));
   }
@@ -250,8 +276,10 @@ class ProcessingServiceTest {
       throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(fdoRecordBuilder.createNewHandle(givenDigitalSpecimen())).willReturn(HANDLE);
-
+    given(fdoRecordBuilder.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
+        List.of(MAPPER.createObjectNode()));
+    given(handleComponent.postHandle(anyList()))
+        .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
@@ -267,7 +295,7 @@ class ProcessingServiceTest {
     then(repository).should().createDigitalSpecimenRecord(anySet());
     then(elasticRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
     then(repository).should().rollbackSpecimen(givenDigitalSpecimenRecord().id());
-    then(fdoRecordBuilder).should().rollbackHandleCreation(givenDigitalSpecimenRecord());
+    then(handleComponent).should().rollbackHandleCreation(any());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     assertThat(result).isEmpty();
   }
@@ -306,9 +334,8 @@ class ProcessingServiceTest {
 
     // Then
     then(handleComponent).should().postHandle(anyList());
+    then(handleComponent).should().rollbackHandleUpdate(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
-    then(fdoRecordBuilder).should()
-        .deleteVersion(givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"));
     then(kafkaService).should().deadLetterEvent(secondEvent);
     assertThat(result).hasSize(2);
   }
@@ -351,10 +378,11 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    then(fdoRecordBuilder).should().buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimen()));
+    then(fdoRecordBuilder).should()
+        .buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimen()));
     then(handleComponent).should().postHandle(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
-    then(fdoRecordBuilder).should().deleteVersion(unequalCurrentDigitalSpecimen);
+    //then(fdoRecordBuilder).should().deleteVersion(unequalCurrentDigitalSpecimen);
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     assertThat(result).isEmpty();
   }
@@ -363,8 +391,8 @@ class ProcessingServiceTest {
   void testNewSpecimenError() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(fdoRecordBuilder.createNewHandle(givenDigitalSpecimen())).willThrow(
-        TransformerException.class);
+    //given(fdoRecordBuilder.createNewHandle(givenDigitalSpecimen())).willThrow(
+    //    TransformerException.class);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));

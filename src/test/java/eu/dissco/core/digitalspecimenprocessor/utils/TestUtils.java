@@ -12,7 +12,9 @@ import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.core.io.ClassPathResource;
 
 public class TestUtils {
@@ -41,7 +43,6 @@ public class TestUtils {
   public static final String GENERATED_HANDLE = "20.5000.1025/YYY-YYY-YYY";
 
   public static final byte[] LOCAL_OBJECT_ID = " 002b51e5-b8e1-4b2b-a841-86c34dca9ef6:040ck2b86".getBytes(StandardCharsets.UTF_8);
-
 
   public static JsonNode generateSpecimenOriginalData() {
     try {
@@ -180,6 +181,19 @@ public class TestUtils {
     return attributes;
   }
 
+  public static Map<String, String> givenHandleComponentResponse(){
+    return givenHandleComponentResponse(List.of(PHYSICAL_SPECIMEN_ID), List.of(HANDLE));
+  }
+
+  public static Map<String, String> givenHandleComponentResponse(List<String> physIds, List<String> handles){
+    assert(physIds.size()==handles.size());
+    Map<String, String> pidMap = new HashMap<>();
+    for (int i = 0; i<physIds.size(); i++){
+      pidMap.put(physIds.get(i), handles.get(i));
+    }
+    return pidMap;
+  }
+
   public static List<HandleAttribute> givenHandleAttributes() {
     return List.of(
         new HandleAttribute(1, "pid",
@@ -197,6 +211,14 @@ public class TestUtils {
   public static String loadResourceFile(String fileName) throws IOException {
     return new String(new ClassPathResource(fileName).getInputStream()
             .readAllBytes(), StandardCharsets.UTF_8);
+  }
+
+  public static Map<String, String> givenHandleComponentResponse(List<DigitalSpecimenRecord> records){
+    Map<String, String> response = new HashMap<>();
+    for(var specimenRecord : records){
+      response.put(specimenRecord.digitalSpecimen().physicalSpecimenId(), specimenRecord.id());
+    }
+    return response;
   }
 
 }

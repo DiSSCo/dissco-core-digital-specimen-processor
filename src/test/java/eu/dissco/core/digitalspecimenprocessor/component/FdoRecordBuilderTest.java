@@ -46,7 +46,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -188,56 +187,6 @@ class FdoRecordBuilderTest {
   }
 
   @Test
-  void testCreateNewHandle() throws Exception {
-    // Given
-    given(random.nextInt(33)).willReturn(21);
-    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
-
-    // When
-    var result = builder.createNewHandle(givenDigitalSpecimen());
-
-    // Then
-    then(repository).should().createHandle(eq(GENERATED_HANDLE), eq(CREATED), anyList());
-    assertThat(result).isEqualTo(GENERATED_HANDLE);
-  }
-
-
-  @Test
-  void testUpdateHandle() {
-    // Given
-
-    // When
-    builder.updateHandles(List.of(
-        new UpdatedDigitalSpecimenTuple(givenUnequalDigitalSpecimenRecord(),
-            givenDigitalSpecimenEvent())));
-
-    // Then
-    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(true));
-  }
-
-  @Test
-  void testRollbackHandleCreation() {
-    // Given
-
-    // When
-    builder.rollbackHandleCreation(givenDigitalSpecimenRecord());
-
-    // Then
-    then(repository).should().rollbackHandleCreation(HANDLE);
-  }
-
-  @Test
-  void testDeleteVersion() {
-    // Given
-
-    // When
-    builder.deleteVersion(givenDigitalSpecimenRecord());
-
-    // Then
-    then(repository).should().updateHandleAttributes(eq(HANDLE), eq(CREATED), anyList(), eq(false));
-  }
-
-  @Test
   void testGenRollbackCreationRequest(){
     // Given
     var digitalSpecimenRecords = List.of(givenDigitalSpecimenRecord());
@@ -247,7 +196,7 @@ class FdoRecordBuilderTest {
     var expected = MAPPER.createObjectNode().set("data", dataArr);
 
     // When
-    var response = builder.genRollbackCreationRequest(digitalSpecimenRecords);
+    var response = builder.buildRollbackCreationRequest(digitalSpecimenRecords);
 
     // Then
     assertThat(response).isEqualTo(expected);

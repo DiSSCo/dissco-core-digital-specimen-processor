@@ -41,6 +41,7 @@ public class ProcessingService {
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
   private final HandleComponent handleComponent;
+  private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -142,12 +143,21 @@ public class ProcessingService {
   private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
     try {
+      log.info("Persisting to Handle Server");
       updateHandles(updatedDigitalSpecimenTuples);
-    } catch (PidCreationException | PidAuthenticationException e){
-      log.info("Unable to update Handle record. Not proceeding with update");
+    } catch (PidCreationException | PidAuthenticationException pidEx) {
+      log.error("Unable to update Handle record. Not proceeding with update. ", pidEx);
+      try {
+        for (var tuple : updatedDigitalSpecimenTuples){
+          kafkaService.deadLetterEvent(tuple.digitalSpecimenEvent());
+        }
+      } catch(JsonProcessingException jsonEx){
+        log.error(DLQ_FAILED + updatedDigitalSpecimenTuples, jsonEx);
+      }
       return Set.of();
     }
     var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
+
     log.info("Persisting to db");
     repository.createDigitalSpecimenRecord(
         digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
@@ -169,6 +179,7 @@ public class ProcessingService {
       return successfullyProcessedRecords;
     } catch (IOException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
+      filterUpdatesAndRollbackHandles(updatedDigitalSpecimenTuples);
       digitalSpecimenRecords.forEach(
           updatedDigitalSpecimenRecord -> rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord,
               false));
@@ -192,6 +203,10 @@ public class ProcessingService {
   private void handlePartiallyElasticUpdate(
       Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords,
       BulkResponse bulkResponse) {
+
+    rollbackHandleUpdate(digitalSpecimenRecords.stream().map(
+        UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).toList());
+
     var digitalSpecimenMap = digitalSpecimenRecords.stream()
         .collect(Collectors.toMap(
             updatedDigitalSpecimenRecord -> updatedDigitalSpecimenRecord.digitalSpecimenRecord()
@@ -212,6 +227,7 @@ public class ProcessingService {
           }
         }
     );
+
   }
 
   private Set<UpdatedDigitalSpecimenRecord> getSpecimenRecordMap(
@@ -266,19 +282,13 @@ public class ProcessingService {
       }
     }
     rollBackToEarlierVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
-    if (fdoRecordBuilder.handleNeedsUpdate(updatedDigitalSpecimenRecord.currentDigitalSpecimen().digitalSpecimen(),
-        updatedDigitalSpecimenRecord.digitalSpecimenRecord()
-            .digitalSpecimen())) {
-      fdoRecordBuilder.deleteVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
-    }
     try {
       kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                   .digitalSpecimen()));
     } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to dead letter queue: "
-          + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
+      log.error(DLQ_FAILED + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
   }
 
@@ -288,8 +298,15 @@ public class ProcessingService {
 
 
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
+    Map<String, String> pidMap;
+    try {
+      pidMap = createNewPidRecords(events);
+    } catch (PidAuthenticationException | PidCreationException e){
+      log.error("Unable to create PID. {}", e.getMessage());
+      return Collections.emptySet();
+    }
     var digitalSpecimenRecords = events.stream().collect(Collectors.toMap(
-        this::mapToDigitalSpecimenRecord,
+        event -> mapToDigitalSpecimenRecord(event, pidMap),
         DigitalSpecimenEvent::enrichmentList
     ));
     digitalSpecimenRecords.remove(null);
@@ -310,19 +327,30 @@ public class ProcessingService {
     } catch (IOException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
+      rollbackHandleCreation(digitalSpecimenRecords.keySet().stream().toList());
       return Collections.emptySet();
     }
+  }
+
+  private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)
+      throws PidCreationException, PidAuthenticationException {
+    var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimen).toList();
+    var request = fdoRecordBuilder.buildPostHandleRequest(specimenList);
+    return handleComponent.postHandle(request);
   }
 
   private void handleSuccessfulElasticInsert(
       Map<DigitalSpecimenRecord, List<String>> digitalSpecimenRecords) {
     log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
+    List<DigitalSpecimenRecord> rollbackRecords = new ArrayList<>();
     for (var entry : digitalSpecimenRecords.entrySet()) {
       var successfullyPublished = publishEvents(entry.getKey(), entry.getValue());
       if (!successfullyPublished) {
         digitalSpecimenRecords.remove(entry.getKey());
+        rollbackRecords.add(entry.getKey());
       }
     }
+    rollbackHandleCreation(rollbackRecords);
   }
 
   private void handlePartiallyFailedElasticInsert(
@@ -330,12 +358,15 @@ public class ProcessingService {
       BulkResponse bulkResponse) {
     var digitalSpecimenMap = digitalSpecimenRecords.keySet().stream()
         .collect(Collectors.toMap(DigitalSpecimenRecord::id, Function.identity()));
+    ArrayList<DigitalSpecimenRecord> rollbackDigitalRecords = new ArrayList<>();
+
     bulkResponse.items().forEach(
         item -> {
           var digitalSpecimenRecord = digitalSpecimenMap.get(item.id());
           if (item.error() != null) {
             log.error("Failed item to insert into elastic search: {} with errors {}",
                 digitalSpecimenRecord.id(), item.error().reason());
+            rollbackDigitalRecords.add(digitalSpecimenRecord);
             rollbackNewSpecimen(digitalSpecimenRecord,
                 digitalSpecimenRecords.get(digitalSpecimenRecord));
             digitalSpecimenRecords.remove(digitalSpecimenRecord);
@@ -348,6 +379,7 @@ public class ProcessingService {
           }
         }
     );
+    rollbackHandleCreation(rollbackDigitalRecords);
   }
 
   private boolean publishEvents(DigitalSpecimenRecord key, List<String> value) {
@@ -385,30 +417,62 @@ public class ProcessingService {
       }
     }
     repository.rollbackSpecimen(digitalSpecimenRecord.id());
-    fdoRecordBuilder.rollbackHandleCreation(digitalSpecimenRecord);
     try {
       kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(enrichments, digitalSpecimenRecord.digitalSpecimen()));
     } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to dead letter queue: " + digitalSpecimenRecord.id(), e);
+      log.error(DLQ_FAILED + digitalSpecimenRecord.id(), e);
     }
   }
 
-  private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event) {
+  private void rollbackHandleCreation(List<DigitalSpecimenRecord> records){
+    var request = fdoRecordBuilder.buildRollbackCreationRequest(records);
     try {
-      return new DigitalSpecimenRecord(
-          fdoRecordBuilder.createNewHandle(event.digitalSpecimen()),
-          midsService.calculateMids(event.digitalSpecimen()),
-          1,
-          Instant.now(),
-          event.digitalSpecimen()
-      );
-    } catch (TransformerException | PidCreationException e) {
-      log.error("Failed to process record with id: {}",
-          event.digitalSpecimen().physicalSpecimenId(),
-          e);
+      handleComponent.rollbackHandleCreation(request);
+    } catch (PidCreationException | PidAuthenticationException e) {
+      var ids = records.stream().map(DigitalSpecimenRecord::id).toList();
+      log.error("Unable to rollback handles for new specimens. Bad handles: {}", ids);
+    }
+  }
+
+  private void filterUpdatesAndRollbackHandles(List<UpdatedDigitalSpecimenTuple> records){
+    var recordsToRollback = records.stream()
+        .filter(r -> fdoRecordBuilder.handleNeedsUpdate(r.currentSpecimen().digitalSpecimen(),
+            r.currentSpecimen().digitalSpecimen()))
+        .map(UpdatedDigitalSpecimenTuple::currentSpecimen)
+        .toList();
+
+    rollbackHandleUpdate(recordsToRollback);
+  }
+
+  private void rollbackHandleUpdate(List<DigitalSpecimenRecord> recordsToRollback){
+    try {
+      var request = fdoRecordBuilder.buildPostHandleRequest(recordsToRollback.stream().map(DigitalSpecimenRecord::digitalSpecimen).toList());
+      handleComponent.rollbackHandleUpdate(request);
+    } catch (PidCreationException | PidAuthenticationException e) {
+      var ids = recordsToRollback.stream().map(DigitalSpecimenRecord::id).toList();
+      log.error("Unable to rollback handles for new specimens. Bad handles: {}", ids);
+    }
+  }
+
+  private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event,
+      Map<String, String> pidMap) {
+    var handle = matchPidToDs(pidMap, event.digitalSpecimen().physicalSpecimenId());
+    if (handle==null){
       return null;
     }
+
+    return new DigitalSpecimenRecord(
+        matchPidToDs(pidMap, event.digitalSpecimen().physicalSpecimenId()),
+        midsService.calculateMids(event.digitalSpecimen()),
+        1,
+        Instant.now(),
+        event.digitalSpecimen()
+    );
+  }
+
+  private String matchPidToDs(Map<String, String> pidMap, String physicalSpecimenId) {
+    return pidMap.get(physicalSpecimenId);
   }
 
 }
