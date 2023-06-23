@@ -83,7 +83,7 @@ public class HandleComponent {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       log.error("Interrupted exception has occurred.");
-      throw new PidCreationException("An error has occurred in creating a handle.");
+      throw new PidCreationException("Interrupted execution: A connection error has occurred in creating a handle.");
     } catch (ExecutionException e) {
       if (e.getCause().getClass().equals(PidAuthenticationException.class)) {
         log.error(

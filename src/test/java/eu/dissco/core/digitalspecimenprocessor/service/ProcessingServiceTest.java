@@ -25,6 +25,8 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import java.io.IOException;
@@ -209,6 +211,28 @@ class ProcessingServiceTest {
   }
 
   @Test
+  void testNewSpecimenRollbackHandleFailed()throws Exception {
+    // Given
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
+    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(
+        elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
+        IOException.class);
+    doThrow(PidCreationException.class).when(handleComponent).rollbackHandleCreation(any());
+    given(handleComponent.postHandle(anyList()))
+        .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
+    then(repository).should().rollbackSpecimen(givenDigitalSpecimenRecord().id());
+    then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
+    assertThat(result).isEmpty();
+  }
+
+  @Test
   void testNewSpecimenIOException()
       throws Exception {
     // Given
@@ -217,8 +241,6 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
-    given(fdoRecordBuilder.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
-        List.of(MAPPER.createObjectNode()));
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
@@ -253,7 +275,6 @@ class ProcessingServiceTest {
     given(midsService.calculateMids(any(DigitalSpecimen.class))).willReturn(1);
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
-    given(fdoRecordBuilder.buildPostHandleRequest(anyList())).willReturn(List.of(MAPPER.createObjectNode()));
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(specimenRecordList));
 
@@ -310,6 +331,50 @@ class ProcessingServiceTest {
     given(bulkResponse.errors()).willReturn(true);
     given(bulkResponse.items()).willReturn(
         List.of(positiveResponse, negativeResponse, positiveResponse));
+  }
+
+  @Test
+  void testUpdateSpecimenHandleFailed() throws Exception{
+    var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
+    var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
+    given(repository.getDigitalSpecimens(
+        List.of("A third Specimen", "Another Specimen", PHYSICAL_SPECIMEN_ID)))
+        .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
+            givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
+            givenUnequalDigitalSpecimenRecord()
+        ));
+    given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
+    doThrow(PidCreationException.class).when(handleComponent).postHandle(any());
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent));
+
+    // Then
+    then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
+    then(kafkaService).should().deadLetterEvent(secondEvent);
+    then(kafkaService).should().deadLetterEvent(thirdEvent);
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void testUpdateSpecimenHandleAndKafkaFailed() throws Exception{
+    var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
+    var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
+    given(repository.getDigitalSpecimens(
+        List.of("A third Specimen", "Another Specimen", PHYSICAL_SPECIMEN_ID)))
+        .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
+            givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
+            givenUnequalDigitalSpecimenRecord()
+        ));
+    given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
+    doThrow(PidCreationException.class).when(handleComponent).postHandle(any());
+    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any());
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent));
+
+    // Then
+    assertThat(result).isEmpty();
   }
 
   @Test
@@ -382,8 +447,23 @@ class ProcessingServiceTest {
         .buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimen()));
     then(handleComponent).should().postHandle(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
-    //then(fdoRecordBuilder).should().deleteVersion(unequalCurrentDigitalSpecimen);
+    then(handleComponent).should().rollbackHandleUpdate(any());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void testNewSpecimenPidCreationException() throws Exception{
+    // Given
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
+    doThrow(PidCreationException.class).when(handleComponent).postHandle(any());
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    then(repository).shouldHaveNoMoreInteractions();
+    then(elasticRepository).shouldHaveNoInteractions();
     assertThat(result).isEmpty();
   }
 

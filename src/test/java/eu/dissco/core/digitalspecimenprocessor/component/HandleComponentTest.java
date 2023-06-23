@@ -4,7 +4,10 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.BDDAssumptions.given;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -23,9 +26,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
 class HandleComponentTest {
+
   @Mock
   private TokenAuthenticator tokenAuthenticator;
   private HandleComponent handleComponent;
@@ -39,7 +44,7 @@ class HandleComponentTest {
   }
 
   @BeforeEach
-  void setup()  {
+  void setup() {
     WebClient webClient = WebClient.create(
         String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
     handleComponent = new HandleComponent(webClient, tokenAuthenticator);
@@ -56,7 +61,7 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody =  MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
+    var responseBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
     var expected = givenHandleNameResponse(responseBody);
     mockHandleServer.enqueue(new MockResponse()
         .setResponseCode(HttpStatus.CREATED.value())
@@ -103,7 +108,7 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody =  MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
+    var responseBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
     var expected = givenHandleNameResponse(responseBody);
     int requestCount = mockHandleServer.getRequestCount();
 
@@ -118,7 +123,53 @@ class HandleComponentTest {
 
     // Then
     assertThat(response).isEqualTo(expected);
-    assertThat(mockHandleServer.getRequestCount()-requestCount).isEqualTo(2);
+    assertThat(mockHandleServer.getRequestCount() - requestCount).isEqualTo(2);
+  }
+
+
+  @Test
+  void testRollbackHandleCreation() throws Exception {
+    // Given
+    var requestBody = MAPPER.readTree(
+        loadResourceFile("handlerequests/HandleRollbackCreationRequest.json"));
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.OK.value())
+        .addHeader("Content-Type", "application/json"));
+
+    // Then
+    assertDoesNotThrow(() -> handleComponent.rollbackHandleCreation(requestBody));
+  }
+
+  @Test
+  void testRollbackHandleUpdate() throws Exception {
+    // Given
+    var requestBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestMin.json"));
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.OK.value())
+        .addHeader("Content-Type", "application/json"));
+
+    // Then
+    assertDoesNotThrow(() -> handleComponent.rollbackHandleCreation(requestBody));
+  }
+
+  @Test
+  void testInterruptedException() throws Exception {
+    // Given
+    var requestBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestMin.json"));
+    var responseBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
+
+    mockHandleServer.enqueue(new MockResponse()
+        .setResponseCode(HttpStatus.OK.value())
+        .setBody(MAPPER.writeValueAsString(responseBody))
+        .addHeader("Content-Type", "application/json"));
+
+    Thread.currentThread().interrupt();
+
+    // When
+    var response = assertThrows(PidCreationException.class, () -> handleComponent.postHandle(List.of(requestBody)));
+
+    // Then
+    assertThat(response).hasMessage("Interrupted execution: A connection error has occurred in creating a handle.");
   }
 
   @Test
@@ -158,7 +209,8 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody =  MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponseMissingId.json"));
+    var responseBody = MAPPER.readTree(
+        loadResourceFile("handlerequests/TestHandleResponseMissingId.json"));
 
     mockHandleServer.enqueue(new MockResponse()
         .setResponseCode(HttpStatus.CREATED.value())
@@ -173,7 +225,8 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody =  MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponseMissingPhysicalId.json"));
+    var responseBody = MAPPER.readTree(
+        loadResourceFile("handlerequests/TestHandleResponseMissingPhysicalId.json"));
 
     mockHandleServer.enqueue(new MockResponse()
         .setResponseCode(HttpStatus.CREATED.value())
@@ -198,10 +251,12 @@ class HandleComponentTest {
     assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
   }
 
-  private HashMap<String, String> givenHandleNameResponse(JsonNode responseBody){
+  private HashMap<String, String> givenHandleNameResponse(JsonNode responseBody) {
     HashMap<String, String> handleNames = new HashMap<>();
-    for (var node : responseBody.get("data")){
-      handleNames.put(node.get("attributes").get(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(), node.get("id").asText());
+    for (var node : responseBody.get("data")) {
+      handleNames.put(
+          node.get("attributes").get(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(),
+          node.get("id").asText());
     }
     return handleNames;
   }
