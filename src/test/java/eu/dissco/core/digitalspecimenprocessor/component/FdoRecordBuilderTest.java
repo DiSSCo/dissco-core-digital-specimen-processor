@@ -46,6 +46,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -58,6 +59,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.HandleAttribute;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -218,6 +220,25 @@ class FdoRecordBuilderTest {
     assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimen())).isFalse();
   }
 
+  @Test
+  void testPhysicalSpecimenIdsDifferent(){
+    // Given
+    var currentSpecimen = givenDigitalSpecimen("ALT ID", SPECIMEN_NAME, ORGANISATION_ID);
+
+    // When/then
+    assertThat(builder.handleNeedsUpdate(currentSpecimen, givenDigitalSpecimen())).isTrue();
+  }
+
+  @Test
+  void testMissingOrganisationId(){
+    // Given
+    var attributes = givenAttributes(SPECIMEN_NAME, null);
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, "Digital Specimen", attributes, MAPPER.createObjectNode());
+
+    // When/Then
+    assertThrows(PidCreationException.class, () -> builder.buildPostHandleRequest(List.of(specimen)));
+  }
+
   private static Stream<Arguments> digitalSpecimensNeedToBeChanged(){
     return Stream.of(
         Arguments.of(makeOneFieldUnique("ods:organisationId")),
@@ -235,93 +256,5 @@ class FdoRecordBuilderTest {
     attributes.put(field, REPLACEMENT_ATTRIBUTE);
     return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
   }
-
-  private List<HandleAttribute> givenFdoRecordGeneratedElements(String handle){
-    mockedStatic.when(() -> Instant.from(any())).thenReturn(instant);
-    List<HandleAttribute> fdoRecord = new ArrayList<>();
-    fdoRecord.add(new HandleAttribute(100, HS_ADMIN.getAttribute(), decodeAdmin()));
-    fdoRecord.add(new HandleAttribute(101, LOC.getAttribute(), givenLocString(handle)));
-    fdoRecord.add(new HandleAttribute(1, FDO_PROFILE.getAttribute(), (HANDLE_PROXY + "21.T11148/d8de0819e144e4096645").getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(2, FDO_RECORD_LICENSE.getAttribute(), "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(3, DIGITAL_OBJECT_TYPE.getAttribute(), (HANDLE_PROXY + "21.T11148/894b1e6cad57e921764e").getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(4, DIGITAL_OBJECT_NAME.getAttribute(), "digitalSpecimen".getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(5, PID.getAttribute(), (HANDLE_PROXY + handle).getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(6, PID_ISSUER.getAttribute(), TO_FIX.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(7, PID_ISSUER_NAME.getAttribute(), TO_FIX.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(8, ISSUED_FOR_AGENT.getAttribute(), TO_FIX.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(9, ISSUED_FOR_AGENT_NAME.getAttribute(), "DiSSCo".getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(10, PID_RECORD_ISSUE_DATE.getAttribute(), (dt.format(CREATED)).getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(11, PID_RECORD_ISSUE_NUMBER.getAttribute(), "1".getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(12, STRUCTURAL_TYPE.getAttribute(), "digital".getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(13, PID_STATUS.getAttribute(), "DRAFT".getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(40, REFERENT_TYPE.getAttribute(), TO_FIX.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(41, REFERENT_DOI_NAME.getAttribute(), handle.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(43, PRIMARY_REFERENT_TYPE.getAttribute(), "creation".getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(44, REFERENT.getAttribute(), TO_FIX.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(210, OBJECT_TYPE.getAttribute(), "Digital Specimen".getBytes(StandardCharsets.UTF_8)));
-    return fdoRecord;
-  }
-
-  private List<HandleAttribute> givenFdoRecordSpecimenAttributesFull(){
-    List<HandleAttribute> fdoRecord = new ArrayList<>();
-    fdoRecord.add(new HandleAttribute(42, REFERENT_NAME.getAttribute(), SPECIMEN_NAME.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(200, SPECIMEN_HOST.getAttribute(), ORGANISATION_ID.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(201, SPECIMEN_HOST_NAME.getAttribute(), ORG_NAME.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(202, PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(), PHYSICAL_SPECIMEN_ID.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(203, PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(), PHYSICAL_SPECIMEN_TYPE.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(204, PRIMARY_SPECIMEN_OBJECT_ID_NAME.getAttribute(), ("Local identifier for collection "+COLL_ID).getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(206, OTHER_SPECIMEN_IDS.getAttribute(), DWCA_ID.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(216, MARKED_AS_TYPE.getAttribute(), "TRUE".getBytes(StandardCharsets.UTF_8)));
-        return fdoRecord;
-  }
-
-  private List<HandleAttribute> givenFdoRecordSpecimenAttributesMinimalAttributes(){
-    List<HandleAttribute> fdoRecord = new ArrayList<>();
-    fdoRecord.add(new HandleAttribute(42, REFERENT_NAME.getAttribute(), SPECIMEN_NAME.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(200, SPECIMEN_HOST.getAttribute(), ORGANISATION_ID.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(201, SPECIMEN_HOST_NAME.getAttribute(), UNKNOWN.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(202, PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(), PHYSICAL_SPECIMEN_ID.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(203, PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(), PHYSICAL_SPECIMEN_TYPE.getBytes(StandardCharsets.UTF_8)));
-    fdoRecord.add(new HandleAttribute(216, MARKED_AS_TYPE.getAttribute(), "FALSE".getBytes(StandardCharsets.UTF_8)));
-    return fdoRecord;
-  }
-
-  private DigitalSpecimen givenDigitalSpecimenAdditionalAttributes(){
-    var attributes = (ObjectNode) givenAttributes(SPECIMEN_NAME, ORGANISATION_ID);
-    attributes.put("ods:organisationName", ORG_NAME);
-    attributes.put("ods:physicalSpecimenCollection", COLL_ID);
-    attributes.put("dwc:typeStatus", TYPE_STATUS);
-    attributes.remove("dwca:id");
-    attributes.put("dwca:id", DWCA_ID);
-    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
-  }
-
-
-
-  private byte[] givenLocString(String handle){
-    return ("<locations><location href=\"https://sandbox.dissco.tech/api/v1/specimens/"+handle+"\" "
-        + "id=\"0\" weight=\"1\"/><location href=\"https://sandbox.dissco.tech/ds/"+handle+"\" "
-        + "id=\"1\" weight=\"0\"/></locations>").getBytes(StandardCharsets.UTF_8);
-  }
-
-  private static byte[] decodeAdmin() {
-    var admin = "0fff000000153330303a302e4e412f32302e353030302e31303235000000c8";
-    byte[] adminByte = new byte[admin.length() / 2];
-    for (int i = 0; i < admin.length(); i += 2) {
-      adminByte[i / 2] = hexToByte(admin.substring(i, i + 2));
-    }
-    return adminByte;
-  }
-
-  private static byte hexToByte(String hexString) {
-    int firstDigit = toDigit(hexString.charAt(0));
-    int secondDigit = toDigit(hexString.charAt(1));
-    return (byte) ((firstDigit << 4) + secondDigit);
-  }
-
-  private static int toDigit(char hexChar) {
-    return Character.digit(hexChar, 16);
-  }
-
 
 }

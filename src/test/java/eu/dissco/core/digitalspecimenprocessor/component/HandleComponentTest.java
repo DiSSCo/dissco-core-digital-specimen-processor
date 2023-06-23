@@ -4,10 +4,8 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.BDDAssumptions.given;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -22,6 +20,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.BDDMockito;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -149,7 +148,7 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // Then
-    assertDoesNotThrow(() -> handleComponent.rollbackHandleCreation(requestBody));
+    assertDoesNotThrow(() -> handleComponent.rollbackHandleUpdate(List.of(requestBody)));
   }
 
   @Test

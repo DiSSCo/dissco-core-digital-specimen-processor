@@ -211,7 +211,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testNewSpecimenRollbackHandleFailed()throws Exception {
+  void testNewSpecimenRollbackHandleCreationFailed()throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
@@ -392,6 +392,35 @@ class ProcessingServiceTest {
     given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(thirdEvent.digitalSpecimen())).willReturn(1);
+
+    // When
+    var result = service.handleMessages(
+        List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent));
+
+    // Then
+    then(handleComponent).should().postHandle(anyList());
+    then(handleComponent).should().rollbackHandleUpdate(any());
+    then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
+    then(kafkaService).should().deadLetterEvent(secondEvent);
+    assertThat(result).hasSize(2);
+  }
+
+  @Test
+  void testUpdateSpecimenPartialElasticAndRollbackFailed() throws Exception {
+    // Given
+    var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
+    var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
+    given(repository.getDigitalSpecimens(
+        List.of("A third Specimen", "Another Specimen", PHYSICAL_SPECIMEN_ID)))
+        .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
+            givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
+            givenUnequalDigitalSpecimenRecord()
+        ));
+    givenBulkResponse();
+    given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
+    given(midsService.calculateMids(thirdEvent.digitalSpecimen())).willReturn(1);
+    doThrow(PidCreationException.class).when(handleComponent).rollbackHandleUpdate(any());
 
     // When
     var result = service.handleMessages(
