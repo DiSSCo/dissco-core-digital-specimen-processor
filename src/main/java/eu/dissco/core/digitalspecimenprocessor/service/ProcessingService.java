@@ -197,6 +197,10 @@ public class ProcessingService {
         failedRecords.add(digitalSpecimenRecord);
       }
     }
+    if (!failedRecords.isEmpty()){
+      var failedRecordsCurrent = failedRecords.stream().map(UpdatedDigitalSpecimenRecord::currentDigitalSpecimen).toList();
+      rollbackHandleUpdate(failedRecordsCurrent);
+    }
     digitalSpecimenRecords.removeAll(failedRecords);
   }
 
@@ -211,6 +215,8 @@ public class ProcessingService {
         .collect(Collectors.toMap(
             updatedDigitalSpecimenRecord -> updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                 .id(), Function.identity()));
+
+    List<DigitalSpecimenRecord> failedUpdates = new ArrayList<>();
     bulkResponse.items().forEach(
         item -> {
           var digitalSpecimenRecord = digitalSpecimenMap.get(item.id());
@@ -222,12 +228,15 @@ public class ProcessingService {
           } else {
             var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
             if (!successfullyPublished) {
+              failedUpdates.add(digitalSpecimenRecord.currentDigitalSpecimen());
               digitalSpecimenRecords.remove(digitalSpecimenRecord);
             }
           }
         }
     );
-
+    if (!failedUpdates.isEmpty()){
+      rollbackHandleUpdate(failedUpdates);
+    }
   }
 
   private Set<UpdatedDigitalSpecimenRecord> getSpecimenRecordMap(
@@ -447,7 +456,7 @@ public class ProcessingService {
 
   private void rollbackHandleUpdate(List<DigitalSpecimenRecord> recordsToRollback){
     try {
-      var request = fdoRecordBuilder.buildPostHandleRequest(recordsToRollback.stream().map(DigitalSpecimenRecord::digitalSpecimen).toList());
+      var request = fdoRecordBuilder.buildRollbackUpdateRequest(recordsToRollback);
       handleComponent.rollbackHandleUpdate(request);
     } catch (PidCreationException | PidAuthenticationException e) {
       var ids = recordsToRollback.stream().map(DigitalSpecimenRecord::id).toList();

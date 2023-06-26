@@ -14,10 +14,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
-import eu.dissco.core.digitalspecimenprocessor.repository.HandleRepository;
-import java.nio.charset.StandardCharsets;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,10 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.transform.TransformerFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -39,10 +32,7 @@ import org.springframework.stereotype.Component;
 public class FdoRecordBuilder {
 
   private final ObjectMapper mapper;
-  private static final String HANDLE_PROXY = "https://hdl.handle.net/";
   private static final String DWC_TYPE_STATUS = "dwc:typeStatus";
-  private static final byte[] FDO_RECORD_LICENSE_LOC = "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(
-      StandardCharsets.UTF_8);
   private static final Set<String> NOT_TYPE_STATUS = new HashSet<>(
       Arrays.asList("false", "specimen", "type", ""));
 
@@ -58,23 +48,20 @@ public class FdoRecordBuilder {
     odsMap = map;
   }
 
-  private static final String ODS_PREFIX = "ods:";
-  private static final String PREFIX = "20.5000.1025/";
-  private static final String TO_BE_FIXED = "Needs to be fixed!";
-  private final char[] symbols = "ABCDEFGHJKLMNPQRSTVWXYZ1234567890".toCharArray();
-  private final char[] buffer = new char[11];
-  private final Random random;
-  private final DocumentBuilder documentBuilder;
-  private final HandleRepository repository;
-  private final TransformerFactory transformerFactory;
-  private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-      .withZone(ZoneId.of("UTC"));
-
   public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimen> digitalSpecimens)
       throws PidCreationException {
     List<JsonNode> requestBody = new ArrayList<>();
     for (var specimen : digitalSpecimens) {
       requestBody.add(buildSinglePostHandleRequest(specimen));
+    }
+    return requestBody;
+  }
+
+  public List<JsonNode> buildRollbackUpdateRequest(List<DigitalSpecimenRecord> digitalSpecimenRecords)
+      throws PidCreationException {
+    List<JsonNode> requestBody = new ArrayList<>();
+    for (var specimen : digitalSpecimenRecords) {
+      requestBody.add(buildSingleRollbackUpdateRequest(specimen));
     }
     return requestBody;
   }
@@ -94,6 +81,18 @@ public class FdoRecordBuilder {
     var data = mapper.createObjectNode();
     data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
     var attributes = genRequestAttributes(specimen);
+    data.set("attributes", attributes);
+    request.set("data", data);
+    return request;
+  }
+
+  private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen)
+      throws PidCreationException {
+    var request = mapper.createObjectNode();
+    var data = mapper.createObjectNode();
+    data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    var attributes = genRequestAttributes(specimen.digitalSpecimen());
+    data.put("id", specimen.id());
     data.set("attributes", attributes);
     request.set("data", data);
     return request;

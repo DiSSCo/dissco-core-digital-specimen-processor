@@ -88,32 +88,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class FdoRecordBuilderTest {
-
-  @Mock
-  private Random random;
-  @Mock
-  private HandleRepository repository;
   private MockedStatic<Instant> mockedStatic;
-  private static final String HANDLE_PROXY = "https://hdl.handle.net/";
-  private static final String TO_FIX = "Needs to be fixed!";
-  private static final String UNKNOWN = "Unknown";
-  private final DateTimeFormatter dt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(
-      ZoneId.of("UTC"));
   private static final String ORG_NAME = "National Museum of Natural History";
-  private static final String TYPE_STATUS = "holotype";
-  private static final String DWCA_ID = "ZMA.V.POL.1296.2@CRS";
-  private static final String COLL_ID = "NAT.123XYZ.AVES";
   private static final String REPLACEMENT_ATTRIBUTE = "this is different";
 
   private FdoRecordBuilder builder;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
 
   @BeforeEach
-  void setup() throws ParserConfigurationException {
-    var docFactory = DocumentBuilderFactory.newInstance();
-    var transFactory = TransformerFactory.newInstance();
-    builder = new FdoRecordBuilder(MAPPER, random, docFactory.newDocumentBuilder(), repository,
-        transFactory);
+  void setup() {
+    builder = new FdoRecordBuilder(MAPPER);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
   }

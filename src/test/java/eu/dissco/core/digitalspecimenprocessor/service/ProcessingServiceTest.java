@@ -427,6 +427,7 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent));
 
     // Then
+    then(fdoRecordBuilder).should().buildRollbackUpdateRequest(List.of(givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen")));
     then(handleComponent).should().postHandle(anyList());
     then(handleComponent).should().rollbackHandleUpdate(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
@@ -435,7 +436,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testUpdateSpecimenKafkaFailed() throws DisscoRepositoryException, IOException {
+  void testUpdateSpecimenKafkaFailed() throws Exception {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord()));
     given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
@@ -453,6 +454,7 @@ class ProcessingServiceTest {
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(elasticRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
+    then(fdoRecordBuilder).should().buildRollbackUpdateRequest(any());
     assertThat(result).isEmpty();
   }
 
@@ -474,7 +476,9 @@ class ProcessingServiceTest {
     // Then
     then(fdoRecordBuilder).should()
         .buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimen()));
+    then(fdoRecordBuilder).should().buildRollbackUpdateRequest(List.of(unequalCurrentDigitalSpecimen));
     then(handleComponent).should().postHandle(any());
+    then(handleComponent).should().rollbackHandleUpdate(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(handleComponent).should().rollbackHandleUpdate(any());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
@@ -500,8 +504,6 @@ class ProcessingServiceTest {
   void testNewSpecimenError() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    //given(fdoRecordBuilder.createNewHandle(givenDigitalSpecimen())).willThrow(
-    //    TransformerException.class);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
