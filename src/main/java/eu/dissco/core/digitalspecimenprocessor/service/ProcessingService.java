@@ -208,34 +208,32 @@ public class ProcessingService {
       Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords,
       BulkResponse bulkResponse) {
 
-    rollbackHandleUpdate(digitalSpecimenRecords.stream().map(
-        UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).toList());
-
     var digitalSpecimenMap = digitalSpecimenRecords.stream()
         .collect(Collectors.toMap(
             updatedDigitalSpecimenRecord -> updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                 .id(), Function.identity()));
 
-    List<DigitalSpecimenRecord> failedUpdates = new ArrayList<>();
+    List<DigitalSpecimenRecord> handleUpdatesToRollback = new ArrayList<>();
     bulkResponse.items().forEach(
         item -> {
           var digitalSpecimenRecord = digitalSpecimenMap.get(item.id());
           if (item.error() != null) {
             log.error("Failed item to insert into elastic search: {} with errors {}",
                 digitalSpecimenRecord.digitalSpecimenRecord().id(), item.error().reason());
+            handleUpdatesToRollback.add(digitalSpecimenRecord.currentDigitalSpecimen());
             rollbackUpdatedSpecimen(digitalSpecimenRecord, false);
             digitalSpecimenRecords.remove(digitalSpecimenRecord);
           } else {
             var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
             if (!successfullyPublished) {
-              failedUpdates.add(digitalSpecimenRecord.currentDigitalSpecimen());
+              handleUpdatesToRollback.add(digitalSpecimenRecord.currentDigitalSpecimen());
               digitalSpecimenRecords.remove(digitalSpecimenRecord);
             }
           }
         }
     );
-    if (!failedUpdates.isEmpty()){
-      rollbackHandleUpdate(failedUpdates);
+    if (!handleUpdatesToRollback.isEmpty()){
+      rollbackHandleUpdate(handleUpdatesToRollback);
     }
   }
 

@@ -414,8 +414,7 @@ class ProcessingServiceTest {
         List.of("A third Specimen", "Another Specimen", PHYSICAL_SPECIMEN_ID)))
         .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
-            givenUnequalDigitalSpecimenRecord()
-        ));
+            givenUnequalDigitalSpecimenRecord()));
     givenBulkResponse();
     given(fdoRecordBuilder.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
