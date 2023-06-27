@@ -236,5 +236,4 @@ class FdoRecordBuilderTest {
     attributes.put(field, REPLACEMENT_ATTRIBUTE);
     return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
   }
-
 }
