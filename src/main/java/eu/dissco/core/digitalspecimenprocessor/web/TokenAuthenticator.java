@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.component;
+package eu.dissco.core.digitalspecimenprocessor.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;

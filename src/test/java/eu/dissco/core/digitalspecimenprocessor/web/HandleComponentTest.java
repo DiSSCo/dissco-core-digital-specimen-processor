@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.component;
+package eu.dissco.core.digitalspecimenprocessor.web;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
@@ -20,12 +20,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.BDDMockito;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
 class HandleComponentTest {

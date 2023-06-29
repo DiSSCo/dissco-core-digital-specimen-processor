@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.component;
+package eu.dissco.core.digitalspecimenprocessor.web;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;

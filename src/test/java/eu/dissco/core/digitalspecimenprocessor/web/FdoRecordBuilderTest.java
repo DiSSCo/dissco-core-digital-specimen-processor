@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.component;
+package eu.dissco.core.digitalspecimenprocessor.web;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;

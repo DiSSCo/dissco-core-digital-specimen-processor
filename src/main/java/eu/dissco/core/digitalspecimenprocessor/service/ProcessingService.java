@@ -2,8 +2,8 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import eu.dissco.core.digitalspecimenprocessor.component.FdoRecordBuilder;
-import eu.dissco.core.digitalspecimenprocessor.component.HandleComponent;
+import eu.dissco.core.digitalspecimenprocessor.web.FdoRecordBuilder;
+import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
@@ -25,7 +25,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.xml.transform.TransformerException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
