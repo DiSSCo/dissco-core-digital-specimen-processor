@@ -2,6 +2,9 @@ package eu.dissco.core.digitalspecimenprocessor.web;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -56,12 +59,10 @@ class HandleComponentTest {
   @Test
   void testPostHandle() throws Exception {
     // Given
-    var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
+    var requestBody = List.of(givenHandleRequestFullTypeStatus());
+    var responseBody = givenHandleRequest();
     var expected = givenHandleNameResponse(responseBody);
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
 
@@ -75,11 +76,9 @@ class HandleComponentTest {
   @Test
   void testUnauthorized() throws Exception {
     // Given
-    var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+    var requestBody = List.of(givenHandleRequestFullTypeStatus());
 
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.UNAUTHORIZED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value())
         .addHeader("Content-Type", "application/json"));
 
     // Then
@@ -90,10 +89,9 @@ class HandleComponentTest {
   void testBadRequest() throws Exception {
     // Given
     var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+       givenHandleRequestFullTypeStatus());
 
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.BAD_REQUEST.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value())
         .addHeader("Content-Type", "application/json"));
 
     // Then
@@ -104,14 +102,13 @@ class HandleComponentTest {
   void testRetriesSuccess() throws Exception {
     // Given
     var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
+       givenHandleRequestFullTypeStatus());
+    var responseBody = givenHandleRequest();
     var expected = givenHandleNameResponse(responseBody);
     int requestCount = mockHandleServer.getRequestCount();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
 
@@ -127,10 +124,15 @@ class HandleComponentTest {
   @Test
   void testRollbackHandleCreation() throws Exception {
     // Given
-    var requestBody = MAPPER.readTree(
-        loadResourceFile("handlerequests/HandleRollbackCreationRequest.json"));
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.OK.value())
+    var requestBody = MAPPER.readTree("""
+        {
+          "data": [
+            {"id": "20.5000.1025/AAA-111-AAA"},
+            {"id": "20.5000.1025/BBB-222-BBB"}
+          ]
+        }
+        """);
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .addHeader("Content-Type", "application/json"));
 
     // Then
@@ -140,9 +142,8 @@ class HandleComponentTest {
   @Test
   void testRollbackHandleUpdate() throws Exception {
     // Given
-    var requestBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestMin.json"));
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.OK.value())
+    var requestBody = givenHandleRequestMin();
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .addHeader("Content-Type", "application/json"));
 
     // Then
@@ -152,11 +153,10 @@ class HandleComponentTest {
   @Test
   void testInterruptedException() throws Exception {
     // Given
-    var requestBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestMin.json"));
-    var responseBody = MAPPER.readTree(loadResourceFile("handlerequests/TestHandleResponse.json"));
+    var requestBody = givenHandleRequestMin();
+    var responseBody = givenHandleRequest();
 
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.OK.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
 
@@ -175,7 +175,7 @@ class HandleComponentTest {
   void testRetriesFail() throws Exception {
     // Given
     var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+       givenHandleRequestFullTypeStatus());
     int requestCount = mockHandleServer.getRequestCount();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
@@ -192,11 +192,10 @@ class HandleComponentTest {
   void testDataNodeNotArray() throws Exception {
     // Given
     var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+       givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.createObjectNode();
     responseBody.put("data", "val");
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
@@ -207,12 +206,31 @@ class HandleComponentTest {
   void testDataMissingId() throws Exception {
     // Given
     var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody = MAPPER.readTree(
-        loadResourceFile("handlerequests/TestHandleResponseMissingId.json"));
+       givenHandleRequestFullTypeStatus());
+    var responseBody = MAPPER.readTree("""
+        {
+          "data": [
+            {
+              "type": "digitalSpecimen",
+              "attributes": {
+                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "issuedForAgent": "https://ror.org/0566bfb96",
+                "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                "specimenHost": "https://ror.org/0443cwa12",
+                "specimenHostName": "National Museum of Natural History",
+                "primarySpecimenObjectIdType": "cetaf",
+                "referentName": "Biota",
+                "topicDiscipline": "Earth Systems",
+                "livingOrPreserved": "living",
+                "markedAsType": true
+              }
+            }
+          ]
+        }
+        """);
 
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
@@ -223,12 +241,30 @@ class HandleComponentTest {
   void testDataMissingPhysicalId() throws Exception {
     // Given
     var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
-    var responseBody = MAPPER.readTree(
-        loadResourceFile("handlerequests/TestHandleResponseMissingPhysicalId.json"));
+       givenHandleRequestFullTypeStatus());
+    var responseBody = MAPPER.readTree("""
+        {
+          "data": [
+            {
+              "id": "20.5000.1025/V1Z-176-LL4",
+              "type": "digitalSpecimen",
+              "attributes": {
+                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "issuedForAgent": "https://ror.org/0566bfb96",
+                "specimenHost": "https://ror.org/0443cwa12",
+                "specimenHostName": "National Museum of Natural History",
+                "referentName": "Biota",
+                "topicDiscipline": "Earth Systems",
+                "livingOrPreserved": "living",
+                "markedAsType": true
+              }
+            }
+          ]
+        }
+        """);
 
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
@@ -239,11 +275,10 @@ class HandleComponentTest {
   void testEmptyResponse() throws Exception {
     // Given
     var requestBody = List.of(
-        MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestFullTypeStatus.json")));
+       givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.createObjectNode();
 
-    mockHandleServer.enqueue(new MockResponse()
-        .setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then

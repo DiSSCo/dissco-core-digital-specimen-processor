@@ -12,6 +12,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
@@ -65,14 +67,10 @@ class FdoRecordServiceTest {
   @Test
   void testGenRequestMinimal() throws Exception {
     // Given
-    var specimen = new DigitalSpecimen(
-        PHYSICAL_SPECIMEN_ID,
-        TYPE,
-        givenDigitalSpecimenAttributesMinimal(),
-        givenDigitalSpecimenAttributesMinimal()
-    );
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
     var expected = new ArrayList<>(
-        List.of(MAPPER.readTree(loadResourceFile("handlerequests/TestHandleRequestMin.json"))));
+        List.of(givenHandleRequestMin()));
 
     // When
     var response = builder.buildPostHandleRequest(List.of(specimen));
@@ -83,33 +81,24 @@ class FdoRecordServiceTest {
 
   @Test
   void testRollbackUpdate() throws Exception {
-    var specimen = new DigitalSpecimen(
-        PHYSICAL_SPECIMEN_ID,
-        TYPE,
-        givenDigitalSpecimenAttributesMinimal(),
-        givenDigitalSpecimenAttributesMinimal()
-    );
-    var specimenRecord = new DigitalSpecimenRecord(
-        HANDLE,
-        1, 1, CREATED,
-        specimen
-    );
-    var expected = MAPPER.readTree(
-        """
-                {
-                  "data": {
-                    "type": "digitalSpecimen",
-                    "id":"20.5000.1025/V1Z-176-LL4",
-                    "attributes": {
-                      "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                      "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
-                      "issuedForAgent": "https://ror.org/0566bfb96",
-                      "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                      "specimenHost": "https://ror.org/0443cwa12"
-                    }
-                  }
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
+    var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen);
+    var expected = MAPPER.readTree("""
+            {
+              "data": {
+                "type": "digitalSpecimen",
+                "id":"20.5000.1025/V1Z-176-LL4",
+                "attributes": {
+                  "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
+                  "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                  "issuedForAgent": "https://ror.org/0566bfb96",
+                  "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                  "specimenHost": "https://ror.org/0443cwa12"
                 }
-            """);
+              }
+            }
+        """);
     // When
     var result = builder.buildRollbackUpdateRequest(List.of(specimenRecord));
 
@@ -121,30 +110,17 @@ class FdoRecordServiceTest {
   @ValueSource(strings = {"false", "holotype", ""})
   void testGenRequestFull(String typeStatus) throws Exception {
     // Given
-    var specimen = new DigitalSpecimen(
-        PHYSICAL_SPECIMEN_ID,
-        TYPE,
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
         givenDigitalSpecimenAttributesFull(typeStatus),
-        givenDigitalSpecimenAttributesFull(typeStatus)
-    );
-    var expectedFile = getExpectedFile(typeStatus);
-    var expected = new ArrayList<>(List.of(MAPPER.readTree(loadResourceFile(expectedFile))));
+        givenDigitalSpecimenAttributesFull(typeStatus));
+    var expectedJson = getExpectedJson(typeStatus);
+    var expected = new ArrayList<>(List.of(expectedJson));
 
     // When
     var response = builder.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
-  }
-
-  private String getExpectedFile(String typeStatus) {
-    if (typeStatus.equals("holotype")) {
-      return "handlerequests/TestHandleRequestFullTypeStatus.json";
-    }
-    if (typeStatus.equals("false")) {
-      return "handlerequests/TestHandleRequestFullTypeStatusFalse.json";
-    }
-    return "handlerequests/TestHandleRequestFullNoTypeStatus.json";
   }
 
   private static JsonNode givenDigitalSpecimenAttributesMinimal() {
@@ -221,20 +197,64 @@ class FdoRecordServiceTest {
   }
 
   private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
-    return Stream.of(
-        Arguments.of(makeOneFieldUnique("ods:organisationId")),
+    return Stream.of(Arguments.of(makeOneFieldUnique("ods:organisationId")),
         Arguments.of(makeOneFieldUnique("ods:organisationName")),
         Arguments.of(makeOneFieldUnique("ods:specimenName")),
         Arguments.of(makeOneFieldUnique("ods:topicDiscipline")),
         Arguments.of(makeOneFieldUnique("ods:physicalSpecimenIdType")),
         Arguments.of(makeOneFieldUnique("ods:livingOrPreserved")),
-        Arguments.of(makeOneFieldUnique("dwc:typeStatus"))
-    );
+        Arguments.of(makeOneFieldUnique("dwc:typeStatus")));
   }
 
   private static DigitalSpecimen makeOneFieldUnique(String field) {
     ObjectNode attributes = (ObjectNode) givenAttributes(SPECIMEN_NAME, ORGANISATION_ID);
     attributes.put(field, REPLACEMENT_ATTRIBUTE);
     return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
+  }
+
+  private JsonNode getExpectedJson(String typeStatus) throws Exception {
+    if (typeStatus.equals("holotype")) {
+      return givenHandleRequestFullTypeStatus();
+    }
+    if (typeStatus.equals("false")) {
+      return MAPPER.readTree("""
+          {
+            "data": {
+              "type": "digitalSpecimen",
+              "attributes": {
+                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "issuedForAgent": "https://ror.org/0566bfb96",
+                "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                "specimenHost": "https://ror.org/0443cwa12",
+                "specimenHostName": "National Museum of Natural History",
+                "primarySpecimenObjectIdType": "cetaf",
+                "referentName": "Biota",
+                "topicDiscipline": "Earth Systems",
+                "livingOrPreserved": "living",
+                "markedAsType": false
+              }
+            }
+          }
+          """);
+    }
+    return MAPPER.readTree("""
+        {
+          "data": {
+            "type": "digitalSpecimen",
+            "attributes": {
+              "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
+              "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+              "issuedForAgent": "https://ror.org/0566bfb96",
+              "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+              "specimenHost": "https://ror.org/0443cwa12",
+              "specimenHostName": "National Museum of Natural History",
+              "primarySpecimenObjectIdType": "cetaf",
+              "referentName": "Biota",
+              "topicDiscipline": "Earth Systems",
+              "livingOrPreserved": "living"
+            }
+          }
+        }""");
   }
 }
