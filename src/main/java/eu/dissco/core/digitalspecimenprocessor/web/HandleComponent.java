@@ -45,28 +45,27 @@ public class HandleComponent {
     return getHandleName(responseJsonNode);
   }
 
-  public void rollbackHandleCreation(JsonNode request) throws PidCreationException, PidAuthenticationException {
+  public void rollbackHandleCreation(JsonNode request)
+      throws PidCreationException, PidAuthenticationException {
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback");
     getFutureResponse(response);
   }
 
-  public void rollbackHandleUpdate(List<JsonNode> request) throws PidCreationException, PidAuthenticationException {
+  public void rollbackHandleUpdate(List<JsonNode> request)
+      throws PidCreationException, PidAuthenticationException {
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/update");
     getFutureResponse(response);
   }
 
-  private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod, BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint) throws PidAuthenticationException {
+  private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod,
+      BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint)
+      throws PidAuthenticationException {
     var token = "Bearer " + tokenAuthenticator.getToken();
-    return handleClient
-        .method(httpMethod)
-        .uri(uriBuilder -> uriBuilder.path(endpoint).build())
-        .body(BodyInserters.fromValue(requestBody))
-        .header("Authorization", token)
-        .acceptCharset(StandardCharsets.UTF_8)
-        .retrieve()
-        .onStatus(HttpStatus.UNAUTHORIZED::equals,
+    return handleClient.method(httpMethod).uri(uriBuilder -> uriBuilder.path(endpoint).build())
+        .body(BodyInserters.fromValue(requestBody)).header("Authorization", token)
+        .acceptCharset(StandardCharsets.UTF_8).retrieve().onStatus(HttpStatus.UNAUTHORIZED::equals,
             r -> Mono.error(
                 new PidAuthenticationException("Unable to authenticate with Handle Service.")))
         .onStatus(HttpStatusCode::is4xxClientError, r -> Mono.error(new PidCreationException(
@@ -77,13 +76,15 @@ public class HandleComponent {
                     "External Service failed to process after max retries")));
   }
 
-  private JsonNode getFutureResponse(Mono<JsonNode> response) throws PidCreationException, PidAuthenticationException {
+  private JsonNode getFutureResponse(Mono<JsonNode> response)
+      throws PidCreationException, PidAuthenticationException {
     try {
       return response.toFuture().get();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       log.error("Interrupted exception has occurred.");
-      throw new PidCreationException("Interrupted execution: A connection error has occurred in creating a handle.");
+      throw new PidCreationException(
+          "Interrupted execution: A connection error has occurred in creating a handle.");
     } catch (ExecutionException e) {
       if (e.getCause().getClass().equals(PidAuthenticationException.class)) {
         log.error(

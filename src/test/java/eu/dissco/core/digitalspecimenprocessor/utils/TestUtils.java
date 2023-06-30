@@ -194,20 +194,6 @@ public class TestUtils {
     return pidMap;
   }
 
-  public static List<HandleAttribute> givenHandleAttributes() {
-    return List.of(
-        new HandleAttribute(1, "pid",
-            ("https://hdl.handle.net/" + HANDLE).getBytes(StandardCharsets.UTF_8)),
-        new HandleAttribute(11, "pidKernelMetadataLicense",
-            "https://creativecommons.org/publicdomain/zero/1.0/".getBytes(StandardCharsets.UTF_8)),
-        new HandleAttribute(PRIMARY_SPECIMEN_OBJECT_ID.getIndex(),
-            PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
-            LOCAL_OBJECT_ID),
-        new HandleAttribute(7, "issueNumber", "1".getBytes(StandardCharsets.UTF_8)),
-        new HandleAttribute(100, "HS_ADMIN", "TEST_ADMIN_STRING".getBytes(StandardCharsets.UTF_8))
-    );
-  }
-
   public static String loadResourceFile(String fileName) throws IOException {
     return new String(new ClassPathResource(fileName).getInputStream()
             .readAllBytes(), StandardCharsets.UTF_8);

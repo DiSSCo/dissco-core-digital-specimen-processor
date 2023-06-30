@@ -163,10 +163,12 @@ class HandleComponentTest {
     Thread.currentThread().interrupt();
 
     // When
-    var response = assertThrows(PidCreationException.class, () -> handleComponent.postHandle(List.of(requestBody)));
+    var response = assertThrows(PidCreationException.class,
+        () -> handleComponent.postHandle(List.of(requestBody)));
 
     // Then
-    assertThat(response).hasMessage("Interrupted execution: A connection error has occurred in creating a handle.");
+    assertThat(response).hasMessage(
+        "Interrupted execution: A connection error has occurred in creating a handle.");
   }
 
   @Test

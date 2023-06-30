@@ -9,6 +9,7 @@ public class WebClientUtils {
         && webClientResponseException.getStatusCode().is5xxServerError();
   }
 
-  private WebClientUtils(){}
+  private WebClientUtils() {
+  }
 
 }

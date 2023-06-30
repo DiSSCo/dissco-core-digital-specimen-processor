@@ -12,27 +12,27 @@ import reactor.netty.http.client.HttpClient;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${auth.tokenEndpoint}")
-    private String tokenEndpoint;
+  @Value("${auth.tokenEndpoint}")
+  private String tokenEndpoint;
 
-    @Value("${handle.endpoint}")
-    private String handleEndpoint;
+  @Value("${handle.endpoint}")
+  private String handleEndpoint;
 
-    @Bean(name = "tokenClient")
-    public WebClient tokenClient() {
-        return WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(HttpClient.create()))
-                .baseUrl(tokenEndpoint)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                .build();
-    }
+  @Bean(name = "tokenClient")
+  public WebClient tokenClient() {
+    return WebClient.builder()
+        .clientConnector(new ReactorClientHttpConnector(HttpClient.create()))
+        .baseUrl(tokenEndpoint)
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+        .build();
+  }
 
-    @Bean(name = "handleClient")
-    public WebClient handleClient(){
-        return WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true)))
-                .baseUrl(handleEndpoint)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .build();
-    }
+  @Bean(name = "handleClient")
+  public WebClient handleClient() {
+    return WebClient.builder()
+        .clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true)))
+        .baseUrl(handleEndpoint)
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .build();
+  }
 }

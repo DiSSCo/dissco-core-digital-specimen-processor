@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.web;
+package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.service.FdoRecordService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -40,18 +41,18 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class FdoRecordBuilderTest {
+class FdoRecordServiceTest {
 
   private MockedStatic<Instant> mockedStatic;
   private static final String ORG_NAME = "National Museum of Natural History";
   private static final String REPLACEMENT_ATTRIBUTE = "this is different";
 
-  private FdoRecordBuilder builder;
+  private FdoRecordService builder;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
 
   @BeforeEach
   void setup() {
-    builder = new FdoRecordBuilder(MAPPER);
+    builder = new FdoRecordService(MAPPER);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
   }

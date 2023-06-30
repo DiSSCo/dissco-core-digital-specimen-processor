@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.web;
+package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;
@@ -24,12 +24,12 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
-public class FdoRecordBuilder {
+public class FdoRecordService {
 
   private final ObjectMapper mapper;
   private static final String DWC_TYPE_STATUS = "dwc:typeStatus";
@@ -57,7 +57,8 @@ public class FdoRecordBuilder {
     return requestBody;
   }
 
-  public List<JsonNode> buildRollbackUpdateRequest(List<DigitalSpecimenRecord> digitalSpecimenRecords)
+  public List<JsonNode> buildRollbackUpdateRequest(
+      List<DigitalSpecimenRecord> digitalSpecimenRecords)
       throws PidCreationException {
     List<JsonNode> requestBody = new ArrayList<>();
     for (var specimen : digitalSpecimenRecords) {

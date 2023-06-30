@@ -21,8 +21,8 @@ public class ElasticSearchConfiguration {
 
   @Bean
   public ElasticsearchClient elasticsearchClient() {
-    RestClient restClient = RestClient.builder(new HttpHost(properties.getHostname(),
-        properties.getPort())).build();
+    RestClient restClient = RestClient.builder(
+        new HttpHost(properties.getHostname(), properties.getPort())).build();
     ElasticsearchTransport transport = new RestClientTransport(restClient,
         new JacksonJsonpMapper(mapper));
     return new ElasticsearchClient(transport);
