@@ -1,6 +1,4 @@
 FROM eclipse-temurin:17-alpine AS builder
-# Remove this line when alpine addresses CVE-2023-2650
-RUN apk add "openssl=3.1.1-r1"
 WORKDIR application
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} application.jar
