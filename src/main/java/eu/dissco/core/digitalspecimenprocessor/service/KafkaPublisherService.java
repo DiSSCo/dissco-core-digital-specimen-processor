@@ -8,7 +8,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.CreateUpdateDeleteEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -65,12 +64,6 @@ public class KafkaPublisherService {
 
   public void deadLetterEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
     kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(event));
-  }
-
-  public void deadLetterEvent(List<DigitalSpecimenEvent> events) throws JsonProcessingException {
-    for (var event : events) {
-      kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(event));
-    }
   }
 
   public void deadLetterRaw(String event) {

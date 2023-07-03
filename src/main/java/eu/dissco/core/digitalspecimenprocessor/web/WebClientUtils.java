@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.component;
+package eu.dissco.core.digitalspecimenprocessor.web;
 
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -9,6 +9,7 @@ public class WebClientUtils {
         && webClientResponseException.getStatusCode().is5xxServerError();
   }
 
-  private WebClientUtils(){}
+  private WebClientUtils() {
+  }
 
 }

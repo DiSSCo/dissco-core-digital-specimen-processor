@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.component;
+package eu.dissco.core.digitalspecimenprocessor.web;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
@@ -64,7 +64,7 @@ class TokenAuthenticatorTest {
   @Test
   void testGetToken() throws Exception {
     // Given
-    var expectedJson = MAPPER.readTree(loadResourceFile("webclientresponse/tokenResponse.json"));
+    var expectedJson = givenTokenResponse();
     var expected = expectedJson.get("access_token").asText();
     given(properties.getFromFormData()).willReturn(testFromFormData);
 
@@ -96,7 +96,7 @@ class TokenAuthenticatorTest {
   void testRetriesSuccess() throws Exception {
     // Given
     int requestCount = mockTokenServer.getRequestCount();
-    var expectedJson = MAPPER.readTree(loadResourceFile("webclientresponse/tokenResponse.json"));
+    var expectedJson = givenTokenResponse();
     var expected = expectedJson.get("access_token").asText();
     given(properties.getFromFormData()).willReturn(testFromFormData);
     mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
@@ -117,7 +117,7 @@ class TokenAuthenticatorTest {
   void testRetriesFailure() throws Exception {
     // Given
     int requestCount = mockTokenServer.getRequestCount();
-    var expectedJson = MAPPER.readTree(loadResourceFile("webclientresponse/tokenResponse.json"));
+    var expectedJson = givenTokenResponse();
     var expected = expectedJson.get("access_token").asText();
     given(properties.getFromFormData()).willReturn(testFromFormData);
     mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
@@ -151,6 +151,22 @@ class TokenAuthenticatorTest {
 
     // When
     assertThrows(PidAuthenticationException.class, () -> authenticator.getToken());
+  }
+
+  private static JsonNode givenTokenResponse() throws Exception {
+    return MAPPER.readTree("""
+        {
+          "access_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+          aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+          aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+          aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "expires_in": 3600,
+          "refresh_expires_in": 0,
+          "token_type": "Bearer",
+          "not-before-policy": 0,
+          "scope": ""
+        }
+        """);
   }
 
 }
