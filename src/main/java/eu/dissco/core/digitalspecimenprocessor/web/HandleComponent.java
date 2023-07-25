@@ -96,6 +96,7 @@ public class HandleComponent {
             "Token obtained from Keycloak not accepted by Handle Server. Check Keycloak configuration.");
         throw new PidAuthenticationException(e.getCause().getMessage());
       }
+      log.error("An unexpected exception has occurred while reading handle API response", e);
       throw new PidCreationException(e.getCause().getMessage());
     }
   }

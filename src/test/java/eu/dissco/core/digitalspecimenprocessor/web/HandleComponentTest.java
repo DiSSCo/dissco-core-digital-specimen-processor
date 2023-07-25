@@ -62,7 +62,7 @@ class HandleComponentTest {
     var requestBody = List.of(givenHandleRequestFullTypeStatus());
     var responseBody = givenHandleRequest();
     var expected = givenHandleNameResponse(responseBody);
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
 
@@ -108,7 +108,7 @@ class HandleComponentTest {
     int requestCount = mockHandleServer.getRequestCount();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
 
@@ -195,7 +195,7 @@ class HandleComponentTest {
        givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.createObjectNode();
     responseBody.put("data", "val");
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
@@ -230,7 +230,7 @@ class HandleComponentTest {
         }
         """);
 
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
@@ -264,7 +264,7 @@ class HandleComponentTest {
         }
         """);
 
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
@@ -278,7 +278,7 @@ class HandleComponentTest {
        givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.createObjectNode();
 
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.CREATED.value())
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
