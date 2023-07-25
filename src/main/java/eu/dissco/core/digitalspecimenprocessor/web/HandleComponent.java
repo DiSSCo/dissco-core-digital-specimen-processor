@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
@@ -39,6 +40,7 @@ public class HandleComponent {
 
   public Map<String, String> postHandle(List<JsonNode> request)
       throws PidAuthenticationException, PidCreationException {
+    log.info("Posting Digital Specimens to Handle API");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.PATCH, requestBody, "upsert");
     var responseJsonNode = getFutureResponse(response);
@@ -47,6 +49,7 @@ public class HandleComponent {
 
   public void rollbackHandleCreation(JsonNode request)
       throws PidCreationException, PidAuthenticationException {
+    log.info("Rolling back handle creation");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback");
     getFutureResponse(response);
@@ -54,6 +57,7 @@ public class HandleComponent {
 
   public void rollbackHandleUpdate(List<JsonNode> request)
       throws PidCreationException, PidAuthenticationException {
+    log.info("Rolling back handle update");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/update");
     getFutureResponse(response);
@@ -63,11 +67,12 @@ public class HandleComponent {
       BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint)
       throws PidAuthenticationException {
     var token = "Bearer " + tokenAuthenticator.getToken();
-    return handleClient.method(httpMethod).uri(uriBuilder -> uriBuilder.path(endpoint).build())
-        .body(BodyInserters.fromValue(requestBody)).header("Authorization", token)
-        .acceptCharset(StandardCharsets.UTF_8).retrieve().onStatus(HttpStatus.UNAUTHORIZED::equals,
-            r -> Mono.error(
-                new PidAuthenticationException("Unable to authenticate with Handle Service.")))
+    return handleClient.method(httpMethod)
+        .uri(uriBuilder -> uriBuilder.path(endpoint).build())
+        .body(requestBody).header("Authorization", token)
+        .acceptCharset(StandardCharsets.UTF_8).retrieve()
+        .onStatus(HttpStatus.UNAUTHORIZED::equals, r -> Mono.error(
+            new PidAuthenticationException("Unable to authenticate with Handle Service.")))
         .onStatus(HttpStatusCode::is4xxClientError, r -> Mono.error(new PidCreationException(
             "Unable to create PID. Response from Handle API: " + r.statusCode())))
         .bodyToMono(JsonNode.class).retryWhen(
@@ -120,6 +125,4 @@ public class HandleComponent {
       throw new PidCreationException(UNEXPECTED_MSG);
     }
   }
-
-
 }
