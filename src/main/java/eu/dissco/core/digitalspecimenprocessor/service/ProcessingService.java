@@ -314,7 +314,7 @@ public class ProcessingService {
     try {
       pidMap = createNewPidRecords(events);
     } catch (PidAuthenticationException | PidCreationException e) {
-      log.error("Unable to create PID. {}", e.getMessage());
+      log.error("Unable to create PID.", e);
       List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
       for (var event : events) {
         try {
