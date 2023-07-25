@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -143,7 +144,9 @@ public class ProcessingService {
 
     log.info("Persisting to Handle Server");
     var successfullyUpdatedHandles = updateHandles(updatedDigitalSpecimenTuples);
-    if (!successfullyUpdatedHandles) {return Set.of();}
+    if (!successfullyUpdatedHandles) {
+      return Set.of();
+    }
 
     var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
 
@@ -370,7 +373,9 @@ public class ProcessingService {
         rollbackRecords.add(entry.getKey());
       }
     }
-    rollbackHandleCreation(rollbackRecords);
+    if (!rollbackRecords.isEmpty()) {
+      rollbackHandleCreation(rollbackRecords);
+    }
   }
 
   private void handlePartiallyFailedElasticInsert(
@@ -499,5 +504,5 @@ public class ProcessingService {
         event.digitalSpecimen()
     );
   }
-
 }
+
