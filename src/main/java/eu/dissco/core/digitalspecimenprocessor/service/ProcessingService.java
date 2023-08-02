@@ -15,6 +15,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -310,7 +311,8 @@ public class ProcessingService {
 
 
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
-    log.info("BEGIN Creating {} new specimens", events.size());
+    var startTime = Instant.now();
+    int eventsNum = events.size();
     Map<String, String> pidMap;
     try {
       pidMap = createNewPidRecords(events);
@@ -346,8 +348,6 @@ public class ProcessingService {
       } else {
         handlePartiallyFailedElasticInsert(digitalSpecimenRecords, bulkResponse);
       }
-
-
     } catch (IOException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
@@ -355,13 +355,28 @@ public class ProcessingService {
       return Collections.emptySet();
     }
     try {
-      log.info("DOI Registering identifiers as DOIs");
+      var processEnd = Instant.now();
       handleComponent.registerDois(new ArrayList<>(pidMap.values()));
+      var doiEnd = Instant.now();
+      logTimes(startTime, processEnd, doiEnd, eventsNum);
     } catch (PidAuthenticationException | PidCreationException e){
       log.error("Unable to create DOIs for new Specimens", e);
     }
-    log.info("CONCLUDE Successfully created {} new digitalSpecimen", digitalSpecimenRecords.size());
     return digitalSpecimenRecords.keySet();
+  }
+
+  private void logTimes(Instant startTime, Instant processEnd, Instant doiEnd, int eventsNum){
+    double processTime = (double) Duration.between(startTime, processEnd).toNanos() / 1000000000;
+    double doiTime = (double) Duration.between(processEnd, doiEnd).toNanos() / 1000000000;
+    double totalTime = (double) Duration.between(startTime, doiEnd).toNanos() /1000000000;
+    log.info("***** Performance report for {} specimens ****", eventsNum);
+    log.info("\tPROCESSING TIME: {} seconds ", processTime);
+    log.info("\tProcess rate: {} specimens/second", eventsNum/processTime);
+    log.info("\tDOI TIME: {} seconds ", doiTime);
+    log.info("\tDOI Rate: {} specimen/second", eventsNum/doiTime);
+    log.info("\tTOTAL Elapsed time: {} seconds", totalTime);
+    log.info("\tTotal Rate: {} specimen/second", eventsNum/totalTime);
+    log.info("************************************");
   }
 
   private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)
