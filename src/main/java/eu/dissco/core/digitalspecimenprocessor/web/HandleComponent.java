@@ -63,6 +63,13 @@ public class HandleComponent {
     getFutureResponse(response);
   }
 
+  public void registerDois(List<String> handles)
+      throws PidAuthenticationException, PidCreationException {
+    var requestBody = BodyInserters.fromValue(handles);
+    var response = sendRequest(HttpMethod.POST, requestBody, "dois");
+    getFutureResponse(response);
+  }
+
   private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod,
       BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint)
       throws PidAuthenticationException {

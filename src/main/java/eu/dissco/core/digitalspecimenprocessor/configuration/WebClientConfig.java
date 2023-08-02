@@ -37,7 +37,7 @@ public class WebClientConfig {
             .builder()
             .codecs(codecs -> codecs
                 .defaultCodecs()
-                .maxInMemorySize(500 * 1024))
+                .maxInMemorySize(1000 * 1024))
             .build())
         .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
         .build();

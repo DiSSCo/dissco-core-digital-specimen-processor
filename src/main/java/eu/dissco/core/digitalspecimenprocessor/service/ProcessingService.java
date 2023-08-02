@@ -310,6 +310,7 @@ public class ProcessingService {
 
 
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
+    log.info("BEGIN Creating {} new specimens", events.size());
     Map<String, String> pidMap;
     try {
       pidMap = createNewPidRecords(events);
@@ -345,14 +346,22 @@ public class ProcessingService {
       } else {
         handlePartiallyFailedElasticInsert(digitalSpecimenRecords, bulkResponse);
       }
-      log.info("Successfully created {} new digitalSpecimen", digitalSpecimenRecords.size());
-      return digitalSpecimenRecords.keySet();
+
+
     } catch (IOException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
       rollbackHandleCreation(digitalSpecimenRecords.keySet().stream().toList());
       return Collections.emptySet();
     }
+    try {
+      log.info("DOI Registering identifiers as DOIs");
+      handleComponent.registerDois(new ArrayList<>(pidMap.values()));
+    } catch (PidAuthenticationException | PidCreationException e){
+      log.error("Unable to create DOIs for new Specimens", e);
+    }
+    log.info("CONCLUDE Successfully created {} new digitalSpecimen", digitalSpecimenRecords.size());
+    return digitalSpecimenRecords.keySet();
   }
 
   private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)
