@@ -366,17 +366,22 @@ public class ProcessingService {
   }
 
   private void logTimes(Instant startTime, Instant processEnd, Instant doiEnd, int eventsNum){
-    double processTime = (double) Duration.between(startTime, processEnd).toNanos() / 1000000000;
-    double doiTime = (double) Duration.between(processEnd, doiEnd).toNanos() / 1000000000;
-    double totalTime = (double) Duration.between(startTime, doiEnd).toNanos() /1000000000;
-    log.info("***** Performance report for {} specimens ****", eventsNum);
-    log.info("\tPROCESSING TIME: {} seconds ", processTime);
-    log.info("\tProcess rate: {} specimens/second", eventsNum/processTime);
-    log.info("\tDOI TIME: {} seconds ", doiTime);
-    log.info("\tDOI Rate: {} specimen/second", eventsNum/doiTime);
-    log.info("\tTOTAL Elapsed time: {} seconds", totalTime);
-    log.info("\tTotal Rate: {} specimen/second", eventsNum/totalTime);
-    log.info("************************************");
+    try {
+      double processTime = (double) Duration.between(startTime, processEnd).toNanos() / 1000000000;
+      double doiTime = (double) Duration.between(processEnd, doiEnd).toNanos() / 1000000000;
+      double totalTime = (double) Duration.between(startTime, doiEnd).toNanos() /1000000000;
+      log.info("***** Performance report for {} specimens ****", eventsNum);
+      log.info("\tPROCESSING TIME: {} seconds ", processTime);
+      log.info("\tProcess rate: {} specimens/second", eventsNum/processTime);
+      log.info("\tDOI TIME: {} seconds ", doiTime);
+      log.info("\tDOI Rate: {} specimen/second", eventsNum/doiTime);
+      log.info("\tTOTAL Elapsed time: {} seconds", totalTime);
+      log.info("\tTotal Rate: {} specimen/second", eventsNum/totalTime);
+      log.info("************************************");
+    } catch (Exception e){
+      log.info("Not logging times during test");
+    }
+
   }
 
   private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)

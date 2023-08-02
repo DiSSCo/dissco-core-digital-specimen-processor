@@ -59,7 +59,6 @@ class ProcessingServiceTest {
 
   @Mock
   private HandleComponent handleComponent;
-
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
   private ProcessingService service;
