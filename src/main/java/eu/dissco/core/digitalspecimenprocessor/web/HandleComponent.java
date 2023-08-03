@@ -65,6 +65,7 @@ public class HandleComponent {
 
   public void registerDois(List<String> handles)
       throws PidAuthenticationException, PidCreationException {
+    log.info("Registering DOIs");
     var requestBody = BodyInserters.fromValue(handles);
     var response = sendRequest(HttpMethod.POST, requestBody, "dois");
     getFutureResponse(response);
