@@ -40,7 +40,8 @@ public class HandleComponent {
 
   public Map<String, String> postHandle(List<JsonNode> request)
       throws PidAuthenticationException, PidCreationException {
-    log.info("Posting Digital Specimens to Handle API");
+    log.error("Posting Digital Specimens to Handle API");
+    log.info("Method: {}, endpoint: {}, Request: {}", "POST", "upsert", request.toString());
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.PATCH, requestBody, "upsert");
     var responseJsonNode = getFutureResponse(response);
@@ -65,7 +66,8 @@ public class HandleComponent {
 
   public void registerDois(List<String> handles)
       throws PidAuthenticationException, PidCreationException {
-    log.info("Registering DOIs");
+    log.error("Registering DOIs");
+    log.info("Method: {}, endpoint: {}, Request: {}", "POST", "dois", handles.toString());
     var requestBody = BodyInserters.fromValue(handles);
     var response = sendRequest(HttpMethod.POST, requestBody, "dois");
     getFutureResponse(response);
