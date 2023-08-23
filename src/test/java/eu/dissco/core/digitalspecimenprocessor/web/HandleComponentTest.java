@@ -124,9 +124,6 @@ class HandleComponentTest {
 
   @Test
   void testRollbackFromPhysId(){
-    // Given
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(200));
-
     // Then
     assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
   }
