@@ -9,6 +9,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResour
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -120,6 +122,23 @@ class HandleComponentTest {
     assertThat(mockHandleServer.getRequestCount() - requestCount).isEqualTo(2);
   }
 
+  @Test
+  void testRollbackFromPhysId(){
+    // Given
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(200));
+
+    // Then
+    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
+  }
+
+  @Test
+  void testRollbackFromPhysIdAuthFailed() throws Exception{
+    // Given
+    given(tokenAuthenticator.getToken()).willThrow(PidAuthenticationException.class);
+
+    // Then
+    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
+  }
 
   @Test
   void testRollbackHandleCreation() throws Exception {
