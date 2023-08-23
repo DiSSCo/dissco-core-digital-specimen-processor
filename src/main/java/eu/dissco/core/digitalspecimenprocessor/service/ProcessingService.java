@@ -309,23 +309,14 @@ public class ProcessingService {
   }
 
 
+
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
     Map<String, String> pidMap;
     try {
       pidMap = createNewPidRecords(events);
     } catch (PidAuthenticationException | PidCreationException e) {
       log.error("Unable to create PID. {}", e.getMessage());
-      List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
-      for (var event : events) {
-        try {
-          kafkaService.deadLetterEvent(event);
-        } catch (JsonProcessingException e2) {
-          failedDlq.add(event);
-        }
-        if (!failedDlq.isEmpty()) {
-          log.error("Critical error: Failed to DLQ the following events: {}", failedDlq);
-        }
-      }
+      pidCreationFailed(events);
       return Collections.emptySet();
     }
     var digitalSpecimenRecords = events.stream().collect(Collectors.toMap(
@@ -337,7 +328,6 @@ public class ProcessingService {
       return Collections.emptySet();
     }
     repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
-
     try {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(digitalSpecimenRecords.keySet());
       if (!bulkResponse.errors()) {
@@ -360,6 +350,26 @@ public class ProcessingService {
     var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimen).toList();
     var request = fdoRecordService.buildPostHandleRequest(specimenList);
     return handleComponent.postHandle(request);
+  }
+  private void pidCreationFailed(List<DigitalSpecimenEvent> events){
+    rollbackHandlesFromPhysId(events);
+    List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
+    for (var event : events) {
+      try {
+        kafkaService.deadLetterEvent(event);
+      } catch (JsonProcessingException e2) {
+        failedDlq.add(event);
+      }
+      if (!failedDlq.isEmpty()) {
+        log.error("Critical error: Failed to DLQ the following events: {}", failedDlq);
+      }
+    }
+  }
+
+  private void rollbackHandlesFromPhysId(List<DigitalSpecimenEvent> events){
+    var physIds = events.stream().map(DigitalSpecimenEvent::digitalSpecimen)
+        .map(DigitalSpecimen::physicalSpecimenId).toList();
+    handleComponent.rollbackFromPhysId(physIds);
   }
 
   private void handleSuccessfulElasticInsert(
