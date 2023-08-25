@@ -2,6 +2,9 @@
 # Issue: snappy-java high issue, https://www.cvedetails.com/cve/CVE-2023-34453/
 # Used by kafka
 # Solution: Wait for update from kafka
-CVE-2023-34455
-CVE-2023-34453
-CVE-2023-34454
+# CVE-2023-34455
+# CVE-2023-34453
+# CVE-2023-34454
+
+# Aug 25: Updated kafka manually to 3.5.1
+# Remove this property once spring-kafka upgrades

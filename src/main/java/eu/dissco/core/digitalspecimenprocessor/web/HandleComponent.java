@@ -69,7 +69,7 @@ public class HandleComponent {
       var requestBody = BodyInserters.fromValue(physIds);
       sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
     } catch (PidAuthenticationException e){
-      log.error("Unable to rollback handles based on physical identifier");
+      log.error("Unable to rollback handles based on physical identifier: {}", physIds);
     }
 
   }
