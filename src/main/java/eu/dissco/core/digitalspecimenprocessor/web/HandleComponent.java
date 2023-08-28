@@ -63,6 +63,17 @@ public class HandleComponent {
     getFutureResponse(response);
   }
 
+  public void rollbackFromPhysId(List<String> physIds){
+    log.info("Rolling back handles from phys ids");
+    try {
+      var requestBody = BodyInserters.fromValue(physIds);
+      sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
+    } catch (PidAuthenticationException e){
+      log.error("Unable to rollback handles based on physical identifier: {}", physIds);
+    }
+
+  }
+
   private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod,
       BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint)
       throws PidAuthenticationException {
