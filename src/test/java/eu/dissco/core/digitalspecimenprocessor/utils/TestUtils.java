@@ -217,9 +217,9 @@ public class TestUtils {
               "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+              "primarySpecimenObjectIdType": "global",
               "specimenHost": "https://ror.org/0443cwa12",
               "specimenHostName": "National Museum of Natural History",
-              "primarySpecimenObjectIdType": "cetaf",
               "referentName": "Biota",
               "topicDiscipline": "Earth Systems",
               "livingOrPreserved": "living",
@@ -239,6 +239,7 @@ public class TestUtils {
               "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+              "primarySpecimenObjectIdType":"local",
               "specimenHost": "https://ror.org/0443cwa12"
             }
           }
