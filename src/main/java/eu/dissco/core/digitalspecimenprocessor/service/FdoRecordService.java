@@ -43,8 +43,7 @@ public class FdoRecordService {
     map.put("ods:specimenName", REFERENT_NAME.getAttribute());
     map.put("ods:organisationName", SPECIMEN_HOST_NAME.getAttribute());
     map.put("ods:topicDiscipline", TOPIC_DISCIPLINE.getAttribute());
-    map.put("ods:physicalSpecimenIdType",
-        FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute());
+    map.put("ods:sourceSystemId", FdoProfileAttributes.SOURCE_SYSTEM_ID.getAttribute());
     odsMap = map;
   }
 
@@ -112,6 +111,8 @@ public class FdoRecordService {
     // Mandatory
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
         specimen.physicalSpecimenId());
+    attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
+        setPhysicalIdType(specimen));
     var organisationId = getTerm(specimen, "ods:organisationId");
     organisationId.ifPresent(orgId -> attributes.put(SPECIMEN_HOST.getAttribute(), orgId));
     if (organisationId.isEmpty()) {
@@ -134,6 +135,15 @@ public class FdoRecordService {
     setMarkedAsType(specimen, attributes);
 
     return attributes;
+  }
+
+  private String setPhysicalIdType(DigitalSpecimen specimen) {
+    var physicalIdType = specimen.attributes().get("ods:physicalSpecimenIdType").asText();
+    if (physicalIdType.equals("combined")) {
+      return "local";
+    } else {
+      return "global";
+    }
   }
 
   private void setMarkedAsType(DigitalSpecimen specimen, ObjectNode attributeNode) {
