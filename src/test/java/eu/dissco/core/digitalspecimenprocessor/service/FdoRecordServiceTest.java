@@ -14,9 +14,9 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -39,6 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.BDDMockito;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -51,17 +52,23 @@ class FdoRecordServiceTest {
 
   private FdoRecordService builder;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
+  private MockedStatic<Clock> mockedClock;
+
 
   @BeforeEach
   void setup() {
     builder = new FdoRecordService(MAPPER);
+    Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
+    mockedClock = mockStatic(Clock.class);
+    mockedClock.when(Clock::systemUTC).thenReturn(clock);
   }
 
   @AfterEach
   void destroy() {
     mockedStatic.close();
+    mockedClock.close();
   }
 
   @Test
