@@ -87,6 +87,22 @@ class FdoRecordServiceTest {
   }
 
   @Test
+  void testGenRequestMinimalNoPhysId() throws Exception {
+    // Given
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
+    ((ObjectNode)specimen.attributes()).remove("ods:physicalSpecimenIdType");
+    var expected = new ArrayList<>(
+        List.of(givenHandleRequestMin()));
+
+    // When
+    var response = builder.buildPostHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
   void testRollbackUpdate() throws Exception {
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
         givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
