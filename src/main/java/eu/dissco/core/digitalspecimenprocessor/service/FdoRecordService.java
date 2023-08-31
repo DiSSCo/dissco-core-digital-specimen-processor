@@ -140,6 +140,9 @@ public class FdoRecordService {
   private String setPhysicalIdType(DigitalSpecimen specimen) {
     var physicalIdType = specimen.attributes().get("ods:physicalSpecimenIdType");
     if (physicalIdType == null || physicalIdType.asText().equals("combined")) {
+      if (physicalIdType == null){
+        log.warn("\"ods:physicalSpecimenIdType\" is not in specimen {} attributes", specimen.physicalSpecimenId());
+      }
       return "local";
     } else {
       return "global";
