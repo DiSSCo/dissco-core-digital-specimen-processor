@@ -173,7 +173,7 @@ public class ProcessingService {
               Collectors.toSet());
       log.info("Successfully updated {} digitalSpecimen", successfullyProcessedRecords.size());
       return successfullyProcessedRecords;
-    } catch (IOException e) {
+    } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(
           updatedDigitalSpecimenRecord -> rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord,
@@ -292,7 +292,7 @@ public class ProcessingService {
     if (elasticRollback) {
       try {
         elasticRepository.rollbackVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
-      } catch (IOException e) {
+      } catch (IOException | ElasticsearchException e) {
         log.error("Fatal exception, unable to roll back update for: "
             + updatedDigitalSpecimenRecord.currentDigitalSpecimen(), e);
       }
@@ -452,7 +452,7 @@ public class ProcessingService {
     if (elasticRollback) {
       try {
         elasticRepository.rollbackSpecimen(digitalSpecimenRecord);
-      } catch (IOException e) {
+      } catch (IOException | ElasticsearchException e) {
         log.error("Fatal exception, unable to roll back: " + digitalSpecimenRecord.id(), e);
       }
     }
