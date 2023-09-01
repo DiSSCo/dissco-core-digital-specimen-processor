@@ -14,9 +14,9 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -39,6 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.BDDMockito;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -51,17 +52,23 @@ class FdoRecordServiceTest {
 
   private FdoRecordService builder;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
+  private MockedStatic<Clock> mockedClock;
+
 
   @BeforeEach
   void setup() {
     builder = new FdoRecordService(MAPPER);
+    Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
+    mockedClock = mockStatic(Clock.class);
+    mockedClock.when(Clock::systemUTC).thenReturn(clock);
   }
 
   @AfterEach
   void destroy() {
     mockedStatic.close();
+    mockedClock.close();
   }
 
   @Test
@@ -69,6 +76,38 @@ class FdoRecordServiceTest {
     // Given
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
         givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
+    var expected = new ArrayList<>(
+        List.of(givenHandleRequestMin()));
+
+    // When
+    var response = builder.buildPostHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
+  void testGenRequestMinimalNoPhysId() throws Exception {
+    // Given
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
+    ((ObjectNode)specimen.attributes()).remove("ods:physicalSpecimenIdType");
+    var expected = new ArrayList<>(
+        List.of(givenHandleRequestMin()));
+
+    // When
+    var response = builder.buildPostHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
+  void testGenRequestMinimalCombined() throws Exception {
+    // Given
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
+    ((ObjectNode)specimen.attributes()).put("ods:physicalSpecimenIdType", "combined");
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
 
@@ -94,6 +133,7 @@ class FdoRecordServiceTest {
                   "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                   "issuedForAgent": "https://ror.org/0566bfb96",
                   "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                   "primarySpecimenObjectIdType":"local",
                   "specimenHost": "https://ror.org/0443cwa12"
                 }
               }
@@ -226,9 +266,9 @@ class FdoRecordServiceTest {
                 "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                "primarySpecimenObjectIdType": "global",
                 "specimenHost": "https://ror.org/0443cwa12",
                 "specimenHostName": "National Museum of Natural History",
-                "primarySpecimenObjectIdType": "cetaf",
                 "referentName": "Biota",
                 "topicDiscipline": "Earth Systems",
                 "livingOrPreserved": "living",
@@ -247,9 +287,9 @@ class FdoRecordServiceTest {
               "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+              "primarySpecimenObjectIdType": "global",
               "specimenHost": "https://ror.org/0443cwa12",
               "specimenHostName": "National Museum of Natural History",
-              "primarySpecimenObjectIdType": "cetaf",
               "referentName": "Biota",
               "topicDiscipline": "Earth Systems",
               "livingOrPreserved": "living"
