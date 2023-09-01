@@ -8,6 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.property.ElasticSearchProperties;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.RestClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,8 +24,13 @@ public class ElasticSearchConfiguration {
 
   @Bean
   public ElasticsearchClient elasticsearchClient() {
-    RestClient restClient = RestClient.builder(
-        new HttpHost(properties.getHostname(), properties.getPort())).build();
+    var credentialsProvider = new BasicCredentialsProvider();
+    credentialsProvider.setCredentials(AuthScope.ANY,
+        new UsernamePasswordCredentials(properties.getUsername(), properties.getPassword()));
+    RestClient restClient = RestClient.builder(new HttpHost(properties.getHostname(),
+            properties.getPort()))
+        .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
+            .setDefaultCredentialsProvider(credentialsProvider)).build();
     ElasticsearchTransport transport = new RestClientTransport(restClient,
         new JacksonJsonpMapper(mapper));
     return new ElasticsearchClient(transport);
