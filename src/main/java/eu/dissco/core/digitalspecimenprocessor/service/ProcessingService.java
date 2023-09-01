@@ -1,9 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
-import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
@@ -14,6 +14,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationExcept
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
+import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -34,18 +35,21 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ProcessingService {
 
+  private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
   private final DigitalSpecimenRepository repository;
   private final FdoRecordService fdoRecordService;
   private final ElasticSearchRepository elasticRepository;
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
   private final HandleComponent handleComponent;
-  private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
     var uniqueBatch = removeDuplicatesInBatch(events);
     var processResult = processSpecimens(uniqueBatch);
+    log.info("Batch consists of: {} new, {} update and {} equal specimen",
+        processResult.newSpecimens().size(), processResult.changedSpecimens().size(),
+        processResult.equalSpecimens().size());
     var results = new ArrayList<DigitalSpecimenRecord>();
     if (!processResult.equalSpecimens().isEmpty()) {
       updateEqualSpecimen(processResult.equalSpecimens());
@@ -169,7 +173,7 @@ public class ProcessingService {
               Collectors.toSet());
       log.info("Successfully updated {} digitalSpecimen", successfullyProcessedRecords.size());
       return successfullyProcessedRecords;
-    } catch (IOException e) {
+    } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(
           updatedDigitalSpecimenRecord -> rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord,
@@ -288,7 +292,7 @@ public class ProcessingService {
     if (elasticRollback) {
       try {
         elasticRepository.rollbackVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
-      } catch (IOException e) {
+      } catch (IOException | ElasticsearchException e) {
         log.error("Fatal exception, unable to roll back update for: "
             + updatedDigitalSpecimenRecord.currentDigitalSpecimen(), e);
       }
@@ -307,7 +311,6 @@ public class ProcessingService {
   private void rollBackToEarlierVersion(DigitalSpecimenRecord currentDigitalSpecimen) {
     repository.createDigitalSpecimenRecord(List.of(currentDigitalSpecimen));
   }
-
 
 
   private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
@@ -337,7 +340,7 @@ public class ProcessingService {
       }
       log.info("Successfully created {} new digitalSpecimen", digitalSpecimenRecords.size());
       return digitalSpecimenRecords.keySet();
-    } catch (IOException e) {
+    } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
       rollbackHandleCreation(digitalSpecimenRecords.keySet().stream().toList());
@@ -351,7 +354,8 @@ public class ProcessingService {
     var request = fdoRecordService.buildPostHandleRequest(specimenList);
     return handleComponent.postHandle(request);
   }
-  private void pidCreationFailed(List<DigitalSpecimenEvent> events){
+
+  private void pidCreationFailed(List<DigitalSpecimenEvent> events) {
     rollbackHandlesFromPhysId(events);
     List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
     for (var event : events) {
@@ -366,7 +370,7 @@ public class ProcessingService {
     }
   }
 
-  private void rollbackHandlesFromPhysId(List<DigitalSpecimenEvent> events){
+  private void rollbackHandlesFromPhysId(List<DigitalSpecimenEvent> events) {
     var physIds = events.stream().map(DigitalSpecimenEvent::digitalSpecimen)
         .map(DigitalSpecimen::physicalSpecimenId).toList();
     handleComponent.rollbackFromPhysId(physIds);
@@ -448,7 +452,7 @@ public class ProcessingService {
     if (elasticRollback) {
       try {
         elasticRepository.rollbackSpecimen(digitalSpecimenRecord);
-      } catch (IOException e) {
+      } catch (IOException | ElasticsearchException e) {
         log.error("Fatal exception, unable to roll back: " + digitalSpecimenRecord.id(), e);
       }
     }
