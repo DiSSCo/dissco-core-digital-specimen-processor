@@ -21,6 +21,7 @@
     <jakarta.json.version>2.1.1</jakarta.json.version>
     <json-patch.version>1.13</json-patch.version>
     <kafka.version>3.5.1</kafka.version>
+    <spring-kafka.version>3.0.10</spring-kafka.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <testcontainers.version>1.17.6</testcontainers.version>
     <springdoc.version>2.1.0</springdoc.version>
@@ -58,6 +59,7 @@
     <dependency>
       <groupId>org.springframework.kafka</groupId>
       <artifactId>spring-kafka</artifactId>
+      <version>${spring-kafka.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
