@@ -13,7 +13,8 @@ public enum FdoProfileAttributes {
   PRIMARY_SPECIMEN_OBJECT_ID_TYPE("primarySpecimenObjectIdType"),
   TOPIC_DISCIPLINE("topicDiscipline"),
   LIVING_OR_PRESERVED("livingOrPreserved"),
-  MARKED_AS_TYPE("markedAsType");
+  MARKED_AS_TYPE("markedAsType"),
+  SOURCE_SYSTEM_ID("sourceSystemId");
 
   private final String attribute;
 
