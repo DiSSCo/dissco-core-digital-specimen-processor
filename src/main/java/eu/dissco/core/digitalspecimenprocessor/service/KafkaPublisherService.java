@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import eu.dissco.core.digitalspecimenprocessor.domain.CreateUpdateDeleteEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import java.time.Instant;
@@ -74,5 +75,10 @@ public class KafkaPublisherService {
       DigitalSpecimenRecord digitalSpecimenRecord) {
     return JsonDiff.asJson(mapper.valueToTree(currentDigitalSpecimen.digitalSpecimen()),
         mapper.valueToTree(digitalSpecimenRecord.digitalSpecimen()));
+  }
+
+  public void publishDigitalMediaObject(DigitalMediaObjectEvent digitalMediaObjectEvent)
+      throws JsonProcessingException {
+    kafkaTemplate.send("digital-media-object", mapper.writeValueAsString(digitalMediaObjectEvent));
   }
 }

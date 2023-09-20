@@ -4,10 +4,12 @@
 package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
 
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.Handles;
-import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.NewDigitalSpecimen;
+
 import java.util.Arrays;
 import java.util.List;
+
 import org.jooq.Catalog;
 import org.jooq.Table;
 import org.jooq.impl.SchemaImpl;
@@ -27,14 +29,14 @@ public class Public extends SchemaImpl {
     public static final Public PUBLIC = new Public();
 
     /**
+     * The table <code>public.digital_specimen</code>.
+     */
+    public final DigitalSpecimen DIGITAL_SPECIMEN = DigitalSpecimen.DIGITAL_SPECIMEN;
+
+    /**
      * The table <code>public.handles</code>.
      */
     public final Handles HANDLES = Handles.HANDLES;
-
-    /**
-     * The table <code>public.new_digital_specimen</code>.
-     */
-    public final NewDigitalSpecimen NEW_DIGITAL_SPECIMEN = NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN;
 
     /**
      * No further instances allowed
@@ -51,8 +53,9 @@ public class Public extends SchemaImpl {
 
     @Override
     public final List<Table<?>> getTables() {
-        return Arrays.<Table<?>>asList(
-            Handles.HANDLES,
-            NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN);
+        return Arrays.asList(
+            DigitalSpecimen.DIGITAL_SPECIMEN,
+            Handles.HANDLES
+        );
     }
 }

@@ -4,10 +4,11 @@
 package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
 
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.Handles;
-import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.NewDigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.HandlesRecord;
-import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.NewDigitalSpecimenRecord;
+
 import org.jooq.TableField;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
@@ -15,7 +16,7 @@ import org.jooq.impl.Internal;
 
 
 /**
- * A class modelling foreign key relationships and constraints of tables in 
+ * A class modelling foreign key relationships and constraints of tables in
  * public.
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
@@ -25,6 +26,6 @@ public class Keys {
     // UNIQUE and PRIMARY KEY definitions
     // -------------------------------------------------------------------------
 
+    public static final UniqueKey<DigitalSpecimenRecord> DIGITAL_SPECIMEN_PK = Internal.createUniqueKey(DigitalSpecimen.DIGITAL_SPECIMEN, DSL.name("digital_specimen_pk"), new TableField[] { DigitalSpecimen.DIGITAL_SPECIMEN.ID }, true);
     public static final UniqueKey<HandlesRecord> HANDLES_PKEY = Internal.createUniqueKey(Handles.HANDLES, DSL.name("handles_pkey"), new TableField[] { Handles.HANDLES.HANDLE, Handles.HANDLES.IDX }, true);
-    public static final UniqueKey<NewDigitalSpecimenRecord> NEW_DIGITAL_SPECIMEN_PK = Internal.createUniqueKey(NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN, DSL.name("new_digital_specimen_pk"), new TableField[] { NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN.ID }, true);
 }

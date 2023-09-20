@@ -4,8 +4,8 @@
 package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
 
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.Handles;
-import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.NewDigitalSpecimen;
 
 
 /**
@@ -15,12 +15,12 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.NewDigitalSp
 public class Tables {
 
     /**
+     * The table <code>public.digital_specimen</code>.
+     */
+    public static final DigitalSpecimen DIGITAL_SPECIMEN = DigitalSpecimen.DIGITAL_SPECIMEN;
+
+    /**
      * The table <code>public.handles</code>.
      */
     public static final Handles HANDLES = Handles.HANDLES;
-
-    /**
-     * The table <code>public.new_digital_specimen</code>.
-     */
-    public static final NewDigitalSpecimen NEW_DIGITAL_SPECIMEN = NewDigitalSpecimen.NEW_DIGITAL_SPECIMEN;
 }

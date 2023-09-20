@@ -3,6 +3,8 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.nimbusds.jose.util.Pair;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -14,6 +16,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationExcept
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationships;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.time.Instant;
@@ -52,7 +55,7 @@ public class ProcessingService {
         processResult.equalSpecimens().size());
     var results = new ArrayList<DigitalSpecimenRecord>();
     if (!processResult.equalSpecimens().isEmpty()) {
-      updateEqualSpecimen(processResult.equalSpecimens());
+      updateEqualSpecimen(processResult.equalSpecimens(), events);
     }
     if (!processResult.newSpecimens().isEmpty()) {
       results.addAll(createNewDigitalSpecimen(processResult.newSpecimens()));
@@ -136,11 +139,25 @@ public class ProcessingService {
                 Function.identity()));
   }
 
-  private void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalSpecimen) {
+  private void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalSpecimen,
+      List<DigitalSpecimenEvent> events) {
     var currentIds = currentDigitalSpecimen.stream().map(DigitalSpecimenRecord::id).toList();
     repository.updateLastChecked(currentIds);
     log.info("Successfully updated lastChecked for {} existing digitalSpecimen",
         currentDigitalSpecimen.size());
+    gatherDigitalMediaObjectForEqualRecords(currentDigitalSpecimen, events);
+  }
+
+  private void gatherDigitalMediaObjectForEqualRecords(List<DigitalSpecimenRecord> currentDigitalSpecimen, List<DigitalSpecimenEvent> events) {
+    var pidMap = currentDigitalSpecimen.stream().collect(Collectors.toMap(
+        digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimen().physicalSpecimenId(),
+        DigitalSpecimenRecord::id
+    ));
+    for (var event : events) {
+      var digitalSpecimenPid = pidMap.get(event.digitalSpecimen().physicalSpecimenId());
+      var digitalMedia = event.digitalMediaObjectEvents();
+      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid);
+    }
   }
 
   private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
@@ -172,6 +189,7 @@ public class ProcessingService {
           .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
               Collectors.toSet());
       log.info("Successfully updated {} digitalSpecimen", successfullyProcessedRecords.size());
+      gatherDigitalMediaObjectForUpdatedRecords(digitalSpecimenRecords);
       return successfullyProcessedRecords;
     } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
@@ -244,7 +262,8 @@ public class ProcessingService {
             Instant.now(),
             tuple.digitalSpecimenEvent().digitalSpecimen()),
         tuple.digitalSpecimenEvent().enrichmentList(),
-        tuple.currentSpecimen()
+        tuple.currentSpecimen(),
+        tuple.digitalSpecimenEvent().digitalMediaObjectEvents()
     )).collect(Collectors.toSet());
   }
 
@@ -302,7 +321,8 @@ public class ProcessingService {
       kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
-                  .digitalSpecimen()));
+                  .digitalSpecimen(),
+              updatedDigitalSpecimenRecord.digitalMediaObjectEvents()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
@@ -324,14 +344,16 @@ public class ProcessingService {
     }
     var digitalSpecimenRecords = events.stream().collect(Collectors.toMap(
         event -> mapToDigitalSpecimenRecord(event, pidMap),
-        DigitalSpecimenEvent::enrichmentList
+        event -> Pair.of(event.enrichmentList(), event.digitalMediaObjectEvents())
     ));
     digitalSpecimenRecords.remove(null);
     if (digitalSpecimenRecords.isEmpty()) {
       return Collections.emptySet();
     }
+    log.info("Inserting {} new specimen into the database", digitalSpecimenRecords.size());
     repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
     try {
+      log.info("Inserting {} new specimen into the elastic search", digitalSpecimenRecords.size());
       var bulkResponse = elasticRepository.indexDigitalSpecimen(digitalSpecimenRecords.keySet());
       if (!bulkResponse.errors()) {
         handleSuccessfulElasticInsert(digitalSpecimenRecords);
@@ -339,6 +361,7 @@ public class ProcessingService {
         handlePartiallyFailedElasticInsert(digitalSpecimenRecords, bulkResponse);
       }
       log.info("Successfully created {} new digitalSpecimen", digitalSpecimenRecords.size());
+      gatherDigitalMediaObjectForNewRecords(digitalSpecimenRecords);
       return digitalSpecimenRecords.keySet();
     } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
@@ -346,6 +369,40 @@ public class ProcessingService {
       rollbackHandleCreation(digitalSpecimenRecords.keySet().stream().toList());
       return Collections.emptySet();
     }
+  }
+
+  private void gatherDigitalMediaObjectForNewRecords(
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEvent>>> digitalSpecimenRecords) {
+    log.info("Publishing digital media object events for processing");
+    digitalSpecimenRecords.forEach((key, value) -> {
+      var digitalSpecimenPid = key.id();
+      var digitalMedia = value.getRight();
+      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid);
+    });
+  }
+
+  private void publishDigitalMediaRecord(List<DigitalMediaObjectEvent> digitalMedia, String digitalSpecimenPid) {
+    for (var digitalMediaObjectEvent : digitalMedia) {
+      digitalMediaObjectEvent.digitalMediaObject().attributes().getEntityRelationships().add(
+          new EntityRelationships()
+              .withEntityRelationshipType("hasDigitalSpecimen")
+              .withObjectEntityIri("https://doi.org/" + digitalSpecimenPid));
+      try {
+        kafkaService.publishDigitalMediaObject(digitalMediaObjectEvent);
+      } catch (JsonProcessingException e) {
+        log.warn("Failed to publish digitalMediaEvent: {} for specimen {}",
+            digitalMediaObjectEvent.digitalMediaObject().attributes().getAcAccessUri(),
+            digitalSpecimenPid);
+      }
+    }
+  }
+
+  private void gatherDigitalMediaObjectForUpdatedRecords(Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
+    digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
+      var digitalSpecimenPid = digitalSpecimenRecord.digitalSpecimenRecord().id();
+      var digitalMedia = digitalSpecimenRecord.digitalMediaObjectEvents();
+      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid);
+    });
   }
 
   private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)
@@ -377,7 +434,7 @@ public class ProcessingService {
   }
 
   private void handleSuccessfulElasticInsert(
-      Map<DigitalSpecimenRecord, List<String>> digitalSpecimenRecords) {
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEvent>>> digitalSpecimenRecords) {
     log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
     List<DigitalSpecimenRecord> rollbackRecords = new ArrayList<>();
     for (var entry : digitalSpecimenRecords.entrySet()) {
@@ -393,7 +450,7 @@ public class ProcessingService {
   }
 
   private void handlePartiallyFailedElasticInsert(
-      Map<DigitalSpecimenRecord, List<String>> digitalSpecimenRecords,
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEvent>>> digitalSpecimenRecords,
       BulkResponse bulkResponse) {
     var digitalSpecimenMap = digitalSpecimenRecords.keySet().stream()
         .collect(Collectors.toMap(DigitalSpecimenRecord::id, Function.identity()));
@@ -422,15 +479,16 @@ public class ProcessingService {
     rollbackHandleCreation(rollbackDigitalRecords);
   }
 
-  private boolean publishEvents(DigitalSpecimenRecord key, List<String> value) {
+  private boolean publishEvents(DigitalSpecimenRecord key,
+      Pair<List<String>, List<DigitalMediaObjectEvent>> additionalInfo) {
     try {
       kafkaService.publishCreateEvent(key);
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish Create event", e);
-      rollbackNewSpecimen(key, value, true);
+      rollbackNewSpecimen(key, additionalInfo, true);
       return false;
     }
-    value.forEach(aas -> {
+    additionalInfo.getLeft().forEach(aas -> {
       try {
         kafkaService.publishAnnotationRequestEvent(aas, key);
       } catch (JsonProcessingException e) {
@@ -443,12 +501,12 @@ public class ProcessingService {
   }
 
   private void rollbackNewSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
-      List<String> enrichments) {
-    rollbackNewSpecimen(digitalSpecimenRecord, enrichments, false);
+      Pair<List<String>, List<DigitalMediaObjectEvent>> additionalInfo) {
+    rollbackNewSpecimen(digitalSpecimenRecord, additionalInfo, false);
   }
 
   private void rollbackNewSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
-      List<String> enrichments, boolean elasticRollback) {
+      Pair<List<String>, List<DigitalMediaObjectEvent>> additionalInfo, boolean elasticRollback) {
     if (elasticRollback) {
       try {
         elasticRepository.rollbackSpecimen(digitalSpecimenRecord);
@@ -459,7 +517,9 @@ public class ProcessingService {
     repository.rollbackSpecimen(digitalSpecimenRecord.id());
     try {
       kafkaService.deadLetterEvent(
-          new DigitalSpecimenEvent(enrichments, digitalSpecimenRecord.digitalSpecimen()));
+          new DigitalSpecimenEvent(additionalInfo.getLeft(),
+              digitalSpecimenRecord.digitalSpecimen(),
+              additionalInfo.getRight()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED + digitalSpecimenRecord.id(), e);
     }

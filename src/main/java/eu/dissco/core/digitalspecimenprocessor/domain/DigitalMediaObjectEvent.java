@@ -2,8 +2,8 @@ package eu.dissco.core.digitalspecimenprocessor.domain;
 
 import java.util.List;
 
-public record DigitalSpecimenEventOld(
+public record DigitalMediaObjectEvent(
     List<String> enrichmentList,
-    DigitalSpecimenOld digitalSpecimen) {
+    DigitalMediaObject digitalMediaObject) {
 
 }

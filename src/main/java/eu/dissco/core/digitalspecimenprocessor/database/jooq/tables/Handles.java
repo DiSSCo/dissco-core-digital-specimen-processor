@@ -8,15 +8,21 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.Indexes;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Keys;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.HandlesRecord;
+
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
+
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Function12;
 import org.jooq.Index;
 import org.jooq.Name;
 import org.jooq.Record;
+import org.jooq.Records;
 import org.jooq.Row12;
 import org.jooq.Schema;
+import org.jooq.SelectField;
 import org.jooq.Table;
 import org.jooq.TableField;
 import org.jooq.TableOptions;
@@ -142,22 +148,17 @@ public class Handles extends TableImpl<HandlesRecord> {
 
     @Override
     public Schema getSchema() {
-        return Public.PUBLIC;
+        return aliased() ? null : Public.PUBLIC;
     }
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.<Index>asList(Indexes.DATAINDEX, Indexes.HANDLEINDEX);
+        return Arrays.asList(Indexes.DATAINDEX, Indexes.HANDLEINDEX);
     }
 
     @Override
     public UniqueKey<HandlesRecord> getPrimaryKey() {
         return Keys.HANDLES_PKEY;
-    }
-
-    @Override
-    public List<UniqueKey<HandlesRecord>> getKeys() {
-        return Arrays.<UniqueKey<HandlesRecord>>asList(Keys.HANDLES_PKEY);
     }
 
     @Override
@@ -168,6 +169,11 @@ public class Handles extends TableImpl<HandlesRecord> {
     @Override
     public Handles as(Name alias) {
         return new Handles(alias, this);
+    }
+
+    @Override
+    public Handles as(Table<?> alias) {
+        return new Handles(alias.getQualifiedName(), this);
     }
 
     /**
@@ -186,6 +192,14 @@ public class Handles extends TableImpl<HandlesRecord> {
         return new Handles(name, null);
     }
 
+    /**
+     * Rename this table
+     */
+    @Override
+    public Handles rename(Table<?> name) {
+        return new Handles(name.getQualifiedName(), null);
+    }
+
     // -------------------------------------------------------------------------
     // Row12 type methods
     // -------------------------------------------------------------------------
@@ -193,5 +207,20 @@ public class Handles extends TableImpl<HandlesRecord> {
     @Override
     public Row12<byte[], Integer, byte[], byte[], Short, Integer, Long, String, Boolean, Boolean, Boolean, Boolean> fieldsRow() {
         return (Row12) super.fieldsRow();
+    }
+
+    /**
+     * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
+     */
+    public <U> SelectField<U> mapping(Function12<? super byte[], ? super Integer, ? super byte[], ? super byte[], ? super Short, ? super Integer, ? super Long, ? super String, ? super Boolean, ? super Boolean, ? super Boolean, ? super Boolean, ? extends U> from) {
+        return convertFrom(Records.mapping(from));
+    }
+
+    /**
+     * Convenience mapping calling {@link SelectField#convertFrom(Class,
+     * Function)}.
+     */
+    public <U> SelectField<U> mapping(Class<U> toType, Function12<? super byte[], ? super Integer, ? super byte[], ? super byte[], ? super Short, ? super Integer, ? super Long, ? super String, ? super Boolean, ? super Boolean, ? super Boolean, ? super Boolean, ? extends U> from) {
+        return convertFrom(toType, Records.mapping(from));
     }
 }
