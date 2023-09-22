@@ -18,7 +18,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,10 +29,15 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class FdoRecordService {
+
   private static final Set<String> NOT_TYPE_STATUS = new HashSet<>(
       Arrays.asList("false", "specimen", "type", ""));
 
   private final ObjectMapper mapper;
+
+  private static boolean isEqualString(String currentValue, String newValue) {
+    return currentValue != null && !currentValue.equals(newValue);
+  }
 
   public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimen> digitalSpecimens)
       throws PidCreationException {
@@ -136,8 +140,8 @@ public class FdoRecordService {
           specimen.attributes().getOdsLivingOrPreserved().toLowerCase());
     }
     var typeStatus = specimen.attributes().getDwcTypeStatus();
-    if (typeStatus != null && !NOT_TYPE_STATUS.contains(typeStatus)){
-      attributes.put(MARKED_AS_TYPE.getAttribute(), typeStatus);
+    if (typeStatus != null) {
+      attributes.put(MARKED_AS_TYPE.getAttribute(), !NOT_TYPE_STATUS.contains(typeStatus));
     }
   }
 
@@ -145,14 +149,19 @@ public class FdoRecordService {
       DigitalSpecimen digitalSpecimen) {
     var currentAttributes = currentDigitalSpecimen.attributes();
     var attributes = digitalSpecimen.attributes();
-    return !currentDigitalSpecimen.physicalSpecimenId().equals(digitalSpecimen.physicalSpecimenId())
-        || !currentAttributes.getDwcInstitutionId().equals(attributes.getDwcInstitutionId())
-        || !currentAttributes.getDwcInstitutionName().equals(attributes.getDwcInstitutionName())
-        || !currentAttributes.getOdsTopicDiscipline().equals(attributes.getOdsTopicDiscipline())
-        || !currentAttributes.getOdsPhysicalSpecimenIdType()
-        .equals(attributes.getOdsPhysicalSpecimenIdType())
-        || !currentAttributes.getOdsLivingOrPreserved().equals(attributes.getOdsLivingOrPreserved())
-        || !currentAttributes.getOdsSpecimenName().equals(attributes.getOdsSpecimenName())
-        || !currentAttributes.getDwcTypeStatus().endsWith(attributes.getDwcTypeStatus());
+    return isEqualString(currentDigitalSpecimen.physicalSpecimenId(),
+        digitalSpecimen.physicalSpecimenId())
+        || isEqualString(currentAttributes.getDwcInstitutionId(), attributes.getDwcInstitutionId())
+        || isEqualString(currentAttributes.getDwcInstitutionName(),
+        attributes.getDwcInstitutionName())
+        || (currentAttributes.getOdsTopicDiscipline() != null
+        && !currentAttributes.getOdsTopicDiscipline().equals(attributes.getOdsTopicDiscipline()))
+        || (currentAttributes.getOdsPhysicalSpecimenIdType() != null
+        && !currentAttributes.getOdsPhysicalSpecimenIdType()
+        .equals(attributes.getOdsPhysicalSpecimenIdType()))
+        || isEqualString(currentAttributes.getOdsLivingOrPreserved(),
+        attributes.getOdsLivingOrPreserved())
+        || isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
+        || isEqualString(currentAttributes.getDwcTypeStatus(), attributes.getDwcTypeStatus());
   }
 }

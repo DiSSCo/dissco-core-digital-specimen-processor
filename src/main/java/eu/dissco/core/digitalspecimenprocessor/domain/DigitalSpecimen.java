@@ -2,7 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import java.util.List;
 
 public record DigitalSpecimen(
     @JsonProperty("ods:physicalSpecimenId")
@@ -12,6 +11,6 @@ public record DigitalSpecimen(
     @JsonProperty("ods:attributes")
     eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes,
     @JsonProperty("ods:originalAttributes")
-    JsonNode originalAttributes){
+    JsonNode originalAttributes) {
 
 }

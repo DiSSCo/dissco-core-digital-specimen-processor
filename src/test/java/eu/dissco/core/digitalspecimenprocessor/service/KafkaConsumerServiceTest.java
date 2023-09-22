@@ -60,8 +60,8 @@ class KafkaConsumerServiceTest {
           "digitalSpecimen": {
             "type": "GeologyRockSpecimen",
             "physicalSpecimenId": "https://geocollections.info/specimen/23602",
-            "physicalSpecimenIdType": "cetaf",
-            "specimenName": "Biota,
+            "physicalSpecimenIdType": "global",
+            "specimenName": "Biota",
             "organisationId": "https://ror.org/0443cwa12",
             "datasetId": null,
             "physicalSpecimenCollection": null,
@@ -83,16 +83,19 @@ class KafkaConsumerServiceTest {
             "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
-              "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organisationId": "https://ror.org/0443cwa12",
+              "ods:physicalSpecimenIdType": "GLOBAL",
+              "dwc:institutionId": "https://ror.org/0443cwa12",
+              "dwc:institutionName": "National Museum of Natural History",
               "ods:specimenName": "Biota",
-              "ods:datasetId": null,
-              "ods:physicalSpecimenCollection": null,
-              "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-              "dwca:id": null,
+              "dwc:datasetName": null,
+              "dwc:collectionId": null,
+              "ods:sourceSystem": "20.5000.1025/MN0-5XP-FFD",
               "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-              "ods:objectType": "",
-              "ods:modified": "2017-09-26T12:27:21.000+00:00"
+              "dwc:preparations": "",
+              "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
+              "ods:topicDiscipline": "Botany",
+              "dwc:typeStatus": "holotype",
+              "ods:livingOrPreserved": "Preserved"
             },
             "ods:originalAttributes": {
                 "abcd:unitID": "152-4972",
@@ -124,7 +127,8 @@ class KafkaConsumerServiceTest {
                 "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronostratigraphicName": "Pirgu Stage",
                 "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronoStratigraphicDivision": "Stage"
               }
-          }
+          },
+          "digitalMediaObjectEvents": []
         }""";
   }
 

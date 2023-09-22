@@ -2,9 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
-import eu.dissco.core.digitalspecimenprocessor.schema.GeologicalContext;
-import eu.dissco.core.digitalspecimenprocessor.schema.Georeference;
-import eu.dissco.core.digitalspecimenprocessor.schema.Location;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,8 +18,8 @@ public class MidsService {
       OdsTopicDiscipline.ASTROGEOLOGY, OdsTopicDiscipline.EARTH_GEOLOGY,
       OdsTopicDiscipline.ENVIRONMENT);
 
-  private static boolean isInvalid(String value) {
-    return value == null || value.trim().isEmpty() || value.equalsIgnoreCase("null");
+  private static boolean isValid(String value) {
+    return value != null && !value.trim().isEmpty() && !value.equalsIgnoreCase("null");
   }
 
   public int calculateMids(DigitalSpecimen digitalSpecimen) {
@@ -38,11 +35,11 @@ public class MidsService {
 
   private boolean compliesToMidsOne(
       eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
-    return isInvalid(attributes.getDctermsLicense())
-        || isInvalid(attributes.getDctermsModified())
-        || isInvalid(attributes.getDwcPreparations())
-        || isInvalid(attributes.getOdsPhysicalSpecimenIdType().value())
-        || isInvalid(attributes.getOdsSpecimenName());
+    return isValid(attributes.getDctermsLicense())
+        && isValid(attributes.getDctermsModified())
+        && isValid(attributes.getDwcPreparations())
+        && isValid(attributes.getOdsPhysicalSpecimenIdType().value())
+        && isValid(attributes.getOdsSpecimenName());
   }
 
   private boolean compliesToMidsTwo(
@@ -60,63 +57,88 @@ public class MidsService {
 
   private boolean compliesToMidsTwoBio(
       eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
-    return isInvalid(attributes.getDwcTypeStatus())
-        || attributes.getOdsHasMedia()
-        || isQuantitativeLocationInvalid(attributes.getOccurrences().get(0).getLocation()
-        .getGeoreference())
-        || isQualitativeLocationInvalid(attributes.getOccurrences().get(0).getLocation())
-        || isInvalid(attributes.getOccurrences().get(0).getDwcEventDate())
-        || isInvalid(attributes.getOccurrences().get(0).getDwcFieldNumber())
-        || isInvalid(attributes.getDwcRecordedBy());
+    return isValid(attributes.getDwcTypeStatus())
+        && (attributes.getOdsHasMedia() != null && attributes.getOdsHasMedia())
+        && isQualitativeLocationValid(attributes)
+        && isQuantitativeLocationInvalid(attributes)
+        && (missingOccurrence(attributes) || isValid(
+        (attributes.getOccurrences().get(0).getDwcEventDate())))
+        && (missingOccurrence(attributes) || isValid(
+        attributes.getOccurrences().get(0).getDwcFieldNumber()))
+        && isValid(attributes.getDwcRecordedBy());
+  }
+
+  private boolean missingOccurrence(
+      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
+    return attributes.getOccurrences() == null || attributes.getOccurrences().isEmpty()
+        || attributes.getOccurrences().get(0) == null;
   }
 
   private boolean compliesToMidsTwoPaleoBio(
       eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
-    return isInvalid(attributes.getDwcTypeStatus())
-        || isStratigraphyInvalid(
-        attributes.getOccurrences().get(0).getLocation().getGeologicalContext())
-        || isQualitativeLocationInvalid(attributes.getOccurrences().get(0).getLocation())
-        || isQuantitativeLocationInvalid(
-        attributes.getOccurrences().get(0).getLocation().getGeoreference());
+    return isValid(attributes.getDwcTypeStatus())
+        && isStratigraphyValid(attributes)
+        && isQualitativeLocationValid(attributes)
+        && isQuantitativeLocationInvalid(attributes);
   }
 
-  private boolean isQuantitativeLocationInvalid(Georeference georeference) {
-    return georeference.getDwcDecimalLatitude() != null
-        || georeference.getDwcDecimalLongitude() != null
-        || isInvalid(georeference.getDwcGeodeticDatum());
+  private boolean isQuantitativeLocationInvalid(
+      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen digitalSpecimen) {
+    if (digitalSpecimen.getOccurrences() != null && !digitalSpecimen.getOccurrences().isEmpty()
+        && digitalSpecimen.getOccurrences().get(0).getLocation() != null
+        && digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference() != null) {
+      var georeference = digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference();
+      return georeference.getDwcDecimalLatitude() != null
+          && georeference.getDwcDecimalLongitude() != null;
+    }
+    return false;
   }
 
-  private boolean isQualitativeLocationInvalid(Location location) {
-    return isInvalid(location.getDwcContinent())
-        && isInvalid(location.getDwcCountry())
-        && isInvalid(location.getDwcCountryCode())
-        && isInvalid(location.getDwcCounty())
-        && isInvalid(location.getDwcIsland())
-        && isInvalid(location.getDwcIslandGroup())
-        && isInvalid(location.getDwcLocality())
-        && isInvalid(location.getDwcMunicipality())
-        && isInvalid(location.getDwcStateProvince())
-        && isInvalid(location.getDwcWaterBody());
+  private boolean isQualitativeLocationValid(
+      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen digitalSpecimen) {
+    if (digitalSpecimen.getOccurrences() != null && !digitalSpecimen.getOccurrences().isEmpty()
+        && digitalSpecimen.getOccurrences().get(0).getLocation() != null) {
+      var location = digitalSpecimen.getOccurrences().get(0).getLocation();
+      return isValid(location.getDwcContinent())
+          || isValid(location.getDwcCountry())
+          || isValid(location.getDwcCountryCode())
+          || isValid(location.getDwcCounty())
+          || isValid(location.getDwcIsland())
+          || isValid(location.getDwcIslandGroup())
+          || isValid(location.getDwcLocality())
+          || isValid(location.getDwcMunicipality())
+          || isValid(location.getDwcStateProvince())
+          || isValid(location.getDwcWaterBody());
+    }
+    return false;
   }
 
-  private boolean isStratigraphyInvalid(GeologicalContext geologicalContext) {
-    return isInvalid(geologicalContext.getDwcBed())
-        && isInvalid(geologicalContext.getDwcMember())
-        && isInvalid(geologicalContext.getDwcFormation())
-        && isInvalid(geologicalContext.getDwcGroup())
-        && isInvalid(geologicalContext.getDwcLithostratigraphicTerms())
-        && isInvalid(geologicalContext.getDwcHighestBiostratigraphicZone())
-        && isInvalid(geologicalContext.getDwcLowestBiostratigraphicZone())
-        && isInvalid(geologicalContext.getDwcLatestAgeOrHighestStage())
-        && isInvalid(geologicalContext.getDwcEarliestAgeOrLowestStage())
-        && isInvalid(geologicalContext.getDwcLatestEpochOrHighestSeries())
-        && isInvalid(geologicalContext.getDwcEarliestEpochOrLowestSeries())
-        && isInvalid(geologicalContext.getDwcLatestPeriodOrHighestSystem())
-        && isInvalid(geologicalContext.getDwcEarliestPeriodOrLowestSystem())
-        && isInvalid(geologicalContext.getDwcLatestEraOrHighestErathem())
-        && isInvalid(geologicalContext.getDwcEarliestEraOrLowestErathem())
-        && isInvalid(geologicalContext.getDwcLatestEonOrHighestEonothem())
-        && isInvalid(geologicalContext.getDwcEarliestEonOrLowestEonothem());
+  private boolean isStratigraphyValid(
+      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen digitalSpecimen) {
+    if (digitalSpecimen.getOccurrences() != null && !digitalSpecimen.getOccurrences().isEmpty()
+        && digitalSpecimen.getOccurrences().get(0).getLocation() != null
+        && digitalSpecimen.getOccurrences().get(0).getLocation().getGeologicalContext() != null) {
+      var geologicalContext = digitalSpecimen.getOccurrences().get(0).getLocation()
+          .getGeologicalContext();
+      return isValid(geologicalContext.getDwcBed())
+          || isValid(geologicalContext.getDwcMember())
+          || isValid(geologicalContext.getDwcFormation())
+          || isValid(geologicalContext.getDwcGroup())
+          || isValid(geologicalContext.getDwcLithostratigraphicTerms())
+          || isValid(geologicalContext.getDwcHighestBiostratigraphicZone())
+          || isValid(geologicalContext.getDwcLowestBiostratigraphicZone())
+          || isValid(geologicalContext.getDwcLatestAgeOrHighestStage())
+          || isValid(geologicalContext.getDwcEarliestAgeOrLowestStage())
+          || isValid(geologicalContext.getDwcLatestEpochOrHighestSeries())
+          || isValid(geologicalContext.getDwcEarliestEpochOrLowestSeries())
+          || isValid(geologicalContext.getDwcLatestPeriodOrHighestSystem())
+          || isValid(geologicalContext.getDwcEarliestPeriodOrLowestSystem())
+          || isValid(geologicalContext.getDwcLatestEraOrHighestErathem())
+          || isValid(geologicalContext.getDwcEarliestEraOrLowestErathem())
+          || isValid(geologicalContext.getDwcLatestEonOrHighestEonothem())
+          || isValid(geologicalContext.getDwcEarliestEonOrLowestEonothem());
+    }
+    return false;
   }
 
 

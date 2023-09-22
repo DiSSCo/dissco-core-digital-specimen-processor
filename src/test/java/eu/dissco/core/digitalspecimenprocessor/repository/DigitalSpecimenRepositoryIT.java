@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
-import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.NEW_DIGITAL_SPECIMEN;
+import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGITAL_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
@@ -30,7 +30,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
   @AfterEach
   void destroy() {
-    context.truncate(NEW_DIGITAL_SPECIMEN).execute();
+    context.truncate(DIGITAL_SPECIMEN).execute();
   }
 
   @Test
@@ -87,9 +87,9 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
     // When
     repository.updateLastChecked(List.of(HANDLE));
-    var result = context.select(NEW_DIGITAL_SPECIMEN.LAST_CHECKED)
-        .from(NEW_DIGITAL_SPECIMEN)
-        .where(NEW_DIGITAL_SPECIMEN.ID.eq(HANDLE)).fetchOne(Record1::value1);
+    var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED)
+        .from(DIGITAL_SPECIMEN)
+        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE)).fetchOne(Record1::value1);
 
     // Then
     assertThat(result).isAfter(UPDATED_TIMESTAMP);
@@ -108,8 +108,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     repository.createDigitalSpecimenRecord(records);
 
     // Then
-    var result = context.select(NEW_DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
-        .from(NEW_DIGITAL_SPECIMEN).where(NEW_DIGITAL_SPECIMEN.ID.eq(SECOND_HANDLE))
+    var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
+        .from(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(SECOND_HANDLE))
         .fetchOne(Record1::value1);
     assertThat(result).isEqualTo("TEST_2");
   }

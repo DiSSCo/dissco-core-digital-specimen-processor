@@ -4,11 +4,11 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TOPIC_DISCIPLINE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
@@ -16,15 +16,14 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandl
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
-import eu.dissco.core.digitalspecimenprocessor.service.FdoRecordService;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -39,21 +38,55 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.BDDMockito;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class FdoRecordServiceTest {
 
-  private MockedStatic<Instant> mockedStatic;
   private static final String ORG_NAME = "National Museum of Natural History";
   private static final String REPLACEMENT_ATTRIBUTE = "this is different";
-
-  private FdoRecordService builder;
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
+  private MockedStatic<Instant> mockedStatic;
+  private FdoRecordService builder;
   private MockedStatic<Clock> mockedClock;
 
+  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenDigitalSpecimenAttributesMinimal() {
+    return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
+        .withDwcInstitutionId(ORGANISATION_ID)
+        .withOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL);
+  }
+
+  private static JsonNode givenDigitalSpecimenOriginalAttributesMinimal() {
+    var attributeNode = MAPPER.createObjectNode();
+    attributeNode.put("ods:organisationId", ORGANISATION_ID);
+    return attributeNode;
+  }
+
+  private static JsonNode givenDigitalSpecimenAttributesFull(String typeStatus) {
+    var attributeNode = MAPPER.createObjectNode();
+    attributeNode.put("ods:organisationId", ORGANISATION_ID);
+    attributeNode.put("ods:organisationName", ORG_NAME);
+    attributeNode.put("ods:specimenName", SPECIMEN_NAME);
+    attributeNode.put("ods:topicDiscipline", TOPIC_DISCIPLINE.value());
+    attributeNode.put("ods:physicalSpecimenIdType", "cetaf");
+    attributeNode.put("ods:livingOrPreserved", "Living");
+    if (typeStatus != null && !typeStatus.isEmpty()) {
+      attributeNode.put("dwc:typeStatus", typeStatus);
+    }
+    return attributeNode;
+  }
+
+  private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
+    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, "holotype");
+    return Stream.of(Arguments.of(attributes.withDwcInstitutionId(REPLACEMENT_ATTRIBUTE)),
+        Arguments.of(attributes.withDwcInstitutionName(REPLACEMENT_ATTRIBUTE)),
+        Arguments.of(attributes.withOdsSpecimenName(REPLACEMENT_ATTRIBUTE)),
+        Arguments.of(attributes.withOdsTopicDiscipline(OdsTopicDiscipline.ENVIRONMENT)),
+        Arguments.of(attributes.withOdsLivingOrPreserved(REPLACEMENT_ATTRIBUTE)),
+        Arguments.of(attributes.withOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL)),
+        Arguments.of(attributes.withDwcTypeStatus(REPLACEMENT_ATTRIBUTE)));
+  }
 
   @BeforeEach
   void setup() {
@@ -75,23 +108,7 @@ class FdoRecordServiceTest {
   void testGenRequestMinimal() throws Exception {
     // Given
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
-    var expected = new ArrayList<>(
-        List.of(givenHandleRequestMin()));
-
-    // When
-    var response = builder.buildPostHandleRequest(List.of(specimen));
-
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
-
-  @Test
-  void testGenRequestMinimalNoPhysId() throws Exception {
-    // Given
-    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
-    ((ObjectNode)specimen.attributes()).remove("ods:physicalSpecimenIdType");
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
 
@@ -106,8 +123,8 @@ class FdoRecordServiceTest {
   void testGenRequestMinimalCombined() throws Exception {
     // Given
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
-    ((ObjectNode)specimen.attributes()).put("ods:physicalSpecimenIdType", "combined");
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
+    specimen.attributes().setOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL);
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
 
@@ -121,7 +138,7 @@ class FdoRecordServiceTest {
   @Test
   void testRollbackUpdate() throws Exception {
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenAttributesMinimal());
+        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
     var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen);
     var expected = MAPPER.readTree("""
             {
@@ -147,11 +164,11 @@ class FdoRecordServiceTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"false", "holotype", ""})
+  @ValueSource(strings = {"false", "holotype"})
   void testGenRequestFull(String typeStatus) throws Exception {
     // Given
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesFull(typeStatus),
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, typeStatus),
         givenDigitalSpecimenAttributesFull(typeStatus));
     var expectedJson = getExpectedJson(typeStatus);
     var expected = new ArrayList<>(List.of(expectedJson));
@@ -163,24 +180,20 @@ class FdoRecordServiceTest {
     assertThat(response).isEqualTo(expected);
   }
 
-  private static JsonNode givenDigitalSpecimenAttributesMinimal() {
-    var attributeNode = MAPPER.createObjectNode();
-    attributeNode.put("ods:organisationId", ORGANISATION_ID);
-    return attributeNode;
-  }
+  @Test
+  void testGenRequestFullTypeIsNull() throws Exception {
+    // Given
+    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, null),
+        givenDigitalSpecimenAttributesFull(null));
+    var expectedJson = getExpectedJson(null);
+    var expected = new ArrayList<>(List.of(expectedJson));
 
-  private static JsonNode givenDigitalSpecimenAttributesFull(String typeStatus) {
-    var attributeNode = MAPPER.createObjectNode();
-    attributeNode.put("ods:organisationId", ORGANISATION_ID);
-    attributeNode.put("ods:organisationName", ORG_NAME);
-    attributeNode.put("ods:specimenName", SPECIMEN_NAME);
-    attributeNode.put("ods:topicDiscipline", TOPIC_DISCIPLINE);
-    attributeNode.put("ods:physicalSpecimenIdType", "cetaf");
-    attributeNode.put("ods:livingOrPreserved", "Living");
-    if (!typeStatus.isEmpty()) {
-      attributeNode.put("dwc:typeStatus", typeStatus);
-    }
-    return attributeNode;
+    // When
+    var response = builder.buildPostHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
   }
 
   @Test
@@ -201,7 +214,10 @@ class FdoRecordServiceTest {
 
   @ParameterizedTest
   @MethodSource("digitalSpecimensNeedToBeChanged")
-  void testHandleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen) {
+  void testHandleNeedsUpdate(
+      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen currentAttributes) {
+    var currentDigitalSpecimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, currentAttributes,
+        givenDigitalSpecimenOriginalAttributesMinimal());
     // Then
     assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimen())).isTrue();
   }
@@ -209,10 +225,13 @@ class FdoRecordServiceTest {
   @Test
   void testHandleDoesNotNeedsUpdate() {
     // Given
-    var currentDigitalSpecimen = makeOneFieldUnique("ods:collectingNumber");
+    var currentDigitalSpecimen = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID,
+        null).withDwcCollectionId(REPLACEMENT_ATTRIBUTE);
 
     // Then
-    assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimen())).isFalse();
+    assertThat(builder.handleNeedsUpdate(
+        new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
+            generateSpecimenOriginalData()), givenDigitalSpecimen())).isFalse();
   }
 
   @Test
@@ -227,7 +246,7 @@ class FdoRecordServiceTest {
   @Test
   void testMissingOrganisationId() {
     // Given
-    var attributes = givenAttributes(SPECIMEN_NAME, null);
+    var attributes = givenAttributes(SPECIMEN_NAME, null, "type");
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, "Digital Specimen", attributes,
         MAPPER.createObjectNode());
 
@@ -236,27 +255,11 @@ class FdoRecordServiceTest {
         () -> builder.buildPostHandleRequest(List.of(specimen)));
   }
 
-  private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
-    return Stream.of(Arguments.of(makeOneFieldUnique("ods:organisationId")),
-        Arguments.of(makeOneFieldUnique("ods:organisationName")),
-        Arguments.of(makeOneFieldUnique("ods:specimenName")),
-        Arguments.of(makeOneFieldUnique("ods:topicDiscipline")),
-        Arguments.of(makeOneFieldUnique("ods:physicalSpecimenIdType")),
-        Arguments.of(makeOneFieldUnique("ods:livingOrPreserved")),
-        Arguments.of(makeOneFieldUnique("dwc:typeStatus")));
-  }
-
-  private static DigitalSpecimen makeOneFieldUnique(String field) {
-    ObjectNode attributes = (ObjectNode) givenAttributes(SPECIMEN_NAME, ORGANISATION_ID);
-    attributes.put(field, REPLACEMENT_ATTRIBUTE);
-    return new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA);
-  }
-
   private JsonNode getExpectedJson(String typeStatus) throws Exception {
-    if (typeStatus.equals("holotype")) {
+    if (typeStatus != null && typeStatus.equals("holotype")) {
       return givenHandleRequestFullTypeStatus();
     }
-    if (typeStatus.equals("false")) {
+    if (typeStatus != null && typeStatus.equals("false")) {
       return MAPPER.readTree("""
           {
             "data": {
@@ -268,10 +271,11 @@ class FdoRecordServiceTest {
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "primarySpecimenObjectIdType": "global",
                 "specimenHost": "https://ror.org/0443cwa12",
+                "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",
                 "specimenHostName": "National Museum of Natural History",
+                "topicDiscipline": "Botany",
                 "referentName": "Biota",
-                "topicDiscipline": "Earth Systems",
-                "livingOrPreserved": "living",
+                "livingOrPreserved": "preserved",
                 "markedAsType": false
               }
             }
@@ -289,10 +293,11 @@ class FdoRecordServiceTest {
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "primarySpecimenObjectIdType": "global",
               "specimenHost": "https://ror.org/0443cwa12",
+              "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",
               "specimenHostName": "National Museum of Natural History",
+              "topicDiscipline": "Botany",
               "referentName": "Biota",
-              "topicDiscipline": "Earth Systems",
-              "livingOrPreserved": "living"
+              "livingOrPreserved": "preserved"
             }
           }
         }""");

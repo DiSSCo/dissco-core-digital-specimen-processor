@@ -5,12 +5,10 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.loadResourceFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -33,16 +31,20 @@ import org.springframework.web.reactive.function.client.WebClient;
 @ExtendWith(MockitoExtension.class)
 class HandleComponentTest {
 
+  private static MockWebServer mockHandleServer;
   @Mock
   private TokenAuthenticator tokenAuthenticator;
   private HandleComponent handleComponent;
-
-  private static MockWebServer mockHandleServer;
 
   @BeforeAll
   static void init() throws IOException {
     mockHandleServer = new MockWebServer();
     mockHandleServer.start();
+  }
+
+  @AfterAll
+  static void destroy() throws IOException {
+    mockHandleServer.shutdown();
   }
 
   @BeforeEach
@@ -51,11 +53,6 @@ class HandleComponentTest {
         String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
     handleComponent = new HandleComponent(webClient, tokenAuthenticator);
 
-  }
-
-  @AfterAll
-  static void destroy() throws IOException {
-    mockHandleServer.shutdown();
   }
 
   @Test
@@ -91,7 +88,7 @@ class HandleComponentTest {
   void testBadRequest() throws Exception {
     // Given
     var requestBody = List.of(
-       givenHandleRequestFullTypeStatus());
+        givenHandleRequestFullTypeStatus());
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value())
         .addHeader("Content-Type", "application/json"));
@@ -104,7 +101,7 @@ class HandleComponentTest {
   void testRetriesSuccess() throws Exception {
     // Given
     var requestBody = List.of(
-       givenHandleRequestFullTypeStatus());
+        givenHandleRequestFullTypeStatus());
     var responseBody = givenHandleRequest();
     var expected = givenHandleNameResponse(responseBody);
     int requestCount = mockHandleServer.getRequestCount();
@@ -123,13 +120,13 @@ class HandleComponentTest {
   }
 
   @Test
-  void testRollbackFromPhysId(){
+  void testRollbackFromPhysId() {
     // Then
     assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
   }
 
   @Test
-  void testRollbackFromPhysIdAuthFailed() throws Exception{
+  void testRollbackFromPhysIdAuthFailed() throws Exception {
     // Given
     given(tokenAuthenticator.getToken()).willThrow(PidAuthenticationException.class);
 
@@ -191,7 +188,7 @@ class HandleComponentTest {
   void testRetriesFail() throws Exception {
     // Given
     var requestBody = List.of(
-       givenHandleRequestFullTypeStatus());
+        givenHandleRequestFullTypeStatus());
     int requestCount = mockHandleServer.getRequestCount();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
@@ -208,7 +205,7 @@ class HandleComponentTest {
   void testDataNodeNotArray() throws Exception {
     // Given
     var requestBody = List.of(
-       givenHandleRequestFullTypeStatus());
+        givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.createObjectNode();
     responseBody.put("data", "val");
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
@@ -222,7 +219,7 @@ class HandleComponentTest {
   void testDataMissingId() throws Exception {
     // Given
     var requestBody = List.of(
-       givenHandleRequestFullTypeStatus());
+        givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.readTree("""
         {
           "data": [
@@ -257,7 +254,7 @@ class HandleComponentTest {
   void testDataMissingPhysicalId() throws Exception {
     // Given
     var requestBody = List.of(
-       givenHandleRequestFullTypeStatus());
+        givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.readTree("""
         {
           "data": [
@@ -291,7 +288,7 @@ class HandleComponentTest {
   void testEmptyResponse() throws Exception {
     // Given
     var requestBody = List.of(
-       givenHandleRequestFullTypeStatus());
+        givenHandleRequestFullTypeStatus());
     var responseBody = MAPPER.createObjectNode();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())

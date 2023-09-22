@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -67,7 +68,7 @@ public class ProcessingService {
   }
 
   private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(List<DigitalSpecimenEvent> events) {
-    var uniqueSet = new HashSet<DigitalSpecimenEvent>();
+    var uniqueSet = new LinkedHashSet<DigitalSpecimenEvent>();
     var map = events.stream()
         .collect(Collectors.groupingBy(event -> event.digitalSpecimen().physicalSpecimenId()));
     for (Entry<String, List<DigitalSpecimenEvent>> entry : map.entrySet()) {
@@ -148,7 +149,8 @@ public class ProcessingService {
     gatherDigitalMediaObjectForEqualRecords(currentDigitalSpecimen, events);
   }
 
-  private void gatherDigitalMediaObjectForEqualRecords(List<DigitalSpecimenRecord> currentDigitalSpecimen, List<DigitalSpecimenEvent> events) {
+  private void gatherDigitalMediaObjectForEqualRecords(
+      List<DigitalSpecimenRecord> currentDigitalSpecimen, List<DigitalSpecimenEvent> events) {
     var pidMap = currentDigitalSpecimen.stream().collect(Collectors.toMap(
         digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimen().physicalSpecimenId(),
         DigitalSpecimenRecord::id
@@ -381,7 +383,8 @@ public class ProcessingService {
     });
   }
 
-  private void publishDigitalMediaRecord(List<DigitalMediaObjectEvent> digitalMedia, String digitalSpecimenPid) {
+  private void publishDigitalMediaRecord(List<DigitalMediaObjectEvent> digitalMedia,
+      String digitalSpecimenPid) {
     for (var digitalMediaObjectEvent : digitalMedia) {
       digitalMediaObjectEvent.digitalMediaObject().attributes().getEntityRelationships().add(
           new EntityRelationships()
@@ -397,7 +400,8 @@ public class ProcessingService {
     }
   }
 
-  private void gatherDigitalMediaObjectForUpdatedRecords(Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
+  private void gatherDigitalMediaObjectForUpdatedRecords(
+      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
     digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
       var digitalSpecimenPid = digitalSpecimenRecord.digitalSpecimenRecord().id();
       var digitalMedia = digitalSpecimenRecord.digitalMediaObjectEvents();

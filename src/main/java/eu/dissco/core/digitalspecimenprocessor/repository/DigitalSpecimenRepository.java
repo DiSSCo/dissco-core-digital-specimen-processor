@@ -83,8 +83,10 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
             digitalSpecimenRecord.digitalSpecimen().attributes().getOdsSourceSystem())
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
-        .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now()).set(DIGITAL_SPECIMEN.DATA,
-            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().attributes().toString()))
+        .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
+        .set(DIGITAL_SPECIMEN.DATA,
+            JSONB.valueOf(mapper.valueToTree(digitalSpecimenRecord.digitalSpecimen().attributes())
+                .toString()))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalAttributes().toString()))
         .onConflict(DIGITAL_SPECIMEN.ID).doUpdate()
@@ -103,8 +105,10 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
             digitalSpecimenRecord.digitalSpecimen().attributes().getOdsSourceSystem())
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
-        .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now()).set(DIGITAL_SPECIMEN.DATA,
-            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().attributes().toString()))
+        .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
+        .set(DIGITAL_SPECIMEN.DATA,
+            JSONB.valueOf(mapper.valueToTree(digitalSpecimenRecord.digitalSpecimen().attributes())
+                .toString()))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalAttributes().toString()));
   }
