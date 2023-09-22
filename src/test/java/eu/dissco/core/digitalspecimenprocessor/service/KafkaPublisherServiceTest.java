@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.AAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
@@ -98,5 +99,18 @@ class KafkaPublisherServiceTest {
 
     // Then
     then(kafkaTemplate).should().send("digital-specimen-dlq", rawEvent);
+  }
+
+  @Test
+  void testPublishDigitalMediaObjectEvent() throws JsonProcessingException {
+    // Given
+    var digitalMediaObjectEvent = givenDigitalMediaEventWithRelationship();
+
+    // When
+    service.publishDigitalMediaObject(digitalMediaObjectEvent);
+
+    // Then
+    then(kafkaTemplate).should()
+        .send("digital-media-object", MAPPER.writeValueAsString(digitalMediaObjectEvent));
   }
 }
