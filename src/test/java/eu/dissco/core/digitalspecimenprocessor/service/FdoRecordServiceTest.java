@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import java.time.Clock;
@@ -54,7 +55,8 @@ class FdoRecordServiceTest {
   private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenDigitalSpecimenAttributesMinimal() {
     return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
         .withDwcInstitutionId(ORGANISATION_ID)
-        .withOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL);
+        .withOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL)
+        .withOdsNormalisedPhysicalSpecimenId(PHYSICAL_SPECIMEN_ID);
   }
 
   private static JsonNode givenDigitalSpecimenOriginalAttributesMinimal() {
@@ -63,7 +65,7 @@ class FdoRecordServiceTest {
     return attributeNode;
   }
 
-  private static JsonNode givenDigitalSpecimenAttributesFull(String typeStatus) {
+  private static JsonNode givenDigitalSpecimenAttributesFull(Boolean markedAsType) {
     var attributeNode = MAPPER.createObjectNode();
     attributeNode.put("ods:organisationId", ORGANISATION_ID);
     attributeNode.put("ods:organisationName", ORG_NAME);
@@ -71,21 +73,21 @@ class FdoRecordServiceTest {
     attributeNode.put("ods:topicDiscipline", TOPIC_DISCIPLINE.value());
     attributeNode.put("ods:physicalSpecimenIdType", "cetaf");
     attributeNode.put("ods:livingOrPreserved", "Living");
-    if (typeStatus != null && !typeStatus.isEmpty()) {
-      attributeNode.put("dwc:typeStatus", typeStatus);
+    if (markedAsType != null) {
+      attributeNode.put("ods:markedAsType", markedAsType);
     }
     return attributeNode;
   }
 
   private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
-    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, "holotype");
+    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true);
     return Stream.of(Arguments.of(attributes.withDwcInstitutionId(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withDwcInstitutionName(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withOdsSpecimenName(REPLACEMENT_ATTRIBUTE)),
-        Arguments.of(attributes.withOdsTopicDiscipline(OdsTopicDiscipline.ENVIRONMENT)),
-        Arguments.of(attributes.withOdsLivingOrPreserved(REPLACEMENT_ATTRIBUTE)),
+        Arguments.of(attributes.withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY)),
+        Arguments.of(attributes.withOdsLivingOrPreserved(OdsLivingOrPreserved.LIVING)),
         Arguments.of(attributes.withOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL)),
-        Arguments.of(attributes.withDwcTypeStatus(REPLACEMENT_ATTRIBUTE)));
+        Arguments.of(attributes.withOdsMarkedAsType(false)));
   }
 
   @BeforeEach
@@ -150,12 +152,14 @@ class FdoRecordServiceTest {
                   "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                   "issuedForAgent": "https://ror.org/0566bfb96",
                   "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                   "primarySpecimenObjectIdType":"local",
+                  "normalisedSpecimenObjectId":"https://geocollections.info/specimen/23602",
+                  "primarySpecimenObjectIdType":"local",
                   "specimenHost": "https://ror.org/0443cwa12"
                 }
               }
             }
         """);
+
     // When
     var result = builder.buildRollbackUpdateRequest(List.of(specimenRecord));
 
@@ -164,13 +168,13 @@ class FdoRecordServiceTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"false", "holotype"})
-  void testGenRequestFull(String typeStatus) throws Exception {
+  @ValueSource(booleans = {true, false})
+  void testGenRequestFull(boolean markedAsType) throws Exception {
     // Given
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, typeStatus),
-        givenDigitalSpecimenAttributesFull(typeStatus));
-    var expectedJson = getExpectedJson(typeStatus);
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
+        givenDigitalSpecimenAttributesFull(markedAsType));
+    var expectedJson = getExpectedJson(markedAsType);
     var expected = new ArrayList<>(List.of(expectedJson));
 
     // When
@@ -246,7 +250,7 @@ class FdoRecordServiceTest {
   @Test
   void testMissingOrganisationId() {
     // Given
-    var attributes = givenAttributes(SPECIMEN_NAME, null, "type");
+    var attributes = givenAttributes(SPECIMEN_NAME, null, true);
     var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, "Digital Specimen", attributes,
         MAPPER.createObjectNode());
 
@@ -255,11 +259,11 @@ class FdoRecordServiceTest {
         () -> builder.buildPostHandleRequest(List.of(specimen)));
   }
 
-  private JsonNode getExpectedJson(String typeStatus) throws Exception {
-    if (typeStatus != null && typeStatus.equals("holotype")) {
+  private JsonNode getExpectedJson(Boolean markedAsType) throws Exception {
+    if (markedAsType != null && markedAsType) {
       return givenHandleRequestFullTypeStatus();
     }
-    if (typeStatus != null && typeStatus.equals("false")) {
+    if (markedAsType != null && !markedAsType) {
       return MAPPER.readTree("""
           {
             "data": {
@@ -269,6 +273,7 @@ class FdoRecordServiceTest {
                 "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                "normalisedSpecimenObjectId":"https://geocollections.info/specimen/23602",
                 "primarySpecimenObjectIdType": "global",
                 "specimenHost": "https://ror.org/0443cwa12",
                 "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",
@@ -291,6 +296,7 @@ class FdoRecordServiceTest {
               "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+              "normalisedSpecimenObjectId":"https://geocollections.info/specimen/23602",
               "primarySpecimenObjectIdType": "global",
               "specimenHost": "https://ror.org/0443cwa12",
               "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",

@@ -15,8 +15,8 @@ public class MidsService {
 
   private static final List<OdsTopicDiscipline> PALEO_GEO_DISCIPLINES = List.of(
       OdsTopicDiscipline.PALAEONTOLOGY,
-      OdsTopicDiscipline.ASTROGEOLOGY, OdsTopicDiscipline.EARTH_GEOLOGY,
-      OdsTopicDiscipline.ENVIRONMENT);
+      OdsTopicDiscipline.ASTROGEOLOGY, OdsTopicDiscipline.GEOLOGY,
+      OdsTopicDiscipline.ECOLOGY);
 
   private static boolean isValid(String value) {
     return value != null && !value.trim().isEmpty() && !value.equalsIgnoreCase("null");
@@ -57,7 +57,7 @@ public class MidsService {
 
   private boolean compliesToMidsTwoBio(
       eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
-    return isValid(attributes.getDwcTypeStatus())
+    return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
         && (attributes.getOdsHasMedia() != null && attributes.getOdsHasMedia())
         && isQualitativeLocationValid(attributes)
         && isQuantitativeLocationInvalid(attributes)
@@ -76,7 +76,7 @@ public class MidsService {
 
   private boolean compliesToMidsTwoPaleoBio(
       eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
-    return isValid(attributes.getDwcTypeStatus())
+    return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
         && isStratigraphyValid(attributes)
         && isQualitativeLocationValid(attributes)
         && isQuantitativeLocationInvalid(attributes);

@@ -37,9 +37,13 @@
       "minimum": 0,
       "maximum": 3
     },
-    "ods:physicalSpecimenId": {
+    "ods:normalisedPhysicalSpecimenId": {
       "type": "string",
       "description": "The physical specimen identifier of the object. When locally unique this is a combination between source-system-id and the local identifier"
+    },
+    "ods:physicalSpecimenId": {
+      "type": "string",
+      "description": "The physical specimen identifier of the object. Taken over as-is"
     },
     "ods:physicalSpecimenIdType": {
       "type": "string",
@@ -89,18 +93,27 @@
         "Anthropology",
         "Botany",
         "Astrogeology",
-        "Earth Geology",
+        "Geology",
         "Microbiology",
         "Palaeontology",
         "Zoology",
-        "Environment",
-        "Other Bio/Geodiversity",
+        "Ecology",
+        "Other Biodiversity",
+        "Other Geodiversity",
         "Unclassified"
       ],
       "example": [
         "Botany"
       ],
       "$comment": "Do we need to add 'UNKNOWN'?"
+    },
+    "ods:markedAsType": {
+      "type": "boolean",
+      "description": "The specimen is marked as a type specimen"
+    },
+    "ods:hasMedia": {
+      "type": "boolean",
+      "description": "Indicates if there are any media objects attached to this specimen"
     },
     "ods:specimenName": {
       "type": "string",
@@ -109,18 +122,6 @@
         "Roptrocerus typographi (Györfi, 1952)"
       ]
     },
-    "ods:hasMedia": {
-      "type": "boolean",
-      "description": "Indicates if there are any media objects attached to this specimen"
-    },
-    "dwc:typeStatus": {
-      "type": "string",
-      "description": "The typeStatus of the accepted identification https://rs.tdwg.org/dwc/terms/typeStatus",
-      "example": [
-        "holotype"
-      ],
-      "$comment": "Unclear if we can make this an enumeration, which values?"
-    },
     "ods:sourceSystem": {
       "type": "string",
       "description": "The handle to the source system object which retrieved the data from the CMS",
@@ -128,7 +129,11 @@
     },
     "ods:livingOrPreserved": {
       "type": "string",
-      "description": "Whether the specimen is living or preserved"
+      "description": "Whether the specimen is living or preserved",
+      "enum": [
+        "Living",
+        "Preserved"
+      ]
     },
     "dcterms:license": {
       "type": "string",

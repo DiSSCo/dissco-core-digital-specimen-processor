@@ -84,9 +84,7 @@ public class DigitalSpecimenRepository {
             digitalSpecimenRecord.digitalSpecimen().attributes().getOdsSourceSystem())
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .set(DIGITAL_SPECIMEN.DATA,
-            JSONB.valueOf(mapper.valueToTree(digitalSpecimenRecord.digitalSpecimen().attributes())
-                .toString()))
+        .set(DIGITAL_SPECIMEN.DATA, mapToJsonB(digitalSpecimenRecord))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalAttributes().toString()))
         .onConflict(DIGITAL_SPECIMEN.ID).doUpdate()
@@ -107,10 +105,14 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,
-            JSONB.valueOf(mapper.valueToTree(digitalSpecimenRecord.digitalSpecimen().attributes())
-                .toString()))
+            mapToJsonB(digitalSpecimenRecord))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(digitalSpecimenRecord.digitalSpecimen().originalAttributes().toString()));
+  }
+
+  private JSONB mapToJsonB(DigitalSpecimenRecord digitalSpecimenRecord) {
+    return JSONB.valueOf(mapper.valueToTree(digitalSpecimenRecord.digitalSpecimen().attributes())
+        .toString().replace("\\u0000",""));
   }
 
   public int updateLastChecked(List<String> currentDigitalSpecimen) {

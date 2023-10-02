@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 
-public record DigitalMediaObject(
+public record DigitalMediaObjectWithoutDoi(
     @JsonProperty("dcterms:type")
     String type,
-    @JsonProperty("ods:digitalSpecimenId")
-    String digitalSpecimenId,
+    @JsonProperty("ods:physicalSpecimenId")
+    String physicalSpecimenId,
     @JsonProperty("ods:attributes")
     eu.dissco.core.digitalspecimenprocessor.schema.DigitalEntity attributes,
     @JsonProperty("ods:originalAttributes")

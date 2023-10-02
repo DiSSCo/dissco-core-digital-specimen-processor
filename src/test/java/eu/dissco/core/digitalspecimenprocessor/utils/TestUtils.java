@@ -5,26 +5,23 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObject;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEventWithoutDoi;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectWithoutDoi;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalEntity;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationships;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.core.io.ClassPathResource;
 
 public class TestUtils {
 
-  public static final String GENERATED_HANDLE = "20.5000.1025/YYY-YYY-YYY";
-  public static final byte[] LOCAL_OBJECT_ID = " 002b51e5-b8e1-4b2b-a841-86c34dca9ef6:040ck2b86".getBytes(
-      StandardCharsets.UTF_8);
   public static ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
   public static String HANDLE = "20.5000.1025/V1Z-176-LL4";
   public static String SECOND_HANDLE = "20.5000.1025/XXX-XXX-XXX";
@@ -44,7 +41,6 @@ public class TestUtils {
   public static String PHYSICAL_SPECIMEN_COLLECTION = null;
   public static String SOURCE_SYSTEM_ID = "20.5000.1025/MN0-5XP-FFD";
   public static JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
-  public static String DWCA_ID = null;
   public static OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
 
   public static JsonNode generateSpecimenOriginalData() {
@@ -161,10 +157,10 @@ public class TestUtils {
     );
   }
 
-  private static DigitalMediaObjectEvent givenDigitalMediaEvent() {
-    return new DigitalMediaObjectEvent(
+  private static DigitalMediaObjectEventWithoutDoi givenDigitalMediaEvent() {
+    return new DigitalMediaObjectEventWithoutDoi(
         List.of("image-metadata"),
-        new DigitalMediaObject(
+        new DigitalMediaObjectWithoutDoi(
             "StillImage",
             PHYSICAL_SPECIMEN_ID,
             new DigitalEntity().withAcAccessUri("https://an-image.org"),
@@ -174,12 +170,17 @@ public class TestUtils {
   }
 
   public static DigitalMediaObjectEvent givenDigitalMediaEventWithRelationship() {
-    var digitalMediaEvent = givenDigitalMediaEvent();
-    digitalMediaEvent.digitalMediaObject().attributes().setEntityRelationships(
-        List.of(new EntityRelationships().withEntityRelationshipType("hasDigitalSpecimen")
-            .withObjectEntityIri("https://doi.org/20.5000.1025/V1Z-176-LL4"))
-    );
-    return digitalMediaEvent;
+    return new DigitalMediaObjectEvent(
+        List.of("image-metadata"),
+        new DigitalMediaObject(
+            "StillImage",
+            HANDLE,
+            new DigitalEntity().withAcAccessUri("https://an-image.org").withEntityRelationships(
+                List.of(new EntityRelationships().withEntityRelationshipType("hasDigitalSpecimen")
+                    .withObjectEntityIri("https://doi.org/20.5000.1025/V1Z-176-LL4"))
+            ),
+            MAPPER.createObjectNode()
+        ));
   }
 
   public static DigitalSpecimen givenDigitalSpecimen() {
@@ -191,25 +192,10 @@ public class TestUtils {
     return new DigitalSpecimen(
         physicalSpecimenId,
         TYPE,
-        givenAttributes(specimenName, organisation, "holotype"),
+        givenAttributes(specimenName, organisation, true),
         ORIGINAL_DATA
     );
   }
-
-//  public static JsonNode givenAttributes(String specimenName, String organisation) {
-//    var attributes = new ObjectMapper().createObjectNode();
-//    attributes.put("ods:physicalSpecimenIdType", PHYSICAL_SPECIMEN_TYPE);
-//    attributes.put("ods:organisationId", organisation);
-//    attributes.put("ods:specimenName", specimenName);
-//    attributes.put("ods:datasetId", DATASET_ID);
-//    attributes.put("ods:physicalSpecimenCollection", PHYSICAL_SPECIMEN_COLLECTION);
-//    attributes.put("ods:sourceSystemId", SOURCE_SYSTEM_ID);
-//    attributes.put("dwca:id", DWCA_ID);
-//    attributes.put("dcterms:license", "http://creativecommons.org/licenses/by-nc/4.0/");
-//    attributes.put("ods:objectType", "");
-//    attributes.put("ods:modified", "2017-09-26T12:27:21.000+00:00");
-//    return attributes;
-//  }
 
   public static Map<String, String> givenHandleComponentResponse() {
     return givenHandleComponentResponse(List.of(PHYSICAL_SPECIMEN_ID), List.of(HANDLE));
@@ -223,11 +209,6 @@ public class TestUtils {
       pidMap.put(physIds.get(i), handles.get(i));
     }
     return pidMap;
-  }
-
-  public static String loadResourceFile(String fileName) throws IOException {
-    return new String(new ClassPathResource(fileName).getInputStream()
-        .readAllBytes(), StandardCharsets.UTF_8);
   }
 
   public static Map<String, String> givenHandleComponentResponse(
@@ -249,6 +230,7 @@ public class TestUtils {
               "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+              "normalisedSpecimenObjectId":"https://geocollections.info/specimen/23602",
               "primarySpecimenObjectIdType": "global",
               "specimenHost": "https://ror.org/0443cwa12",
               "sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
@@ -272,6 +254,7 @@ public class TestUtils {
               "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+              "normalisedSpecimenObjectId": "https://geocollections.info/specimen/23602",
               "primarySpecimenObjectIdType":"local",
               "specimenHost": "https://ror.org/0443cwa12"
             }
@@ -308,19 +291,20 @@ public class TestUtils {
   }
 
   public static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenAttributes(
-      String specimenName, String organisation, String type) {
+      String specimenName, String organisation, Boolean markedAsType) {
     return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
         .withDwcInstitutionId(organisation)
         .withDwcInstitutionName("National Museum of Natural History")
         .withOdsPhysicalSpecimenIdType(PHYSICAL_SPECIMEN_TYPE)
+        .withOdsNormalisedPhysicalSpecimenId(PHYSICAL_SPECIMEN_ID)
         .withOdsSpecimenName(specimenName)
         .withOdsTopicDiscipline(TOPIC_DISCIPLINE)
         .withOdsSourceSystem(SOURCE_SYSTEM_ID)
-        .withOdsLivingOrPreserved("Preserved")
+        .withOdsLivingOrPreserved(OdsLivingOrPreserved.PRESERVED)
         .withDctermsLicense("http://creativecommons.org/licenses/by-nc/4.0/")
         .withDwcCollectionId(PHYSICAL_SPECIMEN_COLLECTION)
         .withDwcDatasetName(DATASET_ID)
-        .withDwcTypeStatus(type)
+        .withOdsMarkedAsType(markedAsType)
         .withDwcPreparations("")
         .withDctermsModified("2017-09-26T12:27:21.000+00:00");
   }

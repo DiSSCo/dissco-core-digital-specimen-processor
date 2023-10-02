@@ -17,10 +17,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,9 +26,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class FdoRecordService {
-
-  private static final Set<String> NOT_TYPE_STATUS = new HashSet<>(
-      Arrays.asList("false", "specimen", "type", ""));
 
   private final ObjectMapper mapper;
 
@@ -103,6 +97,8 @@ public class FdoRecordService {
     // Mandatory
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
         specimen.physicalSpecimenId());
+    attributes.put(FdoProfileAttributes.NORMALISED_SPECIMEN_OBJECT_ID.getAttribute(),
+        specimen.attributes().getOdsNormalisedPhysicalSpecimenId());
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
         specimen.attributes().getOdsPhysicalSpecimenIdType().value().toLowerCase());
     var organisationId = specimen.attributes().getDwcInstitutionId();
@@ -137,11 +133,10 @@ public class FdoRecordService {
     }
     if (specimen.attributes().getOdsLivingOrPreserved() != null) {
       attributes.put(LIVING_OR_PRESERVED.getAttribute(),
-          specimen.attributes().getOdsLivingOrPreserved().toLowerCase());
+          specimen.attributes().getOdsLivingOrPreserved().value().toLowerCase());
     }
-    var typeStatus = specimen.attributes().getDwcTypeStatus();
-    if (typeStatus != null) {
-      attributes.put(MARKED_AS_TYPE.getAttribute(), !NOT_TYPE_STATUS.contains(typeStatus));
+    if (specimen.attributes().getOdsMarkedAsType() != null) {
+      attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsMarkedAsType());
     }
   }
 
@@ -151,6 +146,8 @@ public class FdoRecordService {
     var attributes = digitalSpecimen.attributes();
     return isEqualString(currentDigitalSpecimen.physicalSpecimenId(),
         digitalSpecimen.physicalSpecimenId())
+        || isEqualString(currentDigitalSpecimen.attributes().getOdsNormalisedPhysicalSpecimenId(),
+        digitalSpecimen.attributes().getOdsNormalisedPhysicalSpecimenId())
         || isEqualString(currentAttributes.getDwcInstitutionId(), attributes.getDwcInstitutionId())
         || isEqualString(currentAttributes.getDwcInstitutionName(),
         attributes.getDwcInstitutionName())
@@ -159,9 +156,10 @@ public class FdoRecordService {
         || (currentAttributes.getOdsPhysicalSpecimenIdType() != null
         && !currentAttributes.getOdsPhysicalSpecimenIdType()
         .equals(attributes.getOdsPhysicalSpecimenIdType()))
-        || isEqualString(currentAttributes.getOdsLivingOrPreserved(),
-        attributes.getOdsLivingOrPreserved())
+        || isEqualString(currentAttributes.getOdsLivingOrPreserved().value(),
+        attributes.getOdsLivingOrPreserved().value())
         || isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
-        || isEqualString(currentAttributes.getDwcTypeStatus(), attributes.getDwcTypeStatus());
+        || (currentAttributes.getOdsMarkedAsType() != null
+        && !currentAttributes.getOdsMarkedAsType().equals(attributes.getOdsMarkedAsType()));
   }
 }

@@ -86,6 +86,7 @@ class KafkaConsumerServiceTest {
               "ods:physicalSpecimenIdType": "GLOBAL",
               "dwc:institutionId": "https://ror.org/0443cwa12",
               "dwc:institutionName": "National Museum of Natural History",
+              "ods:normalisedPhysicalSpecimenId": "https://geocollections.info/specimen/23602",
               "ods:specimenName": "Biota",
               "dwc:datasetName": null,
               "dwc:collectionId": null,
@@ -94,7 +95,7 @@ class KafkaConsumerServiceTest {
               "dwc:preparations": "",
               "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
               "ods:topicDiscipline": "Botany",
-              "dwc:typeStatus": "holotype",
+              "ods:markedAsType": true,
               "ods:livingOrPreserved": "Preserved"
             },
             "ods:originalAttributes": {

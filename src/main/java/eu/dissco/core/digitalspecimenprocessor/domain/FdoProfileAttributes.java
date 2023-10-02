@@ -11,6 +11,7 @@ public enum FdoProfileAttributes {
   SPECIMEN_HOST_NAME("specimenHostName"),
   PRIMARY_SPECIMEN_OBJECT_ID("primarySpecimenObjectId"),
   PRIMARY_SPECIMEN_OBJECT_ID_TYPE("primarySpecimenObjectIdType"),
+  NORMALISED_SPECIMEN_OBJECT_ID("normalisedSpecimenObjectId"),
   TOPIC_DISCIPLINE("topicDiscipline"),
   LIVING_OR_PRESERVED("livingOrPreserved"),
   MARKED_AS_TYPE("markedAsType"),
@@ -18,12 +19,12 @@ public enum FdoProfileAttributes {
 
   private final String attribute;
 
-  public String getAttribute() {
-    return this.attribute;
+  FdoProfileAttributes(String attribute) {
+    this.attribute = attribute;
   }
 
-  private FdoProfileAttributes(String attribute) {
-    this.attribute = attribute;
+  public String getAttribute() {
+    return this.attribute;
   }
 
 }

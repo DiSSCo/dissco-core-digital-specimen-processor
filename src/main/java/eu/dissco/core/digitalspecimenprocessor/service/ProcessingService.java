@@ -4,7 +4,9 @@ import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.util.Pair;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObject;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEventWithoutDoi;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -374,7 +376,7 @@ public class ProcessingService {
   }
 
   private void gatherDigitalMediaObjectForNewRecords(
-      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEvent>>> digitalSpecimenRecords) {
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEventWithoutDoi>>> digitalSpecimenRecords) {
     log.info("Publishing digital media object events for processing");
     digitalSpecimenRecords.forEach((key, value) -> {
       var digitalSpecimenPid = key.id();
@@ -383,13 +385,21 @@ public class ProcessingService {
     });
   }
 
-  private void publishDigitalMediaRecord(List<DigitalMediaObjectEvent> digitalMedia,
+  private void publishDigitalMediaRecord(List<DigitalMediaObjectEventWithoutDoi> digitalMedia,
       String digitalSpecimenPid) {
-    for (var digitalMediaObjectEvent : digitalMedia) {
-      digitalMediaObjectEvent.digitalMediaObject().attributes().getEntityRelationships().add(
+    for (var digitalMediaObjectEventWithoutDoi : digitalMedia) {
+      var attributes = digitalMediaObjectEventWithoutDoi.digitalMediaObject().attributes();
+      attributes.getEntityRelationships().add(
           new EntityRelationships()
               .withEntityRelationshipType("hasDigitalSpecimen")
               .withObjectEntityIri("https://doi.org/" + digitalSpecimenPid));
+      var digitalMediaObjectEvent = new DigitalMediaObjectEvent(
+          digitalMediaObjectEventWithoutDoi.enrichmentList(),
+          new DigitalMediaObject(digitalMediaObjectEventWithoutDoi.digitalMediaObject().type(),
+              digitalSpecimenPid,
+              attributes,
+              digitalMediaObjectEventWithoutDoi.digitalMediaObject().originalAttributes())
+      );
       try {
         kafkaService.publishDigitalMediaObject(digitalMediaObjectEvent);
       } catch (JsonProcessingException e) {
@@ -438,7 +448,7 @@ public class ProcessingService {
   }
 
   private void handleSuccessfulElasticInsert(
-      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEvent>>> digitalSpecimenRecords) {
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEventWithoutDoi>>> digitalSpecimenRecords) {
     log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
     List<DigitalSpecimenRecord> rollbackRecords = new ArrayList<>();
     for (var entry : digitalSpecimenRecords.entrySet()) {
@@ -454,7 +464,7 @@ public class ProcessingService {
   }
 
   private void handlePartiallyFailedElasticInsert(
-      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEvent>>> digitalSpecimenRecords,
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaObjectEventWithoutDoi>>> digitalSpecimenRecords,
       BulkResponse bulkResponse) {
     var digitalSpecimenMap = digitalSpecimenRecords.keySet().stream()
         .collect(Collectors.toMap(DigitalSpecimenRecord::id, Function.identity()));
@@ -484,7 +494,7 @@ public class ProcessingService {
   }
 
   private boolean publishEvents(DigitalSpecimenRecord key,
-      Pair<List<String>, List<DigitalMediaObjectEvent>> additionalInfo) {
+      Pair<List<String>, List<DigitalMediaObjectEventWithoutDoi>> additionalInfo) {
     try {
       kafkaService.publishCreateEvent(key);
     } catch (JsonProcessingException e) {
@@ -505,12 +515,13 @@ public class ProcessingService {
   }
 
   private void rollbackNewSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
-      Pair<List<String>, List<DigitalMediaObjectEvent>> additionalInfo) {
+      Pair<List<String>, List<DigitalMediaObjectEventWithoutDoi>> additionalInfo) {
     rollbackNewSpecimen(digitalSpecimenRecord, additionalInfo, false);
   }
 
   private void rollbackNewSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
-      Pair<List<String>, List<DigitalMediaObjectEvent>> additionalInfo, boolean elasticRollback) {
+      Pair<List<String>, List<DigitalMediaObjectEventWithoutDoi>> additionalInfo,
+      boolean elasticRollback) {
     if (elasticRollback) {
       try {
         elasticRepository.rollbackSpecimen(digitalSpecimenRecord);

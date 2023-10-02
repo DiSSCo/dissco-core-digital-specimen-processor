@@ -115,6 +115,22 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
+  void testCreateWithInvalidUnicode() {
+    // Given
+    var ds = givenDigitalSpecimenRecord();
+    ds.digitalSpecimen().attributes().setDwcCollectionCode("\u0000");
+
+    // When
+    repository.createDigitalSpecimenRecord(List.of(ds));
+
+    // Then
+    var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
+        .from(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+        .fetchOne(Record1::value1);
+    assertThat(result).isEqualTo(PHYSICAL_SPECIMEN_ID);
+  }
+
+  @Test
   void testRollbackSpecimen() throws DisscoRepositoryException {
     // Given
     repository.createDigitalSpecimenRecord(

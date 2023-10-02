@@ -61,7 +61,7 @@ class MidsServiceTest {
 
   private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenFullPaleoSpecimen() {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
-        .withDwcTypeStatus("holotype")
+        .withOdsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
         .withOccurrences(List.of(new Occurrences().withLocation(
             new Location()
@@ -78,7 +78,7 @@ class MidsServiceTest {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
         .withDwcRecordedBy("sam Leeflang")
-        .withDwcTypeStatus("holotype")
+        .withOdsMarkedAsType(true)
         .withOccurrences(List.of(
             new Occurrences()
                 .withDwcEventDate("22-09-2023")
@@ -100,14 +100,15 @@ class MidsServiceTest {
   private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenMissingCountry() {
     return baseDigitalSpecimen()
         .withDwcPreparations("single specimen")
-        .withDwcTypeStatus("holotype")
+        .withOdsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
         .withOccurrences(List.of(new Occurrences().withLocation(
             new Location()
                 .withGeoreference(new Georeference()
                     .withDwcDecimalLatitude(59.465625)
                     .withDwcDecimalLongitude(25.059035))
-                .withGeologicalContext(new GeologicalContext().withDwcEarliestEonOrLowestEonothem("Archean")))));
+                .withGeologicalContext(
+                    new GeologicalContext().withDwcEarliestEonOrLowestEonothem("Archean")))));
   }
 
   private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenPreparationValue(
@@ -130,7 +131,7 @@ class MidsServiceTest {
   private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenMissingLongitude() {
     return baseDigitalSpecimen()
         .withDwcPreparations("single specimen")
-        .withDwcTypeStatus("holotype")
+        .withOdsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
         .withOccurrences(List.of(new Occurrences().withLocation(
             new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")

@@ -21,7 +21,7 @@
     "agentName": {
       "type": "string",
       "examples": [
-        "John Smits"
+        "John Smith"
       ]
     },
     "agentRoleBegan": {
