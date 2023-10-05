@@ -11,8 +11,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
@@ -33,7 +33,7 @@ public class FdoRecordService {
     return currentValue != null && !currentValue.equals(newValue);
   }
 
-  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimen> digitalSpecimens)
+  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimenWrapper> digitalSpecimens)
       throws PidCreationException {
     List<JsonNode> requestBody = new ArrayList<>();
     for (var specimen : digitalSpecimens) {
@@ -61,8 +61,7 @@ public class FdoRecordService {
     return mapper.createObjectNode().set("data", dataArray);
   }
 
-  private JsonNode buildSinglePostHandleRequest(DigitalSpecimen specimen)
-      throws PidCreationException {
+  private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
@@ -72,19 +71,18 @@ public class FdoRecordService {
     return request;
   }
 
-  private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen)
-      throws PidCreationException {
+  private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
-    var attributes = genRequestAttributes(specimen.digitalSpecimen());
+    var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
     data.put("id", specimen.id());
     data.set("attributes", attributes);
     request.set("data", data);
     return request;
   }
 
-  private JsonNode genRequestAttributes(DigitalSpecimen specimen) throws PidCreationException {
+  private JsonNode genRequestAttributes(DigitalSpecimenWrapper specimen) {
     var attributes = mapper.createObjectNode();
     // Defaults
     attributes.put(FdoProfileAttributes.FDO_PROFILE.getAttribute(),
@@ -101,21 +99,14 @@ public class FdoRecordService {
         specimen.attributes().getOdsNormalisedPhysicalSpecimenId());
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
         specimen.attributes().getOdsPhysicalSpecimenIdType().value().toLowerCase());
-    var organisationId = specimen.attributes().getDwcInstitutionId();
-    if (organisationId != null) {
-      attributes.put(SPECIMEN_HOST.getAttribute(), organisationId);
-    } else {
-      throw new PidCreationException(
-          "Digital Specimen missing ods:organisationId. Unable to create PID. Check specimen"
-              + specimen.physicalSpecimenId());
-    }
+    attributes.put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getDwcInstitutionId());
 
     addOptionalAttributes(specimen, attributes);
 
     return attributes;
   }
 
-  private void addOptionalAttributes(DigitalSpecimen specimen, ObjectNode attributes) {
+  private void addOptionalAttributes(DigitalSpecimenWrapper specimen, ObjectNode attributes) {
     if (specimen.attributes().getOdsSourceSystem() != null) {
       attributes.put(FdoProfileAttributes.SOURCE_SYSTEM_ID.getAttribute(),
           specimen.attributes().getOdsSourceSystem());
@@ -140,14 +131,15 @@ public class FdoRecordService {
     }
   }
 
-  public boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
-      DigitalSpecimen digitalSpecimen) {
-    var currentAttributes = currentDigitalSpecimen.attributes();
-    var attributes = digitalSpecimen.attributes();
-    return isEqualString(currentDigitalSpecimen.physicalSpecimenId(),
-        digitalSpecimen.physicalSpecimenId())
-        || isEqualString(currentDigitalSpecimen.attributes().getOdsNormalisedPhysicalSpecimenId(),
-        digitalSpecimen.attributes().getOdsNormalisedPhysicalSpecimenId())
+  public boolean handleNeedsUpdate(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+      DigitalSpecimenWrapper digitalSpecimenWrapper) {
+    var currentAttributes = currentDigitalSpecimenWrapper.attributes();
+    var attributes = digitalSpecimenWrapper.attributes();
+    return isEqualString(currentDigitalSpecimenWrapper.physicalSpecimenId(),
+        digitalSpecimenWrapper.physicalSpecimenId())
+        || isEqualString(
+        currentDigitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenId(),
+        digitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenId())
         || isEqualString(currentAttributes.getDwcInstitutionId(), attributes.getDwcInstitutionId())
         || isEqualString(currentAttributes.getDwcInstitutionName(),
         attributes.getDwcInstitutionName())

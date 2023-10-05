@@ -2,7 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.controller;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
@@ -38,7 +38,7 @@ class DigitalSpecimenControllerTest {
     var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
     given(processingService.handleMessages(
         List.of(digitalSpecimenEvent))).willReturn(
-        List.of(new DigitalSpecimenRecord(HANDLE, 0, 1, CREATED, givenDigitalSpecimen())));
+        List.of(new DigitalSpecimenRecord(HANDLE, 0, 1, CREATED, givenDigitalSpecimenWrapper())));
 
     // When
     var result = controller.upsertDigitalSpecimen(digitalSpecimenEvent);

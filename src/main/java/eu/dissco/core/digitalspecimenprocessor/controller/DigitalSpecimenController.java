@@ -27,10 +27,10 @@ public class DigitalSpecimenController {
 
   private final ProcessingService processingService;
 
-  @PostMapping(value = "new", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
   DigitalSpecimenEvent event) throws NoChangesFoundException {
-    log.info("Received digitalSpecimen upsert: {}", event);
+    log.info("Received digitalSpecimenWrapper upsert: {}", event);
     var result = processingService.handleMessages(List.of(event));
     if (result.isEmpty()) {
       throw new NoChangesFoundException("No changes found for specimen");

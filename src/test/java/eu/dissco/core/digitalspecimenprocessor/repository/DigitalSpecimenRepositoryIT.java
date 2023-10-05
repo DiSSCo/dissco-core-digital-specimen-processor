@@ -118,7 +118,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testCreateWithInvalidUnicode() {
     // Given
     var ds = givenDigitalSpecimenRecord();
-    ds.digitalSpecimen().attributes().setDwcCollectionCode("\u0000");
+    ds.digitalSpecimenWrapper().attributes().setDwcCollectionCode("\u0000");
 
     // When
     repository.createDigitalSpecimenRecord(List.of(ds));

@@ -4,18 +4,19 @@ import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.util.Pair;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObject;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEventWithoutDoi;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationships;
@@ -48,6 +49,7 @@ public class ProcessingService {
   private final KafkaPublisherService kafkaService;
   private final MidsService midsService;
   private final HandleComponent handleComponent;
+  private final ApplicationProperties applicationProperties;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -72,7 +74,8 @@ public class ProcessingService {
   private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(List<DigitalSpecimenEvent> events) {
     var uniqueSet = new LinkedHashSet<DigitalSpecimenEvent>();
     var map = events.stream()
-        .collect(Collectors.groupingBy(event -> event.digitalSpecimen().physicalSpecimenId()));
+        .collect(
+            Collectors.groupingBy(event -> event.digitalSpecimenWrapper().physicalSpecimenId()));
     for (Entry<String, List<DigitalSpecimenEvent>> entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicates in batch for id {}", entry.getValue().size(), entry.getKey());
@@ -98,14 +101,16 @@ public class ProcessingService {
       var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
 
       for (DigitalSpecimenEvent event : events) {
-        var digitalSpecimen = event.digitalSpecimen();
-        log.debug("ds: {}", digitalSpecimen);
-        if (!currentSpecimens.containsKey(digitalSpecimen.physicalSpecimenId())) {
-          log.debug("Specimen with id: {} is completely new", digitalSpecimen.physicalSpecimenId());
+        var digitalSpecimenWrapper = event.digitalSpecimenWrapper();
+        log.debug("ds: {}", digitalSpecimenWrapper);
+        if (!currentSpecimens.containsKey(digitalSpecimenWrapper.physicalSpecimenId())) {
+          log.debug("Specimen with id: {} is completely new",
+              digitalSpecimenWrapper.physicalSpecimenId());
           newSpecimens.add(event);
         } else {
-          var currentDigitalSpecimen = currentSpecimens.get(digitalSpecimen.physicalSpecimenId());
-          if (currentDigitalSpecimen.digitalSpecimen().equals(digitalSpecimen)) {
+          var currentDigitalSpecimen = currentSpecimens.get(
+              digitalSpecimenWrapper.physicalSpecimenId());
+          if (currentDigitalSpecimen.digitalSpecimenWrapper().equals(digitalSpecimenWrapper)) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
             equalSpecimens.add(currentDigitalSpecimen);
@@ -135,10 +140,10 @@ public class ProcessingService {
   private Map<String, DigitalSpecimenRecord> getCurrentSpecimen(Set<DigitalSpecimenEvent> events)
       throws DisscoRepositoryException {
     return repository.getDigitalSpecimens(
-            events.stream().map(event -> event.digitalSpecimen().physicalSpecimenId()).toList())
+            events.stream().map(event -> event.digitalSpecimenWrapper().physicalSpecimenId()).toList())
         .stream().collect(
             Collectors.toMap(
-                specimenRecord -> specimenRecord.digitalSpecimen().physicalSpecimenId(),
+                specimenRecord -> specimenRecord.digitalSpecimenWrapper().physicalSpecimenId(),
                 Function.identity()));
   }
 
@@ -146,7 +151,7 @@ public class ProcessingService {
       List<DigitalSpecimenEvent> events) {
     var currentIds = currentDigitalSpecimen.stream().map(DigitalSpecimenRecord::id).toList();
     repository.updateLastChecked(currentIds);
-    log.info("Successfully updated lastChecked for {} existing digitalSpecimen",
+    log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
         currentDigitalSpecimen.size());
     gatherDigitalMediaObjectForEqualRecords(currentDigitalSpecimen, events);
   }
@@ -154,11 +159,12 @@ public class ProcessingService {
   private void gatherDigitalMediaObjectForEqualRecords(
       List<DigitalSpecimenRecord> currentDigitalSpecimen, List<DigitalSpecimenEvent> events) {
     var pidMap = currentDigitalSpecimen.stream().collect(Collectors.toMap(
-        digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimen().physicalSpecimenId(),
+        digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimenWrapper()
+            .physicalSpecimenId(),
         DigitalSpecimenRecord::id
     ));
     for (var event : events) {
-      var digitalSpecimenPid = pidMap.get(event.digitalSpecimen().physicalSpecimenId());
+      var digitalSpecimenPid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenId());
       var digitalMedia = event.digitalMediaObjectEvents();
       publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid);
     }
@@ -192,7 +198,8 @@ public class ProcessingService {
       var successfullyProcessedRecords = digitalSpecimenRecords.stream()
           .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
               Collectors.toSet());
-      log.info("Successfully updated {} digitalSpecimen", successfullyProcessedRecords.size());
+      log.info("Successfully updated {} digitalSpecimenWrapper",
+          successfullyProcessedRecords.size());
       gatherDigitalMediaObjectForUpdatedRecords(digitalSpecimenRecords);
       return successfullyProcessedRecords;
     } catch (IOException | ElasticsearchException e) {
@@ -261,10 +268,10 @@ public class ProcessingService {
     return updatedDigitalSpecimenTuples.stream().map(tuple -> new UpdatedDigitalSpecimenRecord(
         new DigitalSpecimenRecord(
             tuple.currentSpecimen().id(),
-            midsService.calculateMids(tuple.digitalSpecimenEvent().digitalSpecimen()),
+            midsService.calculateMids(tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
             tuple.currentSpecimen().version() + 1,
             Instant.now(),
-            tuple.digitalSpecimenEvent().digitalSpecimen()),
+            tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
         tuple.digitalSpecimenEvent().enrichmentList(),
         tuple.currentSpecimen(),
         tuple.digitalSpecimenEvent().digitalMediaObjectEvents()
@@ -274,9 +281,9 @@ public class ProcessingService {
   private boolean updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
     var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream()
         .filter(tuple -> fdoRecordService.handleNeedsUpdate(
-            tuple.currentSpecimen().digitalSpecimen(),
-            tuple.digitalSpecimenEvent().digitalSpecimen()))
-        .map(tuple -> tuple.digitalSpecimenEvent().digitalSpecimen())
+            tuple.currentSpecimen().digitalSpecimenWrapper(),
+            tuple.digitalSpecimenEvent().digitalSpecimenWrapper()))
+        .map(tuple -> tuple.digitalSpecimenEvent().digitalSpecimenWrapper())
         .toList();
 
     if (!digitalSpecimensToUpdate.isEmpty()) {
@@ -325,7 +332,7 @@ public class ProcessingService {
       kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
-                  .digitalSpecimen(),
+                  .digitalSpecimenWrapper(),
               updatedDigitalSpecimenRecord.digitalMediaObjectEvents()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
@@ -364,7 +371,7 @@ public class ProcessingService {
       } else {
         handlePartiallyFailedElasticInsert(digitalSpecimenRecords, bulkResponse);
       }
-      log.info("Successfully created {} new digitalSpecimen", digitalSpecimenRecords.size());
+      log.info("Successfully created {} new digitalSpecimenWrapper", digitalSpecimenRecords.size());
       gatherDigitalMediaObjectForNewRecords(digitalSpecimenRecords);
       return digitalSpecimenRecords.keySet();
     } catch (IOException | ElasticsearchException e) {
@@ -388,23 +395,26 @@ public class ProcessingService {
   private void publishDigitalMediaRecord(List<DigitalMediaObjectEventWithoutDoi> digitalMedia,
       String digitalSpecimenPid) {
     for (var digitalMediaObjectEventWithoutDoi : digitalMedia) {
-      var attributes = digitalMediaObjectEventWithoutDoi.digitalMediaObject().attributes();
+      var attributes = digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi()
+          .attributes();
       attributes.getEntityRelationships().add(
           new EntityRelationships()
               .withEntityRelationshipType("hasDigitalSpecimen")
-              .withObjectEntityIri("https://doi.org/" + digitalSpecimenPid));
+              .withObjectEntityIri(
+                  applicationProperties.getSpecimenBaseUrl() + digitalSpecimenPid));
       var digitalMediaObjectEvent = new DigitalMediaObjectEvent(
           digitalMediaObjectEventWithoutDoi.enrichmentList(),
-          new DigitalMediaObject(digitalMediaObjectEventWithoutDoi.digitalMediaObject().type(),
+          new DigitalMediaObjectWrapper(
+              digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().type(),
               digitalSpecimenPid,
               attributes,
-              digitalMediaObjectEventWithoutDoi.digitalMediaObject().originalAttributes())
+              digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
       );
       try {
         kafkaService.publishDigitalMediaObject(digitalMediaObjectEvent);
       } catch (JsonProcessingException e) {
         log.warn("Failed to publish digitalMediaEvent: {} for specimen {}",
-            digitalMediaObjectEvent.digitalMediaObject().attributes().getAcAccessUri(),
+            digitalMediaObjectEvent.digitalMediaObjectWrapper().attributes().getAcAccessUri(),
             digitalSpecimenPid);
       }
     }
@@ -421,7 +431,7 @@ public class ProcessingService {
 
   private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)
       throws PidCreationException, PidAuthenticationException {
-    var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimen).toList();
+    var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
     var request = fdoRecordService.buildPostHandleRequest(specimenList);
     return handleComponent.postHandle(request);
   }
@@ -442,8 +452,8 @@ public class ProcessingService {
   }
 
   private void rollbackHandlesFromPhysId(List<DigitalSpecimenEvent> events) {
-    var physIds = events.stream().map(DigitalSpecimenEvent::digitalSpecimen)
-        .map(DigitalSpecimen::physicalSpecimenId).toList();
+    var physIds = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper)
+        .map(DigitalSpecimenWrapper::physicalSpecimenId).toList();
     handleComponent.rollbackFromPhysId(physIds);
   }
 
@@ -533,7 +543,7 @@ public class ProcessingService {
     try {
       kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(additionalInfo.getLeft(),
-              digitalSpecimenRecord.digitalSpecimen(),
+              digitalSpecimenRecord.digitalSpecimenWrapper(),
               additionalInfo.getRight()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED + digitalSpecimenRecord.id(), e);
@@ -552,8 +562,9 @@ public class ProcessingService {
 
   private void filterUpdatesAndRollbackHandles(List<UpdatedDigitalSpecimenTuple> records) {
     var recordsToRollback = records.stream()
-        .filter(r -> fdoRecordService.handleNeedsUpdate(r.currentSpecimen().digitalSpecimen(),
-            r.digitalSpecimenEvent().digitalSpecimen()))
+        .filter(
+            r -> fdoRecordService.handleNeedsUpdate(r.currentSpecimen().digitalSpecimenWrapper(),
+                r.digitalSpecimenEvent().digitalSpecimenWrapper()))
         .map(UpdatedDigitalSpecimenTuple::currentSpecimen)
         .toList();
     rollbackHandleUpdate(recordsToRollback);
@@ -573,24 +584,25 @@ public class ProcessingService {
 
   private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event,
       Map<String, String> pidMap) {
-    var handle = pidMap.get(event.digitalSpecimen().physicalSpecimenId());
+    var handle = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenId());
     if (handle == null) {
       try {
         log.error("handle not created for Digital Specimen {}",
-            event.digitalSpecimen().physicalSpecimenId());
+            event.digitalSpecimenWrapper().physicalSpecimenId());
         kafkaService.deadLetterEvent(event);
       } catch (JsonProcessingException e) {
-        log.error("Kafka DLQ failed for specimen {}", event.digitalSpecimen().physicalSpecimenId());
+        log.error("Kafka DLQ failed for specimen {}",
+            event.digitalSpecimenWrapper().physicalSpecimenId());
       }
       return null;
     }
 
     return new DigitalSpecimenRecord(
-        pidMap.get(event.digitalSpecimen().physicalSpecimenId()),
-        midsService.calculateMids(event.digitalSpecimen()),
+        pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenId()),
+        midsService.calculateMids(event.digitalSpecimenWrapper()),
         1,
         Instant.now(),
-        event.digitalSpecimen()
+        event.digitalSpecimenWrapper()
     );
   }
 }

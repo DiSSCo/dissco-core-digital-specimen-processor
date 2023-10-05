@@ -10,7 +10,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TOPIC_DISC
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
@@ -19,12 +19,13 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
+import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -109,7 +110,7 @@ class FdoRecordServiceTest {
   @Test
   void testGenRequestMinimal() throws Exception {
     // Given
-    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
@@ -124,7 +125,7 @@ class FdoRecordServiceTest {
   @Test
   void testGenRequestMinimalCombined() throws Exception {
     // Given
-    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
     specimen.attributes().setOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL);
     var expected = new ArrayList<>(
@@ -139,7 +140,7 @@ class FdoRecordServiceTest {
 
   @Test
   void testRollbackUpdate() throws Exception {
-    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
     var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen);
     var expected = MAPPER.readTree("""
@@ -171,7 +172,7 @@ class FdoRecordServiceTest {
   @ValueSource(booleans = {true, false})
   void testGenRequestFull(boolean markedAsType) throws Exception {
     // Given
-    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
         givenDigitalSpecimenAttributesFull(markedAsType));
     var expectedJson = getExpectedJson(markedAsType);
@@ -187,7 +188,7 @@ class FdoRecordServiceTest {
   @Test
   void testGenRequestFullTypeIsNull() throws Exception {
     // Given
-    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, null),
         givenDigitalSpecimenAttributesFull(null));
     var expectedJson = getExpectedJson(null);
@@ -220,10 +221,10 @@ class FdoRecordServiceTest {
   @MethodSource("digitalSpecimensNeedToBeChanged")
   void testHandleNeedsUpdate(
       eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen currentAttributes) {
-    var currentDigitalSpecimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, currentAttributes,
+    var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentAttributes,
         givenDigitalSpecimenOriginalAttributesMinimal());
     // Then
-    assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimen())).isTrue();
+    assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimenWrapper())).isTrue();
   }
 
   @Test
@@ -234,29 +235,17 @@ class FdoRecordServiceTest {
 
     // Then
     assertThat(builder.handleNeedsUpdate(
-        new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
-            generateSpecimenOriginalData()), givenDigitalSpecimen())).isFalse();
+        new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
+            generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
   }
 
   @Test
   void testPhysicalSpecimenIdsDifferent() {
     // Given
-    var currentSpecimen = givenDigitalSpecimen("ALT ID", SPECIMEN_NAME, ORGANISATION_ID);
+    var currentSpecimen = TestUtils.givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME, ORGANISATION_ID);
 
     // When/then
-    assertThat(builder.handleNeedsUpdate(currentSpecimen, givenDigitalSpecimen())).isTrue();
-  }
-
-  @Test
-  void testMissingOrganisationId() {
-    // Given
-    var attributes = givenAttributes(SPECIMEN_NAME, null, true);
-    var specimen = new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, "Digital Specimen", attributes,
-        MAPPER.createObjectNode());
-
-    // When/Then
-    assertThrows(PidCreationException.class,
-        () -> builder.buildPostHandleRequest(List.of(specimen)));
+    assertThat(builder.handleNeedsUpdate(currentSpecimen, givenDigitalSpecimenWrapper())).isTrue();
   }
 
   private JsonNode getExpectedJson(Boolean markedAsType) throws Exception {

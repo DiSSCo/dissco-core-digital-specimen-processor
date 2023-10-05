@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.AAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
@@ -48,10 +48,10 @@ class KafkaPublisherServiceTest {
     // Given
 
     // When
-    service.publishAnnotationRequestEvent(AAS, givenDigitalSpecimenRecord());
+    service.publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
 
     // Then
-    then(kafkaTemplate).should().send(eq(AAS), anyString());
+    then(kafkaTemplate).should().send(eq(MAS), anyString());
   }
 
   @Test

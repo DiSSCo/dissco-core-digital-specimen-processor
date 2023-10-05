@@ -79,11 +79,11 @@ class KafkaConsumerServiceTest {
           "enrichmentList": [
             "OCR"
             ],
-          "digitalSpecimen": {
+          "digitalSpecimenWrapper": {
             "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
-              "ods:physicalSpecimenIdType": "GLOBAL",
+              "ods:physicalSpecimenIdType": "Global",
               "dwc:institutionId": "https://ror.org/0443cwa12",
               "dwc:institutionName": "National Museum of Natural History",
               "ods:normalisedPhysicalSpecimenId": "https://geocollections.info/specimen/23602",

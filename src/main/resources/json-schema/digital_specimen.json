@@ -49,9 +49,9 @@
       "type": "string",
       "description": "To indicate if the physical identifier is globally unique or locally unique",
       "enum": [
-        "RESOLVABLE",
-        "GLOBAL",
-        "LOCAL"
+        "Resolvable",
+        "Global",
+        "Local"
       ],
       "$comment": "Do we need to further distinguish the identifier, for example add 'RESOLVABLE'"
     },

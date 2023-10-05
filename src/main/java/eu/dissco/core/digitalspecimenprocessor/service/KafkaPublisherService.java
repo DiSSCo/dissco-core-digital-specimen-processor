@@ -73,8 +73,8 @@ public class KafkaPublisherService {
 
   private JsonNode createJsonPatch(DigitalSpecimenRecord currentDigitalSpecimen,
       DigitalSpecimenRecord digitalSpecimenRecord) {
-    return JsonDiff.asJson(mapper.valueToTree(currentDigitalSpecimen.digitalSpecimen()),
-        mapper.valueToTree(digitalSpecimenRecord.digitalSpecimen()));
+    return JsonDiff.asJson(mapper.valueToTree(currentDigitalSpecimen.digitalSpecimenWrapper()),
+        mapper.valueToTree(digitalSpecimenRecord.digitalSpecimenWrapper()));
   }
 
   public void publishDigitalMediaObject(DigitalMediaObjectEvent digitalMediaObjectEvent)

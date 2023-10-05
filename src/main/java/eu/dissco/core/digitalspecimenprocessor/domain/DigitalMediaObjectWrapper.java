@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 
-public record DigitalMediaObject(
-    @JsonProperty("dcterms:type")
+public record DigitalMediaObjectWrapper(
+    @JsonProperty("ods:type")
     String type,
     @JsonProperty("ods:digitalSpecimenId")
     String digitalSpecimenId,

@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -11,19 +12,19 @@ import org.springframework.stereotype.Service;
 public class MidsService {
 
   private static final List<OdsTopicDiscipline> BIO_DISCIPLINES = List.of(OdsTopicDiscipline.BOTANY,
-      OdsTopicDiscipline.MICROBIOLOGY, OdsTopicDiscipline.ZOOLOGY);
+      OdsTopicDiscipline.MICROBIOLOGY, OdsTopicDiscipline.ZOOLOGY,
+      OdsTopicDiscipline.OTHER_BIODIVERSITY);
 
   private static final List<OdsTopicDiscipline> PALEO_GEO_DISCIPLINES = List.of(
-      OdsTopicDiscipline.PALAEONTOLOGY,
-      OdsTopicDiscipline.ASTROGEOLOGY, OdsTopicDiscipline.GEOLOGY,
-      OdsTopicDiscipline.ECOLOGY);
+      OdsTopicDiscipline.PALAEONTOLOGY, OdsTopicDiscipline.ASTROGEOLOGY, OdsTopicDiscipline.GEOLOGY,
+      OdsTopicDiscipline.ECOLOGY, OdsTopicDiscipline.OTHER_GEODIVERSITY);
 
   private static boolean isValid(String value) {
     return value != null && !value.trim().isEmpty() && !value.equalsIgnoreCase("null");
   }
 
-  public int calculateMids(DigitalSpecimen digitalSpecimen) {
-    var attributes = digitalSpecimen.attributes();
+  public int calculateMids(DigitalSpecimenWrapper digitalSpecimenWrapper) {
+    var attributes = digitalSpecimenWrapper.attributes();
     if (!compliesToMidsOne(attributes)) {
       return 0;
     }
@@ -33,8 +34,7 @@ public class MidsService {
     return 2;
   }
 
-  private boolean compliesToMidsOne(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
+  private boolean compliesToMidsOne(DigitalSpecimen attributes) {
     return isValid(attributes.getDctermsLicense())
         && isValid(attributes.getDctermsModified())
         && isValid(attributes.getDwcPreparations())
@@ -42,8 +42,7 @@ public class MidsService {
         && isValid(attributes.getOdsSpecimenName());
   }
 
-  private boolean compliesToMidsTwo(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
+  private boolean compliesToMidsTwo(DigitalSpecimen attributes) {
     if (BIO_DISCIPLINES.contains(attributes.getOdsTopicDiscipline())) {
       return compliesToMidsTwoBio(attributes);
     } else if (PALEO_GEO_DISCIPLINES.contains(attributes.getOdsTopicDiscipline())) {
@@ -55,37 +54,32 @@ public class MidsService {
     }
   }
 
-  private boolean compliesToMidsTwoBio(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
+  private boolean compliesToMidsTwoBio(DigitalSpecimen attributes) {
     return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
         && (attributes.getOdsHasMedia() != null && attributes.getOdsHasMedia())
         && isQualitativeLocationValid(attributes)
-        && isQuantitativeLocationInvalid(attributes)
-        && (missingOccurrence(attributes) || isValid(
+        && isQuantitativeLocationValid(attributes)
+        && (occurrenceIsPresent(attributes) && isValid(
         (attributes.getOccurrences().get(0).getDwcEventDate())))
-        && (missingOccurrence(attributes) || isValid(
+        && (occurrenceIsPresent(attributes) && isValid(
         attributes.getOccurrences().get(0).getDwcFieldNumber()))
         && isValid(attributes.getDwcRecordedBy());
   }
 
-  private boolean missingOccurrence(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
-    return attributes.getOccurrences() == null || attributes.getOccurrences().isEmpty()
-        || attributes.getOccurrences().get(0) == null;
+  private boolean occurrenceIsPresent(DigitalSpecimen attributes) {
+    return attributes.getOccurrences() != null && !attributes.getOccurrences().isEmpty()
+        && attributes.getOccurrences().get(0) != null;
   }
 
-  private boolean compliesToMidsTwoPaleoBio(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen attributes) {
+  private boolean compliesToMidsTwoPaleoBio(DigitalSpecimen attributes) {
     return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
         && isStratigraphyValid(attributes)
         && isQualitativeLocationValid(attributes)
-        && isQuantitativeLocationInvalid(attributes);
+        && isQuantitativeLocationValid(attributes);
   }
 
-  private boolean isQuantitativeLocationInvalid(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen digitalSpecimen) {
-    if (digitalSpecimen.getOccurrences() != null && !digitalSpecimen.getOccurrences().isEmpty()
-        && digitalSpecimen.getOccurrences().get(0).getLocation() != null
+  private boolean isQuantitativeLocationValid(DigitalSpecimen digitalSpecimen) {
+    if (locationIsPresent(digitalSpecimen)
         && digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference() != null) {
       var georeference = digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference();
       return georeference.getDwcDecimalLatitude() != null
@@ -94,10 +88,13 @@ public class MidsService {
     return false;
   }
 
-  private boolean isQualitativeLocationValid(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen digitalSpecimen) {
-    if (digitalSpecimen.getOccurrences() != null && !digitalSpecimen.getOccurrences().isEmpty()
-        && digitalSpecimen.getOccurrences().get(0).getLocation() != null) {
+  private boolean locationIsPresent(DigitalSpecimen digitalSpecimen) {
+    return occurrenceIsPresent(digitalSpecimen)
+        && digitalSpecimen.getOccurrences().get(0).getLocation() != null;
+  }
+
+  private boolean isQualitativeLocationValid(DigitalSpecimen digitalSpecimen) {
+    if (locationIsPresent(digitalSpecimen)) {
       var location = digitalSpecimen.getOccurrences().get(0).getLocation();
       return isValid(location.getDwcContinent())
           || isValid(location.getDwcCountry())
@@ -113,10 +110,8 @@ public class MidsService {
     return false;
   }
 
-  private boolean isStratigraphyValid(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen digitalSpecimen) {
-    if (digitalSpecimen.getOccurrences() != null && !digitalSpecimen.getOccurrences().isEmpty()
-        && digitalSpecimen.getOccurrences().get(0).getLocation() != null
+  private boolean isStratigraphyValid(DigitalSpecimen digitalSpecimen) {
+    if (locationIsPresent(digitalSpecimen)
         && digitalSpecimen.getOccurrences().get(0).getLocation().getGeologicalContext() != null) {
       var geologicalContext = digitalSpecimen.getOccurrences().get(0).getLocation()
           .getGeologicalContext();

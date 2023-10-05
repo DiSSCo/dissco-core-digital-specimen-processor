@@ -9,7 +9,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_N
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.GeologicalContext;
 import eu.dissco.core.digitalspecimenprocessor.schema.Georeference;
@@ -32,34 +33,40 @@ class MidsServiceTest {
 
   private static Stream<Arguments> provideDigitalSpecimen() {
     return Stream.of(
-        Arguments.of(TestUtils.givenDigitalSpecimen(), 0),
-        Arguments.of(new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue(null),
-            MAPPER.createObjectNode()), 0),
+        Arguments.of(TestUtils.givenDigitalSpecimenWrapper(), 0),
         Arguments.of(
-            new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("      "),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue(null),
                 MAPPER.createObjectNode()), 0),
-        Arguments.of(new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("null"),
-            MAPPER.createObjectNode()), 0),
         Arguments.of(
-            new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("in alcohol"),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("      "),
+                MAPPER.createObjectNode()), 0),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("null"),
+                MAPPER.createObjectNode()), 0),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenPreparationValue("in alcohol"),
                 MAPPER.createObjectNode()), 1),
-        Arguments.of(new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingLongitude(),
+        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingLongitude(),
             MAPPER.createObjectNode()), 1),
-        Arguments.of(new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingCountry(),
+        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingCountry(),
             MAPPER.createObjectNode()), 1),
-        Arguments.of(new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenInvalidType(),
+        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenInvalidType(),
             MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenBotanySpecimen(Boolean.FALSE),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanySpecimen(Boolean.FALSE),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenBotanySpecimen(Boolean.TRUE),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanySpecimen(Boolean.TRUE),
                 MAPPER.createObjectNode()), 2),
-        Arguments.of(new DigitalSpecimen(PHYSICAL_SPECIMEN_ID, TYPE, givenFullPaleoSpecimen(),
-            MAPPER.createObjectNode()), 2));
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenFullPaleoSpecimen(),
+                MAPPER.createObjectNode()), 2));
   }
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenFullPaleoSpecimen() {
+  private static DigitalSpecimen givenFullPaleoSpecimen() {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withOdsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
@@ -73,8 +80,7 @@ class MidsServiceTest {
                 .withGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
   }
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenBotanySpecimen(
-      Boolean hasMedia) {
+  private static DigitalSpecimen givenBotanySpecimen(Boolean hasMedia) {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
         .withDwcRecordedBy("sam Leeflang")
@@ -91,13 +97,13 @@ class MidsServiceTest {
         .withOdsHasMedia(hasMedia);
   }
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenInvalidType() {
+  private static DigitalSpecimen givenInvalidType() {
     return baseDigitalSpecimen()
         .withDwcPreparations("single specimen")
         .withOdsTopicDiscipline(OdsTopicDiscipline.UNCLASSIFIED);
   }
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenMissingCountry() {
+  private static DigitalSpecimen givenMissingCountry() {
     return baseDigitalSpecimen()
         .withDwcPreparations("single specimen")
         .withOdsMarkedAsType(true)
@@ -111,15 +117,15 @@ class MidsServiceTest {
                     new GeologicalContext().withDwcEarliestEonOrLowestEonothem("Archean")))));
   }
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenPreparationValue(
+  private static DigitalSpecimen givenPreparationValue(
       String preparationValue) {
     return baseDigitalSpecimen()
         .withDwcPreparations(preparationValue)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY);
   }
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen baseDigitalSpecimen() {
-    return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
+  private static DigitalSpecimen baseDigitalSpecimen() {
+    return new DigitalSpecimen()
         .withOdsPhysicalSpecimenIdType(PHYSICAL_SPECIMEN_TYPE)
         .withDwcInstitutionId(ORGANISATION_ID)
         .withOdsSpecimenName(SPECIMEN_NAME)
@@ -128,7 +134,7 @@ class MidsServiceTest {
         .withDctermsLicense("http://creativecommons.org/licenses/by-nc/4.0/");
   }
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenMissingLongitude() {
+  private static DigitalSpecimen givenMissingLongitude() {
     return baseDigitalSpecimen()
         .withDwcPreparations("single specimen")
         .withOdsMarkedAsType(true)
@@ -146,7 +152,7 @@ class MidsServiceTest {
 
   @ParameterizedTest
   @MethodSource("provideDigitalSpecimen")
-  void testCalculateMids(DigitalSpecimen digitalSpecimen, int midsLevel) {
+  void testCalculateMids(DigitalSpecimenWrapper digitalSpecimen, int midsLevel) {
     // Given
 
     // When

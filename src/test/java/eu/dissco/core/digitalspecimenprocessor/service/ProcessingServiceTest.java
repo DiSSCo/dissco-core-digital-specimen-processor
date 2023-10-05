@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.AAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_ORGANISATION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
@@ -8,10 +8,11 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_BASE_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDifferentUnequalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
@@ -35,13 +36,15 @@ import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
+import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.time.Clock;
@@ -75,6 +78,8 @@ class ProcessingServiceTest {
 
   @Mock
   private HandleComponent handleComponent;
+  @Mock
+  private ApplicationProperties applicationProperties;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -83,7 +88,7 @@ class ProcessingServiceTest {
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, fdoRecordService, elasticRepository, kafkaService,
-        midsService, handleComponent);
+        midsService, handleComponent, applicationProperties);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -103,6 +108,7 @@ class ProcessingServiceTest {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenDigitalSpecimenRecord()));
+    given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
 
     // When
     List<DigitalSpecimenRecord> result = service.handleMessages(
@@ -127,15 +133,16 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(expected)).willReturn(
         bulkResponse);
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
 
     // Then
     then(fdoRecordService).should()
-        .buildPostHandleRequest(List.of(expected.get(0).digitalSpecimen()));
+        .buildPostHandleRequest(List.of(expected.get(0).digitalSpecimenWrapper()));
     then(handleComponent).should().postHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
@@ -155,8 +162,9 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(expected)).willReturn(
         bulkResponse);
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(false);
+    given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -180,11 +188,12 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
-    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
+    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
+    given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -192,7 +201,7 @@ class ProcessingServiceTest {
     // Then
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
     then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
-    then(kafkaService).should().publishAnnotationRequestEvent(AAS, givenDigitalSpecimenRecord());
+    then(kafkaService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord()));
@@ -232,16 +241,16 @@ class ProcessingServiceTest {
   void testDuplicateNewSpecimen()
       throws Exception {
     // Given
-    var duplicateSpecimen = new DigitalSpecimenEvent(List.of(AAS),
-        givenDigitalSpecimen(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION),
+    var duplicateSpecimen = new DigitalSpecimenEvent(List.of(MAS),
+        TestUtils.givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION),
         List.of());
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
-    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
+    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
@@ -254,7 +263,7 @@ class ProcessingServiceTest {
     verify(handleComponent, times(1)).postHandle(anyList());
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
     then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
-    then(kafkaService).should().publishAnnotationRequestEvent(AAS, givenDigitalSpecimenRecord());
+    then(kafkaService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
     then(kafkaService).should().republishEvent(duplicateSpecimen);
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord()));
   }
@@ -263,7 +272,7 @@ class ProcessingServiceTest {
   void testNewSpecimenRollbackHandleCreationFailed() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
@@ -289,7 +298,7 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
@@ -320,7 +329,7 @@ class ProcessingServiceTest {
         givenDigitalSpecimenRecord(THIRD_HANDLE, thirdPhysicalId)
     );
     given(repository.getDigitalSpecimens(anyList())).willReturn(List.of());
-    given(midsService.calculateMids(any(DigitalSpecimen.class))).willReturn(1);
+    given(midsService.calculateMids(any(DigitalSpecimenWrapper.class))).willReturn(1);
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
     given(handleComponent.postHandle(anyList()))
@@ -347,7 +356,7 @@ class ProcessingServiceTest {
       throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimen()))).willReturn(
+    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
@@ -357,7 +366,7 @@ class ProcessingServiceTest {
         bulkResponse);
     doThrow(JsonProcessingException.class).when(kafkaService)
         .publishCreateEvent(any(DigitalSpecimenRecord.class));
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -443,7 +452,7 @@ class ProcessingServiceTest {
     givenBulkResponse();
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
-    given(midsService.calculateMids(firstEvent.digitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(firstEvent, secondEvent, thirdEvent));
@@ -473,7 +482,7 @@ class ProcessingServiceTest {
     givenBulkResponse();
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
-    given(midsService.calculateMids(firstEvent.digitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
     doThrow(PidCreationException.class).when(handleComponent).rollbackHandleUpdate(any());
 
     // When
@@ -495,7 +504,7 @@ class ProcessingServiceTest {
   void testUpdateSpecimenKafkaFailed() throws Exception {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord()));
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(List.of(givenDigitalSpecimenRecord(2)))).willReturn(
@@ -524,14 +533,14 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(List.of(givenDigitalSpecimenRecord(2)))).willThrow(
         IOException.class);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
-    given(midsService.calculateMids(givenDigitalSpecimen())).willReturn(1);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
     then(fdoRecordService).should()
-        .buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimen()));
+        .buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimenWrapper()));
     then(fdoRecordService).should()
         .buildRollbackUpdateRequest(List.of(unequalCurrentDigitalSpecimen));
     then(handleComponent).should().postHandle(any());

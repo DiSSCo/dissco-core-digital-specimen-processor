@@ -4,6 +4,6 @@ import java.util.List;
 
 public record DigitalMediaObjectEventWithoutDoi(
     List<String> enrichmentList,
-    DigitalMediaObjectWithoutDoi digitalMediaObject) {
+    DigitalMediaObjectWithoutDoi digitalMediaObjectWithoutDoi) {
 
 }
