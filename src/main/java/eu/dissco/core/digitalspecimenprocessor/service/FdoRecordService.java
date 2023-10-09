@@ -95,7 +95,7 @@ public class FdoRecordService {
     // Mandatory
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
         specimen.physicalSpecimenId());
-    attributes.put(FdoProfileAttributes.NORMALISED_SPECIMEN_OBJECT_ID.getAttribute(),
+    attributes.put(FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
         specimen.attributes().getOdsNormalisedPhysicalSpecimenId());
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
         specimen.attributes().getOdsPhysicalSpecimenIdType().value().toLowerCase());
