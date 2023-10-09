@@ -4,6 +4,7 @@ import java.util.List;
 
 public record DigitalSpecimenEvent(
     List<String> enrichmentList,
-    DigitalSpecimen digitalSpecimen) {
+    DigitalSpecimenWrapper digitalSpecimenWrapper,
+    List<DigitalMediaObjectEventWithoutDoi> digitalMediaObjectEvents) {
 
 }

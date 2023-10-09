@@ -1,10 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
-import eu.dissco.core.digitalspecimenprocessor.domain.MIDSFields;
-import java.util.Collections;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,92 +11,131 @@ import org.springframework.stereotype.Service;
 @Service
 public class MidsService {
 
-  private static final String MISSING_MESSAGE = "Field does not comply to field: {}";
+  private static final List<OdsTopicDiscipline> BIO_DISCIPLINES = List.of(OdsTopicDiscipline.BOTANY,
+      OdsTopicDiscipline.MICROBIOLOGY, OdsTopicDiscipline.ZOOLOGY,
+      OdsTopicDiscipline.OTHER_BIODIVERSITY);
 
-  public int calculateMids(DigitalSpecimen digitalSpecimen) {
-    var attributes = getAttributes(digitalSpecimen);
-    if (doesNotComplyTo(MIDSFields.MIDS_1, attributes)) {
+  private static final List<OdsTopicDiscipline> PALEO_GEO_DISCIPLINES = List.of(
+      OdsTopicDiscipline.PALAEONTOLOGY, OdsTopicDiscipline.ASTROGEOLOGY, OdsTopicDiscipline.GEOLOGY,
+      OdsTopicDiscipline.ECOLOGY, OdsTopicDiscipline.OTHER_GEODIVERSITY);
+
+  private static boolean isValid(String value) {
+    return value != null && !value.trim().isEmpty() && !value.equalsIgnoreCase("null");
+  }
+
+  public int calculateMids(DigitalSpecimenWrapper digitalSpecimenWrapper) {
+    var attributes = digitalSpecimenWrapper.attributes();
+    if (!compliesToMidsOne(attributes)) {
       return 0;
     }
-    var midsFields = determineMIDSType(digitalSpecimen);
-    if (midsFields.isEmpty() || doesNotComplyTo(midsFields, attributes)) {
+    if (!compliesToMidsTwo(attributes)) {
       return 1;
     }
     return 2;
   }
 
-  private List<MIDSFields> determineMIDSType(DigitalSpecimen digitalSpecimen) {
-    var bioType = List.of("BotanySpecimen", "MycologySpecimen", "MicrobiologyMicroOrganismSpecimen",
-        "ZoologyVertebrateSpecimen", "ZoologyInvertebrateSpecimen");
-    var paleoType = List.of("PalaeontologySpecimen");
-    var geoType = List.of("GeologyRockSpecimen", "GeologyMineralSpecimen",
-        "GeologyMixedSolidMatterSpecimen", "AstronomySpecimen");
-    if (bioType.contains(digitalSpecimen.type())) {
-      return MIDSFields.MIDS_2_BIO;
-    } else if (paleoType.contains(digitalSpecimen.type()) || geoType.contains(
-        digitalSpecimen.type())) {
-      return MIDSFields.MIDS_2_GEO_PALEO;
+  private boolean compliesToMidsOne(DigitalSpecimen attributes) {
+    return isValid(attributes.getDctermsLicense())
+        && isValid(attributes.getDctermsModified())
+        && isValid(attributes.getDwcPreparations())
+        && isValid(attributes.getOdsPhysicalSpecimenIdType().value())
+        && isValid(attributes.getOdsSpecimenName());
+  }
+
+  private boolean compliesToMidsTwo(DigitalSpecimen attributes) {
+    if (BIO_DISCIPLINES.contains(attributes.getOdsTopicDiscipline())) {
+      return compliesToMidsTwoBio(attributes);
+    } else if (PALEO_GEO_DISCIPLINES.contains(attributes.getOdsTopicDiscipline())) {
+      return compliesToMidsTwoPaleoBio(attributes);
     } else {
-      log.warn("Digital Specimen has unknown type: {} level 1 is highest achievable",
-          digitalSpecimen.type());
-      return Collections.emptyList();
+      log.warn("Digital Specimen has unknown topicDiscipline: {} level 1 is highest achievable",
+          attributes.getOdsTopicDiscipline());
+      return false;
     }
   }
 
-  private boolean doesNotComplyTo(List<MIDSFields> fields, JsonNode attributes) {
-    for (var field : fields) {
-      if (field.equals(MIDSFields.QUANTITATIVE_LOCATION)) {
-        if (hasInvalidField(attributes, field, null)) {
-          log.debug(MISSING_MESSAGE, field);
-          return true;
-        }
-      } else if (field.equals(MIDSFields.HAS_MEDIA)) {
-        if (hasInvalidField(attributes, field, "true")) {
-          log.debug(MISSING_MESSAGE, field);
-          return true;
-        }
-      } else {
-        if (isFieldMissing(attributes, field)) {
-          log.debug(MISSING_MESSAGE, field);
-          return true;
-        }
-      }
-    }
-    return false;
+  private boolean compliesToMidsTwoBio(DigitalSpecimen attributes) {
+    return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
+        && (attributes.getOdsHasMedia() != null && attributes.getOdsHasMedia())
+        && isQualitativeLocationValid(attributes)
+        && isQuantitativeLocationValid(attributes)
+        && (occurrenceIsPresent(attributes) && isValid(
+        (attributes.getOccurrences().get(0).getDwcEventDate())))
+        && (occurrenceIsPresent(attributes) && isValid(
+        attributes.getOccurrences().get(0).getDwcFieldNumber()))
+        && isValid(attributes.getDwcRecordedBy());
   }
 
-  private boolean isFieldMissing(JsonNode attributes, MIDSFields field) {
-    for (var term : field.getTerm()) {
-      if (attributes.get(term) != null) {
-        var data = attributes.get(term).asText();
-        if (data != null && !data.trim().equals("") && !data.equals("null")) {
-          return false;
-        }
-      }
-    }
-    return true;
+
+  private boolean compliesToMidsTwoPaleoBio(DigitalSpecimen attributes) {
+    return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
+        && isStratigraphyValid(attributes)
+        && isQualitativeLocationValid(attributes)
+        && isQuantitativeLocationValid(attributes);
   }
 
-  private boolean hasInvalidField(JsonNode attributes, MIDSFields field, String expectedValue) {
-    for (var term : field.getTerm()) {
-      if (attributes.get(term) != null) {
-        var data = attributes.get(term).asText();
-        if (data == null || data.trim().equals("") || data.equals("null") ||
-            (expectedValue != null && !data.equalsIgnoreCase(expectedValue))) {
-          return true;
-        }
-      } else {
-        return true;
-      }
+  private boolean isQuantitativeLocationValid(DigitalSpecimen digitalSpecimen) {
+    if (locationIsPresent(digitalSpecimen)
+        && digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference() != null) {
+      var georeference = digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference();
+      return georeference.getDwcDecimalLatitude() != null
+          && georeference.getDwcDecimalLongitude() != null;
     }
     return false;
   }
 
-  private JsonNode getAttributes(DigitalSpecimen digitalSpecimen) {
-    ObjectNode attributes = digitalSpecimen.attributes().deepCopy();
-    attributes.put(MIDSFields.PHYSICAL_SPECIMEN_ID.getTerm().get(0),
-        digitalSpecimen.physicalSpecimenId());
-    attributes.put(MIDSFields.SPECIMEN_TYPE.getTerm().get(0), digitalSpecimen.type());
-    return attributes;
+  private boolean occurrenceIsPresent(DigitalSpecimen attributes) {
+    return attributes.getOccurrences() != null && !attributes.getOccurrences().isEmpty()
+        && attributes.getOccurrences().get(0) != null;
   }
+
+  private boolean locationIsPresent(DigitalSpecimen digitalSpecimen) {
+    return occurrenceIsPresent(digitalSpecimen)
+        && digitalSpecimen.getOccurrences().get(0).getLocation() != null;
+  }
+
+  private boolean isQualitativeLocationValid(DigitalSpecimen digitalSpecimen) {
+    if (locationIsPresent(digitalSpecimen)) {
+      var location = digitalSpecimen.getOccurrences().get(0).getLocation();
+      return isValid(location.getDwcContinent())
+          || isValid(location.getDwcCountry())
+          || isValid(location.getDwcCountryCode())
+          || isValid(location.getDwcCounty())
+          || isValid(location.getDwcIsland())
+          || isValid(location.getDwcIslandGroup())
+          || isValid(location.getDwcLocality())
+          || isValid(location.getDwcMunicipality())
+          || isValid(location.getDwcStateProvince())
+          || isValid(location.getDwcWaterBody());
+    }
+    return false;
+  }
+
+  private boolean isStratigraphyValid(DigitalSpecimen digitalSpecimen) {
+    if (locationIsPresent(digitalSpecimen)
+        && digitalSpecimen.getOccurrences().get(0).getLocation().getGeologicalContext() != null) {
+      var geologicalContext = digitalSpecimen.getOccurrences().get(0).getLocation()
+          .getGeologicalContext();
+      return isValid(geologicalContext.getDwcBed())
+          || isValid(geologicalContext.getDwcMember())
+          || isValid(geologicalContext.getDwcFormation())
+          || isValid(geologicalContext.getDwcGroup())
+          || isValid(geologicalContext.getDwcLithostratigraphicTerms())
+          || isValid(geologicalContext.getDwcHighestBiostratigraphicZone())
+          || isValid(geologicalContext.getDwcLowestBiostratigraphicZone())
+          || isValid(geologicalContext.getDwcLatestAgeOrHighestStage())
+          || isValid(geologicalContext.getDwcEarliestAgeOrLowestStage())
+          || isValid(geologicalContext.getDwcLatestEpochOrHighestSeries())
+          || isValid(geologicalContext.getDwcEarliestEpochOrLowestSeries())
+          || isValid(geologicalContext.getDwcLatestPeriodOrHighestSystem())
+          || isValid(geologicalContext.getDwcEarliestPeriodOrLowestSystem())
+          || isValid(geologicalContext.getDwcLatestEraOrHighestErathem())
+          || isValid(geologicalContext.getDwcEarliestEraOrLowestErathem())
+          || isValid(geologicalContext.getDwcLatestEonOrHighestEonothem())
+          || isValid(geologicalContext.getDwcEarliestEonOrLowestEonothem());
+    }
+    return false;
+  }
+
+
 }

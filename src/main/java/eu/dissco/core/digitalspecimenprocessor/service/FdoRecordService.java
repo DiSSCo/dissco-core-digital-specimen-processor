@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LIVING_OR_PRESERVED;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MARKED_AS_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST_NAME;
@@ -9,19 +11,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,22 +28,12 @@ import org.springframework.stereotype.Service;
 public class FdoRecordService {
 
   private final ObjectMapper mapper;
-  private static final String DWC_TYPE_STATUS = "dwc:typeStatus";
-  private static final Set<String> NOT_TYPE_STATUS = new HashSet<>(
-      Arrays.asList("false", "specimen", "type", ""));
 
-  private static final HashMap<String, String> odsMap;
-
-  static {
-    HashMap<String, String> map = new HashMap<>();
-    map.put("ods:specimenName", REFERENT_NAME.getAttribute());
-    map.put("ods:organisationName", SPECIMEN_HOST_NAME.getAttribute());
-    map.put("ods:topicDiscipline", TOPIC_DISCIPLINE.getAttribute());
-    map.put("ods:sourceSystemId", FdoProfileAttributes.SOURCE_SYSTEM_ID.getAttribute());
-    odsMap = map;
+  private static boolean isEqualString(String currentValue, String newValue) {
+    return currentValue != null && !currentValue.equals(newValue);
   }
 
-  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimen> digitalSpecimens)
+  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimenWrapper> digitalSpecimens)
       throws PidCreationException {
     List<JsonNode> requestBody = new ArrayList<>();
     for (var specimen : digitalSpecimens) {
@@ -75,8 +61,7 @@ public class FdoRecordService {
     return mapper.createObjectNode().set("data", dataArray);
   }
 
-  private JsonNode buildSinglePostHandleRequest(DigitalSpecimen specimen)
-      throws PidCreationException {
+  private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
@@ -86,19 +71,18 @@ public class FdoRecordService {
     return request;
   }
 
-  private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen)
-      throws PidCreationException {
+  private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
-    var attributes = genRequestAttributes(specimen.digitalSpecimen());
+    var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
     data.put("id", specimen.id());
     data.set("attributes", attributes);
     request.set("data", data);
     return request;
   }
 
-  private JsonNode genRequestAttributes(DigitalSpecimen specimen) throws PidCreationException {
+  private JsonNode genRequestAttributes(DigitalSpecimenWrapper specimen) {
     var attributes = mapper.createObjectNode();
     // Defaults
     attributes.put(FdoProfileAttributes.FDO_PROFILE.getAttribute(),
@@ -111,91 +95,63 @@ public class FdoRecordService {
     // Mandatory
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
         specimen.physicalSpecimenId());
+    attributes.put(FdoProfileAttributes.NORMALISED_SPECIMEN_OBJECT_ID.getAttribute(),
+        specimen.attributes().getOdsNormalisedPhysicalSpecimenId());
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
-        setPhysicalIdType(specimen));
-    var organisationId = getTerm(specimen, "ods:organisationId");
-    organisationId.ifPresent(orgId -> attributes.put(SPECIMEN_HOST.getAttribute(), orgId));
-    if (organisationId.isEmpty()) {
-      throw new PidCreationException(
-          "Digital Specimen missing ods:organisationId. Unable to create PID. Check specimen"
-              + specimen.physicalSpecimenId());
-    }
+        specimen.attributes().getOdsPhysicalSpecimenIdType().value().toLowerCase());
+    attributes.put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getDwcInstitutionId());
 
-    // Optional
-    odsMap.forEach(
-        (odsTerm, fdoAttribute) -> updateOptionalAttribute(specimen, odsTerm, fdoAttribute,
-            attributes));
-
-    //Must be lower case
-    var livingOrPreserved = getTerm(specimen, "ods:livingOrPreserved");
-    livingOrPreserved.ifPresent(
-        foundTerm -> attributes.put(FdoProfileAttributes.LIVING_OR_PRESERVED.getAttribute(),
-            foundTerm.toLowerCase()));
-
-    setMarkedAsType(specimen, attributes);
+    addOptionalAttributes(specimen, attributes);
 
     return attributes;
   }
 
-  private String setPhysicalIdType(DigitalSpecimen specimen) {
-    var physicalIdType = specimen.attributes().get("ods:physicalSpecimenIdType");
-    if (physicalIdType == null || physicalIdType.asText().equals("combined")) {
-      if (physicalIdType == null){
-        log.warn("\"ods:physicalSpecimenIdType\" is not in specimen {} attributes", specimen.physicalSpecimenId());
-      }
-      return "local";
-    } else {
-      return "global";
+  private void addOptionalAttributes(DigitalSpecimenWrapper specimen, ObjectNode attributes) {
+    if (specimen.attributes().getOdsSourceSystem() != null) {
+      attributes.put(FdoProfileAttributes.SOURCE_SYSTEM_ID.getAttribute(),
+          specimen.attributes().getOdsSourceSystem());
+    }
+    if (specimen.attributes().getDwcInstitutionName() != null) {
+      attributes.put(SPECIMEN_HOST_NAME.getAttribute(),
+          specimen.attributes().getDwcInstitutionName());
+    }
+    if (specimen.attributes().getOdsTopicDiscipline() != null) {
+      attributes.put(TOPIC_DISCIPLINE.getAttribute(),
+          specimen.attributes().getOdsTopicDiscipline().value());
+    }
+    if (specimen.attributes().getOdsSpecimenName() != null) {
+      attributes.put(REFERENT_NAME.getAttribute(), specimen.attributes().getOdsSpecimenName());
+    }
+    if (specimen.attributes().getOdsLivingOrPreserved() != null) {
+      attributes.put(LIVING_OR_PRESERVED.getAttribute(),
+          specimen.attributes().getOdsLivingOrPreserved().value().toLowerCase());
+    }
+    if (specimen.attributes().getOdsMarkedAsType() != null) {
+      attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsMarkedAsType());
     }
   }
 
-  private void setMarkedAsType(DigitalSpecimen specimen, ObjectNode attributeNode) {
-    // If typeStatus is present and NOT ["false", "specimen", "type"], this is to true, otherwise left blank.
-    var markedAsType = getTerm(specimen, DWC_TYPE_STATUS);
-    markedAsType.ifPresent(
-        s -> attributeNode.put(FdoProfileAttributes.MARKED_AS_TYPE.getAttribute(),
-            !NOT_TYPE_STATUS.contains(s)));
+  public boolean handleNeedsUpdate(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+      DigitalSpecimenWrapper digitalSpecimenWrapper) {
+    var currentAttributes = currentDigitalSpecimenWrapper.attributes();
+    var attributes = digitalSpecimenWrapper.attributes();
+    return isEqualString(currentDigitalSpecimenWrapper.physicalSpecimenId(),
+        digitalSpecimenWrapper.physicalSpecimenId())
+        || isEqualString(
+        currentDigitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenId(),
+        digitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenId())
+        || isEqualString(currentAttributes.getDwcInstitutionId(), attributes.getDwcInstitutionId())
+        || isEqualString(currentAttributes.getDwcInstitutionName(),
+        attributes.getDwcInstitutionName())
+        || (currentAttributes.getOdsTopicDiscipline() != null
+        && !currentAttributes.getOdsTopicDiscipline().equals(attributes.getOdsTopicDiscipline()))
+        || (currentAttributes.getOdsPhysicalSpecimenIdType() != null
+        && !currentAttributes.getOdsPhysicalSpecimenIdType()
+        .equals(attributes.getOdsPhysicalSpecimenIdType()))
+        || isEqualString(currentAttributes.getOdsLivingOrPreserved().value(),
+        attributes.getOdsLivingOrPreserved().value())
+        || isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
+        || (currentAttributes.getOdsMarkedAsType() != null
+        && !currentAttributes.getOdsMarkedAsType().equals(attributes.getOdsMarkedAsType()));
   }
-
-  public boolean handleNeedsUpdate(DigitalSpecimen currentDigitalSpecimen,
-      DigitalSpecimen digitalSpecimen) {
-    return !currentDigitalSpecimen.physicalSpecimenId().equals(digitalSpecimen.physicalSpecimenId())
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:organisationId")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:organisationName")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:specimenName")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:topicDiscipline")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:physicalSpecimenIdType")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, "ods:livingOrPreserved")
-        || isUnEqual(currentDigitalSpecimen, digitalSpecimen, DWC_TYPE_STATUS);
-  }
-
-  private boolean isUnEqual(DigitalSpecimen currentDigitalSpecimen, DigitalSpecimen digitalSpecimen,
-      String fieldName) {
-    return !Objects.equals(getValueFromAttributes(currentDigitalSpecimen, fieldName),
-        getValueFromAttributes(digitalSpecimen, fieldName));
-  }
-
-  private String getValueFromAttributes(DigitalSpecimen digitalSpecimen, String fieldName) {
-    if (digitalSpecimen.attributes().get(fieldName) != null) {
-      return digitalSpecimen.attributes().get(fieldName).asText();
-    } else {
-      return null;
-    }
-  }
-
-  private void updateOptionalAttribute(DigitalSpecimen specimen, String term, String fdoAttribute,
-      ObjectNode attributeNode) {
-    var optionalAttribute = getTerm(specimen, term);
-    optionalAttribute.ifPresent(foundTerm -> attributeNode.put(fdoAttribute, foundTerm));
-  }
-
-  private Optional<String> getTerm(DigitalSpecimen specimen, String term) {
-    var val = specimen.attributes().get(term);
-    return jsonNodeIsNull(val) ? Optional.empty() : Optional.of(val.asText());
-  }
-
-  private boolean jsonNodeIsNull(JsonNode val) {
-    return val == null || val.isNull();
-  }
-
 }

@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.1.2</version>
+    <version>3.1.4</version>
     <relativePath/> <!-- lookup parent from repository -->
   </parent>
   <groupId>eu.dissco.core</groupId>
@@ -17,13 +17,14 @@
   <properties>
     <java.version>17</java.version>
     <elasticsearch.version>8.4.1</elasticsearch.version>
-    <snakeyaml.version>2.0</snakeyaml.version>
-    <jakarta.json.version>2.1.1</jakarta.json.version>
+    <snakeyaml.version>2.2</snakeyaml.version>
+    <snappy-java.version>1.1.10.5</snappy-java.version>
+    <jakarta.json.version>2.1.2</jakarta.json.version>
     <json-patch.version>1.13</json-patch.version>
     <kafka.version>3.5.1</kafka.version>
-    <spring-kafka.version>3.0.10</spring-kafka.version>
+    <spring-kafka.version>3.0.11</spring-kafka.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
-    <testcontainers.version>1.17.6</testcontainers.version>
+    <testcontainers.version>1.19.0</testcontainers.version>
     <springdoc.version>2.1.0</springdoc.version>
     <sonar.organization>dissco</sonar.organization>
     <apache.collections.version>4.2</apache.collections.version>
@@ -130,6 +131,12 @@
     <dependency>
       <artifactId>spring-boot-starter-web</artifactId>
       <groupId>org.springframework.boot</groupId>
+    </dependency>
+    <!-- Overwrite kafka client snappy version as it contains high prio security issues (02-10-2023) -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>${snappy-java.version}</version>
     </dependency>
 
     <dependency>
@@ -239,6 +246,28 @@
             <version>${glassfish-jaxb.version}</version>
           </dependency>
         </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>org.jsonschema2pojo</groupId>
+        <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+        <version>1.2.1</version>
+        <configuration>
+          <sourceDirectory>${basedir}/src/main/resources/json-schema/</sourceDirectory>
+          <targetPackage>eu.dissco.core.digitalspecimenprocessor.schema</targetPackage>
+          <generateBuilders>true</generateBuilders>
+          <includeConstructors>true</includeConstructors>
+          <includeDynamicBuilders>true</includeDynamicBuilders>
+          <includeAdditionalProperties>false</includeAdditionalProperties>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>
+                generate
+              </goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

@@ -7,6 +7,6 @@ public record DigitalSpecimenRecord(
     int midsLevel,
     int version,
     Instant created,
-    DigitalSpecimen digitalSpecimen) {
+    DigitalSpecimenWrapper digitalSpecimenWrapper) {
 
 }

@@ -1,11 +1,23 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
+import eu.dissco.core.digitalspecimenprocessor.schema.GeologicalContext;
+import eu.dissco.core.digitalspecimenprocessor.schema.Georeference;
+import eu.dissco.core.digitalspecimenprocessor.schema.Location;
+import eu.dissco.core.digitalspecimenprocessor.schema.Occurrences;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +31,120 @@ class MidsServiceTest {
 
   private MidsService midsService;
 
+  private static Stream<Arguments> provideDigitalSpecimen() {
+    return Stream.of(
+        Arguments.of(TestUtils.givenDigitalSpecimenWrapper(), 0),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue(null),
+                MAPPER.createObjectNode()), 0),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("      "),
+                MAPPER.createObjectNode()), 0),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("null"),
+                MAPPER.createObjectNode()), 0),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenPreparationValue("in alcohol"),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingLongitude(),
+            MAPPER.createObjectNode()), 1),
+        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingCountry(),
+            MAPPER.createObjectNode()), 1),
+        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenInvalidType(),
+            MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanySpecimen(Boolean.FALSE),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanySpecimen(Boolean.TRUE),
+                MAPPER.createObjectNode()), 2),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenFullPaleoSpecimen(),
+                MAPPER.createObjectNode()), 2));
+  }
+
+  private static DigitalSpecimen givenFullPaleoSpecimen() {
+    return baseDigitalSpecimen().withDwcPreparations("single specimen")
+        .withOdsMarkedAsType(true)
+        .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
+        .withOccurrences(List.of(new Occurrences().withLocation(
+            new Location()
+                .withDwcCountry("Estonia")
+                .withDwcCountryCode("EE")
+                .withGeoreference(new Georeference()
+                    .withDwcDecimalLatitude(59.465625)
+                    .withDwcDecimalLongitude(25.059035))
+                .withGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
+  }
+
+  private static DigitalSpecimen givenBotanySpecimen(Boolean hasMedia) {
+    return baseDigitalSpecimen().withDwcPreparations("in alcohol")
+        .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
+        .withDwcRecordedBy("sam Leeflang")
+        .withOdsMarkedAsType(true)
+        .withOccurrences(List.of(
+            new Occurrences()
+                .withDwcEventDate("22-09-2023")
+                .withDwcFieldNumber("A field number")
+                .withLocation(
+                    new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
+                        .withGeoreference(new Georeference()
+                            .withDwcDecimalLatitude(59.465625)
+                            .withDwcDecimalLongitude(25.059035)))))
+        .withOdsHasMedia(hasMedia);
+  }
+
+  private static DigitalSpecimen givenInvalidType() {
+    return baseDigitalSpecimen()
+        .withDwcPreparations("single specimen")
+        .withOdsTopicDiscipline(OdsTopicDiscipline.UNCLASSIFIED);
+  }
+
+  private static DigitalSpecimen givenMissingCountry() {
+    return baseDigitalSpecimen()
+        .withDwcPreparations("single specimen")
+        .withOdsMarkedAsType(true)
+        .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
+        .withOccurrences(List.of(new Occurrences().withLocation(
+            new Location()
+                .withGeoreference(new Georeference()
+                    .withDwcDecimalLatitude(59.465625)
+                    .withDwcDecimalLongitude(25.059035))
+                .withGeologicalContext(
+                    new GeologicalContext().withDwcEarliestEonOrLowestEonothem("Archean")))));
+  }
+
+  private static DigitalSpecimen givenPreparationValue(
+      String preparationValue) {
+    return baseDigitalSpecimen()
+        .withDwcPreparations(preparationValue)
+        .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY);
+  }
+
+  private static DigitalSpecimen baseDigitalSpecimen() {
+    return new DigitalSpecimen()
+        .withOdsPhysicalSpecimenIdType(PHYSICAL_SPECIMEN_TYPE)
+        .withDwcInstitutionId(ORGANISATION_ID)
+        .withOdsSpecimenName(SPECIMEN_NAME)
+        .withOdsSourceSystem(SOURCE_SYSTEM_ID)
+        .withDctermsModified("2017-09-26T12:27:21.000+00:00")
+        .withDctermsLicense("http://creativecommons.org/licenses/by-nc/4.0/");
+  }
+
+  private static DigitalSpecimen givenMissingLongitude() {
+    return baseDigitalSpecimen()
+        .withDwcPreparations("single specimen")
+        .withOdsMarkedAsType(true)
+        .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
+        .withOccurrences(List.of(new Occurrences().withLocation(
+            new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
+                .withGeoreference(new Georeference().withDwcDecimalLatitude(59.465625))
+                .withGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
+  }
+
   @BeforeEach
   void setup() {
     midsService = new MidsService();
@@ -26,7 +152,7 @@ class MidsServiceTest {
 
   @ParameterizedTest
   @MethodSource("provideDigitalSpecimen")
-  void testCalculateMids(DigitalSpecimen digitalSpecimen, int midsLevel) {
+  void testCalculateMids(DigitalSpecimenWrapper digitalSpecimen, int midsLevel) {
     // Given
 
     // When
@@ -35,266 +161,4 @@ class MidsServiceTest {
     // Then
     assertThat(result).isEqualTo(midsLevel);
   }
-
-  private static Stream<Arguments> provideDigitalSpecimen() throws JsonProcessingException {
-    return Stream.of(
-        Arguments.of(TestUtils.givenDigitalSpecimen(), 0),
-        Arguments.of(MAPPER.readValue(MISSING_VALUE, DigitalSpecimen.class), 0),
-        Arguments.of(MAPPER.readValue(WHITE_SPACE_VALUE, DigitalSpecimen.class), 0),
-        Arguments.of(MAPPER.readValue(NULL_STRING_VALUE, DigitalSpecimen.class), 0),
-        Arguments.of(MAPPER.readValue(MIDS_1, DigitalSpecimen.class), 1),
-        Arguments.of(MAPPER.readValue(MISSING_LONGITUDE, DigitalSpecimen.class), 1),
-        Arguments.of(MAPPER.readValue(MISSING_QUALITATIVE_LOCATION, DigitalSpecimen.class), 1),
-        Arguments.of(MAPPER.readValue(UNKNOWN_SPECIMEN_TYPE, DigitalSpecimen.class), 1),
-        Arguments.of(MAPPER.readValue(BIO_LACKS_MEDIA, DigitalSpecimen.class), 1),
-        Arguments.of(MAPPER.readValue(BIO_MIDS_2, DigitalSpecimen.class), 2),
-        Arguments.of(MAPPER.readValue(MIDS_2, DigitalSpecimen.class), 2));
-  }
-
-
-  private final static String MISSING_LONGITUDE = """
-      {
-        "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-        "ods:type": "GeologyRockSpecimen",
-        "ods:attributes": {
-          "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organisationId": "https://ror.org/0443cwa12",
-          "ods:specimenName": "Biota",
-          "ods:datasetId": null,
-          "ods:physicalSpecimenCollection": null,
-          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-          "dwca:id": null,
-          "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-          "ods:objectType": "single specimen",
-          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
-          "dwc:earliestAgeOrLowestStage": "Pakerort Stage",
-          "dwc:latestAgeOrHighestStage": "Pakerort Stage",
-          "dwc:country": "Estonia",
-          "dwc:countryCode": "EE",
-          "dwc:decimalLatitude": "59.465625",
-          "dwc:decimalLongitude": null
-        },
-        "ods:originalAttributes": {}
-      }
-      """;
-
-  private final static String BIO_MIDS_2 = """
-      {
-        "ods:physicalSpecimenId": "HBG500000:00g30e956",
-        "ods:type": "BotanySpecimen",
-        "ods:attributes": {
-          "ods:physicalSpecimenIdType": "combined",
-          "ods:organisationId": "https://ror.org/00g30e956",
-          "ods:specimenName": "Calanthe crenulata",
-          "ods:datasetId": null,
-          "ods:physicalSpecimenCollection": null,
-          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-          "dwca:id": null,
-          "dcterms:license": "https://creativecommons.org/licenses/by/4.0/",
-          "ods:objectType": "single specimen",
-          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
-          "dwc:country": "Indonesia",
-          "dwc:countryCode": "ID",
-          "dwc:decimalLatitude": "-4.066340",
-          "dwc:decimalLongitude": "104.096684",
-          "ods:collectingNumber": "612",
-          "ods:collector": "Winkler, H. (Hans) K.A.",
-          "ods:dateCollected": "1924-12-10",
-          "ods:hasMedia": "true",
-          "dwc:typeStatus": "Known not a type"
-        },
-        "ods:originalAttributes": {}
-      }
-      """;
-
-  private final static String BIO_LACKS_MEDIA = """
-      {
-        "ods:physicalSpecimenId": "HBG500000:00g30e956",
-        "ods:type": "BotanySpecimen",
-        "ods:attributes": {
-          "ods:physicalSpecimenIdType": "combined",
-          "ods:organisationId": "https://ror.org/00g30e956",
-          "ods:specimenName": "Calanthe crenulata",
-          "ods:datasetId": null,
-          "ods:physicalSpecimenCollection": null,
-          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-          "dwca:id": null,
-          "dcterms:license": "https://creativecommons.org/licenses/by/4.0/",
-          "ods:objectType": "single specimen",
-          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
-          "dwc:country": "Indonesia",
-          "dwc:countryCode": "ID",
-          "dwc:decimalLatitude": "-4.066340",
-          "dwc:decimalLongitude": "104.096684",
-          "ods:collectingNumber": "612",
-          "ods:collector": "Winkler, H. (Hans) K.A.",
-          "ods:dateCollected": "1924-12-10",
-          "ods:hasMedia": "false",
-          "dwc:typeStatus": "Known not a type"
-        },
-        "ods:originalAttributes": {}
-      }
-      """;
-
-  private final static String UNKNOWN_SPECIMEN_TYPE = """
-      {
-        "ods:physicalSpecimenId": "HBG500000:00g30e956",
-        "ods:type": "UnknownType",
-        "ods:attributes": {
-          "ods:physicalSpecimenIdType": "combined",
-          "ods:organisationId": "https://ror.org/00g30e956",
-          "ods:specimenName": "Calanthe crenulata",
-          "ods:datasetId": null,
-          "ods:physicalSpecimenCollection": null,
-          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-          "dwca:id": null,
-          "dcterms:license": "https://creativecommons.org/licenses/by/4.0/",
-          "ods:objectType": "single specimen",
-          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
-          "dwc:country": "Indonesia",
-          "dwc:countryCode": "ID",
-          "dwc:decimalLatitude": "-4.066340",
-          "dwc:decimalLongitude": "104.096684",
-          "ods:collectingNumber": "612",
-          "ods:collector": "Winkler, H. (Hans) K.A.",
-          "ods:dateCollected": "1924-12-10",
-          "ods:hasMedia": "true",
-          "dwc:typeStatus": "Known not a type"
-        },
-        "ods:originalAttributes": {}
-      }
-      """;
-
-  private final static String MISSING_QUALITATIVE_LOCATION = """
-      {
-        "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-        "ods:type": "GeologyRockSpecimen",
-        "ods:attributes": {
-          "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organisationId": "https://ror.org/0443cwa12",
-          "ods:specimenName": "Biota",
-          "ods:datasetId": null,
-          "ods:physicalSpecimenCollection": null,
-          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-          "dwca:id": null,
-          "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-          "ods:objectType": "single specimen",
-          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
-          "dwc:earliestAgeOrLowestStage": "Pakerort Stage",
-          "dwc:latestAgeOrHighestStage": "Pakerort Stage",
-          "dwc:decimalLatitude": "59.465625",
-          "dwc:decimalLongitude": "25.059035"
-        },
-        "ods:originalAttributes": {}
-      }
-      """;
-
-  private final static String MIDS_2 = """
-      {
-        "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-        "ods:type": "GeologyRockSpecimen",
-        "ods:attributes": {
-          "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organisationId": "https://ror.org/0443cwa12",
-          "ods:specimenName": "Biota",
-          "ods:datasetId": null,
-          "ods:physicalSpecimenCollection": null,
-          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-          "dwca:id": null,
-          "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-          "ods:objectType": "single specimen",
-          "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
-          "dwc:earliestAgeOrLowestStage": "Pakerort Stage",
-          "dwc:latestAgeOrHighestStage": "Pakerort Stage",
-          "dwc:country": "Estonia",
-          "dwc:countryCode": "EE",
-          "dwc:decimalLatitude": "59.465625",
-          "dwc:decimalLongitude": "25.059035",
-          "dwc:typeStatus": "Known not a type"
-        },
-        "ods:originalAttributes": {}
-      }
-      """;
-
-  private final static String MIDS_1 = """
-      {
-        "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-        "ods:type": "GeologyRockSpecimen",
-        "ods:attributes": {
-          "ods:physicalSpecimenIdType": "cetaf",
-          "ods:organisationId": "https://ror.org/0443cwa12",
-          "ods:specimenName": "Biota",
-          "ods:datasetId": null,
-          "ods:physicalSpecimenCollection": null,
-          "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-          "dwca:id": null,
-          "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-          "ods:objectType": "single specimen",
-          "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
-        },
-        "ods:originalAttributes": {}
-      }
-      """;
-
-  private final static String MISSING_VALUE =
-      """
-            {
-            "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-            "ods:type": "GeologyRockSpecimen",
-            "ods:attributes": {
-              "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organisationId": "https://ror.org/0443cwa12",
-              "ods:specimenName": "Biota",
-              "ods:datasetId": null,
-              "ods:physicalSpecimenCollection": null,
-              "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-              "dwca:id": null,
-              "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-              "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
-            },
-            "ods:originalAttributes": {}
-          }
-          """;
-
-  private final static String WHITE_SPACE_VALUE =
-      """
-            {
-            "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-            "ods:type": "GeologyRockSpecimen",
-            "ods:attributes": {
-              "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organisationId": "https://ror.org/0443cwa12",
-              "ods:specimenName": "Biota",
-              "ods:datasetId": null,
-              "ods:physicalSpecimenCollection": null,
-              "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-              "dwca:id": null,
-              "ods:objectType": "single specimen",
-              "dcterms:license": "    ",
-              "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
-            },
-            "ods:originalAttributes": {}
-          }
-          """;
-
-  private final static String NULL_STRING_VALUE =
-      """
-            {
-            "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
-            "ods:type": "GeologyRockSpecimen",
-            "ods:attributes": {
-              "ods:physicalSpecimenIdType": "cetaf",
-              "ods:organisationId": "https://ror.org/0443cwa12",
-              "ods:specimenName": "null",
-              "ods:datasetId": null,
-              "ods:physicalSpecimenCollection": null,
-              "ods:sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
-              "dwca:id": null,
-              "ods:objectType": "single specimen",
-              "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
-              "dcterms:modified": "2017-09-26T12:27:21.000+00:00"
-            },
-            "ods:originalAttributes": {}
-          }
-          """;
 }

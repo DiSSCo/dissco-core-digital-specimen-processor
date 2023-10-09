@@ -7,7 +7,7 @@ public enum FdoProfileConstants {
   ISSUED_FOR_AGENT_PID("https://ror.org/0566bfb96");
   private final String value;
 
-  private FdoProfileConstants(String value) {
+  FdoProfileConstants(String value) {
     this.value = value;
   }
 
