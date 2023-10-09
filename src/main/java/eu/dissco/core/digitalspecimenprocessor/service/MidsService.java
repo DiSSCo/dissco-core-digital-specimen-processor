@@ -66,10 +66,6 @@ public class MidsService {
         && isValid(attributes.getDwcRecordedBy());
   }
 
-  private boolean occurrenceIsPresent(DigitalSpecimen attributes) {
-    return attributes.getOccurrences() != null && !attributes.getOccurrences().isEmpty()
-        && attributes.getOccurrences().get(0) != null;
-  }
 
   private boolean compliesToMidsTwoPaleoBio(DigitalSpecimen attributes) {
     return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
@@ -86,6 +82,11 @@ public class MidsService {
           && georeference.getDwcDecimalLongitude() != null;
     }
     return false;
+  }
+
+  private boolean occurrenceIsPresent(DigitalSpecimen attributes) {
+    return attributes.getOccurrences() != null && !attributes.getOccurrences().isEmpty()
+        && attributes.getOccurrences().get(0) != null;
   }
 
   private boolean locationIsPresent(DigitalSpecimen digitalSpecimen) {
