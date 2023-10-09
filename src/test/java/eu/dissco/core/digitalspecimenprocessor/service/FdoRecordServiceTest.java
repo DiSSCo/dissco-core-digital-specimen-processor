@@ -153,7 +153,7 @@ class FdoRecordServiceTest {
                   "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                   "issuedForAgent": "https://ror.org/0566bfb96",
                   "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                  "normalisedSpecimenObjectId":"https://geocollections.info/specimen/23602",
+                  "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
                   "primarySpecimenObjectIdType":"local",
                   "specimenHost": "https://ror.org/0443cwa12"
                 }
@@ -262,7 +262,7 @@ class FdoRecordServiceTest {
                 "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                "normalisedSpecimenObjectId":"https://geocollections.info/specimen/23602",
+                "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
                 "primarySpecimenObjectIdType": "global",
                 "specimenHost": "https://ror.org/0443cwa12",
                 "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",
@@ -285,7 +285,7 @@ class FdoRecordServiceTest {
               "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-              "normalisedSpecimenObjectId":"https://geocollections.info/specimen/23602",
+              "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
               "primarySpecimenObjectIdType": "global",
               "specimenHost": "https://ror.org/0443cwa12",
               "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",
