@@ -15,7 +15,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +32,7 @@ public class FdoRecordService {
     return currentValue != null && !currentValue.equals(newValue);
   }
 
-  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimenWrapper> digitalSpecimens)
-      throws PidCreationException {
+  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimenWrapper> digitalSpecimens) {
     List<JsonNode> requestBody = new ArrayList<>();
     for (var specimen : digitalSpecimens) {
       requestBody.add(buildSinglePostHandleRequest(specimen));
@@ -43,8 +41,7 @@ public class FdoRecordService {
   }
 
   public List<JsonNode> buildRollbackUpdateRequest(
-      List<DigitalSpecimenRecord> digitalSpecimenRecords)
-      throws PidCreationException {
+      List<DigitalSpecimenRecord> digitalSpecimenRecords) {
     List<JsonNode> requestBody = new ArrayList<>();
     for (var specimen : digitalSpecimenRecords) {
       requestBody.add(buildSingleRollbackUpdateRequest(specimen));
@@ -98,7 +95,7 @@ public class FdoRecordService {
     attributes.put(FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
         specimen.attributes().getOdsNormalisedPhysicalSpecimenId());
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
-        specimen.attributes().getOdsPhysicalSpecimenIdType().value().toLowerCase());
+        specimen.attributes().getOdsPhysicalSpecimenIdType().value());
     attributes.put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getDwcInstitutionId());
 
     addOptionalAttributes(specimen, attributes);
@@ -107,10 +104,6 @@ public class FdoRecordService {
   }
 
   private void addOptionalAttributes(DigitalSpecimenWrapper specimen, ObjectNode attributes) {
-    if (specimen.attributes().getOdsSourceSystem() != null) {
-      attributes.put(FdoProfileAttributes.SOURCE_SYSTEM_ID.getAttribute(),
-          specimen.attributes().getOdsSourceSystem());
-    }
     if (specimen.attributes().getDwcInstitutionName() != null) {
       attributes.put(SPECIMEN_HOST_NAME.getAttribute(),
           specimen.attributes().getDwcInstitutionName());
@@ -124,7 +117,7 @@ public class FdoRecordService {
     }
     if (specimen.attributes().getOdsLivingOrPreserved() != null) {
       attributes.put(LIVING_OR_PRESERVED.getAttribute(),
-          specimen.attributes().getOdsLivingOrPreserved().value().toLowerCase());
+          specimen.attributes().getOdsLivingOrPreserved().value());
     }
     if (specimen.attributes().getOdsMarkedAsType() != null) {
       attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsMarkedAsType());

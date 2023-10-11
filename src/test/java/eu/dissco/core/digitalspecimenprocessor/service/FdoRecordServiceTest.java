@@ -154,7 +154,7 @@ class FdoRecordServiceTest {
                   "issuedForAgent": "https://ror.org/0566bfb96",
                   "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                   "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-                  "primarySpecimenObjectIdType":"local",
+                  "primarySpecimenObjectIdType":"Local",
                   "specimenHost": "https://ror.org/0443cwa12"
                 }
               }
@@ -252,7 +252,7 @@ class FdoRecordServiceTest {
     if (markedAsType != null && markedAsType) {
       return givenHandleRequestFullTypeStatus();
     }
-    if (markedAsType != null && !markedAsType) {
+    if (markedAsType != null) {
       return MAPPER.readTree("""
           {
             "data": {
@@ -263,13 +263,12 @@ class FdoRecordServiceTest {
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-                "primarySpecimenObjectIdType": "global",
+                "primarySpecimenObjectIdType": "Global",
                 "specimenHost": "https://ror.org/0443cwa12",
-                "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",
                 "specimenHostName": "National Museum of Natural History",
                 "topicDiscipline": "Botany",
                 "referentName": "Biota",
-                "livingOrPreserved": "preserved",
+                "livingOrPreserved": "Preserved",
                 "markedAsType": false
               }
             }
@@ -286,13 +285,12 @@ class FdoRecordServiceTest {
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-              "primarySpecimenObjectIdType": "global",
+              "primarySpecimenObjectIdType": "Global",
               "specimenHost": "https://ror.org/0443cwa12",
-              "sourceSystemId":"20.5000.1025/MN0-5XP-FFD",
               "specimenHostName": "National Museum of Natural History",
               "topicDiscipline": "Botany",
               "referentName": "Biota",
-              "livingOrPreserved": "preserved"
+              "livingOrPreserved": "Preserved"
             }
           }
         }""");
