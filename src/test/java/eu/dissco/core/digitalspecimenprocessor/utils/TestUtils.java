@@ -237,13 +237,12 @@ public class TestUtils {
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-              "primarySpecimenObjectIdType": "global",
+              "primarySpecimenObjectIdType": "Global",
               "specimenHost": "https://ror.org/0443cwa12",
-              "sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
               "specimenHostName": "National Museum of Natural History",
               "topicDiscipline": "Botany",
               "referentName": "Biota",
-              "livingOrPreserved": "preserved",
+              "livingOrPreserved": "Preserved",
               "markedAsType":true
             }
           }
@@ -261,7 +260,7 @@ public class TestUtils {
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-              "primarySpecimenObjectIdType":"local",
+              "primarySpecimenObjectIdType":"Local",
               "specimenHost": "https://ror.org/0443cwa12"
             }
           }
@@ -284,10 +283,10 @@ public class TestUtils {
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "specimenHost": "https://ror.org/0443cwa12",
                 "specimenHostName": "National Museum of Natural History",
-                "primarySpecimenObjectIdType": "cetaf",
+                "primarySpecimenObjectIdType": "Global",
                 "referentName": "Biota",
                 "topicDiscipline": "Earth Systems",
-                "livingOrPreserved": "living",
+                "livingOrPreserved": "Living",
                 "markedAsType": true
               }
             }
