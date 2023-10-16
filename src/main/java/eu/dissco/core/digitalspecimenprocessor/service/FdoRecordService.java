@@ -141,8 +141,9 @@ public class FdoRecordService {
         || (currentAttributes.getOdsPhysicalSpecimenIdType() != null
         && !currentAttributes.getOdsPhysicalSpecimenIdType()
         .equals(attributes.getOdsPhysicalSpecimenIdType()))
-        || isEqualString(currentAttributes.getOdsLivingOrPreserved().value(),
-        attributes.getOdsLivingOrPreserved().value())
+        || (currentAttributes.getOdsLivingOrPreserved() != null && isEqualString(
+        currentAttributes.getOdsLivingOrPreserved().value(),
+        attributes.getOdsLivingOrPreserved().value()))
         || isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
         || (currentAttributes.getOdsMarkedAsType() != null
         && !currentAttributes.getOdsMarkedAsType().equals(attributes.getOdsMarkedAsType()));
