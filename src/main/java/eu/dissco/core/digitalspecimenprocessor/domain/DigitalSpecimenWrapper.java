@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 
 public record DigitalSpecimenWrapper(
-    @JsonProperty("ods:physicalSpecimenId")
+    @JsonProperty("ods:normalisedPhysicalSpecimenId")
     String physicalSpecimenId,
     @JsonProperty("ods:type")
     String type,

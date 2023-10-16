@@ -80,7 +80,7 @@ class KafkaConsumerServiceTest {
             "OCR"
             ],
           "digitalSpecimenWrapper": {
-            "ods:physicalSpecimenId": "https://geocollections.info/specimen/23602",
+            "ods:normalisedPhysicalSpecimenId": "https://geocollections.info/specimen/23602",
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
               "ods:physicalSpecimenIdType": "Global",
