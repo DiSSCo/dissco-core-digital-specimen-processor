@@ -5,23 +5,19 @@
   "properties": {
     "dcterms:type": {
       "type": "string",
-      "description": "Unclear yet",
-      "$comment": "Unknown what this field should be"
+      "description": "https://purl.org/dc/terms/type"
     },
     "dcterms:date": {
       "type": "string",
-      "description": "Unclear yet",
-      "$comment": "Unknown what this field should be"
+      "description": "https://purl.org/dc/terms/date"
     },
     "dcterms:title": {
       "type": "string",
-      "description": "Unclear yet",
-      "$comment": "Unknown what this field should be"
+      "description": "https://purl.org/dc/terms/title"
     },
     "dcterms:creator": {
       "type": "string",
-      "description": "Unclear yet",
-      "$comment": "Unknown what this field should be"
+      "description": "https://purl.org/dc/elements/1.1/creator"
     },
     "???:citationPageNumber": {
       "type": "string",
