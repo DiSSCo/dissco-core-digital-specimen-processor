@@ -15,6 +15,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
+import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +34,11 @@ public class FdoRecordService {
   }
 
   public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimenWrapper> digitalSpecimens) {
-    List<JsonNode> requestBody = new ArrayList<>();
-    for (var specimen : digitalSpecimens) {
-      requestBody.add(buildSinglePostHandleRequest(specimen));
-    }
-    return requestBody;
+    return digitalSpecimens.stream().map(this::buildSinglePostHandleRequest).toList();
+  }
+
+  public List<JsonNode> buildUpdateHandleRequest(List<UpdatedDigitalSpecimenTuple> digitalSpecimens){
+    return digitalSpecimens.stream().map(this::buildSingleUpdateHandleRequest).toList();
   }
 
   public List<JsonNode> buildRollbackUpdateRequest(
@@ -64,6 +65,17 @@ public class FdoRecordService {
     data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
     var attributes = genRequestAttributes(specimen);
     data.set("attributes", attributes);
+    request.set("data", data);
+    return request;
+  }
+
+  private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
+    var request = mapper.createObjectNode();
+    var data = mapper.createObjectNode();
+    data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
+    data.set("attributes", attributes);
+    data.put("id", specimenTuple.currentSpecimen().id());
     request.set("data", data);
     return request;
   }

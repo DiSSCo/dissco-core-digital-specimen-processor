@@ -283,13 +283,12 @@ public class ProcessingService {
         .filter(tuple -> fdoRecordService.handleNeedsUpdate(
             tuple.currentSpecimen().digitalSpecimenWrapper(),
             tuple.digitalSpecimenEvent().digitalSpecimenWrapper()))
-        .map(tuple -> tuple.digitalSpecimenEvent().digitalSpecimenWrapper())
         .toList();
 
     if (!digitalSpecimensToUpdate.isEmpty()) {
       try {
-        var requests = fdoRecordService.buildPostHandleRequest(digitalSpecimensToUpdate);
-        handleComponent.postHandle(requests);
+        var requests = fdoRecordService.buildUpdateHandleRequest(digitalSpecimensToUpdate);
+        handleComponent.updateHandle(requests);
       } catch (PidCreationException | PidAuthenticationException e) {
         log.error("Unable to update Handle record. Not proceeding with update. ", e);
         try {

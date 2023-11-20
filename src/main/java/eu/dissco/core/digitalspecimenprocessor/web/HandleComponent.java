@@ -42,7 +42,16 @@ public class HandleComponent {
       throws PidAuthenticationException, PidCreationException {
     log.info("Posting Digital Specimens to Handle API");
     var requestBody = BodyInserters.fromValue(request);
-    var response = sendRequest(HttpMethod.PATCH, requestBody, "upsert");
+    var response = sendRequest(HttpMethod.POST, requestBody, "batch");
+    var responseJsonNode = getFutureResponse(response);
+    return getHandleName(responseJsonNode);
+  }
+
+  public Map<String, String> updateHandle(List<JsonNode> request)
+      throws PidAuthenticationException, PidCreationException {
+    log.info("Patching Digital Specimens to Handle API");
+    var requestBody = BodyInserters.fromValue(request);
+    var response = sendRequest(HttpMethod.PATCH, requestBody, "");
     var responseJsonNode = getFutureResponse(response);
     return getHandleName(responseJsonNode);
   }
