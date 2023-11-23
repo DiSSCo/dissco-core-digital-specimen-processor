@@ -29,6 +29,12 @@ public class FdoRecordService {
 
   private final ObjectMapper mapper;
 
+  private static final String ATTRIBUTES = "attributes";
+  private static final String TYPE = "type";
+  private static final String ID = "id";
+
+  private static final String DATA = "data";
+
   private static boolean isEqualString(String currentValue, String newValue) {
     return currentValue != null && !currentValue.equals(newValue);
   }
@@ -53,41 +59,41 @@ public class FdoRecordService {
   public JsonNode buildRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
     var handles = digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
     var dataNode = handles.stream()
-        .map(handle -> mapper.createObjectNode().put("id", handle))
+        .map(handle -> mapper.createObjectNode().put(ID, handle))
         .toList();
     ArrayNode dataArray = mapper.valueToTree(dataNode);
-    return mapper.createObjectNode().set("data", dataArray);
+    return mapper.createObjectNode().set(DATA, dataArray);
   }
 
   private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    data.put(TYPE, FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
     var attributes = genRequestAttributes(specimen);
-    data.set("attributes", attributes);
-    request.set("data", data);
+    data.set(ATTRIBUTES, attributes);
+    request.set(DATA, data);
     return request;
   }
 
   private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    data.put(TYPE, FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
     var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
-    data.set("attributes", attributes);
-    data.put("id", specimenTuple.currentSpecimen().id());
-    request.set("data", data);
+    data.set(ATTRIBUTES, attributes);
+    data.put(ID, specimenTuple.currentSpecimen().id());
+    request.set(DATA, data);
     return request;
   }
 
   private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put("type", FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    data.put(TYPE, FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
     var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
-    data.put("id", specimen.id());
-    data.set("attributes", attributes);
-    request.set("data", data);
+    data.put(ID, specimen.id());
+    data.set(ATTRIBUTES, attributes);
+    request.set(DATA, data);
     return request;
   }
 
