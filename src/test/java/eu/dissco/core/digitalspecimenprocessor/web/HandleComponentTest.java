@@ -5,6 +5,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -67,6 +68,23 @@ class HandleComponentTest {
 
     // When
     var response = handleComponent.postHandle(requestBody);
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
+  void testUpdateHandle() throws Exception {
+    // Given
+    var requestBody = List.of(givenUpdateHandleRequest());
+    var responseBody = givenHandleRequest();
+    var expected = givenHandleNameResponse(responseBody);
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
+        .setBody(MAPPER.writeValueAsString(responseBody))
+        .addHeader("Content-Type", "application/json"));
+
+    // When
+    var response = handleComponent.updateHandle(requestBody);
 
     // Then
     assertThat(response).isEqualTo(expected);

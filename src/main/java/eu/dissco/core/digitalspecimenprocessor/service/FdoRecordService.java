@@ -78,10 +78,10 @@ public class FdoRecordService {
   private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
+    data.put(ID, specimenTuple.currentSpecimen().id());
     data.put(TYPE, FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
     var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
     data.set(ATTRIBUTES, attributes);
-    data.put(ID, specimenTuple.currentSpecimen().id());
     request.set(DATA, data);
     return request;
   }
