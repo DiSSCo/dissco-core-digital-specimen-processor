@@ -20,8 +20,10 @@ public class ElasticSearchProperties {
   @NotBlank
   private String indexName;
 
+  @NotBlank
   private String username;
 
+  @NotBlank
   private String password;
 
 }

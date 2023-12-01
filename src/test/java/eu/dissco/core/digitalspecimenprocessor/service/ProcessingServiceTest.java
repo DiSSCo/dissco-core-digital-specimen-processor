@@ -39,6 +39,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
@@ -141,9 +142,8 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
 
     // Then
-    then(fdoRecordService).should()
-        .buildPostHandleRequest(List.of(expected.get(0).digitalSpecimenWrapper()));
-    then(handleComponent).should().postHandle(any());
+    then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
+    then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
         .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
@@ -403,7 +403,7 @@ class ProcessingServiceTest {
             givenUnequalDigitalSpecimenRecord()
         ));
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
-    doThrow(PidCreationException.class).when(handleComponent).postHandle(any());
+    doThrow(PidCreationException.class).when(handleComponent).updateHandle(any());
 
     // When
     var result = service.handleMessages(
@@ -427,7 +427,7 @@ class ProcessingServiceTest {
             givenUnequalDigitalSpecimenRecord()
         ));
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
-    doThrow(PidCreationException.class).when(handleComponent).postHandle(any());
+    doThrow(PidCreationException.class).when(handleComponent).updateHandle(any());
     doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any());
 
     // When
@@ -458,7 +458,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(firstEvent, secondEvent, thirdEvent));
 
     // Then
-    then(handleComponent).should().postHandle(anyList());
+    then(handleComponent).should().updateHandle(anyList());
     then(handleComponent).should().rollbackHandleUpdate(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(kafkaService).should().deadLetterEvent(secondEvent);
@@ -491,7 +491,7 @@ class ProcessingServiceTest {
     // Then
     then(fdoRecordService).should().buildRollbackUpdateRequest(
         List.of(givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen")));
-    then(handleComponent).should().postHandle(anyList());
+    then(handleComponent).should().updateHandle(anyList());
     then(handleComponent).should().rollbackHandleUpdate(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(kafkaService).should().deadLetterEvent(secondEvent);
@@ -540,10 +540,10 @@ class ProcessingServiceTest {
 
     // Then
     then(fdoRecordService).should()
-        .buildPostHandleRequest(List.of(givenDigitalSpecimenRecord(2).digitalSpecimenWrapper()));
+        .buildUpdateHandleRequest(anyList());
     then(fdoRecordService).should()
         .buildRollbackUpdateRequest(List.of(unequalCurrentDigitalSpecimen));
-    then(handleComponent).should().postHandle(any());
+    then(handleComponent).should().updateHandle(any());
     then(handleComponent).should().rollbackHandleUpdate(any());
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(handleComponent).should().rollbackHandleUpdate(any());

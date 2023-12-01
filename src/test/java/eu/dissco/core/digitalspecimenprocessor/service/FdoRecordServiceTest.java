@@ -10,10 +10,13 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TOPIC_DISC
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mockStatic;
@@ -21,6 +24,7 @@ import static org.mockito.Mockito.mockStatic;
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
@@ -123,6 +127,19 @@ class FdoRecordServiceTest {
   }
 
   @Test
+  void testBuildUpdateHandleRequest() throws Exception {
+    // Given
+    var tupleList = List.of(
+        new UpdatedDigitalSpecimenTuple(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
+
+    // When
+    var response = builder.buildUpdateHandleRequest(tupleList);
+
+    // Then
+    assertThat(response).isEqualTo(List.of(givenUpdateHandleRequest()));
+  }
+
+  @Test
   void testGenRequestMinimalCombined() throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -221,10 +238,12 @@ class FdoRecordServiceTest {
   @MethodSource("digitalSpecimensNeedToBeChanged")
   void testHandleNeedsUpdate(
       eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen currentAttributes) {
-    var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentAttributes,
+    var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+        currentAttributes,
         givenDigitalSpecimenOriginalAttributesMinimal());
     // Then
-    assertThat(builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimenWrapper())).isTrue();
+    assertThat(
+        builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimenWrapper())).isTrue();
   }
 
   @Test
@@ -242,7 +261,8 @@ class FdoRecordServiceTest {
   @Test
   void testPhysicalSpecimenIdsDifferent() {
     // Given
-    var currentSpecimen = TestUtils.givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME, ORGANISATION_ID);
+    var currentSpecimen = TestUtils.givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
+        ORGANISATION_ID);
 
     // When/then
     assertThat(builder.handleNeedsUpdate(currentSpecimen, givenDigitalSpecimenWrapper())).isTrue();
