@@ -22,6 +22,7 @@
     <jakarta.json.version>2.1.2</jakarta.json.version>
     <json-patch.version>1.13</json-patch.version>
     <kafka.version>3.5.1</kafka.version>
+    <logback.version>1.4.12</logback.version>
     <spring-kafka.version>3.0.11</spring-kafka.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <testcontainers.version>1.19.0</testcontainers.version>
