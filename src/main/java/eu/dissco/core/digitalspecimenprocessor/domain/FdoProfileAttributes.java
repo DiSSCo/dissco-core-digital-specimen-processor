@@ -14,6 +14,7 @@ public enum FdoProfileAttributes {
   NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID("normalisedPrimarySpecimenObjectId"),
   TOPIC_DISCIPLINE("topicDiscipline"),
   LIVING_OR_PRESERVED("livingOrPreserved"),
+  OTHER_SPECIMEN_IDS("otherSpecimenIds"),
   MARKED_AS_TYPE("markedAsType"),
   SOURCE_SYSTEM_ID("sourceSystemId");
 

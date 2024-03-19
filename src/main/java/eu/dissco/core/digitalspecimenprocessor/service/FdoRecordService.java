@@ -140,6 +140,16 @@ public class FdoRecordService {
     if (specimen.attributes().getOdsMarkedAsType() != null) {
       attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsMarkedAsType());
     }
+    if (specimen.attributes().getIdentifiers() != null && !specimen.attributes().getIdentifiers().isEmpty()){
+      var otherIdNodes = mapper.createArrayNode();
+      for (var id: specimen.attributes().getIdentifiers()){
+        var idNode = mapper.createObjectNode()
+            .put("identifierValue", id.getIdentifierValue())
+            .put("identifierType", id.getIdentifierType());
+        otherIdNodes.add(idNode);
+      }
+      attributes.set("otherSpecimenIds", otherIdNodes);
+    }
   }
 
   public boolean handleNeedsUpdate(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
