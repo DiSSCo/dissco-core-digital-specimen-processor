@@ -16,6 +16,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingO
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationships;
+import eu.dissco.core.digitalspecimenprocessor.schema.Identifiers;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -338,6 +339,11 @@ public class TestUtils {
         .withOdsMarkedAsType(markedAsType)
         .withDwcPreparations("")
         .withDctermsModified("2017-09-26T12:27:21.000+00:00");
+  }
+
+  public static DigitalSpecimen givenAttributesPlusIdentifier(String specimenName, String organisation, Boolean markedAsType){
+    return givenAttributes(specimenName, organisation, markedAsType)
+        .withIdentifiers(List.of(new Identifiers("Specimen label", HANDLE, false, null, true)));
   }
 
 }
