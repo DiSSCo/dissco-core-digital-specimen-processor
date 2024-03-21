@@ -10,6 +10,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TOPIC_DISC
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributesPlusIdentifier;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
@@ -193,6 +194,49 @@ class FdoRecordServiceTest {
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
         givenDigitalSpecimenAttributesFull(markedAsType));
     var expectedJson = getExpectedJson(markedAsType);
+    var expected = new ArrayList<>(List.of(expectedJson));
+
+    // When
+    var response = builder.buildPostHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
+  void testGenRequestIdentifiers() throws Exception {
+    // Given
+    var markedAsType = false;
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenAttributesPlusIdentifier(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
+        givenDigitalSpecimenAttributesFull(markedAsType));
+    var expectedJson = MAPPER.readTree(
+          """
+          {
+            "data": {
+              "type": "digitalSpecimen",
+              "attributes": {
+                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "issuedForAgent": "https://ror.org/0566bfb96",
+                "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
+                "primarySpecimenObjectIdType": "Global",
+                "specimenHost": "https://ror.org/0443cwa12",
+                "specimenHostName": "National Museum of Natural History",
+                "topicDiscipline": "Botany",
+                "referentName": "Biota",
+                "livingOrPreserved": "Preserved",
+                "markedAsType": false,
+                "otherSpecimenIds": [{
+                  "identifierType": "Specimen label",
+                  "identifierValue": "20.5000.1025/V1Z-176-LL4"
+                }]
+              }
+            }
+          }
+          """
+    );
     var expected = new ArrayList<>(List.of(expectedJson));
 
     // When

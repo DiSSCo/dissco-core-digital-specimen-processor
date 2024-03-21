@@ -23,6 +23,7 @@
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <testcontainers.version>1.19.5</testcontainers.version>
     <springdoc.version>2.3.0</springdoc.version>
+    <spring-security.version>6.2.3</spring-security.version> <!-- 21/03/24: CVE-2024-22257-->
     <sonar.organization>dissco</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <sonar.coverage.jacoco.xmlReportPaths>../app-it/target/site/jacoco-aggregate/jacoco.xml
