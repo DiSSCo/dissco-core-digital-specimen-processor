@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
@@ -39,7 +40,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
@@ -53,12 +53,14 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
+import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.hamcrest.MockitoHamcrest;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -595,6 +597,55 @@ class ProcessingServiceTest {
     then(kafkaService).should().republishEvent(givenDigitalSpecimenEvent());
     then(kafkaService).shouldHaveNoMoreInteractions();
     then(fdoRecordService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testCreateSpecimenThrowsDataAccessException() throws Exception {
+    // Given
+    var firstEvent = givenDigitalSpecimenEvent(true);
+    var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
+    var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
+    var unequalOriginalSpecimens = List.of(
+        givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
+        givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
+        givenUnequalDigitalSpecimenRecord()
+    );
+    given(repository.getDigitalSpecimens(anyList()))
+        .willReturn(unequalOriginalSpecimens);
+    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
+    doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(anyList());
+
+    // When
+    var result = service.handleMessages(List.of(firstEvent, secondEvent, thirdEvent));
+
+    // Then
+    then(fdoRecordService).should().buildRollbackUpdateRequest(anyList());
+    then(handleComponent).should().rollbackHandleUpdate(any());
+    then(kafkaService).should(times(3)).deadLetterEvent(any());
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void testUpdateSpecimenThrowsDataAccessException() throws Exception {
+    // Given
+    var newSpecimenEvent = givenDigitalSpecimenEvent(true);
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
+    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
+        List.of(MAPPER.createObjectNode()));
+    given(handleComponent.postHandle(anyList()))
+        .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
+    doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(any());
+
+    // When
+    var result = service.handleMessages(List.of(newSpecimenEvent));
+
+    // Then
+    then(fdoRecordService).should().buildRollbackCreationRequest(any());
+    then(handleComponent).should().rollbackHandleCreation(any());
+    then(kafkaService).should().deadLetterEvent(newSpecimenEvent);
+    assertThat(result).isEmpty();
   }
 
 }

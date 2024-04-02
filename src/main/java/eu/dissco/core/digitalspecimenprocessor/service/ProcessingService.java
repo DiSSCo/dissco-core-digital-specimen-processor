@@ -35,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.exception.DataAccessException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -182,9 +183,15 @@ public class ProcessingService {
     var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
 
     log.info("Persisting to db");
-    repository.createDigitalSpecimenRecord(
-        digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
-            .toList());
+    try {
+      repository.createDigitalSpecimenRecord(
+          digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
+              .toList());
+    } catch (DataAccessException e) {
+      log.error("Unable to update records into database. Rolling back updates", e);
+      unableToInsertUpdates(digitalSpecimenRecords);
+      return Collections.emptySet();
+    }
     log.info("Persisting to elastic");
     try {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(
@@ -209,6 +216,24 @@ public class ProcessingService {
               false));
       filterUpdatesAndRollbackHandles(updatedDigitalSpecimenTuples);
       return Set.of();
+    }
+  }
+
+  private void unableToInsertUpdates(
+      Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenTuples) {
+    rollbackHandleUpdate(updatedDigitalSpecimenTuples.stream().map(
+        UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).toList());
+    for (var dsRecord : updatedDigitalSpecimenTuples) {
+      var event = new DigitalSpecimenEvent(
+          null,
+          dsRecord.digitalSpecimenRecord().digitalSpecimenWrapper(),
+          dsRecord.digitalMediaObjectEvents()
+      );
+      try {
+        kafkaService.deadLetterEvent(event);
+      } catch (JsonProcessingException e1) {
+        log.error("Unable to DLQ failed specimens");
+      }
     }
   }
 
@@ -339,7 +364,11 @@ public class ProcessingService {
   }
 
   private void rollBackToEarlierVersion(DigitalSpecimenRecord currentDigitalSpecimen) {
-    repository.createDigitalSpecimenRecord(List.of(currentDigitalSpecimen));
+    try {
+      repository.createDigitalSpecimenRecord(List.of(currentDigitalSpecimen));
+    } catch (DataAccessException e) {
+      log.error("Unable to rollback to previous version");
+    }
   }
 
 
@@ -361,7 +390,13 @@ public class ProcessingService {
       return Collections.emptySet();
     }
     log.info("Inserting {} new specimen into the database", digitalSpecimenRecords.size());
-    repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
+    try {
+      repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
+    } catch (DataAccessException e) {
+      log.error("Unable to insert new specimens into the database. Rolling back handles", e);
+      unableToInsertNewSpecimens(digitalSpecimenRecords.keySet(), events);
+      return Collections.emptySet();
+    }
     try {
       log.info("Inserting {} new specimen into the elastic search", digitalSpecimenRecords.size());
       var bulkResponse = elasticRepository.indexDigitalSpecimen(digitalSpecimenRecords.keySet());
@@ -378,6 +413,18 @@ public class ProcessingService {
       digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
       rollbackHandleCreation(digitalSpecimenRecords.keySet().stream().toList());
       return Collections.emptySet();
+    }
+  }
+
+  private void unableToInsertNewSpecimens(Set<DigitalSpecimenRecord> digitalSpecimenRecords,
+      List<DigitalSpecimenEvent> events) {
+    rollbackHandleCreation(new ArrayList<>(digitalSpecimenRecords));
+    for (var event : events) {
+      try {
+        kafkaService.deadLetterEvent(event);
+      } catch (JsonProcessingException e1) {
+        log.error("Unable to DLQ failed specimens");
+      }
     }
   }
 
