@@ -231,8 +231,8 @@ public class ProcessingService {
       );
       try {
         kafkaService.deadLetterEvent(event);
-      } catch (JsonProcessingException e1) {
-        log.error("Unable to DLQ failed specimens");
+      } catch (JsonProcessingException e) {
+        log.error("Fatal Exception: Unable to DLQ failed specimens", e);
       }
     }
   }
