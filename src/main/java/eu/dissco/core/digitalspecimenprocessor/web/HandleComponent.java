@@ -47,13 +47,12 @@ public class HandleComponent {
     return getHandleName(responseJsonNode);
   }
 
-  public Map<String, String> updateHandle(List<JsonNode> request)
+  public void updateHandle(List<JsonNode> request)
       throws PidAuthenticationException, PidCreationException {
     log.info("Patching Digital Specimens to Handle API");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.PATCH, requestBody, "");
-    var responseJsonNode = getFutureResponse(response);
-    return getHandleName(responseJsonNode);
+    getFutureResponse(response);
   }
 
   public void rollbackHandleCreation(JsonNode request)

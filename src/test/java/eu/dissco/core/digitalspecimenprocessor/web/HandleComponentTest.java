@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -53,7 +54,6 @@ class HandleComponentTest {
     WebClient webClient = WebClient.create(
         String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
     handleComponent = new HandleComponent(webClient, tokenAuthenticator);
-
   }
 
   @Test
@@ -78,16 +78,12 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(givenUpdateHandleRequest());
     var responseBody = givenHandleRequest();
-    var expected = givenHandleNameResponse(responseBody);
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
 
-    // When
-    var response = handleComponent.updateHandle(requestBody);
-
-    // Then
-    assertThat(response).isEqualTo(expected);
+    // When / Then
+    assertDoesNotThrow(() -> handleComponent.updateHandle(requestBody));
   }
 
   @Test
