@@ -102,8 +102,6 @@ public class FdoRecordService {
     // Defaults
     attributes.put(FdoProfileAttributes.FDO_PROFILE.getAttribute(),
         FdoProfileConstants.FDO_PROFILE.getValue());
-    attributes.put(FdoProfileAttributes.DIGITAL_OBJECT_TYPE.getAttribute(),
-        FdoProfileConstants.DIGITAL_OBJECT_TYPE.getValue());
     attributes.put(FdoProfileAttributes.ISSUED_FOR_AGENT.getAttribute(),
         FdoProfileConstants.ISSUED_FOR_AGENT_PID.getValue());
 

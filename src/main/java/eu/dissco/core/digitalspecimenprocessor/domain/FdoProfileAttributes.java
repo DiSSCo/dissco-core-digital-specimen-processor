@@ -4,7 +4,6 @@ public enum FdoProfileAttributes {
 
   // Handle: 1-19
   FDO_PROFILE("fdoProfile"),
-  DIGITAL_OBJECT_TYPE("digitalObjectType"),
   ISSUED_FOR_AGENT("issuedForAgent"),
   REFERENT_NAME("referentName"),
   SPECIMEN_HOST("specimenHost"),
