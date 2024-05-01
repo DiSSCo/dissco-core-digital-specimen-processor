@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
-import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileConstants;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +31,9 @@ public class FdoRecordService {
   private static final String ATTRIBUTES = "attributes";
   private static final String TYPE = "type";
   private static final String ID = "id";
+  private static final String DIGITAL_SPECIMEN_TYPE = "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e";
+  private static final String ISSUED_FOR_AGENT_PID = "https://ror.org/0566bfb96";
+
 
   private static final String DATA = "data";
 
@@ -68,7 +70,7 @@ public class FdoRecordService {
   private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put(TYPE, FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    data.put(TYPE, DIGITAL_SPECIMEN_TYPE);
     var attributes = genRequestAttributes(specimen);
     data.set(ATTRIBUTES, attributes);
     request.set(DATA, data);
@@ -79,7 +81,7 @@ public class FdoRecordService {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put(ID, specimenTuple.currentSpecimen().id());
-    data.put(TYPE, FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    data.put(TYPE, DIGITAL_SPECIMEN_TYPE);
     var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
     data.set(ATTRIBUTES, attributes);
     request.set(DATA, data);
@@ -89,7 +91,7 @@ public class FdoRecordService {
   private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put(TYPE, FdoProfileConstants.DIGITAL_SPECIMEN_TYPE.getValue());
+    data.put(TYPE, DIGITAL_SPECIMEN_TYPE);
     var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
     data.put(ID, specimen.id());
     data.set(ATTRIBUTES, attributes);
@@ -100,10 +102,8 @@ public class FdoRecordService {
   private JsonNode genRequestAttributes(DigitalSpecimenWrapper specimen) {
     var attributes = mapper.createObjectNode();
     // Defaults
-    attributes.put(FdoProfileAttributes.FDO_PROFILE.getAttribute(),
-        FdoProfileConstants.FDO_PROFILE.getValue());
     attributes.put(FdoProfileAttributes.ISSUED_FOR_AGENT.getAttribute(),
-        FdoProfileConstants.ISSUED_FOR_AGENT_PID.getValue());
+        ISSUED_FOR_AGENT_PID);
 
     // Mandatory
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),

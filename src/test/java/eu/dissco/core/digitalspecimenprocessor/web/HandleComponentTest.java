@@ -241,7 +241,7 @@ class HandleComponentTest {
               "type": "digitalSpecimen",
               "attributes": {
                 "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764ee",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "specimenHost": "https://ror.org/0443cwa12",
@@ -277,7 +277,7 @@ class HandleComponentTest {
               "type": "digitalSpecimen",
               "attributes": {
                 "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764ee",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "specimenHost": "https://ror.org/0443cwa12",
                 "specimenHostName": "National Museum of Natural History",
