@@ -15,6 +15,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +28,11 @@ import org.springframework.stereotype.Service;
 public class FdoRecordService {
 
   private final ObjectMapper mapper;
+  private final FdoProperties fdoProperties;
 
   private static final String ATTRIBUTES = "attributes";
   private static final String TYPE = "type";
   private static final String ID = "id";
-  private static final String DIGITAL_SPECIMEN_TYPE = "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e";
-  private static final String ISSUED_FOR_AGENT_PID = "https://ror.org/0566bfb96";
 
 
   private static final String DATA = "data";
@@ -70,7 +70,7 @@ public class FdoRecordService {
   private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put(TYPE, DIGITAL_SPECIMEN_TYPE);
+    data.put(TYPE, fdoProperties.getType());
     var attributes = genRequestAttributes(specimen);
     data.set(ATTRIBUTES, attributes);
     request.set(DATA, data);
@@ -81,7 +81,7 @@ public class FdoRecordService {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put(ID, specimenTuple.currentSpecimen().id());
-    data.put(TYPE, DIGITAL_SPECIMEN_TYPE);
+    data.put(TYPE, fdoProperties.getType());
     var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
     data.set(ATTRIBUTES, attributes);
     request.set(DATA, data);
@@ -91,7 +91,7 @@ public class FdoRecordService {
   private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put(TYPE, DIGITAL_SPECIMEN_TYPE);
+    data.put(TYPE, fdoProperties.getType());
     var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
     data.put(ID, specimen.id());
     data.set(ATTRIBUTES, attributes);
@@ -103,7 +103,7 @@ public class FdoRecordService {
     var attributes = mapper.createObjectNode();
     // Defaults
     attributes.put(FdoProfileAttributes.ISSUED_FOR_AGENT.getAttribute(),
-        ISSUED_FOR_AGENT_PID);
+        fdoProperties.getIssuedForAgent());
 
     // Mandatory
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
