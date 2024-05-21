@@ -140,9 +140,9 @@ public class FdoRecordService {
     if (specimen.attributes().getOdsMarkedAsType() != null) {
       attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsMarkedAsType());
     }
-    if (specimen.attributes().getIdentifiers() != null && !specimen.attributes().getIdentifiers().isEmpty()){
+    if (specimen.attributes().getIdentifier() != null && !specimen.attributes().getIdentifier().isEmpty()){
       var idNodeArr = mapper.createArrayNode();
-      for (var id: specimen.attributes().getIdentifiers()){
+      for (var id: specimen.attributes().getIdentifier()){
         idNodeArr.add(mapper.createObjectNode()
             .put("identifierType", id.getIdentifierType())
             .put("identifierValue", id.getIdentifierValue()));

@@ -343,7 +343,7 @@ public class TestUtils {
 
   public static DigitalSpecimen givenAttributesPlusIdentifier(String specimenName, String organisation, Boolean markedAsType){
     return givenAttributes(specimenName, organisation, markedAsType)
-        .withIdentifiers(List.of(new Identifiers("Specimen label", HANDLE, false, null, true)));
+        .withIdentifier(List.of(new Identifiers("Specimen label", HANDLE, false, null, true)));
   }
 
 }

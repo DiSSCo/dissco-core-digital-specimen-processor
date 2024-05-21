@@ -31,14 +31,17 @@ public class MidsService {
     if (!compliesToMidsTwo(attributes)) {
       return 1;
     }
-    return 2;
+    if (!compliesToMidsThree(attributes)) {
+      return 2;
+    }
+    return 3;
   }
 
   private boolean compliesToMidsOne(DigitalSpecimen attributes) {
     return isValid(attributes.getDctermsLicense())
         && isValid(attributes.getDctermsModified())
         && isValid(attributes.getDwcPreparations())
-        && isValid(attributes.getOdsPhysicalSpecimenIdType().value())
+        && isValid(attributes.getOdsTopicDiscipline().value())
         && isValid(attributes.getOdsSpecimenName());
   }
 
@@ -54,16 +57,84 @@ public class MidsService {
     }
   }
 
+  private boolean compliesToMidsThree(DigitalSpecimen attributes) {
+    var topComplies = hasValue(attributes.getDwcInstitutionId());
+    var taxValuesComply = taxValuesComply(attributes);
+    var geographicalValuesComply = geographicalValuesComply(attributes);
+    if (PALEO_GEO_DISCIPLINES.contains(attributes.getOdsTopicDiscipline())) {
+      return topComplies && taxValuesComply && geographicalValuesComply;
+    } else {
+      return topComplies && taxValuesComply && geographicalValuesComply && isValid(
+          attributes.getDwcRecordedById());
+    }
+  }
+
+  private boolean geographicalValuesComply(DigitalSpecimen attributes) {
+    if (attributes.getDwcOccurrence() != null
+        && attributes.getDwcOccurrence().get(0).getDctermsLocation() != null) {
+      var location = attributes.getDwcOccurrence().get(0).getDctermsLocation();
+      if (isValid(location.getDwcLocationID())) {
+        return true;
+      } else if (location.getGeoReference() != null) {
+        var georeference = location.getGeoReference();
+        return (georeference.getDwcDecimalLatitude() != null
+            && georeference.getDwcDecimalLongitude() != null
+            && isValid(georeference.getDwcGeodeticDatum())
+            && georeference.getDwcCoordinateUncertaintyInMeters() != null
+            && georeference.getDwcCoordinatePrecision() != null)
+            || (isValid(georeference.getDwcFootprintWkt())
+            && isValid(georeference.getDwcFootprintSrs()));
+      }
+    }
+    return false;
+  }
+
+  private boolean taxValuesComply(DigitalSpecimen attributes) {
+    var hasScientificNameId = false;
+    var hasIdentifiedById = false;
+    for (var identifications : attributes.getDwcIdentification()) {
+      if (isValid(identifications.getDwcIdentificationID())) {
+        hasIdentifiedById = true;
+      }
+      for (var taxonIdentification : identifications.getTaxonIdentifications()) {
+        if (isValid(taxonIdentification.getDwcScientificNameId())) {
+          hasScientificNameId = true;
+        }
+      }
+    }
+    return hasScientificNameId && hasIdentifiedById;
+  }
+
   private boolean compliesToMidsTwoBio(DigitalSpecimen attributes) {
     return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
         && (attributes.getOdsHasMedia() != null && attributes.getOdsHasMedia())
         && isQualitativeLocationValid(attributes)
         && isQuantitativeLocationValid(attributes)
-        && (occurrenceIsPresent(attributes) && isValid(
-        (attributes.getOccurrences().get(0).getDwcEventDate())))
-        && (occurrenceIsPresent(attributes) && isValid(
-        attributes.getOccurrences().get(0).getDwcFieldNumber()))
-        && isValid(attributes.getDwcRecordedBy());
+        && (occurrenceIsPresent(attributes) && hasValue(
+        attributes.getDwcOccurrence().get(0).getDwcEventDate(),
+        attributes.getDwcOccurrence().get(0).getDwcVerbatimEventDate(),
+        convertInteger(attributes.getDwcOccurrence().get(0).getDwcYear())))
+        && (occurrenceIsPresent(attributes) &&
+        hasValue(attributes.getDwcOccurrence().get(0).getDwcFieldNumber(),
+            attributes.getDwcOccurrence().get(0).getDwcRecordNumber()))
+        && hasValue(attributes.getDwcRecordedBy(), attributes.getDwcRecordedById());
+  }
+
+  private String convertInteger(Integer integer) {
+    if (integer != null) {
+      return integer.toString();
+    } else {
+      return null;
+    }
+  }
+
+  private boolean hasValue(String... terms) {
+    for (var term : terms) {
+      if (isValid(term)) {
+        return true;
+      }
+    }
+    return false;
   }
 
 
@@ -76,66 +147,85 @@ public class MidsService {
 
   private boolean isQuantitativeLocationValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference() != null) {
-      var georeference = digitalSpecimen.getOccurrences().get(0).getLocation().getGeoreference();
-      return georeference.getDwcDecimalLatitude() != null
-          && georeference.getDwcDecimalLongitude() != null;
+        && digitalSpecimen.getDwcOccurrence().get(0).getDctermsLocation().getGeoReference()
+        != null) {
+      var location = digitalSpecimen.getDwcOccurrence().get(0).getDctermsLocation();
+      var georeference = location.getGeoReference();
+      var validValue = hasValue(location.getDwcLocationID(), georeference.getDwcFootprintWkt());
+      if (!validValue) {
+        validValue = georeference.getDwcDecimalLatitude() != null
+            && georeference.getDwcDecimalLongitude() != null;
+      }
+      return validValue;
     }
     return false;
   }
 
   private boolean occurrenceIsPresent(DigitalSpecimen attributes) {
-    return attributes.getOccurrences() != null && !attributes.getOccurrences().isEmpty()
-        && attributes.getOccurrences().get(0) != null;
+    return attributes.getDwcOccurrence() != null && !attributes.getDwcOccurrence().isEmpty()
+        && attributes.getDwcOccurrence().get(0) != null;
   }
 
   private boolean locationIsPresent(DigitalSpecimen digitalSpecimen) {
     return occurrenceIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOccurrences().get(0).getLocation() != null;
+        && digitalSpecimen.getDwcOccurrence().get(0).getDctermsLocation() != null;
   }
 
   private boolean isQualitativeLocationValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)) {
-      var location = digitalSpecimen.getOccurrences().get(0).getLocation();
-      return isValid(location.getDwcContinent())
-          || isValid(location.getDwcCountry())
-          || isValid(location.getDwcCountryCode())
-          || isValid(location.getDwcCounty())
-          || isValid(location.getDwcIsland())
-          || isValid(location.getDwcIslandGroup())
-          || isValid(location.getDwcLocality())
-          || isValid(location.getDwcMunicipality())
-          || isValid(location.getDwcStateProvince())
-          || isValid(location.getDwcWaterBody());
+      var validValue = false;
+      var location = digitalSpecimen.getDwcOccurrence().get(0).getDctermsLocation();
+      validValue = hasValue(
+          location.getDwcContinent(),
+          location.getDwcCountry(),
+          location.getDwcCountryCode(),
+          location.getDwcCounty(),
+          location.getDwcIsland(),
+          location.getDwcIslandGroup(),
+          location.getDwcLocality(),
+          location.getDwcVerbatimLocality(),
+          location.getDwcMunicipality(),
+          location.getDwcStateProvince(),
+          location.getDwcWaterBody(),
+          location.getDwcHigherGeography(),
+          location.getGeoReference().getDwcVerbatimCoordinates());
+      if (!validValue && (location.getGeoReference() != null)) {
+        validValue = isValid(location.getGeoReference().getDwcVerbatimCoordinates());
+        if (!validValue) {
+          validValue = (isValid(location.getGeoReference().getDwcVerbatimLatitude()) && isValid(
+              location.getGeoReference().getDwcVerbatimLongitude()));
+        }
+      }
+      return validValue;
     }
     return false;
   }
 
   private boolean isStratigraphyValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOccurrences().get(0).getLocation().getGeologicalContext() != null) {
-      var geologicalContext = digitalSpecimen.getOccurrences().get(0).getLocation()
-          .getGeologicalContext();
-      return isValid(geologicalContext.getDwcBed())
-          || isValid(geologicalContext.getDwcMember())
-          || isValid(geologicalContext.getDwcFormation())
-          || isValid(geologicalContext.getDwcGroup())
-          || isValid(geologicalContext.getDwcLithostratigraphicTerms())
-          || isValid(geologicalContext.getDwcHighestBiostratigraphicZone())
-          || isValid(geologicalContext.getDwcLowestBiostratigraphicZone())
-          || isValid(geologicalContext.getDwcLatestAgeOrHighestStage())
-          || isValid(geologicalContext.getDwcEarliestAgeOrLowestStage())
-          || isValid(geologicalContext.getDwcLatestEpochOrHighestSeries())
-          || isValid(geologicalContext.getDwcEarliestEpochOrLowestSeries())
-          || isValid(geologicalContext.getDwcLatestPeriodOrHighestSystem())
-          || isValid(geologicalContext.getDwcEarliestPeriodOrLowestSystem())
-          || isValid(geologicalContext.getDwcLatestEraOrHighestErathem())
-          || isValid(geologicalContext.getDwcEarliestEraOrLowestErathem())
-          || isValid(geologicalContext.getDwcLatestEonOrHighestEonothem())
-          || isValid(geologicalContext.getDwcEarliestEonOrLowestEonothem());
+        && digitalSpecimen.getDwcOccurrence().get(0).getDctermsLocation().getDwcGeologicalContext()
+        != null) {
+      var geologicalContext = digitalSpecimen.getDwcOccurrence().get(0).getDctermsLocation()
+          .getDwcGeologicalContext();
+      return hasValue(geologicalContext.getDwcBed(),
+          geologicalContext.getDwcMember(),
+          geologicalContext.getDwcFormation(),
+          geologicalContext.getDwcGroup(),
+          geologicalContext.getDwcLithostratigraphicTerms(),
+          geologicalContext.getDwcHighestBiostratigraphicZone(),
+          geologicalContext.getDwcLowestBiostratigraphicZone(),
+          geologicalContext.getDwcLatestAgeOrHighestStage(),
+          geologicalContext.getDwcEarliestAgeOrLowestStage(),
+          geologicalContext.getDwcLatestEpochOrHighestSeries(),
+          geologicalContext.getDwcEarliestEpochOrLowestSeries(),
+          geologicalContext.getDwcLatestPeriodOrHighestSystem(),
+          geologicalContext.getDwcEarliestPeriodOrLowestSystem(),
+          geologicalContext.getDwcLatestEraOrHighestErathem(),
+          geologicalContext.getDwcEarliestEraOrLowestErathem(),
+          geologicalContext.getDwcLatestEonOrHighestEonothem(),
+          geologicalContext.getDwcEarliestEonOrLowestEonothem());
     }
     return false;
   }
-
 
 }
