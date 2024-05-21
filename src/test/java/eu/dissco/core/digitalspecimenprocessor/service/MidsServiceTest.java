@@ -83,6 +83,14 @@ class MidsServiceTest {
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenMidsThreeGenericSpecimen(givenFootprintLocation()),
+                MAPPER.createObjectNode()), 3),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenMidsThreeGenericSpecimen(givenVerbatimCoordinateLocation()),
+                MAPPER.createObjectNode()), 3),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenMidsThreeGenericSpecimen(givenVerbatimLatLongLocation()),
                 MAPPER.createObjectNode()), 3)
     );
   }
@@ -160,6 +168,24 @@ class MidsServiceTest {
             .withDwcDecimalLongitude(25.059035)
             .withDwcFootprintSrs("Some footprint SRS, WGS84 for example")
             .withDwcFootprintWkt("POINT (12.559220 55.702230)"))
+        .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
+  }
+
+
+  private static Location givenVerbatimCoordinateLocation() {
+    return new Location()
+        .withDwcLocationID("LOC_ID")
+        .withGeoReference(new GeoReference()
+            .withDwcVerbatimCoordinates("59.465625, 25.059035"))
+        .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
+  }
+
+  private static Location givenVerbatimLatLongLocation() {
+    return new Location()
+        .withDwcLocationID("LOC_ID")
+        .withGeoReference(new GeoReference()
+            .withDwcVerbatimLatitude("59.465625")
+            .withDwcVerbatimLongitude("25.059035"))
         .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
   }
 
