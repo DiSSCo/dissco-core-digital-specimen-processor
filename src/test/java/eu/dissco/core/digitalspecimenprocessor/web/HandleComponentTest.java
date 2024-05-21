@@ -10,7 +10,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -241,7 +240,7 @@ class HandleComponentTest {
               "type": "digitalSpecimen",
               "attributes": {
                 "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764ee",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "specimenHost": "https://ror.org/0443cwa12",
@@ -277,7 +276,7 @@ class HandleComponentTest {
               "type": "digitalSpecimen",
               "attributes": {
                 "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764ee",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "specimenHost": "https://ror.org/0443cwa12",
                 "specimenHostName": "National Museum of Natural History",

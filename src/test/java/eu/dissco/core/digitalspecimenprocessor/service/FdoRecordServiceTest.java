@@ -14,19 +14,17 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttri
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
@@ -98,7 +96,7 @@ class FdoRecordServiceTest {
 
   @BeforeEach
   void setup() {
-    builder = new FdoRecordService(MAPPER);
+    builder = new FdoRecordService(MAPPER, new FdoProperties());
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
@@ -164,11 +162,9 @@ class FdoRecordServiceTest {
     var expected = MAPPER.readTree("""
             {
               "data": {
-                "type": "digitalSpecimen",
+                "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                 "id":"20.5000.1025/V1Z-176-LL4",
                 "attributes": {
-                  "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                  "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                   "issuedForAgent": "https://ror.org/0566bfb96",
                   "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                   "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
@@ -214,10 +210,8 @@ class FdoRecordServiceTest {
           """
           {
             "data": {
-              "type": "digitalSpecimen",
+              "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "attributes": {
-                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
@@ -320,10 +314,8 @@ class FdoRecordServiceTest {
       return MAPPER.readTree("""
           {
             "data": {
-              "type": "digitalSpecimen",
+              "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "attributes": {
-                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
@@ -342,10 +334,8 @@ class FdoRecordServiceTest {
     return MAPPER.readTree("""
         {
           "data": {
-            "type": "digitalSpecimen",
+            "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
             "attributes": {
-              "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-              "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",

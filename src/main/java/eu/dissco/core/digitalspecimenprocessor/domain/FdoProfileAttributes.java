@@ -1,10 +1,11 @@
 package eu.dissco.core.digitalspecimenprocessor.domain;
 
+import lombok.Getter;
+
+@Getter
 public enum FdoProfileAttributes {
 
   // Handle: 1-19
-  FDO_PROFILE("fdoProfile"),
-  DIGITAL_OBJECT_TYPE("digitalObjectType"),
   ISSUED_FOR_AGENT("issuedForAgent"),
   REFERENT_NAME("referentName"),
   SPECIMEN_HOST("specimenHost"),
@@ -21,10 +22,6 @@ public enum FdoProfileAttributes {
 
   FdoProfileAttributes(String attribute) {
     this.attribute = attribute;
-  }
-
-  public String getAttribute() {
-    return this.attribute;
   }
 
 }
