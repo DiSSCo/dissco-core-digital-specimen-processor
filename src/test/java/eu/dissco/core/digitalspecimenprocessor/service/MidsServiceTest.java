@@ -64,6 +64,10 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanyNoOccurrenceSpecimen(),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenBotanySpecimen(Boolean.TRUE),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
@@ -93,6 +97,15 @@ class MidsServiceTest {
                 givenMidsThreeGenericSpecimen(givenVerbatimLatLongLocation()),
                 MAPPER.createObjectNode()), 3)
     );
+  }
+
+  private static DigitalSpecimen givenBotanyNoOccurrenceSpecimen() {
+    return baseDigitalSpecimen().withDwcPreparations("in alcohol")
+        .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
+        .withDwcRecordedBy("sam Leeflang")
+        .withOdsMarkedAsType(true)
+        .withDwcOccurrence(List.of())
+        .withOdsHasMedia(true);
   }
 
   private static DigitalSpecimen givenBotanySpecimenAlternative() {
