@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.4</version>
+    <version>3.2.5</version>
     <relativePath/> <!-- lookup parent from repository -->
   </parent>
   <groupId>eu.dissco.core</groupId>
@@ -16,14 +16,14 @@
   <description>Processing service for digital specimen</description>
   <properties>
     <java.version>17</java.version>
-    <elasticsearch.version>8.12.1</elasticsearch.version>
+    <elasticsearch.version>8.12.2</elasticsearch.version>
     <jakarta.json.version>2.1.3</jakarta.json.version>
     <json-patch.version>1.13</json-patch.version>
-    <spring-kafka.version>3.0.11</spring-kafka.version>
+    <spring-kafka.version>3.1.4</spring-kafka.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
-    <testcontainers.version>1.19.5</testcontainers.version>
-    <springdoc.version>2.3.0</springdoc.version>
-    <spring-security.version>6.2.3</spring-security.version> <!-- 21/03/24: CVE-2024-22257-->
+    <testcontainers.version>1.19.8</testcontainers.version>
+    <springdoc.version>2.5.0</springdoc.version>
+    <spring-security.version>6.3.0</spring-security.version> <!-- 21/03/24: CVE-2024-22257-->
     <sonar.organization>dissco</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <sonar.coverage.jacoco.xmlReportPaths>../app-it/target/site/jacoco-aggregate/jacoco.xml

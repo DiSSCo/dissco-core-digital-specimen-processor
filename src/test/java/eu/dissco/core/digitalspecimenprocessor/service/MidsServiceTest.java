@@ -67,6 +67,10 @@ class MidsServiceTest {
                 givenBotanySpecimen(Boolean.TRUE),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanySpecimenAlternative(),
+                MAPPER.createObjectNode()), 2),
+        Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenFullPaleoSpecimen(),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
@@ -82,6 +86,24 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 3)
     );
   }
+
+  private static DigitalSpecimen givenBotanySpecimenAlternative() {
+    return baseDigitalSpecimen().withDwcPreparations("in alcohol")
+        .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
+        .withDwcRecordedBy("sam Leeflang")
+        .withOdsMarkedAsType(true)
+        .withDwcOccurrence(List.of(
+            new Occurrences()
+                .withDwcYear(2023)
+                .withDwcRecordNumber("A record number")
+                .withDctermsLocation(
+                    new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
+                        .withGeoReference(new GeoReference()
+                            .withDwcDecimalLatitude(59.465625)
+                            .withDwcDecimalLongitude(25.059035)))))
+        .withOdsHasMedia(true);
+  }
+
   private static DigitalSpecimen givenMissingLocation() {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withOdsMarkedAsType(true)
@@ -97,12 +119,16 @@ class MidsServiceTest {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withOdsMarkedAsType(true)
         .withDwcRecordedById("ORCID")
-        .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
+        .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
         .withDwcIdentification(List.of(new Identifications().withDwcIdentificationID("ID1")
             .withTaxonIdentifications(
                 List.of(new TaxonIdentification().withDwcScientificNameId("ID2")))))
-        .withDwcOccurrence(List.of(new Occurrences().withDctermsLocation(
-            new Location()
+        .withOdsHasMedia(true)
+        .withOdsMarkedAsType(false)
+        .withDwcOccurrence(List.of(new Occurrences()
+                .withDwcVerbatimEventDate("A verbatim date as is on the label")
+                .withDwcFieldNumber("1202")
+            .withDctermsLocation(new Location()
                 .withDwcCountry("Estonia")
                 .withDwcCountryCode("EE")
                 .withGeoReference(new GeoReference()
