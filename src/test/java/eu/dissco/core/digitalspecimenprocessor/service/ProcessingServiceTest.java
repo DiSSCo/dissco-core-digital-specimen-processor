@@ -133,9 +133,7 @@ class ProcessingServiceTest {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(specimen));
     given(bulkResponse.errors()).willReturn(false);
-    given(
-        elasticRepository.indexDigitalSpecimen(expected)).willReturn(
-        bulkResponse);
+    given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);

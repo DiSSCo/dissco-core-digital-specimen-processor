@@ -138,18 +138,27 @@ public class ProcessingService {
   */
   private boolean isEquals(DigitalSpecimenWrapper currentDigitalSpecimen,
       DigitalSpecimenWrapper digitalSpecimen) {
-    var entityDateMap = digitalSpecimen.attributes().getEntityRelationship().stream().collect(
-        Collectors.toMap(Function.identity(),
-            EntityRelationships::getEntityRelationshipDate));
+    var entityRelationships = digitalSpecimen.attributes().getEntityRelationship();
+    digitalSpecimen.attributes().setEntityRelationship(
+        entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
     ignoreTimestampEntityRelationship(currentDigitalSpecimen.attributes().getEntityRelationship());
-    ignoreTimestampEntityRelationship(digitalSpecimen.attributes().getEntityRelationship());
     if (currentDigitalSpecimen.equals(digitalSpecimen)) {
       return true;
     } else {
-      digitalSpecimen.attributes().getEntityRelationship()
-          .forEach(er -> er.setEntityRelationshipDate(entityDateMap.get(er)));
+      digitalSpecimen.attributes().setEntityRelationship(entityRelationships);
       return false;
     }
+  }
+
+  private EntityRelationships deepcopyEntityRelationship(EntityRelationships entityRelationships) {
+    return new EntityRelationships()
+        .withEntityRelationshipDate(null)
+        .withEntityRelationshipType(entityRelationships.getEntityRelationshipType())
+        .withObjectEntityIri(entityRelationships.getObjectEntityIri())
+        .withAgents(entityRelationships.getAgents())
+        .withEntityRelationshipCreatorId(entityRelationships.getEntityRelationshipCreatorId())
+        .withEntityRelationshipCreatorName(entityRelationships.getEntityRelationshipCreatorName())
+        .withEntityRelationshipOrder(entityRelationships.getEntityRelationshipOrder());
   }
 
   private void ignoreTimestampEntityRelationship(List<EntityRelationships> entityRelationship) {
