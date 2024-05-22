@@ -18,6 +18,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDi
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationships;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identifiers;
 import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,6 +105,16 @@ public class TestUtils {
     return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID);
   }
 
+  public static DigitalSpecimenRecord givenDigitalSpecimenWithEntityRelationship() {
+    return new DigitalSpecimenRecord(
+        HANDLE,
+        MIDS_LEVEL,
+        VERSION,
+        CREATED,
+        givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANISATION_ID, true)
+    );
+  }
+
   public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String organisation) {
     return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, organisation);
   }
@@ -115,7 +126,7 @@ public class TestUtils {
         MIDS_LEVEL,
         VERSION,
         CREATED,
-        givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, specimenName, organisation)
+        givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, specimenName, organisation, false)
     );
   }
 
@@ -127,7 +138,7 @@ public class TestUtils {
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(physicalIdentifier, ANOTHER_SPECIMEN_NAME,
-            ANOTHER_ORGANISATION));
+            ANOTHER_ORGANISATION, false));
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecord(String handle,
@@ -137,14 +148,14 @@ public class TestUtils {
         MIDS_LEVEL,
         VERSION,
         CREATED,
-        givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID)
+        givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false)
     );
   }
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId) {
     return new DigitalSpecimenEvent(
         List.of(MAS),
-        givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID),
+        givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false),
         List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent())
     );
   }
@@ -154,12 +165,17 @@ public class TestUtils {
     return givenDigitalSpecimenEvent(false);
   }
 
-  public static DigitalSpecimenEvent givenDigitalSpecimenEvent(boolean hasMedia) {
+  public static DigitalSpecimenEvent givenDigitalSpecimenEvent(boolean hasMedia,
+      boolean entityRelationship) {
     return new DigitalSpecimenEvent(
         List.of(MAS),
-        givenDigitalSpecimenWrapper(),
+        givenDigitalSpecimenWrapper(entityRelationship),
         hasMedia ? List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent()) : List.of()
     );
+  }
+
+  public static DigitalSpecimenEvent givenDigitalSpecimenEvent(boolean hasMedia) {
+    return givenDigitalSpecimenEvent(hasMedia, false);
   }
 
   private static DigitalMediaObjectEventWithoutDoi givenDigitalMediaEvent() {
@@ -189,16 +205,20 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper() {
-    return givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANISATION_ID);
+    return givenDigitalSpecimenWrapper(false);
+  }
+
+  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper(boolean entityRelationship) {
+    return givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANISATION_ID,
+        entityRelationship);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper(String physicalSpecimenId,
-      String specimenName,
-      String organisation) {
+      String specimenName, String organisation, boolean entityRelationship) {
     return new DigitalSpecimenWrapper(
         physicalSpecimenId,
         TYPE,
-        givenAttributes(specimenName, organisation, true),
+        givenAttributes(specimenName, organisation, true, entityRelationship),
         ORIGINAL_DATA
     );
   }
@@ -323,8 +343,9 @@ public class TestUtils {
   }
 
   public static DigitalSpecimen givenAttributes(
-      String specimenName, String organisation, Boolean markedAsType) {
-    return new DigitalSpecimen()
+      String specimenName, String organisation, Boolean markedAsType,
+      boolean addEntityRelationShip) {
+    var ds = new DigitalSpecimen()
         .withDwcInstitutionId(organisation)
         .withDwcInstitutionName("National Museum of Natural History")
         .withOdsPhysicalSpecimenIdType(PHYSICAL_SPECIMEN_TYPE)
@@ -339,10 +360,18 @@ public class TestUtils {
         .withOdsMarkedAsType(markedAsType)
         .withDwcPreparations("")
         .withDctermsModified("2017-09-26T12:27:21.000+00:00");
+    if (addEntityRelationShip) {
+      ds.withEntityRelationship(
+          List.of(new EntityRelationships().withEntityRelationshipType("hasDigitalSpecimen")
+              .withObjectEntityIri(SPECIMEN_BASE_URL + HANDLE)
+              .withEntityRelationshipDate(new Date())));
+    }
+    return ds;
   }
 
-  public static DigitalSpecimen givenAttributesPlusIdentifier(String specimenName, String organisation, Boolean markedAsType){
-    return givenAttributes(specimenName, organisation, markedAsType)
+  public static DigitalSpecimen givenAttributesPlusIdentifier(String specimenName,
+      String organisation, Boolean markedAsType) {
+    return givenAttributes(specimenName, organisation, markedAsType, false)
         .withIdentifier(List.of(new Identifiers("Specimen label", HANDLE, false, null, true)));
   }
 

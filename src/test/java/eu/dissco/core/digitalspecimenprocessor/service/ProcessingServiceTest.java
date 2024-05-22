@@ -14,6 +14,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDiffe
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWithEntityRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
@@ -108,12 +109,12 @@ class ProcessingServiceTest {
   void testEqualSpecimen() throws DisscoRepositoryException, JsonProcessingException {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
-        List.of(givenDigitalSpecimenRecord()));
+        List.of(givenDigitalSpecimenWithEntityRelationship()));
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
 
     // When
     List<DigitalSpecimenRecord> result = service.handleMessages(
-        List.of(givenDigitalSpecimenEvent(true)));
+        List.of(givenDigitalSpecimenEvent(true, true)));
 
     // Then
     verifyNoInteractions(handleComponent);
@@ -128,8 +129,9 @@ class ProcessingServiceTest {
   void testUnequalSpecimen() throws Exception {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2));
+    var specimen = givenUnequalDigitalSpecimenRecord();
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
-        List.of(givenUnequalDigitalSpecimenRecord()));
+        List.of(specimen));
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(expected)).willReturn(
@@ -244,7 +246,7 @@ class ProcessingServiceTest {
     // Given
     var duplicateSpecimen = new DigitalSpecimenEvent(List.of(MAS),
         TestUtils.givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
-            ANOTHER_ORGANISATION),
+            ANOTHER_ORGANISATION, false),
         List.of());
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(bulkResponse.errors()).willReturn(false);
@@ -634,7 +636,8 @@ class ProcessingServiceTest {
     var newSpecimenEvent = givenDigitalSpecimenEvent(true);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
-    given(fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
+    given(
+        fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));

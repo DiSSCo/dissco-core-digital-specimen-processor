@@ -111,7 +111,7 @@ public class ProcessingService {
         } else {
           var currentDigitalSpecimen = currentSpecimens.get(
               digitalSpecimenWrapper.physicalSpecimenId());
-          if (currentDigitalSpecimen.digitalSpecimenWrapper().equals(digitalSpecimenWrapper)) {
+          if (isEquals(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
             equalSpecimens.add(currentDigitalSpecimen);
@@ -128,6 +128,32 @@ public class ProcessingService {
       events.forEach(this::republishEvent);
       return new ProcessResult(List.of(), List.of(), List.of());
     }
+  }
+
+  /*
+  We need to remove the EntityRelationshipDate from the comparison.
+  We cannot control the equals in the EntityRelationship as it is generated
+  Therefore we first store the EntityRelationshipDate in a map and set both to null
+  When the objects are not equal we reinsert the data into the EntityRelationship
+  */
+  private boolean isEquals(DigitalSpecimenWrapper currentDigitalSpecimen,
+      DigitalSpecimenWrapper digitalSpecimen) {
+    var entityDateMap = digitalSpecimen.attributes().getEntityRelationship().stream().collect(
+        Collectors.toMap(Function.identity(),
+            EntityRelationships::getEntityRelationshipDate));
+    ignoreTimestampEntityRelationship(currentDigitalSpecimen.attributes().getEntityRelationship());
+    ignoreTimestampEntityRelationship(digitalSpecimen.attributes().getEntityRelationship());
+    if (currentDigitalSpecimen.equals(digitalSpecimen)) {
+      return true;
+    } else {
+      digitalSpecimen.attributes().getEntityRelationship()
+          .forEach(er -> er.setEntityRelationshipDate(entityDateMap.get(er)));
+      return false;
+    }
+  }
+
+  private void ignoreTimestampEntityRelationship(List<EntityRelationships> entityRelationship) {
+    entityRelationship.forEach(e -> e.setEntityRelationshipDate(null));
   }
 
   private void republishEvent(DigitalSpecimenEvent event) {
