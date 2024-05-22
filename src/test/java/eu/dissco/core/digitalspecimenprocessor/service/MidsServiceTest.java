@@ -65,6 +65,10 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanySpecimen(null),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenBotanySpecimenMissingFieldNumber(),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
@@ -118,6 +122,10 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenMidsThreeGenericSpecimen(givenMissingPercisionLocation()),
+                MAPPER.createObjectNode()), 2),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenMidsThreeGenericSpecimen(givenLocationId()),
                 MAPPER.createObjectNode()), 3),
         Arguments.of(
@@ -141,7 +149,6 @@ class MidsServiceTest {
   private static DigitalSpecimen givenFullBioSpecimenMissingTax(boolean missingName,
       boolean missingIdentificationId) {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
-        .withOdsMarkedAsType(true)
         .withDwcRecordedById("ORCID")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
         .withDwcIdentification(List.of(new Identifications().withDwcIdentificationID(missingIdentificationId ? null : "ID1")
@@ -290,6 +297,16 @@ class MidsServiceTest {
             .withDwcDecimalLatitude(59.465625)
             .withDwcDecimalLongitude(25.059035)
             .withDwcGeodeticDatum("WGS84"))
+        .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
+  }
+  private static Location givenMissingPercisionLocation() {
+    return new Location()
+        .withDwcCountry("The Netherlands")
+        .withGeoReference(new GeoReference()
+            .withDwcDecimalLatitude(59.465625)
+            .withDwcDecimalLongitude(25.059035)
+            .withDwcGeodeticDatum("WGS84")
+            .withDwcCoordinateUncertaintyInMeters(100.00))
         .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
   }
 
