@@ -20,7 +20,8 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
-                .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll().anyRequest().authenticated());
+                .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
+            .anyRequest().authenticated());
 
         http.oauth2ResourceServer(jwtoauth2ResourceServer -> jwtoauth2ResourceServer.jwt((
                 jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter)
