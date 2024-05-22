@@ -106,7 +106,7 @@ public class MidsService {
   }
 
   private boolean compliesToMidsTwoBio(DigitalSpecimen attributes) {
-    return (attributes.getOdsMarkedAsType() != null)
+    return attributes.getOdsMarkedAsType() != null
         && (attributes.getOdsHasMedia() != null && attributes.getOdsHasMedia())
         && isQualitativeLocationValid(attributes)
         && isQuantitativeLocationValid(attributes)
@@ -139,7 +139,7 @@ public class MidsService {
 
 
   private boolean compliesToMidsTwoPaleoBio(DigitalSpecimen attributes) {
-    return (attributes.getOdsMarkedAsType() != null && attributes.getOdsMarkedAsType())
+    return attributes.getOdsMarkedAsType() != null
         && isStratigraphyValid(attributes)
         && isQualitativeLocationValid(attributes)
         && isQuantitativeLocationValid(attributes);

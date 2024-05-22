@@ -19,6 +19,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.Location;
 import eu.dissco.core.digitalspecimenprocessor.schema.Occurrences;
 import eu.dissco.core.digitalspecimenprocessor.schema.TaxonIdentification;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,11 +61,33 @@ class MidsServiceTest {
                 givenBotanySpecimen(Boolean.FALSE),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanySpecimenMissingFieldNumber(),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingLocation(),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-                givenBotanyNoOccurrenceSpecimen(),
+                givenBotanyNoOccurrenceSpecimen(List.of()),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanyNoOccurrenceSpecimen(null),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenBotanyNoOccurrenceSpecimen(new ArrayList<>() {{
+                  add(null);
+                } }),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenMidsThreeGenericSpecimen(new Location().withGeoReference(new GeoReference())),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenMidsThreeGenericSpecimen(new Location().withGeoReference(null)),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -76,6 +99,10 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenFullPaleoSpecimen(),
+                MAPPER.createObjectNode()), 2),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenMidsThreeGenericSpecimen(givenMissingUncertaintyLocation()),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -99,12 +126,28 @@ class MidsServiceTest {
     );
   }
 
-  private static DigitalSpecimen givenBotanyNoOccurrenceSpecimen() {
+  private static DigitalSpecimen givenBotanySpecimenMissingFieldNumber() {
+    return baseDigitalSpecimen().withDwcPreparations("in alcohol")
+        .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
+        .withDwcRecordedBy("sam Leeflang")
+        .withOdsMarkedAsType(false)
+        .withDwcOccurrence(List.of(
+            new Occurrences()
+                .withDwcYear(2023)
+                .withDctermsLocation(
+                    new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
+                        .withGeoReference(new GeoReference()
+                            .withDwcDecimalLatitude(59.465625)
+                            .withDwcDecimalLongitude(25.059035)))))
+        .withOdsHasMedia(true);
+  }
+
+  private static DigitalSpecimen givenBotanyNoOccurrenceSpecimen(List<Occurrences> occurrences) {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
         .withDwcRecordedBy("sam Leeflang")
         .withOdsMarkedAsType(true)
-        .withDwcOccurrence(List.of())
+        .withDwcOccurrence(occurrences)
         .withOdsHasMedia(true);
   }
 
@@ -112,7 +155,7 @@ class MidsServiceTest {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
         .withDwcRecordedBy("sam Leeflang")
-        .withOdsMarkedAsType(true)
+        .withOdsMarkedAsType(false)
         .withDwcOccurrence(List.of(
             new Occurrences()
                 .withDwcYear(2023)
@@ -147,8 +190,8 @@ class MidsServiceTest {
         .withOdsHasMedia(true)
         .withOdsMarkedAsType(false)
         .withDwcOccurrence(List.of(new Occurrences()
-                .withDwcVerbatimEventDate("A verbatim date as is on the label")
-                .withDwcFieldNumber("1202")
+            .withDwcVerbatimEventDate("A verbatim date as is on the label")
+            .withDwcFieldNumber("1202")
             .withDctermsLocation(new Location()
                 .withDwcCountry("Estonia")
                 .withDwcCountryCode("EE")
@@ -161,7 +204,7 @@ class MidsServiceTest {
                 .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group")))));
   }
 
-  private static Location givenLocationId()  {
+  private static Location givenLocationId() {
     return new Location()
         .withDwcCountry("Estonia")
         .withDwcCountryCode("EE")
@@ -172,7 +215,7 @@ class MidsServiceTest {
         .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
   }
 
-  private static Location givenFootprintLocation()  {
+  private static Location givenFootprintLocation() {
     return new Location()
         .withDwcCountry("Estonia")
         .withDwcCountryCode("EE")
@@ -202,6 +245,16 @@ class MidsServiceTest {
         .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
   }
 
+  private static Location givenMissingUncertaintyLocation() {
+    return new Location()
+        .withDwcCountry("The Netherlands")
+        .withGeoReference(new GeoReference()
+            .withDwcDecimalLatitude(59.465625)
+            .withDwcDecimalLongitude(25.059035)
+            .withDwcGeodeticDatum("WGS84"))
+        .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
+  }
+
   private static DigitalSpecimen givenMidsThreeGenericSpecimen(Location location) {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withOdsMarkedAsType(true)
@@ -214,7 +267,7 @@ class MidsServiceTest {
 
   private static DigitalSpecimen givenFullPaleoSpecimen() {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
-        .withOdsMarkedAsType(true)
+        .withOdsMarkedAsType(false)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
         .withDwcOccurrence(List.of(new Occurrences().withDctermsLocation(
             new Location()
