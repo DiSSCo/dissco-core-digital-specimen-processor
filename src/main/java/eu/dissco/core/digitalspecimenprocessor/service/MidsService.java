@@ -41,7 +41,7 @@ public class MidsService {
     return isValid(attributes.getDctermsLicense())
         && isValid(attributes.getDctermsModified())
         && isValid(attributes.getDwcPreparations())
-        && isValid(attributes.getOdsTopicDiscipline().value())
+        && attributes.getOdsTopicDiscipline() != null
         && isValid(attributes.getOdsSpecimenName());
   }
 

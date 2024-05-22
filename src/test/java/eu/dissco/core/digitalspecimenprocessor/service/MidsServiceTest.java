@@ -47,6 +47,9 @@ class MidsServiceTest {
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("null"),
                 MAPPER.createObjectNode()), 0),
         Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingTopic(),
+                MAPPER.createObjectNode()), 0),
+        Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenPreparationValue("in alcohol"),
                 MAPPER.createObjectNode()), 1),
@@ -77,9 +80,10 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-                givenBotanyNoOccurrenceSpecimen(new ArrayList<>() {{
-                  add(null);
-                } }),
+                givenBotanyNoOccurrenceSpecimen(new ArrayList<>() {
+                  {
+                    add(null);
+                  } }),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -99,6 +103,14 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenFullPaleoSpecimen(),
+                MAPPER.createObjectNode()), 2),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenFullBioSpecimenMissingTax(true, false),
+                MAPPER.createObjectNode()), 2),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+                givenFullBioSpecimenMissingTax(false, true),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -124,6 +136,32 @@ class MidsServiceTest {
                 givenMidsThreeGenericSpecimen(givenVerbatimLatLongLocation()),
                 MAPPER.createObjectNode()), 3)
     );
+  }
+
+  private static DigitalSpecimen givenFullBioSpecimenMissingTax(boolean missingName,
+      boolean missingIdentificationId) {
+    return baseDigitalSpecimen().withDwcPreparations("single specimen")
+        .withOdsMarkedAsType(true)
+        .withDwcRecordedById("ORCID")
+        .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
+        .withDwcIdentification(List.of(new Identifications().withDwcIdentificationID(missingIdentificationId ? null : "ID1")
+            .withTaxonIdentifications(
+                List.of(new TaxonIdentification().withDwcScientificNameId(missingName ? null : "ID2")))))
+        .withOdsHasMedia(true)
+        .withOdsMarkedAsType(false)
+        .withDwcOccurrence(List.of(new Occurrences()
+            .withDwcVerbatimEventDate("A verbatim date as is on the label")
+            .withDwcFieldNumber("1202")
+            .withDctermsLocation(new Location()
+                .withDwcCountry("Estonia")
+                .withDwcCountryCode("EE")
+                .withGeoReference(new GeoReference()
+                    .withDwcDecimalLatitude(59.465625)
+                    .withDwcDecimalLongitude(25.059035)
+                    .withDwcGeodeticDatum("WGS84")
+                    .withDwcCoordinateUncertaintyInMeters(10.0)
+                    .withDwcCoordinatePrecision(0.0001))
+                .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group")))));
   }
 
   private static DigitalSpecimen givenBotanySpecimenMissingFieldNumber() {
@@ -314,6 +352,15 @@ class MidsServiceTest {
                     .withDwcDecimalLongitude(25.059035))
                 .withDwcGeologicalContext(
                     new DwcGeologicalContext().withDwcEarliestEonOrLowestEonothem("Archean")))));
+  }
+
+  private static DigitalSpecimen givenMissingTopic() {
+    return baseDigitalSpecimen()
+        .withDwcPreparations("alcohol")
+        .withDctermsModified("22-05-2024")
+        .withDctermsLicense("A license")
+        .withOdsSpecimenName("A nice name")
+        .withOdsTopicDiscipline(null);
   }
 
   private static DigitalSpecimen givenPreparationValue(
