@@ -233,10 +233,8 @@ public class TestUtils {
           "data": 
             {
               "id": "20.5000.1025/V1Z-176-LL4",
-              "type": "digitalSpecimen",
+              "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "attributes": {
-                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
@@ -258,10 +256,8 @@ public class TestUtils {
     return MAPPER.readTree("""
         {
           "data": {
-            "type": "digitalSpecimen",
+            "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
             "attributes": {
-              "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-              "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
@@ -281,10 +277,8 @@ public class TestUtils {
     return MAPPER.readTree("""
         {
           "data": {
-            "type": "digitalSpecimen",
+            "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
             "attributes": {
-              "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-              "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
@@ -304,8 +298,7 @@ public class TestUtils {
               "id": "20.5000.1025/V1Z-176-LL4",
               "type": "digitalSpecimen",
               "attributes": {
-                "fdoProfile": "https://hdl.handle.net/21.T11148/d8de0819e144e4096645",
-                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764ee",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "specimenHost": "https://ror.org/0443cwa12",
