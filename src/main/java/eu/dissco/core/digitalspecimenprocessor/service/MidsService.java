@@ -94,7 +94,7 @@ public class MidsService {
     var hasScientificNameId = false;
     var hasIdentifiedById = false;
     for (var identifications : attributes.getDwcIdentification()) {
-      if (isValid(identifications.getDwcIdentificationID())) {
+      if (isValid(identifications.getDwcIdentifiedById())) {
         hasIdentifiedById = true;
       }
       for (var taxonIdentification : identifications.getTaxonIdentifications()) {
@@ -110,7 +110,7 @@ public class MidsService {
     return attributes.getOdsMarkedAsType() != null
         && Boolean.TRUE.equals(attributes.getOdsHasMedia())
         && qualitativeLocationIsValid(attributes)
-        && QuantitativeLocationIsValid(attributes)
+        && quantitativeLocationIsValid(attributes)
         && (occurrenceIsPresent(attributes) && hasValue(
         attributes.getDwcOccurrence().get(0).getDwcEventDate(),
         attributes.getDwcOccurrence().get(0).getDwcVerbatimEventDate(),
@@ -143,10 +143,10 @@ public class MidsService {
     return attributes.getOdsMarkedAsType() != null
         && stratigraphyIsValid(attributes)
         && qualitativeLocationIsValid(attributes)
-        && QuantitativeLocationIsValid(attributes);
+        && quantitativeLocationIsValid(attributes);
   }
 
-  private boolean QuantitativeLocationIsValid(DigitalSpecimen digitalSpecimen) {
+  private boolean quantitativeLocationIsValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)
         && digitalSpecimen.getDwcOccurrence().get(0).getDctermsLocation().getGeoReference()
         != null) {
