@@ -111,7 +111,7 @@ public class ProcessingService {
         } else {
           var currentDigitalSpecimen = currentSpecimens.get(
               digitalSpecimenWrapper.physicalSpecimenId());
-          if (isEquals(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)) {
+          if (isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
             equalSpecimens.add(currentDigitalSpecimen);
@@ -136,13 +136,14 @@ public class ProcessingService {
   Therefore we first store the EntityRelationshipDate in a map and set both to null
   When the objects are not equal we reinsert the data into the EntityRelationship
   */
-  private boolean isEquals(DigitalSpecimenWrapper currentDigitalSpecimen,
+  private boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimen,
       DigitalSpecimenWrapper digitalSpecimen) {
     var entityRelationships = digitalSpecimen.attributes().getEntityRelationship();
     digitalSpecimen.attributes().setEntityRelationship(
         entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
     ignoreTimestampEntityRelationship(currentDigitalSpecimen.attributes().getEntityRelationship());
     if (currentDigitalSpecimen.equals(digitalSpecimen)) {
+      digitalSpecimen.attributes().setEntityRelationship(entityRelationships);
       return true;
     } else {
       digitalSpecimen.attributes().setEntityRelationship(entityRelationships);
