@@ -84,7 +84,7 @@ class FdoRecordServiceTest {
   }
 
   private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
-    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true);
+    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false);
     return Stream.of(Arguments.of(attributes.withDwcInstitutionId(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withDwcInstitutionName(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withOdsSpecimenName(REPLACEMENT_ATTRIBUTE)),
@@ -187,7 +187,7 @@ class FdoRecordServiceTest {
   void testGenRequestFull(boolean markedAsType) throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false),
         givenDigitalSpecimenAttributesFull(markedAsType));
     var expectedJson = getExpectedJson(markedAsType);
     var expected = new ArrayList<>(List.of(expectedJson));
@@ -244,7 +244,7 @@ class FdoRecordServiceTest {
   void testGenRequestFullTypeIsNull() throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, null),
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, null, false),
         givenDigitalSpecimenAttributesFull(null));
     var expectedJson = getExpectedJson(null);
     var expected = new ArrayList<>(List.of(expectedJson));
@@ -288,7 +288,7 @@ class FdoRecordServiceTest {
   void testHandleDoesNotNeedsUpdate() {
     // Given
     var currentDigitalSpecimen = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID,
-        null).withDwcCollectionId(REPLACEMENT_ATTRIBUTE);
+        null, false).withDwcCollectionId(REPLACEMENT_ATTRIBUTE);
 
     // Then
     assertThat(builder.handleNeedsUpdate(
@@ -300,7 +300,7 @@ class FdoRecordServiceTest {
   void testPhysicalSpecimenIdsDifferent() {
     // Given
     var currentSpecimen = TestUtils.givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
-        ORGANISATION_ID);
+        ORGANISATION_ID, false);
 
     // When/then
     assertThat(builder.handleNeedsUpdate(currentSpecimen, givenDigitalSpecimenWrapper())).isTrue();

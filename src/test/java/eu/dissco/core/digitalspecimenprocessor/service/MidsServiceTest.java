@@ -87,7 +87,8 @@ class MidsServiceTest {
                 givenBotanyNoOccurrenceSpecimen(new ArrayList<>() {
                   {
                     add(null);
-                  } }),
+                  }
+                }),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -151,9 +152,11 @@ class MidsServiceTest {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withDwcRecordedById("ORCID")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withDwcIdentification(List.of(new Identifications().withDwcIdentificationID(missingIdentificationId ? null : "ID1")
-            .withTaxonIdentifications(
-                List.of(new TaxonIdentification().withDwcScientificNameId(missingName ? null : "ID2")))))
+        .withDwcIdentification(List.of(
+            new Identifications().withDwcIdentifiedById(missingIdentificationId ? null : "ID1")
+                .withTaxonIdentifications(
+                    List.of(new TaxonIdentification().withDwcScientificNameId(
+                        missingName ? null : "ID2")))))
         .withOdsHasMedia(true)
         .withOdsMarkedAsType(false)
         .withDwcOccurrence(List.of(new Occurrences()
@@ -229,7 +232,7 @@ class MidsServiceTest {
         .withOdsMarkedAsType(true)
         .withDwcRecordedById("ORCID")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withDwcIdentification(List.of(new Identifications().withDwcIdentificationID("ID1")
+        .withDwcIdentification(List.of(new Identifications().withDwcIdentifiedById("ID1")
             .withTaxonIdentifications(
                 List.of(new TaxonIdentification().withDwcScientificNameId("ID2")))))
         .withOdsHasMedia(true)
@@ -299,6 +302,7 @@ class MidsServiceTest {
             .withDwcGeodeticDatum("WGS84"))
         .withDwcGeologicalContext(new DwcGeologicalContext().withDwcGroup("Group"));
   }
+
   private static Location givenMissingPercisionLocation() {
     return new Location()
         .withDwcCountry("The Netherlands")
@@ -311,10 +315,11 @@ class MidsServiceTest {
   }
 
   private static DigitalSpecimen givenMidsThreeGenericSpecimen(Location location) {
-    return baseDigitalSpecimen().withDwcPreparations("single specimen")
+    return baseDigitalSpecimen()
+        .withDwcPreparations("single specimen")
         .withOdsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
-        .withDwcIdentification(List.of(new Identifications().withDwcIdentificationID("ID1")
+        .withDwcIdentification(List.of(new Identifications().withDwcIdentifiedById("ID1")
             .withTaxonIdentifications(
                 List.of(new TaxonIdentification().withDwcScientificNameId("ID2")))))
         .withDwcOccurrence(List.of(new Occurrences().withDctermsLocation(location)));

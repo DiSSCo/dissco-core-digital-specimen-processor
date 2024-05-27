@@ -111,7 +111,7 @@ public class ProcessingService {
         } else {
           var currentDigitalSpecimen = currentSpecimens.get(
               digitalSpecimenWrapper.physicalSpecimenId());
-          if (currentDigitalSpecimen.digitalSpecimenWrapper().equals(digitalSpecimenWrapper)) {
+          if (isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
             equalSpecimens.add(currentDigitalSpecimen);
@@ -128,6 +128,42 @@ public class ProcessingService {
       events.forEach(this::republishEvent);
       return new ProcessResult(List.of(), List.of(), List.of());
     }
+  }
+
+  /*
+  We need to remove the EntityRelationshipDate from the comparison.
+  We cannot control the equals in the EntityRelationship as it is generated
+  Therefore we first store the EntityRelationshipDate in a map and set both to null
+  When the objects are not equal we reinsert the data into the EntityRelationship
+  */
+  private boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimen,
+      DigitalSpecimenWrapper digitalSpecimen) {
+    var entityRelationships = digitalSpecimen.attributes().getEntityRelationship();
+    digitalSpecimen.attributes().setEntityRelationship(
+        entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
+    ignoreTimestampEntityRelationship(currentDigitalSpecimen.attributes().getEntityRelationship());
+    if (currentDigitalSpecimen.equals(digitalSpecimen)) {
+      digitalSpecimen.attributes().setEntityRelationship(entityRelationships);
+      return true;
+    } else {
+      digitalSpecimen.attributes().setEntityRelationship(entityRelationships);
+      return false;
+    }
+  }
+
+  private EntityRelationships deepcopyEntityRelationship(EntityRelationships entityRelationships) {
+    return new EntityRelationships()
+        .withEntityRelationshipDate(null)
+        .withEntityRelationshipType(entityRelationships.getEntityRelationshipType())
+        .withObjectEntityIri(entityRelationships.getObjectEntityIri())
+        .withAgents(entityRelationships.getAgents())
+        .withEntityRelationshipCreatorId(entityRelationships.getEntityRelationshipCreatorId())
+        .withEntityRelationshipCreatorName(entityRelationships.getEntityRelationshipCreatorName())
+        .withEntityRelationshipOrder(entityRelationships.getEntityRelationshipOrder());
+  }
+
+  private void ignoreTimestampEntityRelationship(List<EntityRelationships> entityRelationship) {
+    entityRelationship.forEach(e -> e.setEntityRelationshipDate(null));
   }
 
   private void republishEvent(DigitalSpecimenEvent event) {
