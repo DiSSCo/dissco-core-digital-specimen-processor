@@ -30,6 +30,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -138,6 +139,9 @@ public class ProcessingService {
   */
   private boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimen,
       DigitalSpecimenWrapper digitalSpecimen) {
+    if (currentDigitalSpecimen.attributes() == null) {
+      return false;
+    }
     var entityRelationships = digitalSpecimen.attributes().getEntityRelationship();
     digitalSpecimen.attributes().setEntityRelationship(
         entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());

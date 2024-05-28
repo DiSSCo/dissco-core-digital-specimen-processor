@@ -5,8 +5,8 @@ import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGIT
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Query;
@@ -21,6 +22,7 @@ import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
 import org.springframework.stereotype.Repository;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class DigitalSpecimenRepository {
@@ -34,20 +36,17 @@ public class DigitalSpecimenRepository {
         dbRecord.get(DIGITAL_SPECIMEN.TYPE),
         mapToDigitalSpecimen(dbRecord.get(DIGITAL_SPECIMEN.DATA)),
         mapToJson(dbRecord.get(DIGITAL_SPECIMEN.ORIGINAL_DATA)));
-
     return new DigitalSpecimenRecord(dbRecord.get(DIGITAL_SPECIMEN.ID),
         dbRecord.get(DIGITAL_SPECIMEN.MIDSLEVEL), dbRecord.get(DIGITAL_SPECIMEN.VERSION),
         dbRecord.get(DIGITAL_SPECIMEN.CREATED), digitalSpecimenWrapper);
   }
 
-  private DigitalSpecimen mapToDigitalSpecimen(
-      JSONB jsonb) {
+  private DigitalSpecimen mapToDigitalSpecimen(JSONB jsonb) {
     try {
-      return mapper.readValue(jsonb.data(),
-          eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.class);
+      return mapper.readValue(jsonb.data(), DigitalSpecimen.class);
     } catch (JsonProcessingException e) {
-      throw new DisscoJsonBMappingException("Failed to parse jsonb field to json: " + jsonb.data(),
-          e);
+      log.warn("Unable to map jsonb to digital specimen: {}", jsonb.data(), e);
+      return new DigitalSpecimen();
     }
   }
 
@@ -75,7 +74,8 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID,
             digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenId())
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE,
-            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsPhysicalSpecimenIdType()
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
+                .getOdsPhysicalSpecimenIdType()
                 .value())
         .set(DIGITAL_SPECIMEN.SPECIMEN_NAME,
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSpecimenName())
@@ -87,7 +87,8 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA, mapToJsonB(digitalSpecimenRecord))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
-            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()))
+            JSONB.valueOf(
+                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()))
         .onConflict(DIGITAL_SPECIMEN.ID).doUpdate()
         .set(DIGITAL_SPECIMEN.TYPE, digitalSpecimenRecord.digitalSpecimenWrapper().type())
         .set(DIGITAL_SPECIMEN.VERSION, digitalSpecimenRecord.version())
@@ -95,7 +96,8 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID,
             digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenId())
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE,
-            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsPhysicalSpecimenIdType()
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
+                .getOdsPhysicalSpecimenIdType()
                 .value())
         .set(DIGITAL_SPECIMEN.SPECIMEN_NAME,
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSpecimenName())
@@ -108,12 +110,14 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.DATA,
             mapToJsonB(digitalSpecimenRecord))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
-            JSONB.valueOf(digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
+            JSONB.valueOf(
+                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
   }
 
   private JSONB mapToJsonB(DigitalSpecimenRecord digitalSpecimenRecord) {
-    return JSONB.valueOf(mapper.valueToTree(digitalSpecimenRecord.digitalSpecimenWrapper().attributes())
-        .toString().replace("\\u0000",""));
+    return JSONB.valueOf(
+        mapper.valueToTree(digitalSpecimenRecord.digitalSpecimenWrapper().attributes())
+            .toString().replace("\\u0000", ""));
   }
 
   public int updateLastChecked(List<String> currentDigitalSpecimen) {
