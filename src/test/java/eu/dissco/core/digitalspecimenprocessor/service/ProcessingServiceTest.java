@@ -6,10 +6,12 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_BASE_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDifferentUnequalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
@@ -45,6 +47,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
@@ -53,11 +56,15 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -86,6 +93,17 @@ class ProcessingServiceTest {
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
   private ProcessingService service;
+
+  private static Stream<Arguments> provideUnequalDigitalSpecimen() {
+    return Stream.of(
+        Arguments.of(givenUnequalDigitalSpecimenRecord()),
+        Arguments.of(new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME, null, null))),
+        Arguments.of(new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
+                new DigitalSpecimen(), null)))
+    );
+  }
 
   @BeforeEach
   void setup() {
@@ -125,13 +143,14 @@ class ProcessingServiceTest {
     assertThat(result).isEmpty();
   }
 
-  @Test
-  void testUnequalSpecimen() throws Exception {
+  @ParameterizedTest
+  @MethodSource("provideUnequalDigitalSpecimen")
+  void testUnequalSpecimen(DigitalSpecimenRecord currentSpecimenRecord) throws Exception {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2));
     var specimen = givenUnequalDigitalSpecimenRecord();
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
-        List.of(specimen));
+        List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
@@ -146,7 +165,7 @@ class ProcessingServiceTest {
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
-        .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
+        .publishUpdateEvent(givenDigitalSpecimenRecord(2), currentSpecimenRecord);
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
