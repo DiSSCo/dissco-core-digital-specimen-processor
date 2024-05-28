@@ -148,7 +148,6 @@ class ProcessingServiceTest {
   void testUnequalSpecimen(DigitalSpecimenRecord currentSpecimenRecord) throws Exception {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2));
-    var specimen = givenUnequalDigitalSpecimenRecord();
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
