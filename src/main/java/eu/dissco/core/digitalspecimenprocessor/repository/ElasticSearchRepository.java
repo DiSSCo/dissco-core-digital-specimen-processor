@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.flattenToDigitalSpecimen;
+
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
@@ -18,14 +20,15 @@ public class ElasticSearchRepository {
   private final ElasticsearchClient client;
   private final ElasticSearchProperties properties;
 
-  public BulkResponse indexDigitalSpecimen(Collection<DigitalSpecimenRecord> digitalSpecimens)
+  public BulkResponse indexDigitalSpecimen(Collection<DigitalSpecimenRecord> digitalSpecimenRecords)
       throws IOException {
     var bulkRequest = new BulkRequest.Builder();
-    for (var digitalSpecimen : digitalSpecimens) {
+    for (var digitalSpecimenrecord : digitalSpecimenRecords) {
+      var digitalSpecimen = flattenToDigitalSpecimen(digitalSpecimenrecord);
       bulkRequest.operations(op ->
           op.index(idx -> idx
               .index(properties.getIndexName())
-              .id(digitalSpecimen.id())
+              .id(digitalSpecimen.getId())
               .document(digitalSpecimen))
       );
     }

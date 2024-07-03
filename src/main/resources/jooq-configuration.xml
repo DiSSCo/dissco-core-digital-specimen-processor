@@ -13,7 +13,7 @@
     <database>
       <name>org.jooq.meta.postgres.PostgresDatabase</name>
       <inputSchema>public</inputSchema>
-      <includes>digital_specimen</includes>
+      <includes>digital_specimen | source_system | translator_type</includes>
       <forcedTypes>
         <forcedType>
           <name>INSTANT</name>

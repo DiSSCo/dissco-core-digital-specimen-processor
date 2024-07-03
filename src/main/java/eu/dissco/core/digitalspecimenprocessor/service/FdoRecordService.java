@@ -107,12 +107,12 @@ public class FdoRecordService {
 
     // Mandatory
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
-        specimen.physicalSpecimenId());
+        specimen.physicalSpecimenID());
     attributes.put(FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
-        specimen.attributes().getOdsNormalisedPhysicalSpecimenId());
+        specimen.attributes().getOdsNormalisedPhysicalSpecimenID());
     attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
-        specimen.attributes().getOdsPhysicalSpecimenIdType().value());
-    attributes.put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getDwcInstitutionId());
+        specimen.attributes().getOdsPhysicalSpecimenIDType().value());
+    attributes.put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getOdsOrganisationID());
 
     addOptionalAttributes(specimen, attributes);
 
@@ -120,9 +120,9 @@ public class FdoRecordService {
   }
 
   private void addOptionalAttributes(DigitalSpecimenWrapper specimen, ObjectNode attributes) {
-    if (specimen.attributes().getDwcInstitutionName() != null) {
+    if (specimen.attributes().getOdsOrganisationName() != null) {
       attributes.put(SPECIMEN_HOST_NAME.getAttribute(),
-          specimen.attributes().getDwcInstitutionName());
+          specimen.attributes().getOdsOrganisationName());
     }
     if (specimen.attributes().getOdsTopicDiscipline() != null) {
       attributes.put(TOPIC_DISCIPLINE.getAttribute(),
@@ -135,15 +135,15 @@ public class FdoRecordService {
       attributes.put(LIVING_OR_PRESERVED.getAttribute(),
           specimen.attributes().getOdsLivingOrPreserved().value());
     }
-    if (specimen.attributes().getOdsMarkedAsType() != null) {
-      attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsMarkedAsType());
+    if (specimen.attributes().getOdsIsMarkedAsType() != null) {
+      attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsIsMarkedAsType());
     }
-    if (specimen.attributes().getIdentifier() != null && !specimen.attributes().getIdentifier().isEmpty()){
+    if (specimen.attributes().getOdsHasIdentifier() != null && !specimen.attributes().getOdsHasIdentifier().isEmpty()){
       var idNodeArr = mapper.createArrayNode();
-      for (var id: specimen.attributes().getIdentifier()){
+      for (var id: specimen.attributes().getOdsHasIdentifier()){
         idNodeArr.add(mapper.createObjectNode()
-            .put("identifierType", id.getIdentifierType())
-            .put("identifierValue", id.getIdentifierValue()));
+            .put("identifierType", id.getDctermsTitle())
+            .put("identifierValue", id.getDctermsIdentifier()));
       }
       attributes.set("otherSpecimenIds", idNodeArr);
     }
@@ -153,24 +153,24 @@ public class FdoRecordService {
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
     var currentAttributes = currentDigitalSpecimenWrapper.attributes();
     var attributes = digitalSpecimenWrapper.attributes();
-    return isEqualString(currentDigitalSpecimenWrapper.physicalSpecimenId(),
-        digitalSpecimenWrapper.physicalSpecimenId())
+    return isEqualString(currentDigitalSpecimenWrapper.physicalSpecimenID(),
+        digitalSpecimenWrapper.physicalSpecimenID())
         || isEqualString(
-        currentDigitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenId(),
-        digitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenId())
-        || isEqualString(currentAttributes.getDwcInstitutionId(), attributes.getDwcInstitutionId())
-        || isEqualString(currentAttributes.getDwcInstitutionName(),
-        attributes.getDwcInstitutionName())
+        currentDigitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID(),
+        digitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID())
+        || isEqualString(currentAttributes.getOdsOrganisationID(), attributes.getOdsOrganisationID())
+        || isEqualString(currentAttributes.getOdsOrganisationName(),
+        attributes.getOdsOrganisationName())
         || (currentAttributes.getOdsTopicDiscipline() != null
         && !currentAttributes.getOdsTopicDiscipline().equals(attributes.getOdsTopicDiscipline()))
-        || (currentAttributes.getOdsPhysicalSpecimenIdType() != null
-        && !currentAttributes.getOdsPhysicalSpecimenIdType()
-        .equals(attributes.getOdsPhysicalSpecimenIdType()))
+        || (currentAttributes.getOdsPhysicalSpecimenIDType() != null
+        && !currentAttributes.getOdsPhysicalSpecimenIDType()
+        .equals(attributes.getOdsPhysicalSpecimenIDType()))
         || (currentAttributes.getOdsLivingOrPreserved() != null && isEqualString(
         currentAttributes.getOdsLivingOrPreserved().value(),
         attributes.getOdsLivingOrPreserved().value()))
         || isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
-        || (currentAttributes.getOdsMarkedAsType() != null
-        && !currentAttributes.getOdsMarkedAsType().equals(attributes.getOdsMarkedAsType()));
+        || (currentAttributes.getOdsIsMarkedAsType() != null
+        && !currentAttributes.getOdsIsMarkedAsType().equals(attributes.getOdsIsMarkedAsType()));
   }
 }

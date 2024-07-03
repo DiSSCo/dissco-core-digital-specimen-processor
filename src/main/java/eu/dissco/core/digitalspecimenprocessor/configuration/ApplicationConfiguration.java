@@ -3,7 +3,12 @@ package eu.dissco.core.digitalspecimenprocessor.configuration;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import eu.dissco.core.digitalspecimenprocessor.component.DateDeserializer;
+import eu.dissco.core.digitalspecimenprocessor.component.DateSerializer;
+import eu.dissco.core.digitalspecimenprocessor.component.InstantDeserializer;
+import eu.dissco.core.digitalspecimenprocessor.component.InstantSerializer;
 import java.time.Instant;
+import java.util.Date;
 import java.util.Random;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -21,6 +26,8 @@ public class ApplicationConfiguration {
   public ObjectMapper objectMapper() {
     var mapper = new ObjectMapper().findAndRegisterModules();
     SimpleModule dateModule = new SimpleModule();
+    dateModule.addSerializer(Date.class, new DateSerializer());
+    dateModule.addDeserializer(Date.class, new DateDeserializer());
     dateModule.addSerializer(Instant.class, new InstantSerializer());
     dateModule.addDeserializer(Instant.class, new InstantDeserializer());
     mapper.registerModule(dateModule);

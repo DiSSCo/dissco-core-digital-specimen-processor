@@ -26,7 +26,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
-import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIdType;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.time.Clock;
@@ -58,9 +58,9 @@ class FdoRecordServiceTest {
 
   private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenDigitalSpecimenAttributesMinimal() {
     return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
-        .withDwcInstitutionId(ORGANISATION_ID)
-        .withOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL)
-        .withOdsNormalisedPhysicalSpecimenId(PHYSICAL_SPECIMEN_ID);
+        .withOdsOrganisationID(ORGANISATION_ID)
+        .withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)
+        .withOdsNormalisedPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID);
   }
 
   private static JsonNode givenDigitalSpecimenOriginalAttributesMinimal() {
@@ -85,13 +85,13 @@ class FdoRecordServiceTest {
 
   private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
     var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false);
-    return Stream.of(Arguments.of(attributes.withDwcInstitutionId(REPLACEMENT_ATTRIBUTE)),
-        Arguments.of(attributes.withDwcInstitutionName(REPLACEMENT_ATTRIBUTE)),
+    return Stream.of(Arguments.of(attributes.withOdsOrganisationID(REPLACEMENT_ATTRIBUTE)),
+        Arguments.of(attributes.withOdsOrganisationName(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withOdsSpecimenName(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY)),
         Arguments.of(attributes.withOdsLivingOrPreserved(OdsLivingOrPreserved.LIVING)),
-        Arguments.of(attributes.withOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL)),
-        Arguments.of(attributes.withOdsMarkedAsType(false)));
+        Arguments.of(attributes.withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)),
+        Arguments.of(attributes.withOdsIsMarkedAsType(false)));
   }
 
   @BeforeEach
@@ -143,7 +143,7 @@ class FdoRecordServiceTest {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
-    specimen.attributes().setOdsPhysicalSpecimenIdType(OdsPhysicalSpecimenIdType.LOCAL);
+    specimen.attributes().setOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL);
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
 
@@ -288,7 +288,7 @@ class FdoRecordServiceTest {
   void testHandleDoesNotNeedsUpdate() {
     // Given
     var currentDigitalSpecimen = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID,
-        null, false).withDwcCollectionId(REPLACEMENT_ATTRIBUTE);
+        null, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
 
     // Then
     assertThat(builder.handleNeedsUpdate(

@@ -23,13 +23,15 @@ class KafkaPublisherServiceTest {
 
   @Mock
   private KafkaTemplate<String, String> kafkaTemplate;
+  @Mock
+  private ProvenanceService provenanceService;
 
   private KafkaPublisherService service;
 
 
   @BeforeEach
   void setup() {
-    service = new KafkaPublisherService(MAPPER, kafkaTemplate);
+    service = new KafkaPublisherService(MAPPER, kafkaTemplate, provenanceService);
   }
 
   @Test
