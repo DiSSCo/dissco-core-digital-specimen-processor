@@ -32,7 +32,7 @@ class SourceSystemRepositoryIT extends BaseRepositoryIT {
     givenInsertSourceSystem();
 
     // When
-    var result = repository.retrieveNameByID(SOURCE_SYSTEM_ID);
+    var result = repository.retrieveNameByID("TEST/57Z-6PC-64W");
 
     // Then
     assertThat(result).isEqualTo(SOURCE_SYSTEM_NAME);
@@ -52,7 +52,7 @@ class SourceSystemRepositoryIT extends BaseRepositoryIT {
 
   private void givenInsertSourceSystem() {
     context.insertInto(SOURCE_SYSTEM)
-        .set(SOURCE_SYSTEM.ID, SOURCE_SYSTEM_ID)
+        .set(SOURCE_SYSTEM.ID, "TEST/57Z-6PC-64W")
         .set(SOURCE_SYSTEM.NAME, SOURCE_SYSTEM_NAME)
         .set(SOURCE_SYSTEM.ENDPOINT, "http://localhost:8080")
         .set(SOURCE_SYSTEM.CREATED, Instant.now())

@@ -29,7 +29,7 @@ class SourceSystemNameComponentTest {
   @Test
   void testGetSourceSystemName() {
     // Given
-    given(repository.retrieveNameByID(SOURCE_SYSTEM_ID)).willReturn(SOURCE_SYSTEM_NAME);
+    given(repository.retrieveNameByID("TEST/57Z-6PC-64W")).willReturn(SOURCE_SYSTEM_NAME);
 
     // When
     var name = component.getSourceSystemName(SOURCE_SYSTEM_ID);
