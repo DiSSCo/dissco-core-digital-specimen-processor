@@ -8,10 +8,8 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.Keys;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.TranslatorType;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.SourceSystemRecord;
-
 import java.time.Instant;
 import java.util.Collection;
-
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.Name;

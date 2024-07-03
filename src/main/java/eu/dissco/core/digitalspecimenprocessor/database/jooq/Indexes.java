@@ -5,7 +5,6 @@ package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
-
 import org.jooq.Index;
 import org.jooq.OrderField;
 import org.jooq.impl.DSL;

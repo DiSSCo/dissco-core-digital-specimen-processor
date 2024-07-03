@@ -27,31 +27,31 @@ import java.util.Map;
 
 public class TestUtils {
 
-  public static ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
-  public static String HANDLE = "20.5000.1025/V1Z-176-LL4";
-  public static String SECOND_HANDLE = "20.5000.1025/XXX-XXX-XXX";
-  public static String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
-  public static String APP_HANDLE = "https://hdl.handle.net/TEST/123-123-123";
-  public static String APP_NAME = "dissco-digital-specimen-processor";
-  public static int MIDS_LEVEL = 1;
-  public static int VERSION = 1;
-  public static Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
-  public static String MAS = "OCR";
-  public static String TYPE = "GeologyRockSpecimen";
-  public static String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
-  public static OdsPhysicalSpecimenIDType PHYSICAL_SPECIMEN_TYPE = OdsPhysicalSpecimenIDType.GLOBAL;
-  public static String SPECIMEN_NAME = "Biota";
-  public static String ANOTHER_SPECIMEN_NAME = "Another SpecimenName";
-  public static String ORGANISATION_ID = "https://ror.org/0443cwa12";
-  public static String ANOTHER_ORGANISATION = "Another organisation";
-  public static String DATASET_ID = null;
-  public static String PHYSICAL_SPECIMEN_COLLECTION = null;
-  public static String SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64W";
-  public static String SOURCE_SYSTEM_NAME = "A very nice source system";
-  public static JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
-  public static OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
+  public static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
+  public static final String HANDLE = "20.5000.1025/V1Z-176-LL4";
+  public static final String SECOND_HANDLE = "20.5000.1025/XXX-XXX-XXX";
+  public static final String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
+  public static final String APP_HANDLE = "https://hdl.handle.net/TEST/123-123-123";
+  public static final String APP_NAME = "dissco-digital-specimen-processor";
+  public static final int MIDS_LEVEL = 1;
+  public static final int VERSION = 1;
+  public static final Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
+  public static final String MAS = "OCR";
+  public static final String TYPE = "GeologyRockSpecimen";
+  public static final String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
+  public static final OdsPhysicalSpecimenIDType PHYSICAL_SPECIMEN_TYPE = OdsPhysicalSpecimenIDType.GLOBAL;
+  public static final String SPECIMEN_NAME = "Biota";
+  public static final String ANOTHER_SPECIMEN_NAME = "Another SpecimenName";
+  public static final String ORGANISATION_ID = "https://ror.org/0443cwa12";
+  public static final String ANOTHER_ORGANISATION = "Another organisation";
+  public static final String DATASET_ID = null;
+  public static final String PHYSICAL_SPECIMEN_COLLECTION = null;
+  public static final String SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64W";
+  public static final String SOURCE_SYSTEM_NAME = "A very nice source system";
+  public static final JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
+  public static final OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
 
-  public static String SPECIMEN_BASE_URL = "https://doi.org/";
+  public static final String SPECIMEN_BASE_URL = "https://doi.org/";
 
   public static JsonNode generateSpecimenOriginalData() {
     try {

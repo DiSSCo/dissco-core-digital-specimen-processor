@@ -6,9 +6,7 @@ package eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records;
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.TranslatorType;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.SourceSystem;
-
 import java.time.Instant;
-
 import org.jooq.Record1;
 import org.jooq.impl.UpdatableRecordImpl;
 

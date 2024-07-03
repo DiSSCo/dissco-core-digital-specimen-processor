@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
 import org.junit.jupiter.api.Test;
 
-public class DigitalSpecimenUtilsTest {
+class DigitalSpecimenUtilsTest {
 
   @Test
-  public void testFlattenToDigitalSpecimen() {
+  void testFlattenToDigitalSpecimen() {
     // Given
     var digitalSpecimenRecord = TestUtils.givenDigitalSpecimenRecord();
 
