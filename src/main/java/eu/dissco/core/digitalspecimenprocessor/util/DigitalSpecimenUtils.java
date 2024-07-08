@@ -6,6 +6,8 @@ import java.util.Date;
 
 public class DigitalSpecimenUtils {
 
+  public static final String DOI_PREFIX = "https://doi.org/";
+
   private DigitalSpecimenUtils() {
     // This is a utility class
   }
@@ -13,8 +15,8 @@ public class DigitalSpecimenUtils {
   public static DigitalSpecimen flattenToDigitalSpecimen(
       DigitalSpecimenRecord digitalSpecimenrecord) {
     var digitalSpecimen = digitalSpecimenrecord.digitalSpecimenWrapper().attributes();
-    digitalSpecimen.setId("https://doi.org/" + digitalSpecimenrecord.id());
-    digitalSpecimen.setOdsID("https://doi.org/" + digitalSpecimenrecord.id());
+    digitalSpecimen.setId(DOI_PREFIX + digitalSpecimenrecord.id());
+    digitalSpecimen.setOdsID(DOI_PREFIX + digitalSpecimenrecord.id());
     digitalSpecimen.setOdsVersion(digitalSpecimenrecord.version());
     digitalSpecimen.setOdsMidsLevel(digitalSpecimenrecord.midsLevel());
     digitalSpecimen.setDctermsCreated(Date.from(digitalSpecimenrecord.created()));

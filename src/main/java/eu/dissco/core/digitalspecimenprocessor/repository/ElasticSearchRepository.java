@@ -1,5 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.flattenToDigitalSpecimen;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -37,11 +38,13 @@ public class ElasticSearchRepository {
 
   public DeleteResponse rollbackSpecimen(DigitalSpecimenRecord digitalSpecimenRecord)
       throws IOException {
-    return client.delete(d -> d.index(properties.getIndexName()).id(digitalSpecimenRecord.id()));
+    return client.delete(
+        d -> d.index(properties.getIndexName()).id(DOI_PREFIX + digitalSpecimenRecord.id()));
   }
 
   public void rollbackVersion(DigitalSpecimenRecord currentDigitalSpecimen) throws IOException {
-    client.index(i -> i.index(properties.getIndexName()).id(currentDigitalSpecimen.id())
-        .document(currentDigitalSpecimen));
+    var digitalSpecimen = flattenToDigitalSpecimen(currentDigitalSpecimen);
+    client.index(i -> i.index(properties.getIndexName()).id(digitalSpecimen.getId())
+        .document(digitalSpecimen));
   }
 }
