@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_ID;
@@ -69,7 +70,7 @@ class ProvenanceServiceTest {
     var event = service.generateCreateEvent(digitalSpecimen);
 
     // Then
-    assertThat(event.getOdsID()).isEqualTo(HANDLE + "/" + VERSION);
+    assertThat(event.getOdsID()).isEqualTo(DOI_PREFIX + HANDLE + "/" + VERSION);
     assertThat(event.getProvActivity().getOdsChangeValue()).isNull();
     assertThat(event.getProvEntity().getProvValue()).isNotNull();
     assertThat(event.getOdsHasProvAgent()).isEqualTo(givenExpectedAgents());
@@ -90,7 +91,7 @@ class ProvenanceServiceTest {
     var event = service.generateUpdateEvent(anotherDigitalSpecimen, digitalSpecimen);
 
     // Then
-    assertThat(event.getOdsID()).isEqualTo(HANDLE + "/" + VERSION);
+    assertThat(event.getOdsID()).isEqualTo(DOI_PREFIX + HANDLE + "/" + VERSION);
     assertThat(event.getProvActivity().getOdsChangeValue()).isEqualTo(givenChangeValue());
     assertThat(event.getProvEntity().getProvValue()).isNotNull();
     assertThat(event.getOdsHasProvAgent()).isEqualTo(givenExpectedAgents());

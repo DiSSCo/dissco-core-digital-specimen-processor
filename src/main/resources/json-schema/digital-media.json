@@ -42,11 +42,19 @@
       ],
       "description": "The status of the Digital Object"
     },
-    "ods:created": {
+    "dcterms:modified": {
       "type": "string",
-      "description": "The timestamp that the object version was created in DiSSCo",
+      "description": "The timestamp that the object was last changed, which resulted in a new version of the object",
+      "examples": [
+        "2023-10-02T12:31:34.806Z"
+      ]
+    },
+    "dcterms:created": {
+      "type": "string",
+      "description": "The timestamp that the object was created in DiSSCo",
       "format": "date-time",
       "examples": [
+        "2023-10-02T12:31:34.806Z"
       ]
     },
     "ods:type": {
@@ -79,6 +87,11 @@
       "description": "https://rs.tdwg.org/ac/terms/accessURI",
       "examples": [
       ]
+    },
+    "ods:sourceSystemID": {
+      "type": "string",
+      "description": "The handle to the source system object which retrieved the data from the CMS",
+      "pattern": "^https:\/\/hdl\\.handle\\.net\/[\\w.]+\/(.){3}-(.){3}-(.){3}"
     },
     "ods:organisationID": {
       "type": "string",
@@ -126,14 +139,6 @@
     "dcterms:creator": {
       "type": "string",
       "description": "https://purl.org/dc/elements/1.1/creator"
-    },
-    "dcterms:created": {
-      "type": "string",
-      "description": "https://purl.org/dc/terms/created"
-    },
-    "dcterms:modified": {
-      "type": "string",
-      "description": "https://purl.org/dc/terms/modified"
     },
     "ods:hasAssertion": {
       "type": "array",
@@ -186,7 +191,9 @@
     "@type",
     "ods:ID",
     "ods:version",
-    "ods:created",
-    "ac:accessURI"
+    "dcterms:created",
+    "dcterms:modified",
+    "ac:accessURI",
+    "ods:sourceSystemID"
   ]
 }

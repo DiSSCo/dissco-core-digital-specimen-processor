@@ -29,6 +29,7 @@ public class TestUtils {
 
   public static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
   public static final String HANDLE = "20.5000.1025/V1Z-176-LL4";
+  public static final String DOI_PREFIX = "https://doi.org/";
   public static final String SECOND_HANDLE = "20.5000.1025/XXX-XXX-XXX";
   public static final String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
   public static final String APP_HANDLE = "https://hdl.handle.net/TEST/123-123-123";
@@ -365,7 +366,7 @@ public class TestUtils {
         .withDwcDatasetName(DATASET_ID)
         .withOdsIsMarkedAsType(markedAsType)
         .withDwcPreparations("")
-        .withDctermsModified("2017-09-26T12:27:21.000+00:00");
+        .withDctermsModified("2022-11-01T09:59:24.000Z");
     if (addEntityRelationShip) {
       ds.withOdsHasEntityRelationship(
           List.of(new EntityRelationship()

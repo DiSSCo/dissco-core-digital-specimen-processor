@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationConfiguration.DATE_STRING;
+
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,6 +27,8 @@ import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -47,6 +51,8 @@ import org.springframework.stereotype.Service;
 public class ProcessingService {
 
   private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
+  private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
+      .withZone(ZoneOffset.UTC);
   private final DigitalSpecimenRepository repository;
   private final FdoRecordService fdoRecordService;
   private final ElasticSearchRepository elasticRepository;
@@ -134,7 +140,7 @@ public class ProcessingService {
   }
 
   /*
-  We need to remove the EntityRelationshipDate from the comparison.
+  We need to remove the Modified and EntityRelationshipDate from the comparison.
   We cannot control the equals in the EntityRelationship as it is generated
   Therefore we first store the EntityRelationshipDate in a map and set both to null
   When the objects are not equal we reinsert the data into the EntityRelationship
@@ -144,15 +150,23 @@ public class ProcessingService {
     if (currentDigitalSpecimen.attributes() == null) {
       return false;
     }
+    var currentModified = currentDigitalSpecimen.attributes().getDctermsModified();
+    currentDigitalSpecimen.attributes().setDctermsModified(null);
+    digitalSpecimen.attributes().setDctermsModified(null);
     var entityRelationships = digitalSpecimen.attributes().getOdsHasEntityRelationship();
     digitalSpecimen.attributes().setOdsHasEntityRelationship(
         entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
-    ignoreTimestampEntityRelationship(currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
+    ignoreTimestampEntityRelationship(
+        currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
     if (currentDigitalSpecimen.equals(digitalSpecimen)) {
       digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
+      digitalSpecimen.attributes().setDctermsModified(currentModified);
+      currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       return true;
     } else {
       digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
+      digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
+      currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       return false;
     }
   }
@@ -219,7 +233,6 @@ public class ProcessingService {
 
   private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-
     log.info("Persisting to Handle Server");
     var successfullyUpdatedHandles = updateHandles(updatedDigitalSpecimenTuples);
     if (!successfullyUpdatedHandles) {

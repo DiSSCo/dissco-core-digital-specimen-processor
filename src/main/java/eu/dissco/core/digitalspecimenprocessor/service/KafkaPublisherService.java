@@ -51,6 +51,6 @@ public class KafkaPublisherService {
 
   public void publishDigitalMediaObject(DigitalMediaEvent digitalMediaObjectEvent)
       throws JsonProcessingException {
-    kafkaTemplate.send("digital-media-object", mapper.writeValueAsString(digitalMediaObjectEvent));
+    kafkaTemplate.send("digital-media", mapper.writeValueAsString(digitalMediaObjectEvent));
   }
 }

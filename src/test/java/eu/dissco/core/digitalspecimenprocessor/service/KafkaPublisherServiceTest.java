@@ -113,6 +113,6 @@ class KafkaPublisherServiceTest {
 
     // Then
     then(kafkaTemplate).should()
-        .send("digital-media-object", MAPPER.writeValueAsString(digitalMediaObjectEvent));
+        .send("digital-media", MAPPER.writeValueAsString(digitalMediaObjectEvent));
   }
 }

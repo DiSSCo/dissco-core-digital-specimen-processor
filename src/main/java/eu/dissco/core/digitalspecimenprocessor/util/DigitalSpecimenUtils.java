@@ -13,11 +13,11 @@ public class DigitalSpecimenUtils {
   public static DigitalSpecimen flattenToDigitalSpecimen(
       DigitalSpecimenRecord digitalSpecimenrecord) {
     var digitalSpecimen = digitalSpecimenrecord.digitalSpecimenWrapper().attributes();
-    digitalSpecimen.setId(digitalSpecimenrecord.id());
-    digitalSpecimen.setOdsID(digitalSpecimenrecord.id());
+    digitalSpecimen.setId("https://doi.org/" + digitalSpecimenrecord.id());
+    digitalSpecimen.setOdsID("https://doi.org/" + digitalSpecimenrecord.id());
     digitalSpecimen.setOdsVersion(digitalSpecimenrecord.version());
     digitalSpecimen.setOdsMidsLevel(digitalSpecimenrecord.midsLevel());
-    digitalSpecimen.setOdsCreated(Date.from(digitalSpecimenrecord.created()));
+    digitalSpecimen.setDctermsCreated(Date.from(digitalSpecimenrecord.created()));
     return digitalSpecimen;
   }
 }

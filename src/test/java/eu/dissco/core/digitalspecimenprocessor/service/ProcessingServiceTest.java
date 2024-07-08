@@ -115,6 +115,8 @@ class ProcessingServiceTest {
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
     mockedInstant.when(Instant::now).thenReturn(instant);
+    mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
+    mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
     mockedClock = mockStatic(Clock.class);
     mockedClock.when(Clock::systemUTC).thenReturn(clock);
   }
