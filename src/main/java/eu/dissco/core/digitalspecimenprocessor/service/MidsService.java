@@ -111,11 +111,11 @@ public class MidsService {
         && Boolean.TRUE.equals(attributes.getOdsIsKnownToContainMedia())
         && qualitativeLocationIsValid(attributes)
         && quantitativeLocationIsValid(attributes)
-        && (occurrenceIsPresent(attributes) && hasValue(
+        && (eventIsPresent(attributes) && hasValue(
         attributes.getOdsHasEvent().get(0).getDwcEventDate(),
         attributes.getOdsHasEvent().get(0).getDwcVerbatimEventDate(),
         convertInteger(attributes.getOdsHasEvent().get(0).getDwcYear())))
-        && (occurrenceIsPresent(attributes) &&
+        && (eventIsPresent(attributes) &&
         hasValue(attributes.getOdsHasEvent().get(0).getDwcFieldNumber(),
             attributes.getOdsHasEvent().get(0).getDwcRecordNumber()))
         && hasValue(attributes.getDwcRecordedBy(), attributes.getDwcRecordedByID());
@@ -159,13 +159,13 @@ public class MidsService {
     return false;
   }
 
-  private boolean occurrenceIsPresent(DigitalSpecimen attributes) {
+  private boolean eventIsPresent(DigitalSpecimen attributes) {
     return attributes.getOdsHasEvent() != null && !attributes.getOdsHasEvent().isEmpty()
         && attributes.getOdsHasEvent().get(0) != null;
   }
 
   private boolean locationIsPresent(DigitalSpecimen digitalSpecimen) {
-    return occurrenceIsPresent(digitalSpecimen)
+    return eventIsPresent(digitalSpecimen)
         && digitalSpecimen.getOdsHasEvent().get(0).getOdsLocation() != null;
   }
 
@@ -185,8 +185,7 @@ public class MidsService {
           location.getDwcMunicipality(),
           location.getDwcStateProvince(),
           location.getDwcWaterBody(),
-          location.getDwcHigherGeography(),
-          location.getOdsGeoReference().getDwcVerbatimCoordinates());
+          location.getDwcHigherGeography());
       if (!isValidValue && (location.getOdsGeoReference() != null)) {
         isValidValue = isValid(location.getOdsGeoReference().getDwcVerbatimCoordinates());
         if (!isValidValue) {

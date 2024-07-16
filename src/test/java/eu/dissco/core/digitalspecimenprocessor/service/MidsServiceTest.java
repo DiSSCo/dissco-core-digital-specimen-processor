@@ -75,6 +75,9 @@ class MidsServiceTest {
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingLocation(),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingGeoReference(),
+                MAPPER.createObjectNode()), 1),
+        Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenBotanyNoOccurrenceSpecimen(List.of()),
                 MAPPER.createObjectNode()), 1),
@@ -412,6 +415,19 @@ class MidsServiceTest {
                 .withOdsGeoReference(new OdsGeoReference().withDwcDecimalLatitude(59.465625))
                 .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
   }
+
+  private static DigitalSpecimen givenMissingGeoReference() {
+    return baseDigitalSpecimen()
+        .withDwcPreparations("single specimen")
+        .withOdsIsMarkedAsType(true)
+        .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
+        .withOdsHasEvent(List.of(new Event().withOdsLocation(
+            new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
+                .withOdsGeoReference(null)
+                .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
+  }
+
+
 
   @BeforeEach
   void setup() {
