@@ -8,23 +8,21 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.Indexes;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Keys;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.DigitalSpecimenRecord;
-
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
-
+import org.jooq.Condition;
 import org.jooq.Field;
-import org.jooq.ForeignKey;
-import org.jooq.Function14;
 import org.jooq.Index;
 import org.jooq.JSONB;
 import org.jooq.Name;
-import org.jooq.Record;
-import org.jooq.Records;
-import org.jooq.Row14;
+import org.jooq.PlainSQL;
+import org.jooq.QueryPart;
+import org.jooq.SQL;
 import org.jooq.Schema;
-import org.jooq.SelectField;
+import org.jooq.Select;
+import org.jooq.Stringly;
 import org.jooq.Table;
 import org.jooq.TableField;
 import org.jooq.TableOptions;
@@ -126,11 +124,11 @@ public class DigitalSpecimen extends TableImpl<DigitalSpecimenRecord> {
     public final TableField<DigitalSpecimenRecord, JSONB> ORIGINAL_DATA = createField(DSL.name("original_data"), SQLDataType.JSONB, this, "");
 
     private DigitalSpecimen(Name alias, Table<DigitalSpecimenRecord> aliased) {
-        this(alias, aliased, null);
+        this(alias, aliased, (Field<?>[]) null, null);
     }
 
-    private DigitalSpecimen(Name alias, Table<DigitalSpecimenRecord> aliased, Field<?>[] parameters) {
-        super(alias, null, aliased, parameters, DSL.comment(""), TableOptions.table());
+    private DigitalSpecimen(Name alias, Table<DigitalSpecimenRecord> aliased, Field<?>[] parameters, Condition where) {
+        super(alias, null, aliased, parameters, DSL.comment(""), TableOptions.table(), where);
     }
 
     /**
@@ -152,10 +150,6 @@ public class DigitalSpecimen extends TableImpl<DigitalSpecimenRecord> {
      */
     public DigitalSpecimen() {
         this(DSL.name("digital_specimen"), null);
-    }
-
-    public <O extends Record> DigitalSpecimen(Table<O> child, ForeignKey<O, DigitalSpecimenRecord> key) {
-        super(child, key, DIGITAL_SPECIMEN);
     }
 
     @Override
@@ -212,27 +206,87 @@ public class DigitalSpecimen extends TableImpl<DigitalSpecimenRecord> {
         return new DigitalSpecimen(name.getQualifiedName(), null);
     }
 
-    // -------------------------------------------------------------------------
-    // Row14 type methods
-    // -------------------------------------------------------------------------
-
+    /**
+     * Create an inline derived table from this table
+     */
     @Override
-    public Row14<String, Integer, String, Short, String, String, String, String, String, Instant, Instant, Instant, JSONB, JSONB> fieldsRow() {
-        return (Row14) super.fieldsRow();
+    public DigitalSpecimen where(Condition condition) {
+        return new DigitalSpecimen(getQualifiedName(), aliased() ? this : null, null, condition);
     }
 
     /**
-     * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
+     * Create an inline derived table from this table
      */
-    public <U> SelectField<U> mapping(Function14<? super String, ? super Integer, ? super String, ? super Short, ? super String, ? super String, ? super String, ? super String, ? super String, ? super Instant, ? super Instant, ? super Instant, ? super JSONB, ? super JSONB, ? extends U> from) {
-        return convertFrom(Records.mapping(from));
+    @Override
+    public DigitalSpecimen where(Collection<? extends Condition> conditions) {
+        return where(DSL.and(conditions));
     }
 
     /**
-     * Convenience mapping calling {@link SelectField#convertFrom(Class,
-     * Function)}.
+     * Create an inline derived table from this table
      */
-    public <U> SelectField<U> mapping(Class<U> toType, Function14<? super String, ? super Integer, ? super String, ? super Short, ? super String, ? super String, ? super String, ? super String, ? super String, ? super Instant, ? super Instant, ? super Instant, ? super JSONB, ? super JSONB, ? extends U> from) {
-        return convertFrom(toType, Records.mapping(from));
+    @Override
+    public DigitalSpecimen where(Condition... conditions) {
+        return where(DSL.and(conditions));
+    }
+
+    /**
+     * Create an inline derived table from this table
+     */
+    @Override
+    public DigitalSpecimen where(Field<Boolean> condition) {
+        return where(DSL.condition(condition));
+    }
+
+    /**
+     * Create an inline derived table from this table
+     */
+    @Override
+    @PlainSQL
+    public DigitalSpecimen where(SQL condition) {
+        return where(DSL.condition(condition));
+    }
+
+    /**
+     * Create an inline derived table from this table
+     */
+    @Override
+    @PlainSQL
+    public DigitalSpecimen where(@Stringly.SQL String condition) {
+        return where(DSL.condition(condition));
+    }
+
+    /**
+     * Create an inline derived table from this table
+     */
+    @Override
+    @PlainSQL
+    public DigitalSpecimen where(@Stringly.SQL String condition, Object... binds) {
+        return where(DSL.condition(condition, binds));
+    }
+
+    /**
+     * Create an inline derived table from this table
+     */
+    @Override
+    @PlainSQL
+    public DigitalSpecimen where(@Stringly.SQL String condition, QueryPart... parts) {
+        return where(DSL.condition(condition, parts));
+    }
+
+    /**
+     * Create an inline derived table from this table
+     */
+    @Override
+    public DigitalSpecimen whereExists(Select<?> select) {
+        return where(DSL.exists(select));
+    }
+
+    /**
+     * Create an inline derived table from this table
+     */
+    @Override
+    public DigitalSpecimen whereNotExists(Select<?> select) {
+        return where(DSL.notExists(select));
     }
 }

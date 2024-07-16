@@ -36,7 +36,7 @@ jobs:
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar 
                   -Dsonar.projectKey=DiSSCo_${{ github.event.repository.name }}
                   -Dsonar.exclusions=**/jooq/**
-                  -Dsonar.coverage.exclusions=**/properties/**,**/configuration/**,**/domain/**,**/exception/**
+                  -Dsonar.coverage.exclusions=**/properties/**,**/configuration/**,**/domain/**,**/exception/**,**/maven/**
       - name: Build image
         run: |
           docker build -t ${{ github.event.repository.name }} .

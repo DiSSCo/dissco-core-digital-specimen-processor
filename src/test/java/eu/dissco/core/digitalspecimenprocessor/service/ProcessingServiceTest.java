@@ -2,6 +2,8 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_ORGANISATION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
@@ -38,7 +40,7 @@ import co.elastic.clients.elasticsearch._types.ErrorCause;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaObjectEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
@@ -113,6 +115,8 @@ class ProcessingServiceTest {
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
     mockedInstant.when(Instant::now).thenReturn(instant);
+    mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
+    mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
     mockedClock = mockStatic(Clock.class);
     mockedClock.when(Clock::systemUTC).thenReturn(clock);
   }
@@ -129,6 +133,8 @@ class ProcessingServiceTest {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenDigitalSpecimenWithEntityRelationship()));
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
+    given(applicationProperties.getPid()).willReturn(APP_HANDLE);
+    given(applicationProperties.getName()).willReturn(APP_NAME);
 
     // When
     List<DigitalSpecimenRecord> result = service.handleMessages(
@@ -155,6 +161,8 @@ class ProcessingServiceTest {
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
+    given(applicationProperties.getPid()).willReturn(APP_HANDLE);
+    given(applicationProperties.getName()).willReturn(APP_NAME);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -183,6 +191,8 @@ class ProcessingServiceTest {
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(false);
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
+    given(applicationProperties.getPid()).willReturn(APP_HANDLE);
+    given(applicationProperties.getName()).willReturn(APP_NAME);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -213,6 +223,8 @@ class ProcessingServiceTest {
     given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
+    given(applicationProperties.getPid()).willReturn(APP_HANDLE);
+    given(applicationProperties.getName()).willReturn(APP_NAME);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -368,7 +380,7 @@ class ProcessingServiceTest {
     then(handleComponent).should().postHandle(any());
     then(kafkaService).should().deadLetterEvent(secondEvent);
     then(kafkaService).should(times(2))
-        .publishDigitalMediaObject(any(DigitalMediaObjectEvent.class));
+        .publishDigitalMediaObject(any(DigitalMediaEvent.class));
     assertThat(result).contains(givenDigitalSpecimenRecord(), thirdSpecimen);
   }
 
@@ -485,7 +497,7 @@ class ProcessingServiceTest {
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(kafkaService).should().deadLetterEvent(secondEvent);
     then(kafkaService).should(times(4))
-        .publishDigitalMediaObject(any(DigitalMediaObjectEvent.class));
+        .publishDigitalMediaObject(any(DigitalMediaEvent.class));
     assertThat(result).hasSize(2);
   }
 
@@ -518,7 +530,7 @@ class ProcessingServiceTest {
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(kafkaService).should().deadLetterEvent(secondEvent);
     then(kafkaService).should(times(4))
-        .publishDigitalMediaObject(any(DigitalMediaObjectEvent.class));
+        .publishDigitalMediaObject(any(DigitalMediaEvent.class));
     assertThat(result).hasSize(2);
   }
 

@@ -127,11 +127,9 @@ class TokenAuthenticatorTest {
   }
 
   @Test
-  void testRetriesFailure() throws Exception {
+  void testRetriesFailure() {
     // Given
     int requestCount = mockTokenServer.getRequestCount();
-    var expectedJson = givenTokenResponse();
-    var expected = expectedJson.get("access_token").asText();
     given(properties.getFromFormData()).willReturn(testFromFormData);
     mockTokenServer.enqueue(new MockResponse().setResponseCode(501));
     mockTokenServer.enqueue(new MockResponse().setResponseCode(501));

@@ -1,5 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.flattenToDigitalSpecimen;
+
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
@@ -18,14 +21,15 @@ public class ElasticSearchRepository {
   private final ElasticsearchClient client;
   private final ElasticSearchProperties properties;
 
-  public BulkResponse indexDigitalSpecimen(Collection<DigitalSpecimenRecord> digitalSpecimens)
+  public BulkResponse indexDigitalSpecimen(Collection<DigitalSpecimenRecord> digitalSpecimenRecords)
       throws IOException {
     var bulkRequest = new BulkRequest.Builder();
-    for (var digitalSpecimen : digitalSpecimens) {
+    for (var digitalSpecimenrecord : digitalSpecimenRecords) {
+      var digitalSpecimen = flattenToDigitalSpecimen(digitalSpecimenrecord);
       bulkRequest.operations(op ->
           op.index(idx -> idx
               .index(properties.getIndexName())
-              .id(digitalSpecimen.id())
+              .id(digitalSpecimen.getId())
               .document(digitalSpecimen))
       );
     }
@@ -34,11 +38,13 @@ public class ElasticSearchRepository {
 
   public DeleteResponse rollbackSpecimen(DigitalSpecimenRecord digitalSpecimenRecord)
       throws IOException {
-    return client.delete(d -> d.index(properties.getIndexName()).id(digitalSpecimenRecord.id()));
+    return client.delete(
+        d -> d.index(properties.getIndexName()).id(DOI_PREFIX + digitalSpecimenRecord.id()));
   }
 
   public void rollbackVersion(DigitalSpecimenRecord currentDigitalSpecimen) throws IOException {
-    client.index(i -> i.index(properties.getIndexName()).id(currentDigitalSpecimen.id())
-        .document(currentDigitalSpecimen));
+    var digitalSpecimen = flattenToDigitalSpecimen(currentDigitalSpecimen);
+    client.index(i -> i.index(properties.getIndexName()).id(digitalSpecimen.getId())
+        .document(digitalSpecimen));
   }
 }

@@ -5,10 +5,9 @@ package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
-
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.SourceSystem;
 import java.util.Arrays;
 import java.util.List;
-
 import org.jooq.Catalog;
 import org.jooq.Table;
 import org.jooq.impl.SchemaImpl;
@@ -33,6 +32,11 @@ public class Public extends SchemaImpl {
     public final DigitalSpecimen DIGITAL_SPECIMEN = DigitalSpecimen.DIGITAL_SPECIMEN;
 
     /**
+     * The table <code>public.source_system</code>.
+     */
+    public final SourceSystem SOURCE_SYSTEM = SourceSystem.SOURCE_SYSTEM;
+
+    /**
      * No further instances allowed
      */
     private Public() {
@@ -48,7 +52,8 @@ public class Public extends SchemaImpl {
     @Override
     public final List<Table<?>> getTables() {
         return Arrays.asList(
-            DigitalSpecimen.DIGITAL_SPECIMEN
+            DigitalSpecimen.DIGITAL_SPECIMEN,
+            SourceSystem.SOURCE_SYSTEM
         );
     }
 }

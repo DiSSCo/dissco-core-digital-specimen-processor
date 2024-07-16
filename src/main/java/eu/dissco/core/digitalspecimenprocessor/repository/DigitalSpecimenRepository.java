@@ -72,17 +72,17 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.VERSION, digitalSpecimenRecord.version())
         .set(DIGITAL_SPECIMEN.MIDSLEVEL, (short) digitalSpecimenRecord.midsLevel())
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID,
-            digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenId())
+            digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenID())
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE,
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-                .getOdsPhysicalSpecimenIdType()
+                .getOdsPhysicalSpecimenIDType()
                 .value())
         .set(DIGITAL_SPECIMEN.SPECIMEN_NAME,
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSpecimenName())
         .set(DIGITAL_SPECIMEN.ORGANIZATION_ID,
-            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getDwcInstitutionId())
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsOrganisationID())
         .set(DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
-            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystem())
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID())
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA, mapToJsonB(digitalSpecimenRecord))
@@ -94,17 +94,17 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.VERSION, digitalSpecimenRecord.version())
         .set(DIGITAL_SPECIMEN.MIDSLEVEL, (short) digitalSpecimenRecord.midsLevel())
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID,
-            digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenId())
+            digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenID())
         .set(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_TYPE,
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-                .getOdsPhysicalSpecimenIdType()
+                .getOdsPhysicalSpecimenIDType()
                 .value())
         .set(DIGITAL_SPECIMEN.SPECIMEN_NAME,
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSpecimenName())
         .set(DIGITAL_SPECIMEN.ORGANIZATION_ID,
-            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getDwcInstitutionId())
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsOrganisationID())
         .set(DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
-            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystem())
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID())
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,

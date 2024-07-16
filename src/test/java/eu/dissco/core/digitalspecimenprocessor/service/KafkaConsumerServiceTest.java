@@ -59,16 +59,16 @@ class KafkaConsumerServiceTest {
           ],
           "digitalSpecimen": {
             "type": "GeologyRockSpecimen",
-            "physicalSpecimenId": "https://geocollections.info/specimen/23602",
-            "physicalSpecimenIdType": "global",
+            "physicalSpecimenID": "https://geocollections.info/specimen/23602",
+            "physicalSpecimenIDType": "global",
             "specimenName": "Biota",
-            "organisationId": "https://ror.org/0443cwa12",
+            "organisationID": "https://ror.org/0443cwa12",
             "datasetId": null,
             "physicalSpecimenCollection": null,
-            "sourceSystemId": "20.5000.1025/MN0-5XP-FFD",
+            "sourceSystemID": "20.5000.1025/MN0-5XP-FFD",
             "data": {},
             "originalData": {},
-            "dwcaId": null
+            "dwcaID": null
           }
         }""";
   }
@@ -80,22 +80,22 @@ class KafkaConsumerServiceTest {
             "OCR"
             ],
           "digitalSpecimenWrapper": {
-            "ods:normalisedPhysicalSpecimenId": "https://geocollections.info/specimen/23602",
+            "ods:normalisedPhysicalSpecimenID": "https://geocollections.info/specimen/23602",
             "ods:type": "GeologyRockSpecimen",
             "ods:attributes": {
-              "ods:physicalSpecimenIdType": "Global",
-              "dwc:institutionId": "https://ror.org/0443cwa12",
-              "dwc:institutionName": "National Museum of Natural History",
-              "ods:normalisedPhysicalSpecimenId": "https://geocollections.info/specimen/23602",
+              "ods:physicalSpecimenIDType": "Global",
+              "ods:organisationID": "https://ror.org/0443cwa12",
+              "ods:organisationName": "National Museum of Natural History",
+              "ods:normalisedPhysicalSpecimenID": "https://geocollections.info/specimen/23602",
               "ods:specimenName": "Biota",
               "dwc:datasetName": null,
-              "dwc:collectionId": null,
-              "ods:sourceSystem": "20.5000.1025/MN0-5XP-FFD",
+              "dwc:collectionID": null,
+              "ods:sourceSystemID": "https://hdl.handle.net/TEST/57Z-6PC-64W",
               "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
               "dwc:preparations": "",
-              "dcterms:modified": "2017-09-26T12:27:21.000+00:00",
+              "dcterms:modified": "2022-11-01T09:59:24.000Z",
               "ods:topicDiscipline": "Botany",
-              "ods:markedAsType": true,
+              "ods:isMarkedAsType": true,
               "ods:livingOrPreserved": "Preserved"
             },
             "ods:originalAttributes": {
@@ -129,7 +129,7 @@ class KafkaConsumerServiceTest {
                 "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronoStratigraphicDivision": "Stage"
               }
           },
-          "digitalMediaObjectEvents": []
+          "digitalMediaEvents": []
         }""";
   }
 

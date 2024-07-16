@@ -1,7 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
@@ -23,13 +23,15 @@ class KafkaPublisherServiceTest {
 
   @Mock
   private KafkaTemplate<String, String> kafkaTemplate;
+  @Mock
+  private ProvenanceService provenanceService;
 
   private KafkaPublisherService service;
 
 
   @BeforeEach
   void setup() {
-    service = new KafkaPublisherService(MAPPER, kafkaTemplate);
+    service = new KafkaPublisherService(MAPPER, kafkaTemplate, provenanceService);
   }
 
   @Test
@@ -111,6 +113,6 @@ class KafkaPublisherServiceTest {
 
     // Then
     then(kafkaTemplate).should()
-        .send("digital-media-object", MAPPER.writeValueAsString(digitalMediaObjectEvent));
+        .send("digital-media", MAPPER.writeValueAsString(digitalMediaObjectEvent));
   }
 }
