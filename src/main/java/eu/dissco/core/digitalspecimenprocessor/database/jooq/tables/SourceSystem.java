@@ -8,10 +8,13 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.Keys;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.TranslatorType;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.SourceSystemRecord;
+
 import java.time.Instant;
 import java.util.Collection;
+
 import org.jooq.Condition;
 import org.jooq.Field;
+import org.jooq.JSONB;
 import org.jooq.Name;
 import org.jooq.PlainSQL;
 import org.jooq.QueryPart;
@@ -55,6 +58,11 @@ public class SourceSystem extends TableImpl<SourceSystemRecord> {
     public final TableField<SourceSystemRecord, String> ID = createField(DSL.name("id"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
+     * The column <code>public.source_system.version</code>.
+     */
+    public final TableField<SourceSystemRecord, Integer> VERSION = createField(DSL.name("version"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.INTEGER)), this, "");
+
+    /**
      * The column <code>public.source_system.name</code>.
      */
     public final TableField<SourceSystemRecord, String> NAME = createField(DSL.name("name"), SQLDataType.CLOB.nullable(false), this, "");
@@ -65,19 +73,19 @@ public class SourceSystem extends TableImpl<SourceSystemRecord> {
     public final TableField<SourceSystemRecord, String> ENDPOINT = createField(DSL.name("endpoint"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.source_system.description</code>.
+     * The column <code>public.source_system.date_created</code>.
      */
-    public final TableField<SourceSystemRecord, String> DESCRIPTION = createField(DSL.name("description"), SQLDataType.CLOB, this, "");
+    public final TableField<SourceSystemRecord, Instant> DATE_CREATED = createField(DSL.name("date_created"), SQLDataType.INSTANT.nullable(false), this, "");
 
     /**
-     * The column <code>public.source_system.created</code>.
+     * The column <code>public.source_system.date_modified</code>.
      */
-    public final TableField<SourceSystemRecord, Instant> CREATED = createField(DSL.name("created"), SQLDataType.INSTANT.nullable(false), this, "");
+    public final TableField<SourceSystemRecord, Instant> DATE_MODIFIED = createField(DSL.name("date_modified"), SQLDataType.INSTANT.nullable(false), this, "");
 
     /**
-     * The column <code>public.source_system.deleted</code>.
+     * The column <code>public.source_system.date_tombstoned</code>.
      */
-    public final TableField<SourceSystemRecord, Instant> DELETED = createField(DSL.name("deleted"), SQLDataType.INSTANT, this, "");
+    public final TableField<SourceSystemRecord, Instant> DATE_TOMBSTONED = createField(DSL.name("date_tombstoned"), SQLDataType.INSTANT, this, "");
 
     /**
      * The column <code>public.source_system.mapping_id</code>.
@@ -85,19 +93,19 @@ public class SourceSystem extends TableImpl<SourceSystemRecord> {
     public final TableField<SourceSystemRecord, String> MAPPING_ID = createField(DSL.name("mapping_id"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.source_system.version</code>.
-     */
-    public final TableField<SourceSystemRecord, Integer> VERSION = createField(DSL.name("version"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.INTEGER)), this, "");
-
-    /**
      * The column <code>public.source_system.creator</code>.
      */
-    public final TableField<SourceSystemRecord, String> CREATOR = createField(DSL.name("creator"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'0000-0002-5669-2769'::text"), SQLDataType.CLOB)), this, "");
+    public final TableField<SourceSystemRecord, String> CREATOR = createField(DSL.name("creator"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
      * The column <code>public.source_system.translator_type</code>.
      */
-    public final TableField<SourceSystemRecord, TranslatorType> TRANSLATOR_TYPE = createField(DSL.name("translator_type"), SQLDataType.VARCHAR.asEnumDataType(TranslatorType.class), this, "");
+    public final TableField<SourceSystemRecord, TranslatorType> TRANSLATOR_TYPE = createField(DSL.name("translator_type"), SQLDataType.VARCHAR.nullable(false).asEnumDataType(TranslatorType.class), this, "");
+
+    /**
+     * The column <code>public.source_system.data</code>.
+     */
+    public final TableField<SourceSystemRecord, JSONB> DATA = createField(DSL.name("data"), SQLDataType.JSONB.nullable(false), this, "");
 
     private SourceSystem(Name alias, Table<SourceSystemRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -135,7 +143,7 @@ public class SourceSystem extends TableImpl<SourceSystemRecord> {
 
     @Override
     public UniqueKey<SourceSystemRecord> getPrimaryKey() {
-        return Keys.NEW_SOURCE_SYSTEM_PKEY;
+        return Keys.SOURCE_SYSTEM_PKEY;
     }
 
     @Override

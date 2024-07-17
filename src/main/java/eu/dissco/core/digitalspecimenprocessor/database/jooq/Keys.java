@@ -8,6 +8,7 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpeci
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.SourceSystem;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.SourceSystemRecord;
+
 import org.jooq.TableField;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
@@ -26,5 +27,5 @@ public class Keys {
     // -------------------------------------------------------------------------
 
     public static final UniqueKey<DigitalSpecimenRecord> DIGITAL_SPECIMEN_PK = Internal.createUniqueKey(DigitalSpecimen.DIGITAL_SPECIMEN, DSL.name("digital_specimen_pk"), new TableField[] { DigitalSpecimen.DIGITAL_SPECIMEN.ID }, true);
-    public static final UniqueKey<SourceSystemRecord> NEW_SOURCE_SYSTEM_PKEY = Internal.createUniqueKey(SourceSystem.SOURCE_SYSTEM, DSL.name("new_source_system_pkey"), new TableField[] { SourceSystem.SOURCE_SYSTEM.ID }, true);
+    public static final UniqueKey<SourceSystemRecord> SOURCE_SYSTEM_PKEY = Internal.createUniqueKey(SourceSystem.SOURCE_SYSTEM, DSL.name("source_system_pkey"), new TableField[] { SourceSystem.SOURCE_SYSTEM.ID }, true);
 }
