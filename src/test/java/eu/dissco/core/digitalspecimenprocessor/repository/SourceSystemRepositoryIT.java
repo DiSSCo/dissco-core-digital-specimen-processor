@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.TranslatorType;
 import java.time.Instant;
+import org.jooq.JSONB;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,11 +54,13 @@ class SourceSystemRepositoryIT extends BaseRepositoryIT {
         .set(SOURCE_SYSTEM.ID, "TEST/57Z-6PC-64W")
         .set(SOURCE_SYSTEM.NAME, SOURCE_SYSTEM_NAME)
         .set(SOURCE_SYSTEM.ENDPOINT, "http://localhost:8080")
-        .set(SOURCE_SYSTEM.CREATED, Instant.now())
+        .set(SOURCE_SYSTEM.DATE_CREATED, Instant.now())
+        .set(SOURCE_SYSTEM.DATE_MODIFIED, Instant.now())
         .set(SOURCE_SYSTEM.CREATOR, "test")
         .set(SOURCE_SYSTEM.VERSION, 1)
         .set(SOURCE_SYSTEM.MAPPING_ID, "mapping_id")
         .set(SOURCE_SYSTEM.TRANSLATOR_TYPE, TranslatorType.dwca)
+        .set(SOURCE_SYSTEM.DATA, JSONB.valueOf("{}"))
         .execute();
   }
 
