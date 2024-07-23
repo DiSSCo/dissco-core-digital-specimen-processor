@@ -54,11 +54,11 @@ public class HandleComponent {
     getFutureResponse(response);
   }
 
-  public void rollbackHandleCreation(JsonNode request)
+  public void rollbackHandleCreation(List<String> handles)
       throws PidCreationException, PidAuthenticationException {
     log.info("Rolling back handle creation");
-    var requestBody = BodyInserters.fromValue(request);
-    var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback");
+    var requestBody = BodyInserters.fromValue(handles);
+    var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/create");
     getFutureResponse(response);
   }
 
@@ -68,17 +68,6 @@ public class HandleComponent {
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/update");
     getFutureResponse(response);
-  }
-
-  public void rollbackFromPhysId(List<String> physIds){
-    log.info("Rolling back handles from phys ids");
-    try {
-      var requestBody = BodyInserters.fromValue(physIds);
-      sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
-    } catch (PidAuthenticationException e){
-      log.error("Unable to rollback handles based on physical identifier: {}", physIds);
-    }
-
   }
 
   private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod,

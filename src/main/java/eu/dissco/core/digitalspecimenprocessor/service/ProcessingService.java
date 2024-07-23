@@ -549,7 +549,6 @@ public class ProcessingService {
   }
 
   private void pidCreationFailed(List<DigitalSpecimenEvent> events) {
-    rollbackHandlesFromPhysId(events);
     List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
     for (var event : events) {
       try {
@@ -561,12 +560,6 @@ public class ProcessingService {
         log.error("Critical error: Failed to DLQ the following events: {}", failedDlq);
       }
     }
-  }
-
-  private void rollbackHandlesFromPhysId(List<DigitalSpecimenEvent> events) {
-    var physIds = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper)
-        .map(DigitalSpecimenWrapper::physicalSpecimenID).toList();
-    handleComponent.rollbackFromPhysId(physIds);
   }
 
   private void handleSuccessfulElasticInsert(
