@@ -20,6 +20,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWithEntityRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -177,6 +178,28 @@ class ProcessingServiceTest {
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
   }
+
+  @Test
+  void testOriginalDataChanged() throws Exception {
+    // Given
+    var currentSpecimenRecord = givenDigitalSpecimenRecord();
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(currentSpecimenRecord));
+    var event = new DigitalSpecimenEvent(
+        List.of(MAS),
+        givenDigitalSpecimenWrapperNoOriginalData(),
+       List.of());
+
+    // When
+    var result = service.handleMessages(List.of(event));
+
+    // Then
+    verifyNoInteractions(handleComponent);
+    verifyNoInteractions(fdoRecordService);
+    then(repository).should().updateLastChecked(List.of(HANDLE));
+    assertThat(result).isEmpty();
+  }
+
 
   @Test
   void testHandleRecordDoesNotNeedUpdate() throws Exception {
