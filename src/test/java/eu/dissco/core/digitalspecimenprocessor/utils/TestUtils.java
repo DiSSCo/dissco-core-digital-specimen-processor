@@ -213,8 +213,7 @@ public class TestUtils {
                             .withType(Type.AS_APPLICATION)
                             .withSchemaName("dissco-digital-specimen-processor"))
                     .withDwcRelatedResourceID(SPECIMEN_BASE_URL + "20.5000.1025/V1Z-176-LL4"))
-            ),
-            MAPPER.createObjectNode()
+            )
         ));
   }
 

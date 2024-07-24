@@ -144,6 +144,11 @@ public class ProcessingService {
   We cannot control the equals in the EntityRelationship as it is generated
   Therefore we first store the EntityRelationshipDate in a map and set both to null
   When the objects are not equal we reinsert the data into the EntityRelationship
+
+  To establish equality , we only compare type and attributes, not original data or
+  physical specimen id. We ignore original data because original data is not updated
+  if it does change, and we ignore physical specimen id because that's how the specimens
+  were identified to be the same in the first place.
   */
   private boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimen,
       DigitalSpecimenWrapper digitalSpecimen) {
@@ -158,7 +163,9 @@ public class ProcessingService {
         entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
     ignoreTimestampEntityRelationship(
         currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
-    if (currentDigitalSpecimen.equals(digitalSpecimen)) {
+    verifyOriginalData(currentDigitalSpecimen, digitalSpecimen);
+    if (currentDigitalSpecimen.type().equals(digitalSpecimen.type()) &&
+        currentDigitalSpecimen.attributes().equals(digitalSpecimen.attributes())) {
       digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
       digitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
@@ -168,6 +175,15 @@ public class ProcessingService {
       digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       return false;
+    }
+  }
+
+  private void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimen,
+      DigitalSpecimenWrapper digitalSpecimen){
+    var currentOriginalData = currentDigitalSpecimen.originalAttributes();
+    var originalData = digitalSpecimen.originalAttributes();
+    if (currentOriginalData != null && !currentOriginalData.equals(originalData)){
+      log.info("Original data for specimen with physical id {} has changed. Ignoring new original data.", digitalSpecimen.physicalSpecimenID());
     }
   }
 
@@ -238,9 +254,7 @@ public class ProcessingService {
     if (!successfullyUpdatedHandles) {
       return Set.of();
     }
-
     var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
-
     log.info("Persisting to db");
     try {
       repository.createDigitalSpecimenRecord(
@@ -519,8 +533,8 @@ public class ProcessingService {
           new DigitalMediaWrapper(
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().type(),
               digitalSpecimenPid,
-              attributes,
-              digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
+              attributes
+          )
       );
       try {
         kafkaService.publishDigitalMediaObject(digitalMediaObjectEvent);
