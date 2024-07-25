@@ -184,7 +184,7 @@ public class TestUtils {
     return givenDigitalSpecimenEvent(hasMedia, false);
   }
 
-  private static DigitalMediaEventWithoutDOI givenDigitalMediaEvent() {
+  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent() {
     return new DigitalMediaEventWithoutDOI(
         List.of("image-metadata"),
         new DigitalMediaWithoutDOI(
@@ -204,14 +204,14 @@ public class TestUtils {
             HANDLE,
             new DigitalMedia().withAcAccessURI("https://an-image.org").withOdsHasEntityRelationship(
                 List.of(new EntityRelationship()
-                        .withType("ods:EntityRelationship")
+                    .withType("ods:EntityRelationship")
                     .withDwcRelationshipOfResource("hasDigitalSpecimen")
-                        .withDwcRelationshipEstablishedDate(Date.from(Instant.now()))
-                        .withDwcRelationshipAccordingTo("dissco-digital-specimen-processor")
-                        .withOdsRelationshipAccordingToAgent(new Agent()
-                            .withId("https://hdl.handle.net/TEST/123-123-123")
-                            .withType(Type.AS_APPLICATION)
-                            .withSchemaName("dissco-digital-specimen-processor"))
+                    .withDwcRelationshipEstablishedDate(Date.from(Instant.now()))
+                    .withDwcRelationshipAccordingTo("dissco-digital-specimen-processor")
+                    .withOdsRelationshipAccordingToAgent(new Agent()
+                        .withId("https://hdl.handle.net/TEST/123-123-123")
+                        .withType(Type.AS_APPLICATION)
+                        .withSchemaName("dissco-digital-specimen-processor"))
                     .withDwcRelatedResourceID(SPECIMEN_BASE_URL + "20.5000.1025/V1Z-176-LL4"))
             ),
             MAPPER.createObjectNode()
@@ -234,6 +234,25 @@ public class TestUtils {
         TYPE,
         givenAttributes(specimenName, organisation, true, entityRelationship),
         ORIGINAL_DATA
+    );
+  }
+
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecordNoOriginalData() {
+    return new DigitalSpecimenRecord(
+        HANDLE,
+        MIDS_LEVEL,
+        VERSION,
+        CREATED,
+        givenDigitalSpecimenWrapperNoOriginalData()
+    );
+  }
+
+  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperNoOriginalData() {
+    return new DigitalSpecimenWrapper(
+        PHYSICAL_SPECIMEN_ID,
+        TYPE,
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false),
+        MAPPER.createObjectNode()
     );
   }
 

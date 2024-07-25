@@ -13,6 +13,7 @@ public record DigitalMediaWrapper(
     @JsonProperty("ods:attributes")
     DigitalMedia attributes,
     @JsonProperty("ods:originalAttributes")
-    JsonNode originalAttributes) {
+    JsonNode originalAttributes
+) {
 
 }

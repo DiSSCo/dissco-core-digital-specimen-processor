@@ -7,8 +7,10 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_S
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordNoOriginalData;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.time.Instant;
 import java.util.List;
@@ -113,6 +115,26 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
         .fetchOne(Record1::value1);
     assertThat(result).isEqualTo("TEST_2");
   }
+
+  @Test
+  void testUpsertSpecimensOriginalDataOnly() throws JsonProcessingException{
+    // Given
+    var firstRecord = givenDigitalSpecimenRecordNoOriginalData();
+    var records = List.of(
+        firstRecord,
+        givenDigitalSpecimenRecord());
+
+    // When
+    repository.createDigitalSpecimenRecord(records);
+
+    // Then
+    var result = MAPPER.readTree(context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
+        .from(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+        .fetchOne(Record1::value1).data());
+
+    assertThat(result).isEqualTo(MAPPER.createObjectNode());
+  }
+
 
   @Test
   void testCreateWithInvalidUnicode() {
