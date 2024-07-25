@@ -533,9 +533,9 @@ public class ProcessingService {
           new DigitalMediaWrapper(
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().type(),
               digitalSpecimenPid,
-              attributes
-          )
-      );
+              attributes,
+              digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
+          );
       try {
         kafkaService.publishDigitalMediaObject(digitalMediaObjectEvent);
       } catch (JsonProcessingException e) {
