@@ -134,6 +134,12 @@ class HandleComponentTest {
   }
 
   @Test
+  void testRollbackFromPhysId() {
+    // Then
+    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
+  }
+
+  @Test
   void testRollbackHandleCreation() {
     // Given
     var requestBody = List.of(HANDLE, SECOND_HANDLE);
