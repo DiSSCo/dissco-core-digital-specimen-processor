@@ -1,8 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.web;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
@@ -135,8 +136,11 @@ class HandleComponentTest {
 
   @Test
   void testRollbackFromPhysId() {
+    //
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(200));
+
     // Then
-    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
+    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of(PHYSICAL_SPECIMEN_ID)));
   }
 
   @Test
@@ -300,7 +304,7 @@ class HandleComponentTest {
     HashMap<String, String> handleNames = new HashMap<>();
     for (var node : responseBody.get("data")) {
       handleNames.put(
-          node.get("attributes").get(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(),
+          node.get("attributes").get(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(),
           node.get("id").asText());
     }
     return handleNames;

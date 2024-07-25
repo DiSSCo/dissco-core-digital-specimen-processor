@@ -335,6 +335,7 @@ public class TestUtils {
                 "digitalObjectType": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764ee",
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                 "specimenHost": "https://ror.org/0443cwa12",
                 "specimenHostName": "National Museum of Natural History",
                 "primarySpecimenObjectIdType": "Global",
