@@ -9,7 +9,6 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
@@ -58,13 +57,8 @@ public class FdoRecordService {
     return requestBody;
   }
 
-  public JsonNode buildRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
-    var handles = digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
-    var dataNode = handles.stream()
-        .map(handle -> mapper.createObjectNode().put(ID, handle))
-        .toList();
-    ArrayNode dataArray = mapper.valueToTree(dataNode);
-    return mapper.createObjectNode().set(DATA, dataArray);
+  public List<String> buildRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
+    return digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
   }
 
   private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {

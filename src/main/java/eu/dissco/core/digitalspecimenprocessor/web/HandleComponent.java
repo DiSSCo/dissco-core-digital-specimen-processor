@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.web;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -54,12 +54,24 @@ public class HandleComponent {
     getFutureResponse(response);
   }
 
-  public void rollbackHandleCreation(JsonNode request)
+  public void rollbackHandleCreation(List<String> handles)
       throws PidCreationException, PidAuthenticationException {
     log.info("Rolling back handle creation");
-    var requestBody = BodyInserters.fromValue(request);
-    var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback");
+    var requestBody = BodyInserters.fromValue(handles);
+    var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/create");
     getFutureResponse(response);
+  }
+
+  public void rollbackFromPhysId(List<String> physIds){
+    log.info("Rolling back handles from phys ids");
+    try {
+      var requestBody = BodyInserters.fromValue(physIds);
+      var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
+      response.toFuture().get();
+    } catch (PidAuthenticationException | InterruptedException | ExecutionException e){
+      Thread.currentThread().interrupt();
+      log.error("Unable to rollback handles based on physical identifier: {}", physIds);
+    }
   }
 
   public void rollbackHandleUpdate(List<JsonNode> request)
@@ -68,17 +80,6 @@ public class HandleComponent {
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/update");
     getFutureResponse(response);
-  }
-
-  public void rollbackFromPhysId(List<String> physIds){
-    log.info("Rolling back handles from phys ids");
-    try {
-      var requestBody = BodyInserters.fromValue(physIds);
-      sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
-    } catch (PidAuthenticationException e){
-      log.error("Unable to rollback handles based on physical identifier: {}", physIds);
-    }
-
   }
 
   private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod,
@@ -131,7 +132,7 @@ public class HandleComponent {
       for (var node : dataNode) {
         var handle = node.get("id");
         var primarySpecimenObjectId = node.get("attributes")
-            .get(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
+            .get(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
         if (handle == null || primarySpecimenObjectId == null) {
           log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
           throw new PidCreationException(UNEXPECTED_MSG);

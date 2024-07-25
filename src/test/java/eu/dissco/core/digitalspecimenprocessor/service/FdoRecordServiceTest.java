@@ -260,10 +260,7 @@ class FdoRecordServiceTest {
   void testGenRollbackCreationRequest() {
     // Given
     var digitalSpecimenRecords = List.of(givenDigitalSpecimenRecord());
-    var id = digitalSpecimenRecords.get(0).id();
-    var dataNode = List.of(MAPPER.createObjectNode().put("id", id));
-    var dataArr = MAPPER.valueToTree(dataNode);
-    var expected = MAPPER.createObjectNode().set("data", dataArr);
+    var expected = List.of(HANDLE);
 
     // When
     var response = builder.buildRollbackCreationRequest(digitalSpecimenRecords);

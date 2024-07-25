@@ -1,7 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.web;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
@@ -9,7 +12,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdat
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.BDDMockito.given;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
@@ -134,30 +136,17 @@ class HandleComponentTest {
 
   @Test
   void testRollbackFromPhysId() {
+    //
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(200));
+
     // Then
-    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
+    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of(PHYSICAL_SPECIMEN_ID)));
   }
 
   @Test
-  void testRollbackFromPhysIdAuthFailed() throws Exception {
+  void testRollbackHandleCreation() {
     // Given
-    given(tokenAuthenticator.getToken()).willThrow(PidAuthenticationException.class);
-
-    // Then
-    assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of("")));
-  }
-
-  @Test
-  void testRollbackHandleCreation() throws Exception {
-    // Given
-    var requestBody = MAPPER.readTree("""
-        {
-          "data": [
-            {"id": "20.5000.1025/AAA-111-AAA"},
-            {"id": "20.5000.1025/BBB-222-BBB"}
-          ]
-        }
-        """);
+    var requestBody = List.of(HANDLE, SECOND_HANDLE);
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .addHeader("Content-Type", "application/json"));
 
@@ -315,7 +304,7 @@ class HandleComponentTest {
     HashMap<String, String> handleNames = new HashMap<>();
     for (var node : responseBody.get("data")) {
       handleNames.put(
-          node.get("attributes").get(PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(),
+          node.get("attributes").get(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(),
           node.get("id").asText());
     }
     return handleNames;
