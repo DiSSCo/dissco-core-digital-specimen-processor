@@ -71,7 +71,7 @@ public class ProvenanceService {
             .withRdfsComment("Specimen newly created"))
         .withProvEntity(new ProvEntity()
             .withId(entityID)
-            .withType(digitalSpecimen.getType())
+            .withType("ods:DigitalSpecimen")
             .withProvValue(mapEntityToProvValue(digitalSpecimen))
             .withProvWasGeneratedBy(activityID))
         .withOdsHasProvAgent(List.of(
