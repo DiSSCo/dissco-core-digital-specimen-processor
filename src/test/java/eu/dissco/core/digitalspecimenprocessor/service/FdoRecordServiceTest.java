@@ -162,7 +162,7 @@ class FdoRecordServiceTest {
     var expected = MAPPER.readTree("""
             {
               "data": {
-                "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+                "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
                 "id":"20.5000.1025/V1Z-176-LL4",
                 "attributes": {
                   "issuedForAgent": "https://ror.org/0566bfb96",
@@ -210,7 +210,7 @@ class FdoRecordServiceTest {
           """
           {
             "data": {
-              "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+              "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
               "attributes": {
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
@@ -311,7 +311,7 @@ class FdoRecordServiceTest {
       return MAPPER.readTree("""
           {
             "data": {
-              "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+              "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
               "attributes": {
                 "issuedForAgent": "https://ror.org/0566bfb96",
                 "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
@@ -331,7 +331,7 @@ class FdoRecordServiceTest {
     return MAPPER.readTree("""
         {
           "data": {
-            "type": "https://hdl.handle.net/21.T11148/894b1e6cad57e921764e",
+            "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
             "attributes": {
               "issuedForAgent": "https://ror.org/0566bfb96",
               "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
