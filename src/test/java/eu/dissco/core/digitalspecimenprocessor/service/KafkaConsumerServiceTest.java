@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaUpdatePidEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static org.mockito.BDDMockito.then;
 
@@ -48,7 +49,32 @@ class KafkaConsumerServiceTest {
 
     // Then
     then(processingService).should().handleMessages(List.of());
+  }
 
+  @Test
+  void testUpdateMedia() throws Exception {
+    // Given
+    var expected = givenDigitalMediaUpdatePidEvent();
+    var messages = List.of(MAPPER.writeValueAsString(expected));
+
+    // When
+    service.updateMedia(messages);
+
+    // Then
+    then(processingService).should().updateDigitalMediaEntityRelationships(List.of(expected));
+  }
+
+
+  @Test
+  void testUpdateMediaInvalid() throws Exception{
+    // Given
+    var message = givenInvalidMessage();
+
+    // When
+    service.updateMedia(List.of(message));
+
+    // Then
+    then(processingService).should().updateDigitalMediaEntityRelationships(List.of());
   }
 
   private String givenInvalidMessage() {

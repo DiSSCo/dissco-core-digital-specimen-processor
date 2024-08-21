@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaUpdatePidEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
@@ -19,7 +20,10 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysica
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identifier;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +53,9 @@ public class TestUtils {
   public static final String PHYSICAL_SPECIMEN_COLLECTION = null;
   public static final String SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64W";
   public static final String SOURCE_SYSTEM_NAME = "A very nice source system";
+  public static final String MEDIA_ACCESS_URI = "https://an-image.org";
+  public static final String FDO_APP_NAME = "DiSSCo Processing Service";
+  public static final String FDO_APP_ID = "https://hdl.handle.net/TEST/YYY-YYY-YYY";
   public static final JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static final OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
 
@@ -190,7 +197,7 @@ public class TestUtils {
         new DigitalMediaWithoutDOI(
             "StillImage",
             PHYSICAL_SPECIMEN_ID,
-            new DigitalMedia().withAcAccessURI("https://an-image.org"),
+            new DigitalMedia().withAcAccessURI(MEDIA_ACCESS_URI),
             MAPPER.createObjectNode()
         )
     );
@@ -202,7 +209,7 @@ public class TestUtils {
         new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
-            new DigitalMedia().withAcAccessURI("https://an-image.org").withOdsHasEntityRelationship(
+            new DigitalMedia().withAcAccessURI(MEDIA_ACCESS_URI).withOdsHasEntityRelationship(
                 List.of(new EntityRelationship()
                     .withType("ods:EntityRelationship")
                     .withDwcRelationshipOfResource("hasDigitalSpecimen")
@@ -402,6 +409,45 @@ public class TestUtils {
     return givenAttributes(specimenName, organisation, markedAsType, false)
         .withOdsHasIdentifier(List.of(
             new Identifier().withDctermsTitle("Specimen label").withDctermsIdentifier(HANDLE)));
+  }
+
+  public static DigitalMediaUpdatePidEvent givenDigitalMediaUpdatePidEvent() {
+    return new DigitalMediaUpdatePidEvent(
+        HANDLE,
+        SECOND_HANDLE,
+        MEDIA_ACCESS_URI
+    );
+  }
+
+  public static void addErToSpecimenRecord(DigitalSpecimenRecord digitalSpecimen, EntityRelationship er){
+    var erList = new ArrayList<>(
+       digitalSpecimen.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship());
+    erList.add(er);
+    digitalSpecimen.digitalSpecimenWrapper().attributes().setOdsHasEntityRelationship(erList);
+  }
+
+  public static EntityRelationship givenInterimMediaEntityRelationship() throws URISyntaxException {
+    return new EntityRelationship()
+        .withType("ods:EntityRelationship")
+        .withDwcRelationshipOfResource("hasMedia")
+        .withDwcRelatedResourceID(
+           MEDIA_ACCESS_URI)
+        .withDwcRelationshipAccordingTo(FDO_APP_NAME)
+        .withOdsRelatedResourceURI(new URI(MEDIA_ACCESS_URI))
+        .withOdsRelationshipAccordingToAgent(new Agent()
+            .withType(Agent.Type.AS_APPLICATION)
+            .withId(FDO_APP_ID)
+            .withSchemaName(FDO_APP_NAME))
+        .withDwcRelationshipEstablishedDate(java.util.Date.from(CREATED))
+        .withDwcRelationshipRemarks(
+            "Media Object is not yet ingested in DiSSCo. PID is not yet available.");
+  }
+
+  public static EntityRelationship givenMediaEntityRelationshipWithId() throws URISyntaxException  {
+    return givenInterimMediaEntityRelationship()
+        .withDwcRelatedResourceID(SECOND_HANDLE)
+        .withDwcRelationshipEstablishedDate(java.util.Date.from(CREATED))
+        .withDwcRelationshipRemarks(null);
   }
 
 }

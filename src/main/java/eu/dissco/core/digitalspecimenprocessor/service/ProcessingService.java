@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.util.Pair;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaUpdatePidEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -60,6 +61,7 @@ public class ProcessingService {
   private final MidsService midsService;
   private final HandleComponent handleComponent;
   private final ApplicationProperties applicationProperties;
+  private final MediaEntityRelationshipService mediaEntityRelationshipService;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -76,9 +78,28 @@ public class ProcessingService {
       results.addAll(createNewDigitalSpecimen(processResult.newSpecimens()));
     }
     if (!processResult.changedSpecimens().isEmpty()) {
-      results.addAll(updateExistingDigitalSpecimen(processResult.changedSpecimens()));
+      results.addAll(updateExistingDigitalSpecimen(processResult.changedSpecimens(), true));
     }
     return results;
+  }
+
+  public void updateDigitalMediaEntityRelationships(
+      List<DigitalMediaUpdatePidEvent> updateMediaEvents)
+      throws DisscoRepositoryException {
+    if (updateMediaEvents.isEmpty()) {
+      return;
+    }
+    var currentSpecimens = repository.getDigitalSpecimensFromPID(updateMediaEvents.stream().map(
+        DigitalMediaUpdatePidEvent::digitalSpecimenPID).toList());
+    var updatedTuples = mediaEntityRelationshipService.updateMediaERs(currentSpecimens,
+        updateMediaEvents);
+    var result = updateExistingDigitalSpecimen(updatedTuples, false);
+    var resultIds = result.stream().map(DigitalSpecimenRecord::id).toList();
+    if (result.size() < currentSpecimens.size()) {
+      var eventsToRollback = updateMediaEvents.stream()
+          .filter(event -> resultIds.contains(event.digitalSpecimenPID())).toList();
+      dlqMediaUpdatePidEvents(eventsToRollback);
+    }
   }
 
   private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(List<DigitalSpecimenEvent> events) {
@@ -120,6 +141,8 @@ public class ProcessingService {
         } else {
           var currentDigitalSpecimen = currentSpecimens.get(
               digitalSpecimenWrapper.physicalSpecimenID());
+          digitalSpecimenWrapper = mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(
+              currentDigitalSpecimen, event);
           if (isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
@@ -179,11 +202,13 @@ public class ProcessingService {
   }
 
   private void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen){
+      DigitalSpecimenWrapper digitalSpecimen) {
     var currentOriginalData = currentDigitalSpecimen.originalAttributes();
     var originalData = digitalSpecimen.originalAttributes();
-    if (currentOriginalData != null && !currentOriginalData.equals(originalData)){
-      log.info("Original data for specimen with physical id {} has changed. Ignoring new original data.", digitalSpecimen.physicalSpecimenID());
+    if (currentOriginalData != null && !currentOriginalData.equals(originalData)) {
+      log.info(
+          "Original data for specimen with physical id {} has changed. Ignoring new original data.",
+          digitalSpecimen.physicalSpecimenID());
     }
   }
 
@@ -199,7 +224,8 @@ public class ProcessingService {
         .withDwcRelationshipAccordingTo(entityRelationships.getDwcRelationshipAccordingTo())
         .withDwcRelationshipAccordingTo(entityRelationships.getDwcRelationshipAccordingTo())
         .withOdsEntityRelationshipOrder(entityRelationships.getOdsEntityRelationshipOrder())
-        .withDwcRelationshipRemarks(entityRelationships.getDwcRelationshipRemarks());
+        .withDwcRelationshipRemarks(entityRelationships.getDwcRelationshipRemarks())
+        .withOdsRelationshipAccordingToAgent(entityRelationships.getOdsRelationshipAccordingToAgent());
   }
 
   private void ignoreTimestampEntityRelationship(List<EntityRelationship> entityRelationship) {
@@ -248,13 +274,14 @@ public class ProcessingService {
   }
 
   private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples, boolean isIngestionEvent) {
     log.info("Persisting to Handle Server");
     var successfullyUpdatedHandles = updateHandles(updatedDigitalSpecimenTuples);
     if (!successfullyUpdatedHandles) {
       return Set.of();
     }
-    var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
+    var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples,
+        isIngestionEvent);
     log.info("Persisting to db");
     try {
       repository.createDigitalSpecimenRecord(
@@ -262,7 +289,9 @@ public class ProcessingService {
               .toList());
     } catch (DataAccessException e) {
       log.error("Unable to update records into database. Rolling back updates", e);
-      unableToInsertUpdates(digitalSpecimenRecords);
+      if (isIngestionEvent) {
+        unableToInsertUpdates(digitalSpecimenRecords);
+      }
       return Collections.emptySet();
     }
     log.info("Persisting to elastic");
@@ -271,9 +300,9 @@ public class ProcessingService {
           digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
               .toList());
       if (!bulkResponse.errors()) {
-        handleSuccessfulElasticUpdate(digitalSpecimenRecords);
+        handleSuccessfulElasticUpdate(digitalSpecimenRecords, isIngestionEvent);
       } else {
-        handlePartiallyElasticUpdate(digitalSpecimenRecords, bulkResponse);
+        handlePartiallyElasticUpdate(digitalSpecimenRecords, bulkResponse, isIngestionEvent);
       }
       var successfullyProcessedRecords = digitalSpecimenRecords.stream()
           .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
@@ -286,8 +315,10 @@ public class ProcessingService {
       log.error("Rolling back, failed to insert records in elastic", e);
       digitalSpecimenRecords.forEach(
           updatedDigitalSpecimenRecord -> rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord,
-              false));
-      filterUpdatesAndRollbackHandles(updatedDigitalSpecimenTuples);
+              false, isIngestionEvent));
+      if (isIngestionEvent) {
+        filterUpdatesAndRollbackHandles(updatedDigitalSpecimenTuples);
+      }
       return Set.of();
     }
   }
@@ -310,12 +341,23 @@ public class ProcessingService {
     }
   }
 
+  private void dlqMediaUpdatePidEvents(List<DigitalMediaUpdatePidEvent> mediaUpdatePidEvents) {
+    mediaUpdatePidEvents.forEach(event -> {
+      try {
+        kafkaService.deadLetterEvent(event);
+      } catch (JsonProcessingException e) {
+        log.error("Fatal Exception: Unable to DLQ failed media update events", e);
+      }
+    });
+
+  }
+
   private void handleSuccessfulElasticUpdate(
-      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
+      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords, boolean isIngestionEvent) {
     log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
     var failedRecords = new HashSet<UpdatedDigitalSpecimenRecord>();
     for (var digitalSpecimenRecord : digitalSpecimenRecords) {
-      var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
+      var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord, isIngestionEvent);
       if (!successfullyPublished) {
         failedRecords.add(digitalSpecimenRecord);
       }
@@ -330,7 +372,7 @@ public class ProcessingService {
 
   private void handlePartiallyElasticUpdate(
       Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords,
-      BulkResponse bulkResponse) {
+      BulkResponse bulkResponse, boolean isIngestionEvent) {
 
     var digitalSpecimenMap = digitalSpecimenRecords.stream()
         .collect(Collectors.toMap(
@@ -345,10 +387,10 @@ public class ProcessingService {
             log.error("Failed item to insert into elastic search: {} with errors {}",
                 digitalSpecimenRecord.digitalSpecimenRecord().id(), item.error().reason());
             handleUpdatesToRollback.add(digitalSpecimenRecord.currentDigitalSpecimen());
-            rollbackUpdatedSpecimen(digitalSpecimenRecord, false);
+            rollbackUpdatedSpecimen(digitalSpecimenRecord, false, isIngestionEvent);
             digitalSpecimenRecords.remove(digitalSpecimenRecord);
           } else {
-            var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
+            var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord, isIngestionEvent);
             if (!successfullyPublished) {
               handleUpdatesToRollback.add(digitalSpecimenRecord.currentDigitalSpecimen());
               digitalSpecimenRecords.remove(digitalSpecimenRecord);
@@ -362,13 +404,14 @@ public class ProcessingService {
   }
 
   private Set<UpdatedDigitalSpecimenRecord> getSpecimenRecordMap(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples, boolean isIngestionEvent) {
     return updatedDigitalSpecimenTuples.stream().map(tuple -> new UpdatedDigitalSpecimenRecord(
         new DigitalSpecimenRecord(
             tuple.currentSpecimen().id(),
             midsService.calculateMids(tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
-            tuple.currentSpecimen().version() + 1,
-            Instant.now(),
+            isIngestionEvent ? tuple.currentSpecimen().version() + 1
+                : tuple.currentSpecimen().version(),
+            tuple.currentSpecimen().created(), // todo shouldn't this be unchanged?
             tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
         tuple.digitalSpecimenEvent().enrichmentList(),
         tuple.currentSpecimen(),
@@ -402,20 +445,22 @@ public class ProcessingService {
     return true;
   }
 
-  private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
+  private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord,
+      boolean isIngestionEvent) {
     try {
+      // Todo : we should publish update event when we just update the media PID right?
       kafkaService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
           updatedDigitalSpecimenRecord.currentDigitalSpecimen());
       return true;
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish update event", e);
-      rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord, true);
+      rollbackUpdatedSpecimen(updatedDigitalSpecimenRecord, true, isIngestionEvent);
       return false;
     }
   }
 
   private void rollbackUpdatedSpecimen(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord,
-      boolean elasticRollback) {
+      boolean elasticRollback, boolean isIngestionEvent) {
     if (elasticRollback) {
       try {
         elasticRepository.rollbackVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
@@ -426,11 +471,13 @@ public class ProcessingService {
     }
     rollBackToEarlierVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
     try {
-      kafkaService.deadLetterEvent(
-          new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
-              updatedDigitalSpecimenRecord.digitalSpecimenRecord()
-                  .digitalSpecimenWrapper(),
-              updatedDigitalSpecimenRecord.digitalMediaObjectEvents()));
+      if (isIngestionEvent) {
+        kafkaService.deadLetterEvent(
+            new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
+                updatedDigitalSpecimenRecord.digitalSpecimenRecord()
+                    .digitalSpecimenWrapper(),
+                updatedDigitalSpecimenRecord.digitalMediaObjectEvents()));
+      }
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
@@ -462,6 +509,7 @@ public class ProcessingService {
     if (digitalSpecimenRecords.isEmpty()) {
       return Collections.emptySet();
     }
+    mediaEntityRelationshipService.addNewMediaERs(digitalSpecimenRecords);
     log.info("Inserting {} new specimen into the database", digitalSpecimenRecords.size());
     try {
       repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
@@ -535,7 +583,7 @@ public class ProcessingService {
               digitalSpecimenPid,
               attributes,
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
-          );
+      );
       try {
         kafkaService.publishDigitalMediaObject(digitalMediaObjectEvent);
       } catch (JsonProcessingException e) {

@@ -141,4 +141,17 @@ public class DigitalSpecimenRepository {
     context.delete(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(handle)).execute();
   }
 
+  public List<DigitalSpecimenRecord> getDigitalSpecimensFromPID(List<String> pids)
+      throws DisscoRepositoryException {
+    try {
+      return context.select(DIGITAL_SPECIMEN.asterisk())
+          .from(DIGITAL_SPECIMEN)
+          .where(DIGITAL_SPECIMEN.ID.in(pids))
+          .fetch(this::mapToDigitalSpecimenRecord);
+    } catch (DataAccessException ex) {
+      throw new DisscoRepositoryException(
+          "Failed to get specimen from repository: " + pids);
+    }
+  }
+
 }

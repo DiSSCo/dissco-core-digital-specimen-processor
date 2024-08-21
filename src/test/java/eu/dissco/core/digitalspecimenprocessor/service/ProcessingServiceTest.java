@@ -14,14 +14,17 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_BASE_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.addErToSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDifferentUnequalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaUpdatePidEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWithEntityRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaEntityRelationshipWithId;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,6 +48,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
@@ -57,6 +61,7 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -92,6 +97,8 @@ class ProcessingServiceTest {
   private HandleComponent handleComponent;
   @Mock
   private ApplicationProperties applicationProperties;
+  @Mock
+  private MediaEntityRelationshipService mediaEntityRelationshipService;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -111,7 +118,7 @@ class ProcessingServiceTest {
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, fdoRecordService, elasticRepository, kafkaService,
-        midsService, handleComponent, applicationProperties);
+        midsService, handleComponent, applicationProperties, mediaEntityRelationshipService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -136,6 +143,39 @@ class ProcessingServiceTest {
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper(true));
+
+    // When
+    List<DigitalSpecimenRecord> result = service.handleMessages(
+        List.of(givenDigitalSpecimenEvent(true, true)));
+
+    // Then
+    verifyNoInteractions(handleComponent);
+    verifyNoInteractions(fdoRecordService);
+    then(repository).should().updateLastChecked(List.of(HANDLE));
+    then(kafkaService).should(times(2))
+        .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void testEqualSpecimenWithMediaEr() throws Exception {
+    // Given
+    var originalRecord = givenDigitalSpecimenWithEntityRelationship();
+    addErToSpecimenRecord(originalRecord, givenMediaEntityRelationshipWithId());
+    var specimenWrapperWithMediaEr = givenDigitalSpecimenWrapper(true);
+    var erList = new ArrayList<>(
+        specimenWrapperWithMediaEr.attributes().getOdsHasEntityRelationship());
+    erList.add(givenMediaEntityRelationshipWithId());
+    specimenWrapperWithMediaEr.attributes().setOdsHasEntityRelationship(erList);
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(originalRecord));
+    given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
+    given(applicationProperties.getPid()).willReturn(APP_HANDLE);
+    given(applicationProperties.getName()).willReturn(APP_NAME);
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        specimenWrapperWithMediaEr);
 
     // When
     List<DigitalSpecimenRecord> result = service.handleMessages(
@@ -164,6 +204,8 @@ class ProcessingServiceTest {
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -188,7 +230,9 @@ class ProcessingServiceTest {
     var event = new DigitalSpecimenEvent(
         List.of(MAS),
         givenDigitalSpecimenWrapperNoOriginalData(),
-       List.of());
+        List.of());
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(event));
@@ -216,6 +260,8 @@ class ProcessingServiceTest {
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -461,6 +507,8 @@ class ProcessingServiceTest {
             givenUnequalDigitalSpecimenRecord()
         ));
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
     doThrow(PidCreationException.class).when(handleComponent).updateHandle(any());
 
     // When
@@ -486,7 +534,10 @@ class ProcessingServiceTest {
         ));
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     doThrow(PidCreationException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any());
+    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any(
+        DigitalSpecimenEvent.class));
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(
@@ -511,6 +562,8 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(firstEvent, secondEvent, thirdEvent));
@@ -542,6 +595,8 @@ class ProcessingServiceTest {
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
     doThrow(PidCreationException.class).when(handleComponent).rollbackHandleUpdate(any());
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(firstEvent, secondEvent, thirdEvent));
@@ -569,6 +624,8 @@ class ProcessingServiceTest {
         bulkResponse);
     doThrow(JsonProcessingException.class).when(kafkaService)
         .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -592,6 +649,8 @@ class ProcessingServiceTest {
         IOException.class);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -671,6 +730,8 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
     doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(anyList());
+    given(mediaEntityRelationshipService.getMediaErsForUpdatedSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenWrapper());
 
     // When
     var result = service.handleMessages(List.of(firstEvent, secondEvent, thirdEvent));
@@ -678,7 +739,7 @@ class ProcessingServiceTest {
     // Then
     then(fdoRecordService).should().buildRollbackUpdateRequest(anyList());
     then(handleComponent).should().rollbackHandleUpdate(any());
-    then(kafkaService).should(times(3)).deadLetterEvent(any());
+    then(kafkaService).should(times(3)).deadLetterEvent(any(DigitalSpecimenEvent.class));
     assertThat(result).isEmpty();
   }
 
@@ -703,6 +764,46 @@ class ProcessingServiceTest {
     then(handleComponent).should().rollbackHandleCreation(any());
     then(kafkaService).should().deadLetterEvent(newSpecimenEvent);
     assertThat(result).isEmpty();
+  }
+
+  @Test
+  void testUpdateDigitalMediaEntityRelationships() throws Exception {
+    // Given
+    var originalRecord = givenDigitalSpecimenRecord();
+    var recordWithErs = givenDigitalSpecimenRecord();
+    addErToSpecimenRecord(recordWithErs, givenMediaEntityRelationshipWithId());
+    var tuple = new UpdatedDigitalSpecimenTuple(
+        originalRecord,
+        new DigitalSpecimenEvent(
+            List.of(),
+            recordWithErs.digitalSpecimenWrapper(),
+            List.of()
+        )
+    );
+    given(repository.getDigitalSpecimensFromPID(List.of(HANDLE))).willReturn(
+        List.of(originalRecord));
+    given(mediaEntityRelationshipService.updateMediaERs(List.of(originalRecord),
+        List.of(givenDigitalMediaUpdatePidEvent()))).willReturn(List.of(tuple));
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalSpecimen(any())).willReturn(bulkResponse);
+    given(midsService.calculateMids(any())).willReturn(1);
+
+    // When
+    service.updateDigitalMediaEntityRelationships(List.of(givenDigitalMediaUpdatePidEvent()));
+
+    // Then
+    then(repository).should().createDigitalSpecimenRecord(List.of(recordWithErs));
+    then(elasticRepository).should().indexDigitalSpecimen(List.of(recordWithErs));
+    then(kafkaService).should().publishUpdateEvent(any(), any());
+  }
+
+  @Test
+  void testUpdateDigitalMediaEntityRelationshipsEmpty() throws Exception {
+    // When
+    service.updateDigitalMediaEntityRelationships(List.of());
+
+    // Then
+    then(repository).shouldHaveNoInteractions();
   }
 
 }

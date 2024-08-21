@@ -16,4 +16,11 @@ public class FdoProperties {
   @NotBlank
   private String issuedForAgent = "https://ror.org/0566bfb96";
 
+  @NotBlank
+  private String applicationName = "DiSSCo Processing Service";
+
+  @NotBlank
+  private String applicationPID = "https://hdl.handle.net/TEST/YYY-YYY-YYY";
+
+
 }

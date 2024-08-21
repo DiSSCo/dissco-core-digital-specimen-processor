@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaUpdatePidEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,9 @@ public class KafkaPublisherService {
   }
 
   public void deadLetterEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
+    kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(event));
+  }
+  public void deadLetterEvent(DigitalMediaUpdatePidEvent event) throws JsonProcessingException {
     kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(event));
   }
 
