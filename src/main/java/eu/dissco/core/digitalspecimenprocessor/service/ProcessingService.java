@@ -94,11 +94,11 @@ public class ProcessingService {
     var updatedTuples = mediaEntityRelationshipService.updateMediaERs(currentSpecimens,
         updateMediaEvents);
     var result = updateExistingDigitalSpecimen(updatedTuples, false);
-    var resultIds = result.stream().map(DigitalSpecimenRecord::id).toList();
     if (result.size() < currentSpecimens.size()) {
-      var eventsToRollback = updateMediaEvents.stream()
-          .filter(event -> resultIds.contains(event.digitalSpecimenPID())).toList();
-      dlqMediaUpdatePidEvents(eventsToRollback);
+      var resultIds = result.stream().map(DigitalSpecimenRecord::id).toList();
+      var eventsToDlq = updateMediaEvents.stream()
+          .filter(event -> !resultIds.contains(event.digitalSpecimenPID())).toList();
+      dlqMediaUpdatePidEvents(eventsToDlq);
     }
   }
 

@@ -8,10 +8,8 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
-import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
-import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -20,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -112,18 +110,19 @@ public class MediaEntityRelationshipService {
     var specimenErList = new ArrayList<>(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship());
     for (var updateMediaEvent : updateMediaEvents) {
-      try {
-        var targetEr = getErFromURI(digitalSpecimenRecord, updateMediaEvent);
-        specimenErList.remove(targetEr);
-        targetEr
+      var targetEr = getErFromURI(digitalSpecimenRecord, updateMediaEvent);
+      if (targetEr.isPresent()) {
+        specimenErList.remove(targetEr.get());
+        targetEr.get()
             .withDwcRelationshipEstablishedDate(java.util.Date.from(
                 Instant.now())) // todo should this update when we make the new ER?
             .withDwcRelatedResourceID(updateMediaEvent.digitalMediaPID())
             .withDwcRelationshipRemarks(null);
-        specimenErList.add(targetEr);
-      } catch (NoChangesFoundException e) {
-        return digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-            .getOdsHasEntityRelationship();
+        specimenErList.add(targetEr.get());
+      } else {
+        log.warn(
+            "Unable to identify single, unique media EntityRelationship in specimen with uri {}",
+            updateMediaEvent.digitalMediaAccessURI());
       }
     }
     return specimenErList;
@@ -171,19 +170,13 @@ public class MediaEntityRelationshipService {
     }
   }
 
-  private EntityRelationship getErFromURI(DigitalSpecimenRecord digitalSpecimenRecord,
-      DigitalMediaUpdatePidEvent updatePidEvent)
-      throws NoChangesFoundException {
-    var result = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsHasEntityRelationship()
+  private Optional<EntityRelationship> getErFromURI(DigitalSpecimenRecord digitalSpecimenRecord,
+      DigitalMediaUpdatePidEvent updatePidEvent) {
+    return digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship()
         .stream()
+        .filter(this::isDisscoMediaEr)
         .filter(er -> er.getDwcRelatedResourceID().equals(updatePidEvent.digitalMediaAccessURI()))
-        .toList();
-    if (result.size() != 1) {
-      log.error("{} ERs have the same ac:digitalMediaAccessURI", result.size());
-      throw new NoChangesFoundException("Unable to update ER for media.");
-    }
-    return result.get(0);
+        .findFirst();
   }
 
 }

@@ -806,4 +806,39 @@ class ProcessingServiceTest {
     then(repository).shouldHaveNoInteractions();
   }
 
+  @Test
+  void testUpdateDigitalMediaEntityRelationshipsElasticFailure() throws Exception {
+    // Given
+    var originalRecord = givenDigitalSpecimenRecord();
+    var recordWithErs = givenDigitalSpecimenRecord();
+    addErToSpecimenRecord(recordWithErs, givenMediaEntityRelationshipWithId());
+    var tuple = new UpdatedDigitalSpecimenTuple(
+        originalRecord,
+        new DigitalSpecimenEvent(
+            List.of(),
+            recordWithErs.digitalSpecimenWrapper(),
+            List.of()
+        )
+    );
+    given(repository.getDigitalSpecimensFromPID(List.of(HANDLE))).willReturn(
+        List.of(originalRecord));
+    given(mediaEntityRelationshipService.updateMediaERs(List.of(originalRecord),
+        List.of(givenDigitalMediaUpdatePidEvent()))).willReturn(List.of(tuple));
+    var negativeResponse = mock(BulkResponseItem.class);
+    given(negativeResponse.error()).willReturn(new ErrorCause.Builder().reason("Crashed").build());
+    given(negativeResponse.id()).willReturn(HANDLE);
+    given(bulkResponse.items()).willReturn(List.of(negativeResponse));
+    given(bulkResponse.errors()).willReturn(true);
+    given(elasticRepository.indexDigitalSpecimen(any())).willReturn(bulkResponse);
+    given(midsService.calculateMids(any())).willReturn(1);
+
+    // When
+    service.updateDigitalMediaEntityRelationships(List.of(givenDigitalMediaUpdatePidEvent()));
+
+    // Then
+    then(repository).should().createDigitalSpecimenRecord(List.of(recordWithErs));
+    then(repository).should().createDigitalSpecimenRecord(List.of(originalRecord));
+    then(kafkaService).should().deadLetterEvent(givenDigitalMediaUpdatePidEvent());
+  }
+
 }

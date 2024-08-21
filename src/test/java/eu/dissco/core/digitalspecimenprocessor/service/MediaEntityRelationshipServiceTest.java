@@ -3,8 +3,10 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.FDO_APP_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.FDO_APP_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.addErToSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaUpdatePidEvent;
@@ -18,7 +20,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mockStatic;
 
+import com.nimbusds.jose.util.Pair;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaUpdatePidEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
@@ -28,9 +32,9 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import com.nimbusds.jose.util.Pair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,6 +92,24 @@ class MediaEntityRelationshipServiceTest {
     assertThat(original).isEqualTo(expected);
   }
 
+
+  @Test
+  void testAddNewMediaERsNoMedia() {
+    // Given
+    var original = givenDigitalSpecimenWithEntityRelationship();
+    var expected = givenDigitalSpecimenWithEntityRelationship();
+    var specimenMap = Map.of(
+        original,
+        Pair.of(List.of(""), new ArrayList<DigitalMediaEventWithoutDOI>().stream().toList())
+    );
+
+    // When
+    mediaEntityRelationshipService.addNewMediaERs(specimenMap);
+
+    // Then
+    assertThat(original).isEqualTo(expected);
+  }
+
   @Test
   void testUpdateMediaErs() throws Exception {
     // Given
@@ -99,6 +121,8 @@ class MediaEntityRelationshipServiceTest {
         currentRecord,
         new DigitalSpecimenEvent(List.of(), updatedRecord.digitalSpecimenWrapper(), List.of())
     ));
+    given(fdoProperties.getApplicationName()).willReturn(FDO_APP_NAME);
+    given(fdoProperties.getApplicationPID()).willReturn(FDO_APP_ID);
 
     // When
     var result = mediaEntityRelationshipService.updateMediaERs(List.of(currentRecord),
@@ -107,6 +131,7 @@ class MediaEntityRelationshipServiceTest {
     // Then
     assertThat(result).isEqualTo(expected);
   }
+
 
   @Test
   void testAddMediaERsToSpecimenBadUri() throws Exception {
@@ -178,5 +203,28 @@ class MediaEntityRelationshipServiceTest {
     assertThat(result).isEqualTo(expected);
   }
 
+  @Test
+  void testUpdateMediaMissingUriEvent() throws Exception {
+    // Given
+    var pidUpdateEvent = new DigitalMediaUpdatePidEvent(
+        HANDLE,
+        SECOND_HANDLE,
+        "alt uri"
+    );
+    var currentRecord = givenDigitalSpecimenWithEntityRelationship();
+    addErToSpecimenRecord(currentRecord, givenInterimMediaEntityRelationship());
+    var expected = List.of(new UpdatedDigitalSpecimenTuple(
+        currentRecord,
+        new DigitalSpecimenEvent(List.of(), currentRecord.digitalSpecimenWrapper(), List.of())
+    ));
 
+    given(fdoProperties.getApplicationName()).willReturn(FDO_APP_NAME);
+    given(fdoProperties.getApplicationPID()).willReturn(FDO_APP_ID);
+
+    // When
+    var result = mediaEntityRelationshipService.updateMediaERs(List.of(currentRecord), List.of(pidUpdateEvent));
+
+    // Then
+    assertThat(result).isEqualTo(expected);
+  }
 }
