@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
@@ -40,17 +41,16 @@ public class KafkaConsumerService {
   }
 
   @KafkaListener(topics = "media-update")
-  public void updateMedia(@Payload List<String> messages) throws DisscoRepositoryException {
-    var events = messages.stream().map(message -> {
+  public void updateMedia(@Payload String message) throws DisscoRepositoryException {
       try {
-        return mapper.readValue(message, DigitalMediaUpdatePidEvent.class);
+        var events = mapper.readValue(message, new TypeReference<List<DigitalMediaUpdatePidEvent>>() {
+        });
+        events = events.stream().filter(Objects::nonNull).toList();
+        processingService.updateDigitalMediaEntityRelationships(events);
       } catch (JsonProcessingException e) {
         log.error("Moving message to DLQ, failed to parse update media PID event message", e);
         publisherService.deadLetterRaw(message);
-        return null;
       }
-    }).filter(Objects::nonNull).toList();
-    processingService.updateDigitalMediaEntityRelationships(events);
   }
 
 }

@@ -54,16 +54,15 @@ class KafkaConsumerServiceTest {
   @Test
   void testUpdateMedia() throws Exception {
     // Given
-    var expected = givenDigitalMediaUpdatePidEvent();
-    var messages = List.of(MAPPER.writeValueAsString(expected));
+    var expected = List.of(givenDigitalMediaUpdatePidEvent());
+    var messages =MAPPER.writeValueAsString(expected);
 
     // When
     service.updateMedia(messages);
 
     // Then
-    then(processingService).should().updateDigitalMediaEntityRelationships(List.of(expected));
+    then(processingService).should().updateDigitalMediaEntityRelationships(expected);
   }
-
 
   @Test
   void testUpdateMediaInvalid() throws Exception{
@@ -71,10 +70,10 @@ class KafkaConsumerServiceTest {
     var message = givenInvalidMessage();
 
     // When
-    service.updateMedia(List.of(message));
+    service.updateMedia(message);
 
     // Then
-    then(processingService).should().updateDigitalMediaEntityRelationships(List.of());
+    then(processingService).shouldHaveNoInteractions();
   }
 
   private String givenInvalidMessage() {
