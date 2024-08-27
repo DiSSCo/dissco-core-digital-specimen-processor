@@ -30,7 +30,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.jetbrains.annotations.NotNull;
 
 public class TestUtils {
 
@@ -411,7 +410,8 @@ public class TestUtils {
             new Identifier().withDctermsTitle("Specimen label").withDctermsIdentifier(HANDLE)));
   }
 
-  public static AutoAcceptedAnnotation givenAutoAcceptedAnnotation() throws JsonProcessingException {
+  public static AutoAcceptedAnnotation givenAutoAcceptedAnnotation()
+      throws JsonProcessingException {
     return new AutoAcceptedAnnotation(new Agent()
         .withType(Type.AS_APPLICATION)
         .withId(APP_HANDLE)
@@ -426,7 +426,8 @@ public class TestUtils {
             + SOURCE_SYSTEM_ID)
         .withOaHasBody(new AnnotationBody()
             .withType("oa:TextualBody")
-            .withOaValue(List.of(MAPPER.writeValueAsString(givenDigitalSpecimenRecord().digitalSpecimenWrapper().attributes())))
+            .withOaValue(List.of(MAPPER.writeValueAsString(
+                givenDigitalSpecimenRecord().digitalSpecimenWrapper().attributes())))
             .withDctermsReferences(SOURCE_SYSTEM_ID))
         .withDctermsCreated(Date.from(CREATED))
         .withDctermsCreator(new Agent()
