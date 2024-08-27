@@ -60,6 +60,7 @@ public class ProcessingService {
   private final MidsService midsService;
   private final HandleComponent handleComponent;
   private final ApplicationProperties applicationProperties;
+  private final AnnotationPublisherService annotationPublisherService;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -156,8 +157,8 @@ public class ProcessingService {
       return false;
     }
     var currentModified = currentDigitalSpecimen.attributes().getDctermsModified();
-    currentDigitalSpecimen.attributes().setDctermsModified(null);
-    digitalSpecimen.attributes().setDctermsModified(null);
+    var currentCreated = currentDigitalSpecimen.attributes().getDctermsCreated();
+    setGeneratedTimestampToNull(currentDigitalSpecimen, digitalSpecimen);
     var entityRelationships = digitalSpecimen.attributes().getOdsHasEntityRelationship();
     digitalSpecimen.attributes().setOdsHasEntityRelationship(
         entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
@@ -169,21 +170,35 @@ public class ProcessingService {
       digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
       digitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
+      currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
+      digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       return true;
     } else {
       digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
       digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
+      currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
+      digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       return false;
     }
   }
 
+  private static void setGeneratedTimestampToNull(DigitalSpecimenWrapper currentDigitalSpecimen,
+      DigitalSpecimenWrapper digitalSpecimen) {
+    currentDigitalSpecimen.attributes().setDctermsModified(null);
+    digitalSpecimen.attributes().setDctermsModified(null);
+    currentDigitalSpecimen.attributes().setDctermsCreated(null);
+    digitalSpecimen.attributes().setDctermsCreated(null);
+  }
+
   private void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen){
+      DigitalSpecimenWrapper digitalSpecimen) {
     var currentOriginalData = currentDigitalSpecimen.originalAttributes();
     var originalData = digitalSpecimen.originalAttributes();
-    if (currentOriginalData != null && !currentOriginalData.equals(originalData)){
-      log.info("Original data for specimen with physical id {} has changed. Ignoring new original data.", digitalSpecimen.physicalSpecimenID());
+    if (currentOriginalData != null && !currentOriginalData.equals(originalData)) {
+      log.info(
+          "Original data for specimen with physical id {} has changed. Ignoring new original data.",
+          digitalSpecimen.physicalSpecimenID());
     }
   }
 
@@ -478,7 +493,8 @@ public class ProcessingService {
       } else {
         handlePartiallyFailedElasticInsert(digitalSpecimenRecords, bulkResponse);
       }
-      log.info("Successfully created {} new digitalSpecimenWrapper", digitalSpecimenRecords.size());
+      log.info("Successfully created {} new digitalSpecimenRecord", digitalSpecimenRecords.size());
+      annotationPublisherService.publishAnnotationNewSpecimen(digitalSpecimenRecords.keySet());
       gatherDigitalMediaObjectForNewRecords(digitalSpecimenRecords);
       return digitalSpecimenRecords.keySet();
     } catch (IOException | ElasticsearchException e) {
@@ -722,7 +738,6 @@ public class ProcessingService {
       }
       return null;
     }
-
     return new DigitalSpecimenRecord(
         pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()),
         midsService.calculateMids(event.digitalSpecimenWrapper()),

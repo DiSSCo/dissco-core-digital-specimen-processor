@@ -207,29 +207,29 @@ class FdoRecordServiceTest {
         givenAttributesPlusIdentifier(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
         givenDigitalSpecimenAttributesFull(markedAsType));
     var expectedJson = MAPPER.readTree(
-          """
-          {
-            "data": {
-              "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
-              "attributes": {
-                "issuedForAgent": "https://ror.org/0566bfb96",
-                "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-                "primarySpecimenObjectIdType": "Global",
-                "specimenHost": "https://ror.org/0443cwa12",
-                "specimenHostName": "National Museum of Natural History",
-                "topicDiscipline": "Botany",
-                "referentName": "Biota",
-                "livingOrPreserved": "Preserved",
-                "markedAsType": false,
-                "otherSpecimenIds": [{
-                  "identifierType": "Specimen label",
-                  "identifierValue": "20.5000.1025/V1Z-176-LL4"
-                }]
+        """
+            {
+              "data": {
+                "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
+                "attributes": {
+                  "issuedForAgent": "https://ror.org/0566bfb96",
+                  "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
+                  "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
+                  "primarySpecimenObjectIdType": "Global",
+                  "specimenHost": "https://ror.org/0443cwa12",
+                  "specimenHostName": "National Museum of Natural History",
+                  "topicDiscipline": "Botany",
+                  "referentName": "Biota",
+                  "livingOrPreserved": "Preserved",
+                  "markedAsType": false,
+                  "otherSpecimenIds": [{
+                    "identifierType": "Specimen label",
+                    "identifierValue": "20.5000.1025/V1Z-176-LL4"
+                  }]
+                }
               }
             }
-          }
-          """
+            """
     );
     var expected = new ArrayList<>(List.of(expectedJson));
 

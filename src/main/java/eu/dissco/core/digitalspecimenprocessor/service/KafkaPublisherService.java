@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -32,7 +33,8 @@ public class KafkaPublisherService {
 
   public void publishUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
       DigitalSpecimenRecord currentDigitalSpecimen) throws JsonProcessingException {
-    var event = provenanceService.generateUpdateEvent(digitalSpecimenRecord, currentDigitalSpecimen);
+    var event = provenanceService.generateUpdateEvent(digitalSpecimenRecord,
+        currentDigitalSpecimen);
     kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
   }
 
@@ -52,5 +54,11 @@ public class KafkaPublisherService {
   public void publishDigitalMediaObject(DigitalMediaEvent digitalMediaObjectEvent)
       throws JsonProcessingException {
     kafkaTemplate.send("digital-media", mapper.writeValueAsString(digitalMediaObjectEvent));
+  }
+
+  public void publishAcceptedAnnotation(AutoAcceptedAnnotation annotation)
+      throws JsonProcessingException {
+    kafkaTemplate.send("annotation-processing",
+        mapper.writeValueAsString(annotation));
   }
 }

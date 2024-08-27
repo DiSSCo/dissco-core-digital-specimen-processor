@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoAcceptedAnnotation;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
@@ -114,5 +115,18 @@ class KafkaPublisherServiceTest {
     // Then
     then(kafkaTemplate).should()
         .send("digital-media", MAPPER.writeValueAsString(digitalMediaObjectEvent));
+  }
+
+  @Test
+  void testPublishAcceptedAnnotation() throws JsonProcessingException {
+    // Given
+    var newAcceptedAnnotation = givenAutoAcceptedAnnotation();
+
+    // When
+    service.publishAcceptedAnnotation(newAcceptedAnnotation);
+
+    // Then
+    then(kafkaTemplate).should()
+        .send("annotation-processing", MAPPER.writeValueAsString(newAcceptedAnnotation));
   }
 }

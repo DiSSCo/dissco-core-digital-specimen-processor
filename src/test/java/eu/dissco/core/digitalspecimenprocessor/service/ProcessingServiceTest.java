@@ -87,6 +87,8 @@ class ProcessingServiceTest {
   private BulkResponse bulkResponse;
   @Mock
   private MidsService midsService;
+  @Mock
+  private AnnotationPublisherService annotationPublisherService;
 
   @Mock
   private HandleComponent handleComponent;
@@ -111,7 +113,7 @@ class ProcessingServiceTest {
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, fdoRecordService, elasticRepository, kafkaService,
-        midsService, handleComponent, applicationProperties);
+        midsService, handleComponent, applicationProperties, annotationPublisherService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -127,6 +129,7 @@ class ProcessingServiceTest {
     mockedInstant.close();
     mockedClock.close();
   }
+
 
   @Test
   void testEqualSpecimen() throws DisscoRepositoryException, JsonProcessingException {
@@ -144,6 +147,7 @@ class ProcessingServiceTest {
     // Then
     verifyNoInteractions(handleComponent);
     verifyNoInteractions(fdoRecordService);
+    verifyNoInteractions(annotationPublisherService);
     then(repository).should().updateLastChecked(List.of(HANDLE));
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
@@ -177,6 +181,7 @@ class ProcessingServiceTest {
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
+    verifyNoInteractions(annotationPublisherService);
   }
 
   @Test
@@ -188,7 +193,7 @@ class ProcessingServiceTest {
     var event = new DigitalSpecimenEvent(
         List.of(MAS),
         givenDigitalSpecimenWrapperNoOriginalData(),
-       List.of());
+        List.of());
 
     // When
     var result = service.handleMessages(List.of(event));
@@ -196,6 +201,7 @@ class ProcessingServiceTest {
     // Then
     verifyNoInteractions(handleComponent);
     verifyNoInteractions(fdoRecordService);
+    verifyNoInteractions(annotationPublisherService);
     then(repository).should().updateLastChecked(List.of(HANDLE));
     assertThat(result).isEmpty();
   }
@@ -229,6 +235,7 @@ class ProcessingServiceTest {
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
+    verifyNoInteractions(annotationPublisherService);
   }
 
   @Test
@@ -259,6 +266,8 @@ class ProcessingServiceTest {
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord()));
+    then(annotationPublisherService).should()
+        .publishAnnotationNewSpecimen(Set.of(givenDigitalSpecimenRecord()));
   }
 
   @Test
@@ -406,6 +415,8 @@ class ProcessingServiceTest {
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(any(DigitalMediaEvent.class));
     assertThat(result).contains(givenDigitalSpecimenRecord(), thirdSpecimen);
+    then(annotationPublisherService).should()
+        .publishAnnotationNewSpecimen(Set.of(givenDigitalSpecimenRecord(), thirdSpecimen));
   }
 
   @Test
@@ -436,6 +447,7 @@ class ProcessingServiceTest {
     then(handleComponent).should().rollbackHandleCreation(any());
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
     then(kafkaService).shouldHaveNoMoreInteractions();
+    then(annotationPublisherService).should().publishAnnotationNewSpecimen(Set.of());
     assertThat(result).isEmpty();
   }
 

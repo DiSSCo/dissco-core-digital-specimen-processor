@@ -81,7 +81,7 @@ class KafkaConsumerServiceTest {
             ],
           "digitalSpecimenWrapper": {
             "ods:normalisedPhysicalSpecimenID": "https://geocollections.info/specimen/23602",
-            "ods:type": "GeologyRockSpecimen",
+            "ods:type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
             "ods:attributes": {
               "ods:physicalSpecimenIDType": "Global",
               "ods:organisationID": "https://ror.org/0443cwa12",

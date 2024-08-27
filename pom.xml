@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.3.1</version>
+    <version>3.3.3</version>
     <relativePath/> <!-- lookup parent from repository -->
   </parent>
   <groupId>eu.dissco.core</groupId>
@@ -16,12 +16,12 @@
   <description>Processing service for digital specimen</description>
   <properties>
     <java.version>17</java.version>
-    <elasticsearch.version>8.12.2</elasticsearch.version>
+    <elasticsearch.version>8.15.0</elasticsearch.version>
     <jakarta.json.version>2.1.3</jakarta.json.version>
     <json-patch.version>1.13</json-patch.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
-    <testcontainers.version>1.19.8</testcontainers.version>
-    <springdoc.version>2.5.0</springdoc.version>
+    <testcontainers.version>1.20.1</testcontainers.version>
+    <springdoc.version>2.6.0</springdoc.version>
     <sonar.organization>dissco</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <sonar.coverage.jacoco.xmlReportPaths>../app-it/target/site/jacoco-aggregate/jacoco.xml
@@ -185,13 +185,14 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>3.3.0</version>
+        <version>3.4.1</version>
         <configuration>
           <mainClass>eu.dissco.core.digitalspecimenprocessor.maven.MavenRunner</mainClass>
           <arguments>
             <argument>https://schemas.dissco.tech/schemas/fdo-type/digital-specimen/0.3.0/digital-specimen.json</argument>
             <argument>https://schemas.dissco.tech/schemas/fdo-type/digital-media/0.3.0/digital-media.json</argument>
             <argument>https://schemas.dissco.tech/schemas/fdo-type/create-update-tombstone-event/0.3.0/create-update-tombstone-event.json</argument>
+            <argument>https://schemas.dissco.tech/schemas/developer-schema/annotation/0.3.0/annotation-processing-request.json</argument>
           </arguments>
         </configuration>
       </plugin>
