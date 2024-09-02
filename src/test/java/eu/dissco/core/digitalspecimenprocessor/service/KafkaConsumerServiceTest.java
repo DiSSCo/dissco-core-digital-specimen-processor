@@ -91,6 +91,7 @@ class KafkaConsumerServiceTest {
               "dwc:datasetName": null,
               "dwc:collectionID": null,
               "ods:sourceSystemID": "https://hdl.handle.net/TEST/57Z-6PC-64W",
+              "ods:sourceSystemName": "A very nice source system",
               "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
               "dwc:preparations": "",
               "dcterms:modified": "2022-11-01T09:59:24.000Z",

@@ -3,8 +3,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.fge.jsonpatch.diff.JsonDiff;
-import eu.dissco.core.digitalspecimenprocessor.component.SourceSystemNameComponent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
@@ -32,7 +30,6 @@ public class ProvenanceService {
 
   private final ObjectMapper mapper;
   private final ApplicationProperties properties;
-  private final SourceSystemNameComponent sourceSystemNameComponent;
 
   public CreateUpdateTombstoneEvent generateCreateEvent(
       DigitalSpecimenRecord digitalSpecimenRecord) {
@@ -68,7 +65,7 @@ public class ProvenanceService {
                     .withId(properties.getPid())
                     .withProvHadRole(ProvHadRole.ODS_GENERATOR)))
             .withProvUsed(entityID)
-            .withRdfsComment("Specimen newly created"))
+            .withRdfsComment(determineComment(activityType)))
         .withProvEntity(new ProvEntity()
             .withId(entityID)
             .withType("ods:DigitalSpecimen")
@@ -78,12 +75,22 @@ public class ProvenanceService {
             new Agent()
                 .withType(Type.AS_APPLICATION)
                 .withId(sourceSystemID)
-                .withSchemaName(sourceSystemNameComponent.getSourceSystemName(sourceSystemID)),
+                .withSchemaName(digitalSpecimen.getOdsSourceSystemName()),
             new Agent()
                 .withType(Type.AS_APPLICATION)
                 .withId(properties.getPid())
                 .withSchemaName(properties.getName())
         ));
+  }
+
+  private String determineComment(ProvActivity.Type activityType) {
+    if (activityType == ProvActivity.Type.ODS_CREATE) {
+      return "Digital Specimen created";
+    } else if (activityType == ProvActivity.Type.ODS_UPDATE) {
+      return "Digital Specimen updated";
+    } else {
+      return null;
+    }
   }
 
   private List<OdsChangeValue> mapJsonPatch(JsonNode jsonPatch) {
@@ -95,11 +102,8 @@ public class ProvenanceService {
   }
 
   public CreateUpdateTombstoneEvent generateUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
-      DigitalSpecimenRecord currentDigitalSpecimenRecord) {
+      JsonNode jsonPatch) {
     var digitalSpecimen = DigitalSpecimenUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
-    var currentDigitalSpecimen = DigitalSpecimenUtils.flattenToDigitalSpecimen(
-        currentDigitalSpecimenRecord);
-    var jsonPatch = createJsonPatch(currentDigitalSpecimen, digitalSpecimen);
     return generateCreateUpdateTombStoneEvent(digitalSpecimen, ProvActivity.Type.ODS_UPDATE,
         jsonPatch);
   }
@@ -112,11 +116,5 @@ public class ProvenanceService {
       provValue.setAdditionalProperty(entry.getKey(), entry.getValue());
     }
     return provValue;
-  }
-
-  private JsonNode createJsonPatch(DigitalSpecimen currentDigitalSpecimen,
-      DigitalSpecimen digitalSpecimen) {
-    return JsonDiff.asJson(mapper.valueToTree(currentDigitalSpecimen),
-        mapper.valueToTree(digitalSpecimen));
   }
 }

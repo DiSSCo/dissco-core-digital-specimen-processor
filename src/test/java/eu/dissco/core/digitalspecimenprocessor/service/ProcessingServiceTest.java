@@ -22,11 +22,13 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
@@ -41,6 +43,7 @@ import co.elastic.clients.elasticsearch._types.ErrorCause;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
@@ -113,7 +116,7 @@ class ProcessingServiceTest {
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, fdoRecordService, elasticRepository, kafkaService,
-        midsService, handleComponent, applicationProperties, annotationPublisherService);
+        midsService, handleComponent, applicationProperties, annotationPublisherService, MAPPER);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -177,11 +180,11 @@ class ProcessingServiceTest {
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
-        .publishUpdateEvent(givenDigitalSpecimenRecord(2), currentSpecimenRecord);
+        .publishUpdateEvent(eq(givenDigitalSpecimenRecord(2)), any(JsonNode.class));
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
-    verifyNoInteractions(annotationPublisherService);
+    then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
   }
 
   @Test
@@ -214,9 +217,7 @@ class ProcessingServiceTest {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord()));
     given(bulkResponse.errors()).willReturn(false);
-    given(
-        elasticRepository.indexDigitalSpecimen(expected)).willReturn(
-        bulkResponse);
+    given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(false);
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
@@ -231,11 +232,11 @@ class ProcessingServiceTest {
     verifyNoMoreInteractions(handleComponent);
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(kafkaService).should()
-        .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
+        .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenJsonPatch());
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
-    verifyNoInteractions(annotationPublisherService);
+    then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
   }
 
   @Test
@@ -580,7 +581,7 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(List.of(givenDigitalSpecimenRecord(2)))).willReturn(
         bulkResponse);
     doThrow(JsonProcessingException.class).when(kafkaService)
-        .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
+        .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenJsonPatch());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));

@@ -25,6 +25,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDi
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identifier;
 import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
+import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
@@ -386,6 +387,7 @@ public class TestUtils {
         .withOdsSpecimenName(specimenName)
         .withOdsTopicDiscipline(TOPIC_DISCIPLINE)
         .withOdsSourceSystemID(SOURCE_SYSTEM_ID)
+        .withOdsSourceSystemName(SOURCE_SYSTEM_NAME)
         .withOdsLivingOrPreserved(OdsLivingOrPreserved.PRESERVED)
         .withDctermsLicense("http://creativecommons.org/licenses/by-nc/4.0/")
         .withDwcCollectionID(PHYSICAL_SPECIMEN_COLLECTION)
@@ -410,12 +412,12 @@ public class TestUtils {
             new Identifier().withDctermsTitle("Specimen label").withDctermsIdentifier(HANDLE)));
   }
 
-  public static AutoAcceptedAnnotation givenAutoAcceptedAnnotation()
-      throws JsonProcessingException {
+  public static AutoAcceptedAnnotation givenAutoAcceptedAnnotation(
+      AnnotationProcessingRequest annotation) {
     return new AutoAcceptedAnnotation(new Agent()
         .withType(Type.AS_APPLICATION)
         .withId(APP_HANDLE)
-        .withSchemaName(APP_NAME), givenNewAcceptedAnnotation());
+        .withSchemaName(APP_NAME), annotation);
   }
 
   public static AnnotationProcessingRequest givenNewAcceptedAnnotation()
@@ -427,13 +429,13 @@ public class TestUtils {
         .withOaHasBody(new AnnotationBody()
             .withType("oa:TextualBody")
             .withOaValue(List.of(MAPPER.writeValueAsString(
-                givenDigitalSpecimenRecord().digitalSpecimenWrapper().attributes())))
+                DigitalSpecimenUtils.flattenToDigitalSpecimen(givenDigitalSpecimenRecord()))))
             .withDctermsReferences(SOURCE_SYSTEM_ID))
         .withDctermsCreated(Date.from(CREATED))
         .withDctermsCreator(new Agent()
             .withType(Type.AS_APPLICATION)
-            .withId(APP_HANDLE)
-            .withSchemaName(APP_NAME))
+            .withId(SOURCE_SYSTEM_ID)
+            .withSchemaName(SOURCE_SYSTEM_NAME))
         .withOaHasTarget(new AnnotationTarget()
             .withId(HANDLE)
             .withOdsID(HANDLE)
@@ -445,4 +447,8 @@ public class TestUtils {
 
   }
 
+  public static JsonNode givenJsonPatch() throws JsonProcessingException {
+    return MAPPER.readTree(
+        "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Another SpecimenName\"}]");
+  }
 }

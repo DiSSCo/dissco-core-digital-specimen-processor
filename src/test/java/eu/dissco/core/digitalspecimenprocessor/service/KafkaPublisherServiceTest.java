@@ -6,7 +6,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoA
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenNewAcceptedAnnotation;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
@@ -62,7 +63,7 @@ class KafkaPublisherServiceTest {
     // Given
 
     // When
-    service.publishUpdateEvent(givenDigitalSpecimenRecord(2), givenUnequalDigitalSpecimenRecord());
+    service.publishUpdateEvent(givenDigitalSpecimenRecord(2), givenJsonPatch());
 
     // Then
     then(kafkaTemplate).should().send(eq("createUpdateDeleteTopic"), anyString());
@@ -120,7 +121,7 @@ class KafkaPublisherServiceTest {
   @Test
   void testPublishAcceptedAnnotation() throws JsonProcessingException {
     // Given
-    var newAcceptedAnnotation = givenAutoAcceptedAnnotation();
+    var newAcceptedAnnotation = givenAutoAcceptedAnnotation(givenNewAcceptedAnnotation());
 
     // When
     service.publishAcceptedAnnotation(newAcceptedAnnotation);

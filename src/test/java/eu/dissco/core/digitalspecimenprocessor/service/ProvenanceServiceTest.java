@@ -10,11 +10,12 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYS
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
-import eu.dissco.core.digitalspecimenprocessor.component.SourceSystemNameComponent;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
@@ -33,9 +34,6 @@ class ProvenanceServiceTest {
   @Mock
   private ApplicationProperties properties;
 
-  @Mock
-  private SourceSystemNameComponent sourceSystemNameComponent;
-
   private ProvenanceService service;
 
   private static List<Agent> givenExpectedAgents() {
@@ -53,7 +51,7 @@ class ProvenanceServiceTest {
 
   @BeforeEach
   void setup() {
-    this.service = new ProvenanceService(MAPPER, properties, sourceSystemNameComponent);
+    this.service = new ProvenanceService(MAPPER, properties);
   }
 
   @Test
@@ -63,8 +61,6 @@ class ProvenanceServiceTest {
     given(properties.getPid()).willReturn(APP_HANDLE);
     var digitalSpecimen = new DigitalSpecimenRecord(HANDLE, 2, 1, CREATED,
         givenDigitalSpecimenWrapper(true));
-    given(sourceSystemNameComponent.getSourceSystemName(SOURCE_SYSTEM_ID)).willReturn(
-        SOURCE_SYSTEM_NAME);
 
     // When
     var event = service.generateCreateEvent(digitalSpecimen);
@@ -77,18 +73,14 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void testGenerateUpdateEvent() {
+  void testGenerateUpdateEvent() throws JsonProcessingException {
     // Given
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
-    var digitalSpecimen = new DigitalSpecimenRecord(HANDLE, 2, 1, CREATED,
-        givenDigitalSpecimenWrapper(true));
     var anotherDigitalSpecimen = givenUnequalDigitalSpecimenRecord();
-    given(sourceSystemNameComponent.getSourceSystemName(SOURCE_SYSTEM_ID)).willReturn(
-        SOURCE_SYSTEM_NAME);
 
     // When
-    var event = service.generateUpdateEvent(anotherDigitalSpecimen, digitalSpecimen);
+    var event = service.generateUpdateEvent(anotherDigitalSpecimen, givenJsonPatch());
 
     // Then
     assertThat(event.getOdsID()).isEqualTo(DOI_PREFIX + HANDLE + "/" + VERSION);
@@ -98,13 +90,7 @@ class ProvenanceServiceTest {
   }
 
   List<OdsChangeValue> givenChangeValue() {
-    return List.of(new OdsChangeValue()
-            .withAdditionalProperty("op", "replace")
-            .withAdditionalProperty("path", "/ods:midsLevel")
-            .withAdditionalProperty("value", 1),
-        new OdsChangeValue()
-            .withAdditionalProperty("op", "remove")
-            .withAdditionalProperty("path", "/ods:hasEntityRelationship/0"),
+    return List.of(
         new OdsChangeValue()
             .withAdditionalProperty("op", "replace")
             .withAdditionalProperty("path", "/ods:specimenName")
