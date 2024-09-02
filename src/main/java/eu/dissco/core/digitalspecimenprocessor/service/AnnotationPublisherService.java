@@ -195,6 +195,6 @@ public class AnnotationPublisherService {
   }
 
   private boolean isNumeric(String str) {
-    return numericPattern.pattern().matches(str);
+    return numericPattern.matcher(str).matches();
   }
 }
