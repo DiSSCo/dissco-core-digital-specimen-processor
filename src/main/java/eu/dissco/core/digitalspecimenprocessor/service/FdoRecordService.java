@@ -26,15 +26,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class FdoRecordService {
 
-  private final ObjectMapper mapper;
-  private final FdoProperties fdoProperties;
-
   private static final String ATTRIBUTES = "attributes";
   private static final String TYPE = "type";
   private static final String ID = "id";
-
-
   private static final String DATA = "data";
+  private final ObjectMapper mapper;
+  private final FdoProperties fdoProperties;
 
   private static boolean isEqualString(String currentValue, String newValue) {
     return currentValue != null && !currentValue.equals(newValue);
@@ -44,7 +41,8 @@ public class FdoRecordService {
     return digitalSpecimens.stream().map(this::buildSinglePostHandleRequest).toList();
   }
 
-  public List<JsonNode> buildUpdateHandleRequest(List<UpdatedDigitalSpecimenTuple> digitalSpecimens){
+  public List<JsonNode> buildUpdateHandleRequest(
+      List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
     return digitalSpecimens.stream().map(this::buildSingleUpdateHandleRequest).toList();
   }
 
@@ -76,7 +74,8 @@ public class FdoRecordService {
     var data = mapper.createObjectNode();
     data.put(ID, specimenTuple.currentSpecimen().id());
     data.put(TYPE, fdoProperties.getType());
-    var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
+    var attributes = genRequestAttributes(
+        specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
     data.set(ATTRIBUTES, attributes);
     request.set(DATA, data);
     return request;
@@ -132,9 +131,10 @@ public class FdoRecordService {
     if (specimen.attributes().getOdsIsMarkedAsType() != null) {
       attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsIsMarkedAsType());
     }
-    if (specimen.attributes().getOdsHasIdentifier() != null && !specimen.attributes().getOdsHasIdentifier().isEmpty()){
+    if (specimen.attributes().getOdsHasIdentifier() != null && !specimen.attributes()
+        .getOdsHasIdentifier().isEmpty()) {
       var idNodeArr = mapper.createArrayNode();
-      for (var id: specimen.attributes().getOdsHasIdentifier()){
+      for (var id : specimen.attributes().getOdsHasIdentifier()) {
         idNodeArr.add(mapper.createObjectNode()
             .put("identifierType", id.getDctermsTitle())
             .put("identifierValue", id.getDctermsIdentifier()));
@@ -152,7 +152,8 @@ public class FdoRecordService {
         || isEqualString(
         currentDigitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID(),
         digitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID())
-        || isEqualString(currentAttributes.getOdsOrganisationID(), attributes.getOdsOrganisationID())
+        || isEqualString(currentAttributes.getOdsOrganisationID(),
+        attributes.getOdsOrganisationID())
         || isEqualString(currentAttributes.getOdsOrganisationName(),
         attributes.getOdsOrganisationName())
         || (currentAttributes.getOdsTopicDiscipline() != null

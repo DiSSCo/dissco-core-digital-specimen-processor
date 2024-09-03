@@ -81,7 +81,7 @@ class KafkaConsumerServiceTest {
             ],
           "digitalSpecimenWrapper": {
             "ods:normalisedPhysicalSpecimenID": "https://geocollections.info/specimen/23602",
-            "ods:type": "GeologyRockSpecimen",
+            "ods:type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
             "ods:attributes": {
               "ods:physicalSpecimenIDType": "Global",
               "ods:organisationID": "https://ror.org/0443cwa12",
@@ -91,6 +91,7 @@ class KafkaConsumerServiceTest {
               "dwc:datasetName": null,
               "dwc:collectionID": null,
               "ods:sourceSystemID": "https://hdl.handle.net/TEST/57Z-6PC-64W",
+              "ods:sourceSystemName": "A very nice source system",
               "dcterms:license": "http://creativecommons.org/licenses/by-nc/4.0/",
               "dwc:preparations": "",
               "dcterms:modified": "2022-11-01T09:59:24.000Z",

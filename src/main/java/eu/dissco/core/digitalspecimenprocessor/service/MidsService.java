@@ -189,7 +189,8 @@ public class MidsService {
       if (!isValidValue && (location.getOdsGeoReference() != null)) {
         isValidValue = isValid(location.getOdsGeoReference().getDwcVerbatimCoordinates());
         if (!isValidValue) {
-          isValidValue = (isValid(location.getOdsGeoReference().getDwcVerbatimLatitude()) && isValid(
+          isValidValue = (isValid(location.getOdsGeoReference().getDwcVerbatimLatitude())
+              && isValid(
               location.getOdsGeoReference().getDwcVerbatimLongitude()));
         }
       }

@@ -95,7 +95,8 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-                givenMidsThreeGenericSpecimen(new Location().withOdsGeoReference(new OdsGeoReference())),
+                givenMidsThreeGenericSpecimen(
+                    new Location().withOdsGeoReference(new OdsGeoReference())),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -426,7 +427,6 @@ class MidsServiceTest {
                 .withOdsGeoReference(null)
                 .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
   }
-
 
 
   @BeforeEach

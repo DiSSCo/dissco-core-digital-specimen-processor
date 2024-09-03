@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEventWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWithoutDOI;
@@ -12,6 +13,10 @@ import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
+import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationBody;
+import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest;
+import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest.OaMotivation;
+import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationTarget;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
@@ -19,6 +24,8 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysica
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identifier;
+import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
+import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
@@ -38,7 +45,7 @@ public class TestUtils {
   public static final int VERSION = 1;
   public static final Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
   public static final String MAS = "OCR";
-  public static final String TYPE = "GeologyRockSpecimen";
+  public static final String TYPE = "https://doi.org/21.T11148/894b1e6cad57e921764e";
   public static final String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
   public static final OdsPhysicalSpecimenIDType PHYSICAL_SPECIMEN_TYPE = OdsPhysicalSpecimenIDType.GLOBAL;
   public static final String SPECIMEN_NAME = "Biota";
@@ -380,6 +387,7 @@ public class TestUtils {
         .withOdsSpecimenName(specimenName)
         .withOdsTopicDiscipline(TOPIC_DISCIPLINE)
         .withOdsSourceSystemID(SOURCE_SYSTEM_ID)
+        .withOdsSourceSystemName(SOURCE_SYSTEM_NAME)
         .withOdsLivingOrPreserved(OdsLivingOrPreserved.PRESERVED)
         .withDctermsLicense("http://creativecommons.org/licenses/by-nc/4.0/")
         .withDwcCollectionID(PHYSICAL_SPECIMEN_COLLECTION)
@@ -404,4 +412,43 @@ public class TestUtils {
             new Identifier().withDctermsTitle("Specimen label").withDctermsIdentifier(HANDLE)));
   }
 
+  public static AutoAcceptedAnnotation givenAutoAcceptedAnnotation(
+      AnnotationProcessingRequest annotation) {
+    return new AutoAcceptedAnnotation(new Agent()
+        .withType(Type.AS_APPLICATION)
+        .withId(APP_HANDLE)
+        .withSchemaName(APP_NAME), annotation);
+  }
+
+  public static AnnotationProcessingRequest givenNewAcceptedAnnotation()
+      throws JsonProcessingException {
+    return new AnnotationProcessingRequest()
+        .withOaMotivation(OaMotivation.ODS_ADDING)
+        .withOaMotivatedBy("New information received from Source System with id: "
+            + SOURCE_SYSTEM_ID)
+        .withOaHasBody(new AnnotationBody()
+            .withType("oa:TextualBody")
+            .withOaValue(List.of(MAPPER.writeValueAsString(
+                DigitalSpecimenUtils.flattenToDigitalSpecimen(givenDigitalSpecimenRecord()))))
+            .withDctermsReferences(SOURCE_SYSTEM_ID))
+        .withDctermsCreated(Date.from(CREATED))
+        .withDctermsCreator(new Agent()
+            .withType(Type.AS_APPLICATION)
+            .withId(SOURCE_SYSTEM_ID)
+            .withSchemaName(SOURCE_SYSTEM_NAME))
+        .withOaHasTarget(new AnnotationTarget()
+            .withId(HANDLE)
+            .withOdsID(HANDLE)
+            .withType(TYPE)
+            .withOdsType("ods:DigitalSpecimen")
+            .withOaHasSelector(new OaHasSelector()
+                .withAdditionalProperty("@type", "ods:ClassSelector")
+                .withAdditionalProperty("ods:class", "$")));
+
+  }
+
+  public static JsonNode givenJsonPatch() throws JsonProcessingException {
+    return MAPPER.readTree(
+        "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Another SpecimenName\"}]");
+  }
 }

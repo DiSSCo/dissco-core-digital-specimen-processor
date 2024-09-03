@@ -5,6 +5,9 @@ import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationC
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.nimbusds.jose.util.Pair;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEventWithoutDOI;
@@ -23,6 +26,7 @@ import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenReposit
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
@@ -60,6 +64,16 @@ public class ProcessingService {
   private final MidsService midsService;
   private final HandleComponent handleComponent;
   private final ApplicationProperties applicationProperties;
+  private final AnnotationPublisherService annotationPublisherService;
+  private final ObjectMapper mapper;
+
+  private static void setGeneratedTimestampToNull(DigitalSpecimenWrapper currentDigitalSpecimen,
+      DigitalSpecimenWrapper digitalSpecimen) {
+    currentDigitalSpecimen.attributes().setDctermsModified(null);
+    digitalSpecimen.attributes().setDctermsModified(null);
+    currentDigitalSpecimen.attributes().setDctermsCreated(null);
+    digitalSpecimen.attributes().setDctermsCreated(null);
+  }
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -156,8 +170,8 @@ public class ProcessingService {
       return false;
     }
     var currentModified = currentDigitalSpecimen.attributes().getDctermsModified();
-    currentDigitalSpecimen.attributes().setDctermsModified(null);
-    digitalSpecimen.attributes().setDctermsModified(null);
+    var currentCreated = currentDigitalSpecimen.attributes().getDctermsCreated();
+    setGeneratedTimestampToNull(currentDigitalSpecimen, digitalSpecimen);
     var entityRelationships = digitalSpecimen.attributes().getOdsHasEntityRelationship();
     digitalSpecimen.attributes().setOdsHasEntityRelationship(
         entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
@@ -169,21 +183,27 @@ public class ProcessingService {
       digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
       digitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
+      currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
+      digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       return true;
     } else {
       digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
       digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
+      currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
+      digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       return false;
     }
   }
 
   private void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen){
+      DigitalSpecimenWrapper digitalSpecimen) {
     var currentOriginalData = currentDigitalSpecimen.originalAttributes();
     var originalData = digitalSpecimen.originalAttributes();
-    if (currentOriginalData != null && !currentOriginalData.equals(originalData)){
-      log.info("Original data for specimen with physical id {} has changed. Ignoring new original data.", digitalSpecimen.physicalSpecimenID());
+    if (currentOriginalData != null && !currentOriginalData.equals(originalData)) {
+      log.info(
+          "Original data for specimen with physical id {} has changed. Ignoring new original data.",
+          digitalSpecimen.physicalSpecimenID());
     }
   }
 
@@ -280,6 +300,7 @@ public class ProcessingService {
               Collectors.toSet());
       log.info("Successfully updated {} digitalSpecimenWrapper",
           successfullyProcessedRecords.size());
+      annotationPublisherService.publishAnnotationUpdatedSpecimen(digitalSpecimenRecords);
       gatherDigitalMediaObjectForUpdatedRecords(digitalSpecimenRecords);
       return successfullyProcessedRecords;
     } catch (IOException | ElasticsearchException e) {
@@ -372,8 +393,12 @@ public class ProcessingService {
             tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
         tuple.digitalSpecimenEvent().enrichmentList(),
         tuple.currentSpecimen(),
-        tuple.digitalSpecimenEvent().digitalMediaEvents()
-    )).collect(Collectors.toSet());
+        createJsonPatch(
+            tuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes(),
+            tuple.currentSpecimen()
+                .digitalSpecimenWrapper().attributes()),
+        tuple.digitalSpecimenEvent().digitalMediaEvents())
+    ).collect(Collectors.toSet());
   }
 
   private boolean updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
@@ -394,7 +419,7 @@ public class ProcessingService {
             kafkaService.deadLetterEvent(tuple.digitalSpecimenEvent());
           }
         } catch (JsonProcessingException jsonEx) {
-          log.error(DLQ_FAILED + updatedDigitalSpecimenTuples, jsonEx);
+          log.error(DLQ_FAILED + "{}", updatedDigitalSpecimenTuples, jsonEx);
         }
         return false;
       }
@@ -405,7 +430,7 @@ public class ProcessingService {
   private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
     try {
       kafkaService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
-          updatedDigitalSpecimenRecord.currentDigitalSpecimen());
+          updatedDigitalSpecimenRecord.jsonPatch());
       return true;
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish update event", e);
@@ -478,7 +503,8 @@ public class ProcessingService {
       } else {
         handlePartiallyFailedElasticInsert(digitalSpecimenRecords, bulkResponse);
       }
-      log.info("Successfully created {} new digitalSpecimenWrapper", digitalSpecimenRecords.size());
+      log.info("Successfully created {} new digitalSpecimenRecord", digitalSpecimenRecords.size());
+      annotationPublisherService.publishAnnotationNewSpecimen(digitalSpecimenRecords.keySet());
       gatherDigitalMediaObjectForNewRecords(digitalSpecimenRecords);
       return digitalSpecimenRecords.keySet();
     } catch (IOException | ElasticsearchException e) {
@@ -535,7 +561,7 @@ public class ProcessingService {
               digitalSpecimenPid,
               attributes,
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
-          );
+      );
       try {
         kafkaService.publishDigitalMediaObject(digitalMediaObjectEvent);
       } catch (JsonProcessingException e) {
@@ -722,7 +748,6 @@ public class ProcessingService {
       }
       return null;
     }
-
     return new DigitalSpecimenRecord(
         pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()),
         midsService.calculateMids(event.digitalSpecimenWrapper()),
@@ -730,6 +755,12 @@ public class ProcessingService {
         Instant.now(),
         event.digitalSpecimenWrapper()
     );
+  }
+
+  private JsonNode createJsonPatch(DigitalSpecimen currentDigitalSpecimen,
+      DigitalSpecimen digitalSpecimen) {
+    return JsonDiff.asJson(mapper.valueToTree(currentDigitalSpecimen),
+        mapper.valueToTree(digitalSpecimen));
   }
 }
 
