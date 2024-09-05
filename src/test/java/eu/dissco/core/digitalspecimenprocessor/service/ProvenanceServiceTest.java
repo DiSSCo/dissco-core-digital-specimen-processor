@@ -94,7 +94,7 @@ class ProvenanceServiceTest {
         new OdsChangeValue()
             .withAdditionalProperty("op", "replace")
             .withAdditionalProperty("path", "/ods:specimenName")
-            .withAdditionalProperty("value", "Another SpecimenName")
+            .withAdditionalProperty("value", "Biota")
     );
   }
 }

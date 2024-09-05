@@ -58,7 +58,7 @@ public class KafkaPublisherService {
 
   public void publishAcceptedAnnotation(AutoAcceptedAnnotation annotation)
       throws JsonProcessingException {
-    kafkaTemplate.send("annotation-processing",
+    kafkaTemplate.send("auto-accepted-annotation",
         mapper.writeValueAsString(annotation));
   }
 }

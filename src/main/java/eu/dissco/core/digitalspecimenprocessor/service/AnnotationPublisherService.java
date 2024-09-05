@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AnnotationPublisherService {
 
+  public static final String NEW_INFORMATION_MESSAGE = "Received new information from Source System with id: ";
   private static final String VALUE = "value";
   private static final String TYPE = "@type";
   private final Pattern numericPattern = Pattern.compile("\\d+");
@@ -89,9 +92,10 @@ public class AnnotationPublisherService {
 
   private AnnotationTarget buildTarget(DigitalSpecimenRecord digitalSpecimenRecord,
       OaHasSelector selector) {
+    var targetId = DOI_PREFIX + digitalSpecimenRecord.id();
     return new AnnotationTarget()
-        .withId(digitalSpecimenRecord.id())
-        .withOdsID(digitalSpecimenRecord.id())
+        .withId(targetId)
+        .withOdsID(targetId)
         .withType(digitalSpecimenRecord.digitalSpecimenWrapper().type())
         .withOdsType("ods:DigitalSpecimen")
         .withOaHasSelector(selector);
@@ -129,7 +133,8 @@ public class AnnotationPublisherService {
         .getOdsSourceSystemName();
     for (JsonNode action : jsonNode) {
       var annotationProcessingRequest = new AnnotationProcessingRequest()
-          .withOaHasTarget(buildTarget(digitalSpecimenRecord, buildSpecimenSelector(action)))
+          .withOaHasTarget(buildTarget(digitalSpecimenRecord,
+              buildSpecimenSelector(action.get("path").asText())))
           .withDctermsCreated(Date.from(Instant.now()))
           .withDctermsCreator(
               new Agent().withType(Type.AS_APPLICATION).withId(sourceSystemID)
@@ -139,35 +144,68 @@ public class AnnotationPublisherService {
         annotationProcessingRequest.setOaMotivatedBy(
             "Received update information from Source System with id: " + sourceSystemID);
         annotationProcessingRequest.setOaHasBody(
-            buildBody(extractValueString(action), sourceSystemID));
+            buildBody(extractValueString(action.get(VALUE)), sourceSystemID));
+        annotations.add(annotationProcessingRequest);
       } else if (action.get("op").asText().equals("add")) {
         annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
-        annotationProcessingRequest.setOaMotivatedBy(
-            "Received new information from Source System with id: " + sourceSystemID);
+        annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
         annotationProcessingRequest.setOaHasBody(
-            buildBody(extractValueString(action), sourceSystemID));
+            buildBody(extractValueString(action.get(VALUE)), sourceSystemID));
+        annotations.add(annotationProcessingRequest);
       } else if (action.get("op").asText().equals("remove")) {
         annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_DELETING);
         annotationProcessingRequest.setOaMotivatedBy(
             "Received delete information from Source System with id: " + sourceSystemID);
+        annotations.add(annotationProcessingRequest);
+      } else if (action.get("op").asText().equals("copy")) {
+        var digitalSpecimenJson = mapper.convertValue(
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes(), JsonNode.class);
+        var valueNode = digitalSpecimenJson.at(action.get("from").asText());
+        if (!valueNode.isMissingNode()) {
+          annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
+          annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
+          annotationProcessingRequest.setOaHasBody(
+              buildBody(extractValueString(valueNode), sourceSystemID));
+          annotations.add(annotationProcessingRequest);
+        } else {
+          log.warn("Invalid copy operation in json patch: {} Ignoring this annotation", action);
+        }
+      } else if (action.get("op").asText().equals("move")) {
+        var digitalSpecimenJson = mapper.convertValue(
+            digitalSpecimenRecord.digitalSpecimenWrapper().attributes(), JsonNode.class);
+        var valueNode = digitalSpecimenJson.at(action.get("from").asText());
+        annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
+        annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE+ sourceSystemID);
+        annotationProcessingRequest.setOaHasBody(
+            buildBody(extractValueString(valueNode), sourceSystemID));
+        var additionalDeleteAnnotation = new AnnotationProcessingRequest()
+            .withOaHasTarget(buildTarget(digitalSpecimenRecord,
+                buildSpecimenSelector(action.get("from").asText())))
+            .withDctermsCreated(Date.from(Instant.now()))
+            .withDctermsCreator(
+                new Agent().withType(Type.AS_APPLICATION).withId(sourceSystemID)
+                    .withSchemaName(sourceSystemName))
+            .withOaMotivation(OaMotivation.ODS_DELETING)
+            .withOaMotivatedBy(
+                "Received delete information from Source System with id: " + sourceSystemID);
+        annotations.add(additionalDeleteAnnotation);
+        annotations.add(annotationProcessingRequest);
       }
-      annotations.add(annotationProcessingRequest);
     }
     return annotations;
   }
 
   private String extractValueString(JsonNode action) throws JsonProcessingException {
-    if (action.get(VALUE).isTextual()) {
-      return action.get(VALUE).textValue();
+    if (action.isTextual()) {
+      return action.textValue();
     } else {
-      return mapper.writeValueAsString(action.get(VALUE));
+      return mapper.writeValueAsString(action);
     }
   }
 
-  private OaHasSelector buildSpecimenSelector(JsonNode action) {
-    var pointer = action.get("path").asText();
-    var path = convertJsonPointToJsonPath(pointer);
-    if (action.get("path").asText().endsWith("/-")) {
+  private OaHasSelector buildSpecimenSelector(String action) {
+    var path = convertJsonPointToJsonPath(action);
+    if (action.endsWith("/-")) {
       return new OaHasSelector()
           .withAdditionalProperty(TYPE, "ods:ClassSelector")
           .withAdditionalProperty("ods:class", path);

@@ -7,6 +7,7 @@ import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.nimbusds.jose.util.Pair;
 import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
@@ -41,6 +42,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -155,11 +157,9 @@ public class ProcessingService {
 
   /*
   We need to remove the Modified and EntityRelationshipDate from the comparison.
-  We cannot control the equals in the EntityRelationship as it is generated
-  Therefore we first store the EntityRelationshipDate in a map and set both to null
-  When the objects are not equal we reinsert the data into the EntityRelationship
+  We take over the ERDate from the current entity relationship if the ER is equal.
 
-  To establish equality , we only compare type and attributes, not original data or
+  To establish equality, we only compare type and attributes, not original data or
   physical specimen id. We ignore original data because original data is not updated
   if it does change, and we ignore physical specimen id because that's how the specimens
   were identified to be the same in the first place.
@@ -172,27 +172,58 @@ public class ProcessingService {
     var currentModified = currentDigitalSpecimen.attributes().getDctermsModified();
     var currentCreated = currentDigitalSpecimen.attributes().getDctermsCreated();
     setGeneratedTimestampToNull(currentDigitalSpecimen, digitalSpecimen);
-    var entityRelationships = digitalSpecimen.attributes().getOdsHasEntityRelationship();
-    digitalSpecimen.attributes().setOdsHasEntityRelationship(
-        entityRelationships.stream().map(this::deepcopyEntityRelationship).toList());
-    ignoreTimestampEntityRelationship(
+    setTimestampsEntityRelationships(digitalSpecimen.attributes().getOdsHasEntityRelationship(),
         currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
     verifyOriginalData(currentDigitalSpecimen, digitalSpecimen);
     if (currentDigitalSpecimen.type().equals(digitalSpecimen.type()) &&
         currentDigitalSpecimen.attributes().equals(digitalSpecimen.attributes())) {
-      digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
       digitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       return true;
     } else {
-      digitalSpecimen.attributes().setOdsHasEntityRelationship(entityRelationships);
       digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
       currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       return false;
+    }
+  }
+
+  /*
+  When all fields are equal except the timestamp we assume tha relationships are equal and the
+  timestamp can be taken over from the current entity relationship.
+  This will reduce the amount of updates and will only update the ER timestamp when there was an
+  actual change
+  */
+  private void setTimestampsEntityRelationships(List<EntityRelationship> entityRelationships,
+      List<EntityRelationship> currentEntityRelationships) {
+    for (var entityRelationship : entityRelationships) {
+      for (var currentEntityrelationship : currentEntityRelationships) {
+        if (Objects.equals(entityRelationship.getId(), currentEntityrelationship.getId()) &&
+            Objects.equals(entityRelationship.getType(), currentEntityrelationship.getType()) &&
+            Objects.equals(entityRelationship.getDwcRelationshipOfResource(),
+                currentEntityrelationship.getDwcRelationshipOfResource()) &&
+            Objects.equals(entityRelationship.getDwcRelationshipOfResourceID(),
+                currentEntityrelationship.getDwcRelationshipOfResourceID()) &&
+            Objects.equals(entityRelationship.getDwcRelatedResourceID(),
+                currentEntityrelationship.getDwcRelatedResourceID()) &&
+            Objects.equals(entityRelationship.getOdsRelatedResourceURI(),
+                currentEntityrelationship.getOdsRelatedResourceURI()) &&
+            Objects.equals(entityRelationship.getDwcRelationshipAccordingTo(),
+                currentEntityrelationship.getDwcRelationshipAccordingTo()) &&
+            Objects.equals(entityRelationship.getOdsRelationshipAccordingToAgent(),
+                currentEntityrelationship.getOdsRelationshipAccordingToAgent()) &&
+            Objects.equals(entityRelationship.getOdsEntityRelationshipOrder(),
+                currentEntityrelationship.getOdsEntityRelationshipOrder()) &&
+            Objects.equals(entityRelationship.getDwcRelationshipRemarks(),
+                currentEntityrelationship.getDwcRelationshipRemarks())
+        ) {
+          entityRelationship.setDwcRelationshipEstablishedDate(
+              currentEntityrelationship.getDwcRelationshipEstablishedDate());
+        }
+      }
     }
   }
 
@@ -205,25 +236,6 @@ public class ProcessingService {
           "Original data for specimen with physical id {} has changed. Ignoring new original data.",
           digitalSpecimen.physicalSpecimenID());
     }
-  }
-
-  private EntityRelationship deepcopyEntityRelationship(EntityRelationship entityRelationships) {
-    return new EntityRelationship()
-        .withId(entityRelationships.getId())
-        .withType(entityRelationships.getType())
-        .withDwcRelationshipEstablishedDate(null)
-        .withDwcRelationshipOfResource(entityRelationships.getDwcRelationshipOfResource())
-        .withDwcRelationshipOfResourceID(entityRelationships.getDwcRelationshipOfResourceID())
-        .withDwcRelatedResourceID(entityRelationships.getDwcRelatedResourceID())
-        .withOdsRelatedResourceURI(entityRelationships.getOdsRelatedResourceURI())
-        .withDwcRelationshipAccordingTo(entityRelationships.getDwcRelationshipAccordingTo())
-        .withDwcRelationshipAccordingTo(entityRelationships.getDwcRelationshipAccordingTo())
-        .withOdsEntityRelationshipOrder(entityRelationships.getOdsEntityRelationshipOrder())
-        .withDwcRelationshipRemarks(entityRelationships.getDwcRelationshipRemarks());
-  }
-
-  private void ignoreTimestampEntityRelationship(List<EntityRelationship> entityRelationship) {
-    entityRelationship.forEach(e -> e.setDwcRelationshipEstablishedDate(null));
   }
 
   private void republishEvent(DigitalSpecimenEvent event) {
@@ -394,9 +406,8 @@ public class ProcessingService {
         tuple.digitalSpecimenEvent().enrichmentList(),
         tuple.currentSpecimen(),
         createJsonPatch(
-            tuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes(),
-            tuple.currentSpecimen()
-                .digitalSpecimenWrapper().attributes()),
+            tuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
+            tuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
         tuple.digitalSpecimenEvent().digitalMediaEvents())
     ).collect(Collectors.toSet());
   }
@@ -757,10 +768,14 @@ public class ProcessingService {
     );
   }
 
+  // We remove the dcterms:modified from the comparison as it is generated and will always differ
   private JsonNode createJsonPatch(DigitalSpecimen currentDigitalSpecimen,
       DigitalSpecimen digitalSpecimen) {
-    return JsonDiff.asJson(mapper.valueToTree(currentDigitalSpecimen),
-        mapper.valueToTree(digitalSpecimen));
+    var jsonCurrentSpecimen = (ObjectNode) mapper.valueToTree(currentDigitalSpecimen);
+    var jsonSpecimen = (ObjectNode) mapper.valueToTree(digitalSpecimen);
+    jsonCurrentSpecimen.set("dcterms:modified", null);
+    jsonSpecimen.set("dcterms:modified", null);
+    return JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen);
   }
 }
 
