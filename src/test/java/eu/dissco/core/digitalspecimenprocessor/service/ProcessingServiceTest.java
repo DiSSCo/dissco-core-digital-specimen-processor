@@ -106,7 +106,8 @@ class ProcessingServiceTest {
     return Stream.of(
         Arguments.of(givenUnequalDigitalSpecimenRecord()),
         Arguments.of(new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED,
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME, null, null))),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
+                new DigitalSpecimen(), null))),
         Arguments.of(new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED,
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
                 new DigitalSpecimen(), null)))

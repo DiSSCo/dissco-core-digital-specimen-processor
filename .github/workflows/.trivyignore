@@ -1,0 +1,5 @@
+# September 5 2024
+# Issues in base image in the libexpat library, needs to be fixed in a new version of the image
+CVE-2024-45490
+CVE-2024-45491
+CVE-2024-45492

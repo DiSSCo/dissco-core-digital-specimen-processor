@@ -128,6 +128,6 @@ class KafkaPublisherServiceTest {
 
     // Then
     then(kafkaTemplate).should()
-        .send("annotation-processing", MAPPER.writeValueAsString(newAcceptedAnnotation));
+        .send("auto-accepted-annotation", MAPPER.writeValueAsString(newAcceptedAnnotation));
   }
 }

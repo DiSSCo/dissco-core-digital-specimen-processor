@@ -437,8 +437,8 @@ public class TestUtils {
             .withId(SOURCE_SYSTEM_ID)
             .withSchemaName(SOURCE_SYSTEM_NAME))
         .withOaHasTarget(new AnnotationTarget()
-            .withId(HANDLE)
-            .withOdsID(HANDLE)
+            .withId(DOI_PREFIX + HANDLE)
+            .withOdsID(DOI_PREFIX + HANDLE)
             .withType(TYPE)
             .withOdsType("ods:DigitalSpecimen")
             .withOaHasSelector(new OaHasSelector()
@@ -449,6 +449,6 @@ public class TestUtils {
 
   public static JsonNode givenJsonPatch() throws JsonProcessingException {
     return MAPPER.readTree(
-        "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Another SpecimenName\"}]");
+        "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Biota\"}]");
   }
 }

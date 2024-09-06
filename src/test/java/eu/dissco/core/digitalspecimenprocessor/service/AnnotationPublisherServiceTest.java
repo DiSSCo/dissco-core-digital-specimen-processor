@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_ID;
@@ -89,22 +90,22 @@ class AnnotationPublisherServiceTest {
                         "value": "Echinorhynchus haeruca Rudolphi, 1809"
                       }]
                     """),
-            OaMotivation.OA_EDITING,
-            new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
-                .withAdditionalProperty("ods:field",
-                    "$.ods:hasIdentification[0].ods:hasTaxonIdentification[0].dwc:scientificName"),
-            new AnnotationBody().withOaValue(List.of("Echinorhynchus haeruca Rudolphi, 1809"))
-                .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)
+            List.of(givenAcceptedAnnotation(OaMotivation.OA_EDITING,
+                new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
+                    .withAdditionalProperty("ods:field",
+                        "$.ods:hasIdentification[0].ods:hasTaxonIdentification[0].dwc:scientificName"),
+                new AnnotationBody().withOaValue(List.of("Echinorhynchus haeruca Rudolphi, 1809"))
+                    .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)))
         ),
         Arguments.of(classObject,
-            OaMotivation.ODS_ADDING,
-            new OaHasSelector().withAdditionalProperty("@type", "ods:ClassSelector")
-                .withAdditionalProperty("ods:class",
-                    "$.ods:hasEntityRelationship"),
-            new AnnotationBody().withOaValue(
-                    List.of(MAPPER.writeValueAsString(classObject.get(0).get("value"))))
-                .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)
-        ),
+            List.of(givenAcceptedAnnotation(OaMotivation.ODS_ADDING,
+                new OaHasSelector().withAdditionalProperty("@type", "ods:ClassSelector")
+                    .withAdditionalProperty("ods:class",
+                        "$.ods:hasEntityRelationship"),
+                new AnnotationBody().withOaValue(
+                        List.of(MAPPER.writeValueAsString(classObject.get(0).get("value"))))
+                    .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)
+            ))),
         Arguments.of(MAPPER.readTree(
                 """
                       [{
@@ -112,14 +113,77 @@ class AnnotationPublisherServiceTest {
                         "path": "/ods:hasEntityRelationship/1/dwc:relationshipEstablishedDate"
                       }]
                     """),
-            OaMotivation.ODS_DELETING,
-            new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
-                .withAdditionalProperty("ods:field",
-                    "$.ods:hasEntityRelationship[1].dwc:relationshipEstablishedDate"),
-            null
+            List.of(givenAcceptedAnnotation(OaMotivation.ODS_DELETING,
+                new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
+                    .withAdditionalProperty("ods:field",
+                        "$.ods:hasEntityRelationship[1].dwc:relationshipEstablishedDate"), null))
+        ),
+        Arguments.of(
+            MAPPER.readTree(
+                """
+                      [{
+                        "op": "copy",
+                        "path": "/ods:sourceSystemName",
+                        "from": "/ods:sourceSystemID"
+                      }]
+                    """),
+            List.of(givenAcceptedAnnotation(OaMotivation.ODS_ADDING,
+                new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
+                    .withAdditionalProperty("ods:field",
+                        "$.ods:sourceSystemName"),
+                new AnnotationBody().withOaValue(List.of(SOURCE_SYSTEM_ID))
+                    .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)))
+        ),
+        Arguments.of(
+            MAPPER.readTree(
+                """
+                      [{
+                        "op": "move",
+                        "path": "/ods:sourceSystemName",
+                        "from": "/ods:sourceSystemID"
+                      }]
+                    """),
+            List.of(givenAcceptedAnnotation(OaMotivation.ODS_ADDING,
+                    new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
+                        .withAdditionalProperty("ods:field",
+                            "$.ods:sourceSystemName"),
+                    new AnnotationBody().withOaValue(List.of(SOURCE_SYSTEM_ID))
+                        .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)),
+                givenAcceptedAnnotation(OaMotivation.ODS_DELETING, new OaHasSelector()
+                    .withAdditionalProperty("@type", "ods:FieldSelector")
+                    .withAdditionalProperty("ods:field", "$.ods:sourceSystemID"), null))
         ));
   }
 
+  private static AnnotationProcessingRequest givenAcceptedAnnotation(OaMotivation motivation,
+      OaHasSelector selector, AnnotationBody body) {
+    var annotation = new AnnotationProcessingRequest()
+        .withOaMotivation(motivation)
+        .withOaHasBody(body)
+        .withOaHasTarget(new AnnotationTarget()
+            .withOdsType("ods:DigitalSpecimen")
+            .withType(TYPE)
+            .withId(DOI_PREFIX + HANDLE)
+            .withOdsID(DOI_PREFIX + HANDLE)
+            .withOaHasSelector(selector))
+        .withDctermsCreated(Date.from(CREATED))
+        .withDctermsCreator(
+            new Agent().withType(Type.AS_APPLICATION).withId(SOURCE_SYSTEM_ID)
+                .withSchemaName(SOURCE_SYSTEM_NAME));
+    if (motivation == OaMotivation.OA_EDITING) {
+      annotation.withOaMotivatedBy("Received update information from Source System with id: "
+          + SOURCE_SYSTEM_ID);
+    }
+    if (motivation == OaMotivation.ODS_ADDING) {
+      annotation.withOaMotivatedBy("Received new information from Source System with id: "
+          + SOURCE_SYSTEM_ID);
+    }
+    if (motivation == OaMotivation.ODS_DELETING) {
+      annotation.withOaMotivatedBy("Received delete information from Source System with id: "
+          + SOURCE_SYSTEM_ID);
+    }
+    return annotation;
+  }
 
   @BeforeEach
   void setup() {
@@ -140,7 +204,6 @@ class AnnotationPublisherServiceTest {
     mockedClock.close();
   }
 
-
   @Test
   void testPublishAnnotationNewSpecimen() throws JsonProcessingException {
     // Given
@@ -157,13 +220,12 @@ class AnnotationPublisherServiceTest {
 
   @ParameterizedTest
   @MethodSource("provideUpdateAnnotations")
-  void testPublishAnnotationUpdatedSpecimen(JsonNode jsonPatch, OaMotivation motivation,
-      OaHasSelector selector,
-      AnnotationBody body) throws JsonProcessingException {
+  void testPublishAnnotationUpdatedSpecimen(JsonNode jsonPatch,
+      List<AnnotationProcessingRequest> expectedAnnotations) throws JsonProcessingException {
+
     // Given
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    var expectedAnnotation = givenAcceptedAnnotation(motivation, selector, body);
 
     // When
     service.publishAnnotationUpdatedSpecimen(
@@ -171,8 +233,10 @@ class AnnotationPublisherServiceTest {
             List.of(), null, jsonPatch, List.of())));
 
     // Then
-    then(kafkaPublisherService).should()
-        .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(expectedAnnotation));
+    for (var expectedAnnotation : expectedAnnotations) {
+      then(kafkaPublisherService).should()
+          .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(expectedAnnotation));
+    }
   }
 
   @Test
@@ -191,35 +255,25 @@ class AnnotationPublisherServiceTest {
         .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(any()));
   }
 
+  @Test
+  void testInvalidCopy() throws JsonProcessingException {
+    // Given
+    var jsonPatch = MAPPER.readTree(
+        """
+              [{
+                "op": "copy",
+                "path": "/ods:sourceSystemName",
+                "from": "/ods:someUnknownTerm"
+              }]
+            """);
 
-  private AnnotationProcessingRequest givenAcceptedAnnotation(OaMotivation motivation,
-      OaHasSelector selector, AnnotationBody body) {
-    var annotation = new AnnotationProcessingRequest()
-        .withOaMotivation(motivation)
-        .withOaHasBody(body)
-        .withOaHasTarget(new AnnotationTarget()
-            .withOdsType("ods:DigitalSpecimen")
-            .withType(TYPE)
-            .withId(HANDLE)
-            .withOdsID(HANDLE)
-            .withOaHasSelector(selector))
-        .withDctermsCreated(Date.from(Instant.now()))
-        .withDctermsCreator(
-            new Agent().withType(Type.AS_APPLICATION).withId(SOURCE_SYSTEM_ID)
-                .withSchemaName(SOURCE_SYSTEM_NAME));
-    if (motivation == OaMotivation.OA_EDITING) {
-      annotation.withOaMotivatedBy("Received update information from Source System with id: "
-          + SOURCE_SYSTEM_ID);
-    }
-    if (motivation == OaMotivation.ODS_ADDING) {
-      annotation.withOaMotivatedBy("Received new information from Source System with id: "
-          + SOURCE_SYSTEM_ID);
-    }
-    if (motivation == OaMotivation.ODS_DELETING) {
-      annotation.withOaMotivatedBy("Received delete information from Source System with id: "
-          + SOURCE_SYSTEM_ID);
-    }
-    return annotation;
+    // When
+    service.publishAnnotationUpdatedSpecimen(
+        Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
+            List.of(), null, jsonPatch, List.of())));
+
+    // Then
+    then(kafkaPublisherService).shouldHaveNoInteractions();
   }
 
   private JsonNode givenLargeJsonPatch() throws JsonProcessingException {
