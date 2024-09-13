@@ -147,7 +147,8 @@ public class AnnotationPublisherService {
       } else if (action.get(OP).asText().equals("remove")) {
         annotations.add(addRemoveOperation(annotationProcessingRequest, sourceSystemID));
       } else if (action.get(OP).asText().equals("copy")) {
-        var annotation = addCopyOperation(digitalSpecimenRecord, action, annotationProcessingRequest,
+        var annotation = addCopyOperation(digitalSpecimenRecord, action,
+            annotationProcessingRequest,
             sourceSystemID);
         if (annotation != null) {
           annotations.add(annotation);
@@ -264,8 +265,10 @@ public class AnnotationPublisherService {
     // Start from 1 to ignore the first root element
     for (int i = 1; i < parts.length; i++) {
       String part = parts[i];
-      if (isNumeric(part) || !part.equals("-")) {
+      if (isNumeric(part)) {
         jsonPath.append("[").append(part).append("]");
+      } else if (!part.equals("-")) {
+        jsonPath.append("['").append(part).append("']");
       }
     }
     return jsonPath.toString();
