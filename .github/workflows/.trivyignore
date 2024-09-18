@@ -1,5 +1,3 @@
-# September 5 2024
-# Issues in base image in the libexpat library, needs to be fixed in a new version of the image
-CVE-2024-45490
-CVE-2024-45491
-CVE-2024-45492
+# September 16 2024
+# Issue in spring, spring boot needs to upgrade to 6.1.13
+CVE-2024-38816
