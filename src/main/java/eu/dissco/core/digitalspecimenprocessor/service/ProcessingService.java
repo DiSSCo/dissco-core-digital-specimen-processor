@@ -1,6 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationConfiguration.DATE_STRING;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
@@ -10,23 +12,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.nimbusds.jose.util.Pair;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWrapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
@@ -275,7 +277,7 @@ public class ProcessingService {
     for (var event : events) {
       var digitalSpecimenPid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
       var digitalMedia = event.digitalMediaEvents();
-      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid);
+      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, null);
     }
   }
 
@@ -423,7 +425,7 @@ public class ProcessingService {
       try {
         var requests = fdoRecordService.buildUpdateHandleRequest(digitalSpecimensToUpdate);
         handleComponent.updateHandle(requests);
-      } catch (PidCreationException | PidAuthenticationException e) {
+      } catch (PidException e) {
         log.error("Unable to update Handle record. Not proceeding with update. ", e);
         try {
           for (var tuple : updatedDigitalSpecimenTuples) {
@@ -485,7 +487,7 @@ public class ProcessingService {
     Map<String, String> pidMap;
     try {
       pidMap = createNewPidRecords(events);
-    } catch (PidAuthenticationException | PidCreationException e) {
+    } catch (PidException e) {
       log.error("Unable to create PID. {}", e.getMessage());
       pidCreationFailed(events);
       return Collections.emptySet();
@@ -523,6 +525,12 @@ public class ProcessingService {
       digitalSpecimenRecords.forEach(this::rollbackNewSpecimen);
       rollbackHandleCreation(digitalSpecimenRecords.keySet().stream().toList());
       return Collections.emptySet();
+    } catch (PidException e) {
+      log.error(
+          "An error has occurred creating PIDs for media objects of specimens {}",
+          digitalSpecimenRecords.keySet().stream().map(
+              DigitalSpecimenRecord::id).toList());
+      return digitalSpecimenRecords.keySet();
     }
   }
 
@@ -539,17 +547,19 @@ public class ProcessingService {
   }
 
   private void gatherDigitalMediaObjectForNewRecords(
-      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords) {
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords)
+      throws PidException {
     log.info("Publishing digital media object events for processing");
+    var mediaPids = createNewMediaPidRecords(digitalSpecimenRecords); // Map of ac:uri -> handle
     digitalSpecimenRecords.forEach((key, value) -> {
       var digitalSpecimenPid = key.id();
       var digitalMedia = value.getRight();
-      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid);
+      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, mediaPids);
     });
   }
 
   private void publishDigitalMediaRecord(List<DigitalMediaEventWithoutDOI> digitalMedia,
-      String digitalSpecimenPid) {
+      String digitalSpecimenPid, Map<String, String> mediaPidMap) {
     for (var digitalMediaObjectEventWithoutDoi : digitalMedia) {
       var attributes = digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi()
           .attributes();
@@ -565,12 +575,16 @@ public class ProcessingService {
                   .withSchemaName(applicationProperties.getName()))
               .withDwcRelatedResourceID(
                   applicationProperties.getSpecimenBaseUrl() + digitalSpecimenPid));
+      String mediaPid = mediaPidMap == null ? null :
+          "https://doi.org/" + mediaPidMap.get(attributes.getAcAccessURI());
       var digitalMediaObjectEvent = new DigitalMediaEvent(
           digitalMediaObjectEventWithoutDoi.enrichmentList(),
           new DigitalMediaWrapper(
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().type(),
               digitalSpecimenPid,
-              attributes,
+              attributes
+                  .withId(mediaPid)
+                  .withOdsID(mediaPid),
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
       );
       try {
@@ -588,19 +602,38 @@ public class ProcessingService {
     digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
       var digitalSpecimenPid = digitalSpecimenRecord.digitalSpecimenRecord().id();
       var digitalMedia = digitalSpecimenRecord.digitalMediaObjectEvents();
-      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid);
+      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, null);
     });
   }
 
   private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)
-      throws PidCreationException, PidAuthenticationException {
+      throws PidException {
     var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
     var request = fdoRecordService.buildPostHandleRequest(specimenList);
-    return handleComponent.postHandle(request);
+    return handleComponent.postHandle(request,
+        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
+  }
+
+  private Map<String, String> createNewMediaPidRecords(
+      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords)
+      throws PidException {
+    var specimenMediaPairs = digitalSpecimenRecords.entrySet().stream()
+        .map(e -> Pair.of(e.getKey().id(),
+            e.getValue().getRight())) // specimen id -> digitalMediaRecords
+        .toList();
+    var requests = specimenMediaPairs.stream()
+        .map(media -> fdoRecordService.buildPostRequestMedia(media.getLeft(), media.getRight()))
+        .flatMap(List::stream)
+        .toList();
+    return handleComponent.postHandle(requests, PRIMARY_MEDIA_ID.getAttribute());
   }
 
   private void pidCreationFailed(List<DigitalSpecimenEvent> events) {
-    rollbackHandlesFromPhysId(events);
+    try {
+      rollbackHandlesFromPhysId(events);
+    } catch (PidException e) {
+      log.error("Unable to roll back PIDs", e);
+    }
     List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
     for (var event : events) {
       try {
@@ -614,7 +647,7 @@ public class ProcessingService {
     }
   }
 
-  private void rollbackHandlesFromPhysId(List<DigitalSpecimenEvent> events) {
+  private void rollbackHandlesFromPhysId(List<DigitalSpecimenEvent> events) throws PidException{
     var physIds = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper)
         .map(DigitalSpecimenWrapper::physicalSpecimenID).toList();
     handleComponent.rollbackFromPhysId(physIds);
@@ -717,7 +750,7 @@ public class ProcessingService {
     var request = fdoRecordService.buildRollbackCreationRequest(records);
     try {
       handleComponent.rollbackHandleCreation(request);
-    } catch (PidCreationException | PidAuthenticationException e) {
+    } catch (PidException e) {
       var ids = records.stream().map(DigitalSpecimenRecord::id).toList();
       log.error("Unable to rollback handles for new specimens. Bad handles: {}", ids);
     }
@@ -737,7 +770,7 @@ public class ProcessingService {
     try {
       var request = fdoRecordService.buildRollbackUpdateRequest(recordsToRollback);
       handleComponent.rollbackHandleUpdate(request);
-    } catch (PidCreationException | PidAuthenticationException e) {
+    } catch (PidException e) {
       var ids = recordsToRollback.stream().map(DigitalSpecimenRecord::id).toList();
       log.error(
           "Unable to rollback handles for Updated specimens. Bad handles: {}. Revert handles to the following records: {}",

@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.domain;
+package eu.dissco.core.digitalspecimenprocessor.domain.media;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;

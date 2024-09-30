@@ -1,13 +1,17 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_ORGANISATION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
@@ -23,6 +27,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,12 +49,12 @@ import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
@@ -252,8 +257,11 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
+    given(handleComponent.postHandle(anyList(), eq(PRIMARY_MEDIA_ID.getAttribute())))
+        .willReturn(givenMediaPidResponse());
     given(applicationProperties.getSpecimenBaseUrl()).willReturn(SPECIMEN_BASE_URL);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
@@ -266,7 +274,7 @@ class ProcessingServiceTest {
     then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
     then(kafkaService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
     then(kafkaService).should(times(2))
-        .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
+        .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship(DOI_PREFIX + MEDIA_PID));
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord()));
     then(annotationPublisherService).should()
         .publishAnnotationNewSpecimen(Set.of(givenDigitalSpecimenRecord()));
@@ -276,7 +284,8 @@ class ProcessingServiceTest {
   void testNewSpecimenPidFailed() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(handleComponent.postHandle(anyList())).willThrow(PidCreationException.class);
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()))).willThrow(PidException.class);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -291,7 +300,8 @@ class ProcessingServiceTest {
   void testNewSpecimenPidAndKafkaFailed() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(handleComponent.postHandle(anyList())).willThrow(PidCreationException.class);
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()))).willThrow(PidException.class);
     doThrow(JsonProcessingException.class).when(kafkaService)
         .deadLetterEvent(givenDigitalSpecimenEvent());
 
@@ -320,7 +330,8 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -328,7 +339,8 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenEvent(), duplicateSpecimen));
 
     // Then
-    verify(handleComponent, times(1)).postHandle(anyList());
+    verify(handleComponent, times(1)).postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
     then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
     then(kafkaService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
@@ -344,8 +356,9 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
-    doThrow(PidCreationException.class).when(handleComponent).rollbackHandleCreation(any());
-    given(handleComponent.postHandle(anyList()))
+    doThrow(PidException.class).when(handleComponent).rollbackHandleCreation(any());
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -367,7 +380,8 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -400,7 +414,8 @@ class ProcessingServiceTest {
     given(midsService.calculateMids(any(DigitalSpecimenWrapper.class))).willReturn(1);
     givenBulkResponse();
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
         .willReturn(givenHandleComponentResponse(specimenRecordList));
 
     // When
@@ -412,7 +427,8 @@ class ProcessingServiceTest {
     then(repository).should().rollbackSpecimen(secondSpecimen.id());
     then(fdoRecordService).should().buildRollbackCreationRequest(List.of(secondSpecimen));
     then(handleComponent).should().rollbackHandleCreation(any());
-    then(handleComponent).should().postHandle(any());
+    then(handleComponent).should().postHandle(any(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
     then(kafkaService).should().deadLetterEvent(secondEvent);
     then(kafkaService).should(times(2))
         .publishDigitalMediaObject(any(DigitalMediaEvent.class));
@@ -429,7 +445,8 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(bulkResponse.errors()).willReturn(false);
     given(
@@ -475,7 +492,7 @@ class ProcessingServiceTest {
             givenUnequalDigitalSpecimenRecord()
         ));
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
-    doThrow(PidCreationException.class).when(handleComponent).updateHandle(any());
+    doThrow(PidException.class).when(handleComponent).updateHandle(any());
 
     // When
     var result = service.handleMessages(
@@ -499,7 +516,7 @@ class ProcessingServiceTest {
             givenUnequalDigitalSpecimenRecord()
         ));
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
-    doThrow(PidCreationException.class).when(handleComponent).updateHandle(any());
+    doThrow(PidException.class).when(handleComponent).updateHandle(any());
     doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any());
 
     // When
@@ -555,7 +572,7 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
-    doThrow(PidCreationException.class).when(handleComponent).rollbackHandleUpdate(any());
+    doThrow(PidException.class).when(handleComponent).rollbackHandleUpdate(any());
 
     // When
     var result = service.handleMessages(List.of(firstEvent, secondEvent, thirdEvent));
@@ -627,7 +644,8 @@ class ProcessingServiceTest {
   void testNewSpecimenPidCreationException() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    doThrow(PidCreationException.class).when(handleComponent).postHandle(any());
+    doThrow(PidException.class).when(handleComponent).postHandle(any(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -705,7 +723,8 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(),
+        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(any());
 

@@ -4,13 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalMediaWrapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationBody;
@@ -58,6 +58,8 @@ public class TestUtils {
   public static final String SOURCE_SYSTEM_NAME = "A very nice source system";
   public static final JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static final OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
+  public static final String MEDIA_URL = "https://an-image.org";
+  public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
 
@@ -197,19 +199,26 @@ public class TestUtils {
         new DigitalMediaWithoutDOI(
             "StillImage",
             PHYSICAL_SPECIMEN_ID,
-            new DigitalMedia().withAcAccessURI("https://an-image.org"),
+            new DigitalMedia().withAcAccessURI(MEDIA_URL),
             MAPPER.createObjectNode()
         )
     );
   }
 
-  public static DigitalMediaEvent givenDigitalMediaEventWithRelationship() {
+  public static DigitalMediaEvent givenDigitalMediaEventWithRelationship(){
+    return givenDigitalMediaEventWithRelationship(null);
+  }
+
+  public static DigitalMediaEvent givenDigitalMediaEventWithRelationship(String id) {
     return new DigitalMediaEvent(
         List.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
-            new DigitalMedia().withAcAccessURI("https://an-image.org").withOdsHasEntityRelationship(
+            new DigitalMedia().withAcAccessURI(MEDIA_URL)
+                .withId(id)
+                .withOdsID(id)
+                .withOdsHasEntityRelationship(
                 List.of(new EntityRelationship()
                     .withType("ods:EntityRelationship")
                     .withDwcRelationshipOfResource("hasDigitalSpecimen")
@@ -451,4 +460,9 @@ public class TestUtils {
     return MAPPER.readTree(
         "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Biota\"}]");
   }
+
+  public static Map<String, String> givenMediaPidResponse(){
+    return Map.of(MEDIA_URL, MEDIA_PID);
+  }
+
 }

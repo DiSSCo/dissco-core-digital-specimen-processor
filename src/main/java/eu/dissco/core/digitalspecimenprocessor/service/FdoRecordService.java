@@ -1,7 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.ISSUED_FOR_AGENT;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LIVING_OR_PRESERVED;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MARKED_AS_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST_NAME;
@@ -10,10 +12,11 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
-import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +44,25 @@ public class FdoRecordService {
     return digitalSpecimens.stream().map(this::buildSinglePostHandleRequest).toList();
   }
 
+  public List<JsonNode> buildPostRequestMedia(String specimenId, List<DigitalMediaEventWithoutDOI> digitalMedia) {
+    var requests = new ArrayList<JsonNode>();
+    for (var media : digitalMedia) {
+      requests.add(
+          mapper.createObjectNode().set("data",
+              mapper.createObjectNode()
+                  .put("type", fdoProperties.getMediaType())
+                  .set(ATTRIBUTES, mapper.createObjectNode()
+                      .put(ISSUED_FOR_AGENT.getAttribute(), fdoProperties.getIssuedForAgent())
+                      .put("mediaHost", media.digitalMediaObjectWithoutDoi().attributes().getOdsOrganisationID())
+                      .put("isDerivedFromSpecimen", true)
+                      .put("linkedDigitalObjectPid", specimenId)
+                      .put("linkedDigitalObjectType", "digital specimen")
+                      .put(PRIMARY_MEDIA_ID.getAttribute(), media.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()))
+          ));
+    }
+    return requests;
+  }
+
   public List<JsonNode> buildUpdateHandleRequest(
       List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
     return digitalSpecimens.stream().map(this::buildSingleUpdateHandleRequest).toList();
@@ -60,20 +82,17 @@ public class FdoRecordService {
   }
 
   private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
-    var request = mapper.createObjectNode();
-    var data = mapper.createObjectNode();
-    data.put(TYPE, fdoProperties.getType());
-    var attributes = genRequestAttributes(specimen);
-    data.set(ATTRIBUTES, attributes);
-    request.set(DATA, data);
-    return request;
+    return mapper.createObjectNode()
+        .set(DATA, mapper.createObjectNode()
+            .put(TYPE, fdoProperties.getSpecimenType())
+            .set(ATTRIBUTES, genRequestAttributes(specimen)));
   }
 
   private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put(ID, specimenTuple.currentSpecimen().id());
-    data.put(TYPE, fdoProperties.getType());
+    data.put(TYPE, fdoProperties.getSpecimenType());
     var attributes = genRequestAttributes(
         specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
     data.set(ATTRIBUTES, attributes);
@@ -84,7 +103,7 @@ public class FdoRecordService {
   private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put(TYPE, fdoProperties.getType());
+    data.put(TYPE, fdoProperties.getSpecimenType());
     var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
     data.put(ID, specimen.id());
     data.set(ATTRIBUTES, attributes);
@@ -93,22 +112,18 @@ public class FdoRecordService {
   }
 
   private JsonNode genRequestAttributes(DigitalSpecimenWrapper specimen) {
-    var attributes = mapper.createObjectNode();
-    // Defaults
-    attributes.put(FdoProfileAttributes.ISSUED_FOR_AGENT.getAttribute(),
-        fdoProperties.getIssuedForAgent());
-
-    // Mandatory
-    attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
-        specimen.physicalSpecimenID());
-    attributes.put(FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
-        specimen.attributes().getOdsNormalisedPhysicalSpecimenID());
-    attributes.put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
-        specimen.attributes().getOdsPhysicalSpecimenIDType().value());
-    attributes.put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getOdsOrganisationID());
-
+    var attributes = mapper.createObjectNode()
+        .put(FdoProfileAttributes.ISSUED_FOR_AGENT.getAttribute(),
+            fdoProperties.getIssuedForAgent())
+        .put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
+            specimen.physicalSpecimenID())
+        .put(FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
+            specimen.attributes().getOdsNormalisedPhysicalSpecimenID())
+        .put(FdoProfileAttributes.PRIMARY_SPECIMEN_OBJECT_ID_TYPE.getAttribute(),
+            specimen.attributes().getOdsPhysicalSpecimenIDType().value())
+        .put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getOdsOrganisationID());
+    // Optional
     addOptionalAttributes(specimen, attributes);
-
     return attributes;
   }
 
