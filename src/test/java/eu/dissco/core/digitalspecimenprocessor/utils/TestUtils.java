@@ -199,7 +199,7 @@ public class TestUtils {
         new DigitalMediaWithoutDOI(
             "StillImage",
             PHYSICAL_SPECIMEN_ID,
-            new DigitalMedia().withAcAccessURI(MEDIA_URL),
+            new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationID(ORGANISATION_ID),
             MAPPER.createObjectNode()
         )
     );
@@ -218,6 +218,7 @@ public class TestUtils {
             new DigitalMedia().withAcAccessURI(MEDIA_URL)
                 .withId(id)
                 .withOdsID(id)
+                .withOdsOrganisationID(ORGANISATION_ID)
                 .withOdsHasEntityRelationship(
                 List.of(new EntityRelationship()
                     .withType("ods:EntityRelationship")

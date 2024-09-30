@@ -12,10 +12,10 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import java.util.ArrayList;
@@ -55,8 +55,8 @@ public class FdoRecordService {
                       .put(ISSUED_FOR_AGENT.getAttribute(), fdoProperties.getIssuedForAgent())
                       .put("mediaHost", media.digitalMediaObjectWithoutDoi().attributes().getOdsOrganisationID())
                       .put("isDerivedFromSpecimen", true)
-                      .put("linkedDigitalObjectPid", specimenId)
                       .put("linkedDigitalObjectType", "digital specimen")
+                      .put("linkedDigitalObjectPid", specimenId)
                       .put(PRIMARY_MEDIA_ID.getAttribute(), media.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()))
           ));
     }
