@@ -59,7 +59,10 @@ public class TestUtils {
   public static final JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static final OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
   public static final String MEDIA_URL = "https://an-image.org";
+  public static final String MEDIA_URL_ALT = MEDIA_URL + "/2";
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
+  public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
+
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
 
@@ -109,6 +112,21 @@ public class TestUtils {
         version,
         CREATED,
         givenDigitalSpecimenWrapper()
+    );
+  }
+
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr() {
+    return givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID);
+  }
+
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
+      String physicalId) {
+    return new DigitalSpecimenRecord(
+        handle,
+        MIDS_LEVEL,
+        VERSION,
+        CREATED,
+        givenDigitalSpecimenWrapperWithMediaEr(physicalId)
     );
   }
 
@@ -167,11 +185,28 @@ public class TestUtils {
     );
   }
 
+  public static DigitalSpecimenEvent givenDigitalSpecimenEventNoMedia(String physicalSpecimenId) {
+    return new DigitalSpecimenEvent(
+        List.of(MAS),
+        givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false),
+        List.of()
+    );
+  }
+
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId) {
     return new DigitalSpecimenEvent(
         List.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false),
-        List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent())
+        List.of(givenDigitalMediaEvent(physicalSpecimenId))
+    );
+  }
+
+  public static DigitalSpecimenEvent givenDigitalSpecimenEventWithMediaEr(
+      String physicalSpecimenId) {
+    return new DigitalSpecimenEvent(
+        List.of(MAS),
+        givenDigitalSpecimenWrapperWithMediaEr(physicalSpecimenId),
+        List.of(givenDigitalMediaEvent(physicalSpecimenId))
     );
   }
 
@@ -185,27 +220,57 @@ public class TestUtils {
     return new DigitalSpecimenEvent(
         List.of(MAS),
         givenDigitalSpecimenWrapper(entityRelationship),
-        hasMedia ? List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent()) : List.of()
+        hasMedia ? List.of(givenDigitalMediaEvent()) : List.of()
     );
+  }
+
+  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr() {
+    return givenDigitalSpecimenWrapperWithMediaEr(SPECIMEN_NAME);
+  }
+
+  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId) {
+    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false);
+    attributes.getOdsHasEntityRelationship().add(
+        new EntityRelationship()
+            .withType("ods:EntityRelationship")
+            .withDwcRelationshipEstablishedDate(Date.from(CREATED))
+            .withDwcRelationshipOfResource("hasDigitalMedia")
+            .withDwcRelationshipAccordingTo(APP_NAME)
+            .withOdsRelationshipAccordingToAgent(new Agent()
+                .withType(Type.AS_APPLICATION)
+                .withId(APP_HANDLE)
+                .withSchemaName(APP_NAME))
+            .withDwcRelatedResourceID(DOI_PREFIX + MEDIA_PID));
+    return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
+        ORIGINAL_DATA);
   }
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(boolean hasMedia) {
     return givenDigitalSpecimenEvent(hasMedia, false);
   }
 
-  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent() {
+  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent(String specimenId,
+      String mediaUrl) {
     return new DigitalMediaEventWithoutDOI(
         List.of("image-metadata"),
         new DigitalMediaWithoutDOI(
             "StillImage",
-            PHYSICAL_SPECIMEN_ID,
-            new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationID(ORGANISATION_ID),
+            specimenId,
+            new DigitalMedia().withAcAccessURI(mediaUrl).withOdsOrganisationID(ORGANISATION_ID),
             MAPPER.createObjectNode()
         )
     );
   }
 
-  public static DigitalMediaEvent givenDigitalMediaEventWithRelationship(){
+  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent(String specimenId) {
+    return givenDigitalMediaEvent(specimenId, MEDIA_URL);
+  }
+
+  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent() {
+    return givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID);
+  }
+
+  public static DigitalMediaEvent givenDigitalMediaEventWithRelationship() {
     return givenDigitalMediaEventWithRelationship(null);
   }
 
@@ -220,17 +285,17 @@ public class TestUtils {
                 .withOdsID(id)
                 .withOdsOrganisationID(ORGANISATION_ID)
                 .withOdsHasEntityRelationship(
-                List.of(new EntityRelationship()
-                    .withType("ods:EntityRelationship")
-                    .withDwcRelationshipOfResource("hasDigitalSpecimen")
-                    .withDwcRelationshipEstablishedDate(Date.from(Instant.now()))
-                    .withDwcRelationshipAccordingTo("dissco-digital-specimen-processor")
-                    .withOdsRelationshipAccordingToAgent(new Agent()
-                        .withId("https://hdl.handle.net/TEST/123-123-123")
-                        .withType(Type.AS_APPLICATION)
-                        .withSchemaName("dissco-digital-specimen-processor"))
-                    .withDwcRelatedResourceID(SPECIMEN_BASE_URL + "20.5000.1025/V1Z-176-LL4"))
-            ),
+                    List.of(new EntityRelationship()
+                        .withType("ods:EntityRelationship")
+                        .withDwcRelationshipOfResource("hasDigitalSpecimen")
+                        .withDwcRelationshipEstablishedDate(Date.from(CREATED))
+                        .withDwcRelationshipAccordingTo("dissco-digital-specimen-processor")
+                        .withOdsRelationshipAccordingToAgent(new Agent()
+                            .withId("https://hdl.handle.net/TEST/123-123-123")
+                            .withType(Type.AS_APPLICATION)
+                            .withSchemaName("dissco-digital-specimen-processor"))
+                        .withDwcRelatedResourceID(SPECIMEN_BASE_URL + "20.5000.1025/V1Z-176-LL4"))
+                ),
             MAPPER.createObjectNode()
         ));
   }
@@ -462,7 +527,7 @@ public class TestUtils {
         "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Biota\"}]");
   }
 
-  public static Map<String, String> givenMediaPidResponse(){
+  public static Map<String, String> givenMediaPidResponse() {
     return Map.of(MEDIA_URL, MEDIA_PID);
   }
 
