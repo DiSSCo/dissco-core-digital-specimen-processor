@@ -15,6 +15,7 @@ import com.nimbusds.jose.util.Pair;
 import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -32,6 +33,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
+import java.net.URI;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -60,6 +62,8 @@ public class ProcessingService {
 
   private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
   private static final String DOI_STRING = "https://doi.org/";
+  private static final String HAS_MEDIA = "hasDigitalMedia";
+  private static final String HAS_SPECIMEN = "hasDigitalSpecimen";
   private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
       .withZone(ZoneOffset.UTC);
   private final DigitalSpecimenRepository repository;
@@ -71,6 +75,7 @@ public class ProcessingService {
   private final ApplicationProperties applicationProperties;
   private final AnnotationPublisherService annotationPublisherService;
   private final ObjectMapper mapper;
+  private final DigitalMediaService digitalMediaService;
 
   private static void setGeneratedTimestampToNull(DigitalSpecimenWrapper currentDigitalSpecimen,
       DigitalSpecimenWrapper digitalSpecimen) {
@@ -139,14 +144,20 @@ public class ProcessingService {
         } else {
           var currentDigitalSpecimen = currentSpecimens.get(
               digitalSpecimenWrapper.physicalSpecimenID());
-          if (isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)) {
+          var digitalMediaProcessResult = digitalMediaService.getExistingDigitalMedia(
+              currentDigitalSpecimen.digitalSpecimenWrapper().attributes()
+                  .getOdsHasEntityRelationship(), event.digitalMediaEvents());
+          if (isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)
+              && digitalMediaProcessResult.newMedia().isEmpty()
+              && digitalMediaProcessResult.tombstoneMedia().isEmpty()) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
             equalSpecimens.add(currentDigitalSpecimen);
           } else {
             log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
             changedSpecimens.add(
-                new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, event));
+                new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, event,
+                    digitalMediaProcessResult));
           }
         }
       }
@@ -177,6 +188,7 @@ public class ProcessingService {
     setGeneratedTimestampToNull(currentDigitalSpecimen, digitalSpecimen);
     setTimestampsEntityRelationships(digitalSpecimen.attributes().getOdsHasEntityRelationship(),
         currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
+    var mediaRelationships = removeMediaEntityRelationships(currentDigitalSpecimen.attributes());
     verifyOriginalData(currentDigitalSpecimen, digitalSpecimen);
     if (currentDigitalSpecimen.type().equals(digitalSpecimen.type()) &&
         currentDigitalSpecimen.attributes().equals(digitalSpecimen.attributes())) {
@@ -184,12 +196,16 @@ public class ProcessingService {
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
+      var ers = currentDigitalSpecimen.attributes().getOdsHasEntityRelationship();
+      ers.addAll(mediaRelationships);
+      // todo verify this is affecting currentDigitalSpecimen
       return true;
     } else {
       digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
       currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
+      digitalSpecimen.attributes().getOdsHasEntityRelationship().addAll(mediaRelationships);
       return false;
     }
   }
@@ -228,6 +244,21 @@ public class ProcessingService {
         }
       }
     }
+  }
+
+  private List<EntityRelationship> removeMediaEntityRelationships(DigitalSpecimen attributes) {
+    var mediaEntityRelationships = new ArrayList<EntityRelationship>();
+    var remainingEntityRelationships = new ArrayList<EntityRelationship>();
+    attributes.getOdsHasEntityRelationship().forEach(entityRelationship -> {
+      if (entityRelationship.getDwcRelationshipOfResource().equals(HAS_MEDIA)) {
+        mediaEntityRelationships.add(entityRelationship);
+      } else {
+        remainingEntityRelationships.add(entityRelationship);
+      }
+    });
+    attributes.setOdsHasEntityRelationship(remainingEntityRelationships);
+
+    return mediaEntityRelationships;
   }
 
   private void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimen,
@@ -289,7 +320,9 @@ public class ProcessingService {
     if (!successfullyUpdatedHandles) {
       return Set.of();
     }
-    var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples);
+    Map<String, String> mediaPidMap = createMediaPidsForUpdatedRecords(
+        updatedDigitalSpecimenTuples);
+    var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples, mediaPidMap);
     log.info("Persisting to db");
     try {
       repository.createDigitalSpecimenRecord(
@@ -398,20 +431,27 @@ public class ProcessingService {
   }
 
   private Set<UpdatedDigitalSpecimenRecord> getSpecimenRecordMap(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    return updatedDigitalSpecimenTuples.stream().map(tuple -> new UpdatedDigitalSpecimenRecord(
-        new DigitalSpecimenRecord(
-            tuple.currentSpecimen().id(),
-            midsService.calculateMids(tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
-            tuple.currentSpecimen().version() + 1,
-            Instant.now(),
-            tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
-        tuple.digitalSpecimenEvent().enrichmentList(),
-        tuple.currentSpecimen(),
-        createJsonPatch(
-            tuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
-            tuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
-        tuple.digitalSpecimenEvent().digitalMediaEvents())
+      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples,
+      Map<String, String> mediaPidMap) {
+    return updatedDigitalSpecimenTuples.stream().map(tuple -> {
+          var recordNoMediaEr = new DigitalSpecimenRecord(
+              tuple.currentSpecimen().id(),
+              midsService.calculateMids(tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
+              tuple.currentSpecimen().version() + 1,
+              Instant.now(),
+              tuple.digitalSpecimenEvent().digitalSpecimenWrapper());
+          var digitalSpecimenRecord = setMediaEntityRelationship(tuple.digitalMediaProcessResult(),
+              recordNoMediaEr, mediaPidMap);
+          return new UpdatedDigitalSpecimenRecord(
+              digitalSpecimenRecord,
+              tuple.digitalSpecimenEvent().enrichmentList(),
+              tuple.currentSpecimen(),
+              createJsonPatch(
+                  tuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
+                  tuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
+              tuple.digitalSpecimenEvent().digitalMediaEvents(),
+              tuple.digitalMediaProcessResult());
+        }
     ).collect(Collectors.toSet());
   }
 
@@ -501,11 +541,13 @@ public class ProcessingService {
     if (digitalSpecimenRecords.isEmpty()) {
       return Collections.emptySet();
     }
-    mediaPidMap = createNewMediaPidRecords(digitalSpecimenRecords);
+    mediaPidMap = createMediaPidsForNewRecords(digitalSpecimenRecords);
     digitalSpecimenRecords.remove(null);
     var digitalSpecimenRecordsWithMediaEr = digitalSpecimenRecords.entrySet().stream()
         .collect(Collectors.toMap(
-            e -> addMediaEntityRelationship(e.getKey(), e.getValue().getRight(), mediaPidMap),
+            e -> setMediaEntityRelationship(
+                new DigitalMediaProcessResult(Collections.emptyList(), Collections.emptyList(),
+                    e.getValue().getRight()), e.getKey(), mediaPidMap),
             Entry::getValue));
 
     log.info("Inserting {} new specimen into the database",
@@ -549,23 +591,17 @@ public class ProcessingService {
     }
   }
 
-  private DigitalSpecimenRecord addMediaEntityRelationship(
-      DigitalSpecimenRecord digitalSpecimenRecord,
-      List<DigitalMediaEventWithoutDOI> mediaEvents, Map<String, String> mediaPidMap) {
-    var existingMediaErIds = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsHasEntityRelationship()
-        .stream().filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
-            .equalsIgnoreCase("hasDigitalMedia"))
-        .map(EntityRelationship::getDwcRelatedResourceID)
-        .toList();
-    var newEntityRelationshipStream = mediaEvents.stream()
-        .filter(mediaEvent -> !existingMediaErIds.contains(mediaPidMap.get(
-            mediaEvent.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI())))
-        .map(mediaEvent -> buildEntityRelationship("hasDigitalMedia", mediaPidMap.get(
+  private DigitalSpecimenRecord setMediaEntityRelationship(
+      DigitalMediaProcessResult mediaProcessResult,
+      DigitalSpecimenRecord digitalSpecimenRecord, Map<String, String> mediaPidMap) {
+    var newEntityRelationshipStream = mediaProcessResult.newMedia().stream()
+        .map(mediaEvent -> buildEntityRelationship(HAS_MEDIA, mediaPidMap.get(
             mediaEvent.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI())));
     var totalErs = Stream.concat(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship()
-            .stream(),
+            .stream()
+            .filter(entityRelationship -> !mediaProcessResult.tombstoneMedia()
+                .contains(entityRelationship)), // remove tombstone ERs
         newEntityRelationshipStream).toList();
     var existingAttributes = digitalSpecimenRecord.digitalSpecimenWrapper().attributes();
     existingAttributes.setOdsHasEntityRelationship(totalErs);
@@ -615,7 +651,7 @@ public class ProcessingService {
       String mediaPid = mediaPidMap == null ? null :
           DOI_STRING + mediaPidMap.get(attributes.getAcAccessURI());
       attributes.getOdsHasEntityRelationship().add(
-          buildEntityRelationship("hasDigitalSpecimen", digitalSpecimenPid));
+          buildEntityRelationship(HAS_SPECIMEN, digitalSpecimenPid));
       var digitalMediaObjectEvent = new DigitalMediaEvent(
           digitalMediaObjectEventWithoutDoi.enrichmentList(),
           new DigitalMediaWrapper(
@@ -647,7 +683,8 @@ public class ProcessingService {
             .withType(Type.AS_APPLICATION)
             .withId(applicationProperties.getPid())
             .withSchemaName(applicationProperties.getName()))
-        .withDwcRelatedResourceID(DOI_STRING + relatedResourceId);
+        .withDwcRelatedResourceID(relatedResourceId)
+        .withOdsRelatedResourceURI(URI.create(DOI_STRING + relatedResourceId));
   }
 
   private void gatherDigitalMediaObjectForUpdatedRecords(
@@ -667,7 +704,7 @@ public class ProcessingService {
         NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
   }
 
-  private Map<String, String> createNewMediaPidRecords(
+  private Map<String, String> createMediaPidsForNewRecords(
       Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords) {
     var specimenMediaPairs = digitalSpecimenRecords.entrySet().stream()
         .map(e -> Pair.of(e.getKey().id(),
@@ -677,10 +714,34 @@ public class ProcessingService {
       return Collections.emptyMap();
     }
     var requests = specimenMediaPairs.stream()
-        .map(media -> fdoRecordService.buildPostRequestMedia(media.getLeft(), media.getRight()))
+        .map(
+            specimenMediaPair -> fdoRecordService.buildPostRequestMedia(specimenMediaPair.getLeft(),
+                specimenMediaPair.getRight()))
         .flatMap(List::stream)
         .toList();
+    return postMediaHandles(requests);
+  }
+
+  private Map<String, String> createMediaPidsForUpdatedRecords(
+      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+    if (updatedDigitalSpecimenTuples.stream()
+        .map(updateTuple -> updateTuple.digitalMediaProcessResult().newMedia())
+        .flatMap(List::stream).toList()
+        .isEmpty()) {
+      return Collections.emptyMap();
+    }
+    var requests = updatedDigitalSpecimenTuples.stream()
+        .map(updateTuples -> fdoRecordService.buildPostRequestMedia(
+            updateTuples.currentSpecimen().id(),
+            updateTuples.digitalMediaProcessResult().newMedia()))
+        .flatMap(List::stream)
+        .toList();
+    return postMediaHandles(requests);
+  }
+
+  private Map<String, String> postMediaHandles(List<JsonNode> requests) {
     try {
+      log.info("Minting PIDs for media");
       return handleComponent.postHandle(requests, PRIMARY_MEDIA_ID.getAttribute());
     } catch (PidException e) {
       log.error(

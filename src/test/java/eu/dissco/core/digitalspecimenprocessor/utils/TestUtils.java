@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
@@ -26,7 +27,9 @@ import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identifier;
 import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
+import java.net.URI;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -210,6 +213,34 @@ public class TestUtils {
     );
   }
 
+  public static DigitalMediaProcessResult givenEmptyMediaProcessResult() {
+    return new DigitalMediaProcessResult(
+        Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+  }
+
+  public static DigitalMediaProcessResult givenMediaProcessResultNew(
+      List<DigitalSpecimenEvent> events) {
+    return new DigitalMediaProcessResult(
+        Collections.emptyList(),
+        Collections.emptyList(),
+        events.stream().map(DigitalSpecimenEvent::digitalMediaEvents).flatMap(List::stream).toList()
+    );
+  }
+
+  public static DigitalMediaProcessResult givenMediaProcessResultUnchanged(
+      List<DigitalSpecimenEvent> events) {
+    return new DigitalMediaProcessResult(
+        events.stream()
+            .map(event -> event.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship())
+            .flatMap(List::stream)
+            .filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
+                .equals("hasDigitalMedia"))
+            .toList(),
+        Collections.emptyList(),
+        Collections.emptyList()
+    );
+  }
+
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent() {
     return givenDigitalSpecimenEvent(false);
@@ -240,7 +271,9 @@ public class TestUtils {
                 .withType(Type.AS_APPLICATION)
                 .withId(APP_HANDLE)
                 .withSchemaName(APP_NAME))
-            .withDwcRelatedResourceID(DOI_PREFIX + MEDIA_PID));
+            .withDwcRelatedResourceID(MEDIA_PID)
+            .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
+    );
     return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
         ORIGINAL_DATA);
   }
@@ -294,7 +327,8 @@ public class TestUtils {
                             .withId("https://hdl.handle.net/TEST/123-123-123")
                             .withType(Type.AS_APPLICATION)
                             .withSchemaName("dissco-digital-specimen-processor"))
-                        .withDwcRelatedResourceID(SPECIMEN_BASE_URL + "20.5000.1025/V1Z-176-LL4"))
+                        .withDwcRelatedResourceID(HANDLE)
+                        .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE)))
                 ),
             MAPPER.createObjectNode()
         ));

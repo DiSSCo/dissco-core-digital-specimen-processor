@@ -1,6 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.specimen;
 
-public record UpdatedDigitalSpecimenTuple(DigitalSpecimenRecord currentSpecimen,
-                                          DigitalSpecimenEvent digitalSpecimenEvent) {
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+
+public record UpdatedDigitalSpecimenTuple(
+    DigitalSpecimenRecord currentSpecimen,
+    DigitalSpecimenEvent digitalSpecimenEvent,
+    DigitalMediaProcessResult digitalMediaProcessResult) {
 
 }
