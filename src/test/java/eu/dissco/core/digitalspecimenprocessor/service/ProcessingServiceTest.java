@@ -417,8 +417,8 @@ class ProcessingServiceTest {
     String secondPhysicalId = "Another Specimen";
     String thirdPhysicalId = "A third Specimen";
     var secondSpecimen = givenDigitalSpecimenRecordWithMediaEr(SECOND_HANDLE, secondPhysicalId,
-        true);
-    var thirdSpecimen = givenDigitalSpecimenRecordWithMediaEr(THIRD_HANDLE, thirdPhysicalId, true);
+        false);
+    var thirdSpecimen = givenDigitalSpecimenRecordWithMediaEr(THIRD_HANDLE, thirdPhysicalId, false);
     given(repository.getDigitalSpecimens(anyList())).willReturn(List.of());
     given(midsService.calculateMids(any(DigitalSpecimenWrapper.class))).willReturn(1);
     givenBulkResponse();

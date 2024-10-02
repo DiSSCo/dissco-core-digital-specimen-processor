@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -120,7 +122,7 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr() {
-    return givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID, true);
+    return givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID, false);
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
@@ -261,7 +263,7 @@ public class TestUtils {
         new EntityRelationship()
             .withType("ods:EntityRelationship")
             .withDwcRelationshipEstablishedDate(Date.from(CREATED))
-            .withDwcRelationshipOfResource("hasDigitalMedia")
+            .withDwcRelationshipOfResource(HAS_MEDIA.getName())
             .withDwcRelationshipAccordingTo(APP_NAME)
             .withOdsRelationshipAccordingToAgent(new Agent()
                 .withType(Type.AS_APPLICATION)
