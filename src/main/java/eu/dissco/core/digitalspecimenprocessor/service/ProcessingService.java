@@ -196,9 +196,9 @@ public class ProcessingService {
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
-      var ers = currentDigitalSpecimen.attributes().getOdsHasEntityRelationship();
+      var ers = new ArrayList<>(currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
       ers.addAll(mediaRelationships);
-      // todo verify this is affecting currentDigitalSpecimen
+      currentDigitalSpecimen.attributes().setOdsHasEntityRelationship(ers);
       return true;
     } else {
       digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));

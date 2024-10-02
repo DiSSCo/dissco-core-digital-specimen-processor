@@ -126,14 +126,19 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
-      String physicalId, boolean addOtherEntityRelationship) {
+      String physicalId, boolean addOtherEntityRelationship, int version) {
     return new DigitalSpecimenRecord(
         handle,
         MIDS_LEVEL,
-        VERSION,
+        version,
         CREATED,
         givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship)
     );
+  }
+
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
+      String physicalId, boolean addOtherEntityRelationship) {
+    return givenDigitalSpecimenRecordWithMediaEr(handle, physicalId, addOtherEntityRelationship, 1);
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecord() {

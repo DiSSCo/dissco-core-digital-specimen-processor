@@ -19,6 +19,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDifferentUnequalSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEventWithMediaEr;
@@ -55,6 +56,7 @@ import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
@@ -200,6 +202,74 @@ class ProcessingServiceTest {
     then(kafkaService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
+    then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
+  }
+
+  @Test
+  void testUnequalSpecimenNewMedia() throws Exception {
+    // Given
+    var expected = List.of(
+        givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID, false, 2));
+    var currentSpecimenRecord = givenDigitalSpecimenRecord();
+    var currentMediaEvent = List.of(givenDigitalMediaEvent());
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(currentSpecimenRecord));
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
+    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(applicationProperties.getPid()).willReturn(APP_HANDLE);
+    given(applicationProperties.getName()).willReturn(APP_NAME);
+    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
+        new DigitalMediaProcessResult(List.of(), List.of(), currentMediaEvent));
+    given(handleComponent.postHandle(any(), any())).willReturn(givenMediaPidResponse());
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
+
+    // Then
+    then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
+    then(handleComponent).should().updateHandle(any());
+    then(repository).should().createDigitalSpecimenRecord(expected);
+    then(kafkaService).should()
+        .publishUpdateEvent(eq(expected.get(0)), any(JsonNode.class));
+    then(kafkaService).should()
+        .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
+    assertThat(result).isEqualTo(expected);
+    then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
+  }
+
+  @Test
+  void testUnequalSpecimenTombstoneMedia() throws Exception {
+    // Given
+    var currentSpecimenRecord = givenDigitalSpecimenRecordWithMediaEr();
+    var mediaEr = currentSpecimenRecord.digitalSpecimenWrapper().attributes()
+        .getOdsHasEntityRelationship();
+    var expected = List.of(givenDigitalSpecimenRecord(2));
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(currentSpecimenRecord));
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
+    given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
+    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(applicationProperties.getPid()).willReturn(APP_HANDLE);
+    given(applicationProperties.getName()).willReturn(APP_NAME);
+    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
+        new DigitalMediaProcessResult(List.of(), mediaEr, List.of()));
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
+
+    // Then
+    then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
+    then(handleComponent).should().updateHandle(any());
+    then(repository).should().createDigitalSpecimenRecord(expected);
+    then(kafkaService).should()
+        .publishUpdateEvent(eq(givenDigitalSpecimenRecord(2)), any(JsonNode.class));
+    then(kafkaService).should()
+        .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
+    assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2)));
+    then(digitalMediaService).should().removeSpecimenRelationshipsFromMedia(any());
     then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
   }
 
