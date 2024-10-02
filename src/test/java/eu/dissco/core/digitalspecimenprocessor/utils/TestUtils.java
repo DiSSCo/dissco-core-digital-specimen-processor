@@ -29,6 +29,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
 import java.net.URI;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -119,17 +120,17 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr() {
-    return givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID);
+    return givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID, true);
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
-      String physicalId) {
+      String physicalId, boolean addOtherEntityRelationship) {
     return new DigitalSpecimenRecord(
         handle,
         MIDS_LEVEL,
         VERSION,
         CREATED,
-        givenDigitalSpecimenWrapperWithMediaEr(physicalId)
+        givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship)
     );
   }
 
@@ -188,14 +189,6 @@ public class TestUtils {
     );
   }
 
-  public static DigitalSpecimenEvent givenDigitalSpecimenEventNoMedia(String physicalSpecimenId) {
-    return new DigitalSpecimenEvent(
-        List.of(MAS),
-        givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false),
-        List.of()
-    );
-  }
-
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId) {
     return new DigitalSpecimenEvent(
         List.of(MAS),
@@ -208,7 +201,7 @@ public class TestUtils {
       String physicalSpecimenId) {
     return new DigitalSpecimenEvent(
         List.of(MAS),
-        givenDigitalSpecimenWrapperWithMediaEr(physicalSpecimenId),
+        givenDigitalSpecimenWrapperWithMediaEr(physicalSpecimenId, false),
         List.of(givenDigitalMediaEvent(physicalSpecimenId))
     );
   }
@@ -256,12 +249,15 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr() {
-    return givenDigitalSpecimenWrapperWithMediaEr(SPECIMEN_NAME);
+    return givenDigitalSpecimenWrapperWithMediaEr(SPECIMEN_NAME, false);
   }
 
-  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId) {
-    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false);
-    attributes.getOdsHasEntityRelationship().add(
+  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId,
+      Boolean addOtherEntityRelationship) {
+    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true,
+        addOtherEntityRelationship);
+    var entityRelationships = new ArrayList<>(attributes.getOdsHasEntityRelationship());
+    entityRelationships.add(
         new EntityRelationship()
             .withType("ods:EntityRelationship")
             .withDwcRelationshipEstablishedDate(Date.from(CREATED))
@@ -274,6 +270,7 @@ public class TestUtils {
             .withDwcRelatedResourceID(MEDIA_PID)
             .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
     );
+    attributes.setOdsHasEntityRelationship(entityRelationships);
     return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
         ORIGINAL_DATA);
   }

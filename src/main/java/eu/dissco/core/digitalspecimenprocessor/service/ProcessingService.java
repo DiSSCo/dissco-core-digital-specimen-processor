@@ -1,6 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationConfiguration.DATE_STRING;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 
@@ -62,8 +64,6 @@ public class ProcessingService {
 
   private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
   private static final String DOI_STRING = "https://doi.org/";
-  private static final String HAS_MEDIA = "hasDigitalMedia";
-  private static final String HAS_SPECIMEN = "hasDigitalSpecimen";
   private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
       .withZone(ZoneOffset.UTC);
   private final DigitalSpecimenRepository repository;
@@ -250,7 +250,7 @@ public class ProcessingService {
     var mediaEntityRelationships = new ArrayList<EntityRelationship>();
     var remainingEntityRelationships = new ArrayList<EntityRelationship>();
     attributes.getOdsHasEntityRelationship().forEach(entityRelationship -> {
-      if (entityRelationship.getDwcRelationshipOfResource().equals(HAS_MEDIA)) {
+      if (entityRelationship.getDwcRelationshipOfResource().equals(HAS_MEDIA.getName())) {
         mediaEntityRelationships.add(entityRelationship);
       } else {
         remainingEntityRelationships.add(entityRelationship);
@@ -333,6 +333,7 @@ public class ProcessingService {
       unableToInsertUpdates(digitalSpecimenRecords);
       return Collections.emptySet();
     }
+    removeSpecimenRelationshipsFromMedia(digitalSpecimenRecords);
     log.info("Persisting to elastic");
     try {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(
@@ -358,6 +359,15 @@ public class ProcessingService {
               false));
       filterUpdatesAndRollbackHandles(updatedDigitalSpecimenTuples);
       return Set.of();
+    }
+  }
+
+  private void removeSpecimenRelationshipsFromMedia(
+      Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords) {
+    try {
+      digitalMediaService.removeSpecimenRelationshipsFromMedia(updatedDigitalSpecimenRecords);
+    } catch (DataAccessException e) {
+      log.warn("Unable to remove outdated media relationships from the database");
     }
   }
 
@@ -595,7 +605,7 @@ public class ProcessingService {
       DigitalMediaProcessResult mediaProcessResult,
       DigitalSpecimenRecord digitalSpecimenRecord, Map<String, String> mediaPidMap) {
     var newEntityRelationshipStream = mediaProcessResult.newMedia().stream()
-        .map(mediaEvent -> buildEntityRelationship(HAS_MEDIA, mediaPidMap.get(
+        .map(mediaEvent -> buildEntityRelationship(HAS_MEDIA.getName(), mediaPidMap.get(
             mediaEvent.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI())));
     var totalErs = Stream.concat(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship()
@@ -651,7 +661,7 @@ public class ProcessingService {
       String mediaPid = mediaPidMap == null ? null :
           DOI_STRING + mediaPidMap.get(attributes.getAcAccessURI());
       attributes.getOdsHasEntityRelationship().add(
-          buildEntityRelationship(HAS_SPECIMEN, digitalSpecimenPid));
+          buildEntityRelationship(HAS_SPECIMEN.getName(), digitalSpecimenPid));
       var digitalMediaObjectEvent = new DigitalMediaEvent(
           digitalMediaObjectEventWithoutDoi.enrichmentList(),
           new DigitalMediaWrapper(

@@ -1,15 +1,21 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DigitalMediaService {
 
@@ -18,31 +24,49 @@ public class DigitalMediaService {
   public DigitalMediaProcessResult getExistingDigitalMedia(
       List<EntityRelationship> currentEntityRelationships,
       List<DigitalMediaEventWithoutDOI> digitalMediaEvents) {
-    var currentMediaUris = currentEntityRelationships.stream()
+    var currentMediaRelationships = currentEntityRelationships.stream()
+        .filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
+            .equals(HAS_MEDIA.getName()))
+        .toList();
+    var currentMediaIds = currentMediaRelationships.stream()
         .map(EntityRelationship::getDwcRelatedResourceID)
         .toList();
     var incomingMediaUris = digitalMediaEvents.stream()
         .map(media -> media.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI())
         .toList();
-    var existingMediaMap = mediaRepository.getDigitalMediaDois(currentMediaUris);
+    var existingMediaMap = mediaRepository.getDigitalMediaUrisFromId(currentMediaIds);
     var unchangedMedia = new ArrayList<EntityRelationship>();
     var tombstoneMedia = new ArrayList<EntityRelationship>();
     var newMedia = new ArrayList<DigitalMediaEventWithoutDOI>();
-    for (var foundMedia : existingMediaMap.entrySet()) {
-      var mediaUri = foundMedia.getKey();
-      if (currentMediaUris.contains(mediaUri)) {
-        if (incomingMediaUris.contains(mediaUri)) {
-          unchangedMedia.add(
-              findErByMediaPid(currentEntityRelationships, existingMediaMap.get(mediaUri)));
-        } else {
-          tombstoneMedia.add(
-              findErByMediaPid(currentEntityRelationships, existingMediaMap.get(mediaUri)));
-        }
+    existingMediaMap.forEach((mediaUri, mediaPid) -> {
+      var entityRelationship = findErByMediaPid(currentMediaRelationships, mediaPid);
+      if (incomingMediaUris.contains(mediaUri)) {
+        unchangedMedia.add(entityRelationship);
       } else {
-        newMedia.add(findDigitalMediaEventByUri(digitalMediaEvents, mediaUri));
+        tombstoneMedia.add(entityRelationship);
       }
-    }
+    });
+    digitalMediaEvents.stream().filter(event -> !existingMediaMap.containsKey(
+            event.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()))
+        .forEach(newMedia::add);
+
+    log.info(
+        "Identified {} unchanged media relationships, {} tombstoned media relationships, and {} new media",
+        unchangedMedia.size(), tombstoneMedia.size(), newMedia.size());
     return new DigitalMediaProcessResult(unchangedMedia, tombstoneMedia, newMedia);
+  }
+
+  public void removeSpecimenRelationshipsFromMedia(
+      Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords) {
+    var mediaIds = updatedDigitalSpecimenRecords.stream()
+        .map(specimenRecord -> specimenRecord.digitalMediaProcessResult().tombstoneMedia())
+        .flatMap(List::stream)
+        .map(EntityRelationship::getDwcRelatedResourceID)
+        .toList();
+    if (!mediaIds.isEmpty()) {
+      log.info("Removing {} tombstoned media relationships from database", mediaIds.size());
+      mediaRepository.removeSpecimenRelationshipsFromMedia(mediaIds);
+    }
   }
 
   private static EntityRelationship findErByMediaPid(List<EntityRelationship> entityRelationships,
@@ -54,17 +78,5 @@ public class DigitalMediaService {
     }
     throw new IllegalStateException();
   }
-
-  private static DigitalMediaEventWithoutDOI findDigitalMediaEventByUri(
-      List<DigitalMediaEventWithoutDOI> digitalMediaEvents, String mediaUri) {
-    for (var digitalMediaEvent : digitalMediaEvents) {
-      if (digitalMediaEvent.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()
-          .equals(mediaUri)) {
-        return digitalMediaEvent;
-      }
-    }
-    throw new IllegalStateException();
-  }
-
 
 }
