@@ -173,7 +173,7 @@ public class HandleComponent {
       }
       return handleNames;
     } catch (NullPointerException | JsonProcessingException e) {
-      log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+      log.error(UNEXPECTED_LOG, handleResponse.toPrettyString(), e);
       throw new PidException(UNEXPECTED_MSG);
     }
   }

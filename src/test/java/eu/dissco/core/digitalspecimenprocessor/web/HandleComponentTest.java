@@ -8,6 +8,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -67,12 +68,86 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // When
-    var response = handleComponent.postHandle(requestBody
-    );
+    var response = handleComponent.postHandle(requestBody);
 
     // Then
     assertThat(response).isEqualTo(expected);
   }
+
+  @Test
+  void testPostMediaHandle() throws Exception {
+    // Given
+    var expected = givenMediaPidResponse();
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
+        .setBody("""
+            {
+              "data": [{
+                "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
+                "attributes": {
+                  "digitalMediaKey": {
+                    "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
+                    "mediaUrl":"https://an-image.org"
+                  }
+                }
+              }]
+            }
+            """)
+        .addHeader("Content-Type", "application/json"));
+
+    // When
+    var response = handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode()));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
+  void testPostMediaHandleBadResponse() {
+    // Given
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
+        .setBody("""
+            {
+              "data": {
+                "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
+                "attributes": {
+                  "digitalMediaKey": {
+                    "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
+                    "mediaUrl":"https://an-image.org"
+                  }
+                }
+              }
+            }
+            """)
+        .addHeader("Content-Type", "application/json"));
+
+    // When / Then
+    assertThrows(PidException.class,
+        () -> handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode())));
+  }
+
+  @Test
+  void testPostMediaHandleNPE() {
+    // Given
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
+        .setBody("""
+            {
+              "data": {
+                "attributes": {
+                  "digitalMediaKey": {
+                    "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
+                    "mediaUrl":"https://an-image.org"
+                  }
+                }
+              }
+            }
+            """)
+        .addHeader("Content-Type", "application/json"));
+
+    // When / Then
+    assertThrows(PidException.class,
+        () -> handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode())));
+  }
+
 
   @Test
   void testUpdateHandle() throws Exception {
