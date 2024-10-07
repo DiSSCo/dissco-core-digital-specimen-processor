@@ -11,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
 public class ApplicationProperties {
 
   @NotBlank
-  private String specimenBaseUrl;
+  private String specimenBaseUrl = "https://doi.org/";
 
   @NotBlank
   private String name = "dissco-core-digital-specimen-processor";

@@ -42,3 +42,19 @@ create table source_system
     translator_type translator_type,
     data jsonb not null
 );
+
+create table digital_media_object
+(
+    id                  text                     not null
+        constraint digital_media_object_pk
+            primary key,
+    version             integer                  not null,
+    type                text,
+    digital_specimen_id text                     not null,
+    media_url           text                     not null,
+    created             timestamp with time zone not null,
+    last_checked        timestamp with time zone not null,
+    deleted             timestamp with time zone,
+    data                jsonb                    not null,
+    original_data       jsonb                    not null
+);

@@ -9,7 +9,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_N
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.Event;

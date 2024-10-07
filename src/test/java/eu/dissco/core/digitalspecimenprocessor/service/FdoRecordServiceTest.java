@@ -11,9 +11,11 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributesPlusIdentifier;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
@@ -21,9 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenWrapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
@@ -53,7 +55,7 @@ class FdoRecordServiceTest {
   private static final String REPLACEMENT_ATTRIBUTE = "this is different";
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
   private MockedStatic<Instant> mockedStatic;
-  private FdoRecordService builder;
+  private FdoRecordService fdoRecordService;
   private MockedStatic<Clock> mockedClock;
 
   private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenDigitalSpecimenAttributesMinimal() {
@@ -96,7 +98,7 @@ class FdoRecordServiceTest {
 
   @BeforeEach
   void setup() {
-    builder = new FdoRecordService(MAPPER, new FdoProperties());
+    fdoRecordService = new FdoRecordService(MAPPER, new FdoProperties());
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     mockedStatic = mockStatic(Instant.class);
     mockedStatic.when(Instant::now).thenReturn(instant);
@@ -111,6 +113,33 @@ class FdoRecordServiceTest {
   }
 
   @Test
+  void testGenRequestMedia() throws Exception {
+    // Given
+    var expected = List.of(MAPPER.readTree("""
+        {
+          "data": {
+            "type": "https://doi.org/21.T11148/bbad8c4e101e8af01115",
+            "attributes": {
+              "issuedForAgent": "https://ror.org/0566bfb96",
+              "mediaHost": "https://ror.org/0443cwa12",
+              "isDerivedFromSpecimen": true,
+              "linkedDigitalObjectType": "digital specimen",
+              "linkedDigitalObjectPid": "20.5000.1025/V1Z-176-LL4",
+              "primaryMediaId": "https://an-image.org",
+              "licenseUrl":null
+            }
+          }
+        }
+        """));
+
+    // When
+    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(givenDigitalMediaEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(expected);
+  }
+
+  @Test
   void testGenRequestMinimal() throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -119,7 +148,7 @@ class FdoRecordServiceTest {
         List.of(givenHandleRequestMin()));
 
     // When
-    var response = builder.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -129,10 +158,11 @@ class FdoRecordServiceTest {
   void testBuildUpdateHandleRequest() throws Exception {
     // Given
     var tupleList = List.of(
-        new UpdatedDigitalSpecimenTuple(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
+        new UpdatedDigitalSpecimenTuple(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent(),
+            givenEmptyMediaProcessResult()));
 
     // When
-    var response = builder.buildUpdateHandleRequest(tupleList);
+    var response = fdoRecordService.buildUpdateHandleRequest(tupleList);
 
     // Then
     assertThat(response).isEqualTo(List.of(givenUpdateHandleRequest()));
@@ -148,7 +178,7 @@ class FdoRecordServiceTest {
         List.of(givenHandleRequestMin()));
 
     // When
-    var response = builder.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -176,7 +206,7 @@ class FdoRecordServiceTest {
         """);
 
     // When
-    var result = builder.buildRollbackUpdateRequest(List.of(specimenRecord));
+    var result = fdoRecordService.buildRollbackUpdateRequest(List.of(specimenRecord));
 
     // Then
     assertThat(result).isEqualTo(List.of(expected));
@@ -193,7 +223,7 @@ class FdoRecordServiceTest {
     var expected = new ArrayList<>(List.of(expectedJson));
 
     // When
-    var response = builder.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -234,7 +264,7 @@ class FdoRecordServiceTest {
     var expected = new ArrayList<>(List.of(expectedJson));
 
     // When
-    var response = builder.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -250,7 +280,7 @@ class FdoRecordServiceTest {
     var expected = new ArrayList<>(List.of(expectedJson));
 
     // When
-    var response = builder.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -263,7 +293,7 @@ class FdoRecordServiceTest {
     var expected = List.of(HANDLE);
 
     // When
-    var response = builder.buildRollbackCreationRequest(digitalSpecimenRecords);
+    var response = fdoRecordService.buildRollbackCreationRequest(digitalSpecimenRecords);
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -278,7 +308,8 @@ class FdoRecordServiceTest {
         givenDigitalSpecimenOriginalAttributesMinimal());
     // Then
     assertThat(
-        builder.handleNeedsUpdate(currentDigitalSpecimen, givenDigitalSpecimenWrapper())).isTrue();
+        fdoRecordService.handleNeedsUpdate(currentDigitalSpecimen,
+            givenDigitalSpecimenWrapper())).isTrue();
   }
 
   @Test
@@ -288,7 +319,7 @@ class FdoRecordServiceTest {
         null, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
 
     // Then
-    assertThat(builder.handleNeedsUpdate(
+    assertThat(fdoRecordService.handleNeedsUpdate(
         new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
             generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
   }
@@ -300,7 +331,8 @@ class FdoRecordServiceTest {
         ORGANISATION_ID, false);
 
     // When/then
-    assertThat(builder.handleNeedsUpdate(currentSpecimen, givenDigitalSpecimenWrapper())).isTrue();
+    assertThat(fdoRecordService.handleNeedsUpdate(currentSpecimen,
+        givenDigitalSpecimenWrapper())).isTrue();
   }
 
   private JsonNode getExpectedJson(Boolean markedAsType) throws Exception {
