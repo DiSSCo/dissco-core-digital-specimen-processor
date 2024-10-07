@@ -17,7 +17,8 @@ public enum FdoProfileAttributes {
   LIVING_OR_PRESERVED("livingOrPreserved"),
   MARKED_AS_TYPE("markedAsType"),
   SOURCE_SYSTEM_ID("sourceSystemId"),
-  PRIMARY_MEDIA_ID("primaryMediaId");
+  PRIMARY_MEDIA_ID("primaryMediaId"),
+  DIGITAL_MEDIA_KEY("digitalMediaKey");
 
   private final String attribute;
 

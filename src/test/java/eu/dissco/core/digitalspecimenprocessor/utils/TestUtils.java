@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -37,6 +38,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 public class TestUtils {
 
@@ -53,6 +56,7 @@ public class TestUtils {
   public static final String MAS = "OCR";
   public static final String TYPE = "https://doi.org/21.T11148/894b1e6cad57e921764e";
   public static final String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
+  public static final String PHYSICAL_SPECIMEN_ID_ALT = "A second specimen";
   public static final OdsPhysicalSpecimenIDType PHYSICAL_SPECIMEN_TYPE = OdsPhysicalSpecimenIDType.GLOBAL;
   public static final String SPECIMEN_NAME = "Biota";
   public static final String ANOTHER_SPECIMEN_NAME = "Another SpecimenName";
@@ -127,13 +131,18 @@ public class TestUtils {
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
       String physicalId, boolean addOtherEntityRelationship, int version) {
+    return givenDigitalSpecimenRecordWithMediaEr(handle, physicalId, addOtherEntityRelationship,
+        version, MEDIA_PID);
+  }
+
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
+      String physicalId, boolean addOtherEntityRelationship, int version, String mediaId) {
     return new DigitalSpecimenRecord(
         handle,
         MIDS_LEVEL,
         version,
         CREATED,
-        givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship)
-    );
+        givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship, mediaId));
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
@@ -218,13 +227,36 @@ public class TestUtils {
         Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
   }
 
+  public static Map<String, DigitalMediaProcessResult> givenEmptyMediaProcessResultMap(
+      List<String> handles) {
+    var processMap = new HashMap<String, DigitalMediaProcessResult>();
+    for (var handle : handles) {
+      processMap.put(handle, givenEmptyMediaProcessResult());
+    }
+    return processMap;
+  }
+
+  public static Map<String, DigitalMediaProcessResult> givenEmptyMediaProcessResultMap() {
+    return Map.of(HANDLE, givenEmptyMediaProcessResult());
+  }
+
+
   public static DigitalMediaProcessResult givenMediaProcessResultNew(
-      List<DigitalSpecimenEvent> events) {
+      DigitalSpecimenEvent event) {
     return new DigitalMediaProcessResult(
         Collections.emptyList(),
         Collections.emptyList(),
-        events.stream().map(DigitalSpecimenEvent::digitalMediaEvents).flatMap(List::stream).toList()
+        event.digitalMediaEvents()
     );
+  }
+
+  public static Map<String, DigitalMediaProcessResult> givenMediaProcessResultMapNew(
+      Map<String, DigitalSpecimenEvent> events) {
+    return events.entrySet().stream()
+        .collect(Collectors.toMap(
+            Entry::getKey,
+            e -> givenMediaProcessResultNew(e.getValue())
+        ));
   }
 
   public static DigitalMediaProcessResult givenMediaProcessResultUnchanged(
@@ -261,6 +293,12 @@ public class TestUtils {
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId,
       Boolean addOtherEntityRelationship) {
+    return givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship,
+        MEDIA_PID);
+  }
+
+  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId,
+      Boolean addOtherEntityRelationship, String mediaId) {
     var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true,
         addOtherEntityRelationship);
     var entityRelationships = new ArrayList<>(attributes.getOdsHasEntityRelationship());
@@ -274,8 +312,8 @@ public class TestUtils {
                 .withType(Type.AS_APPLICATION)
                 .withId(APP_HANDLE)
                 .withSchemaName(APP_NAME))
-            .withDwcRelatedResourceID(MEDIA_PID)
-            .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
+            .withDwcRelatedResourceID(mediaId)
+            .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + mediaId))
     );
     attributes.setOdsHasEntityRelationship(entityRelationships);
     return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
@@ -395,6 +433,16 @@ public class TestUtils {
     Map<String, String> response = new HashMap<>();
     for (var specimenRecord : records) {
       response.put(specimenRecord.digitalSpecimenWrapper().physicalSpecimenID(),
+          specimenRecord.id());
+    }
+    return response;
+  }
+
+  public static Map<DigitalMediaKey, String> givenHandleComponentResponseMedia(
+      List<DigitalSpecimenRecord> records) {
+    Map<DigitalMediaKey, String> response = new HashMap<>();
+    for (var specimenRecord : records) {
+      response.put(new DigitalMediaKey(null, null),
           specimenRecord.id());
     }
     return response;
@@ -565,8 +613,8 @@ public class TestUtils {
         "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Biota\"}]");
   }
 
-  public static Map<String, String> givenMediaPidResponse() {
-    return Map.of(MEDIA_URL, MEDIA_PID);
+  public static Map<DigitalMediaKey, String> givenMediaPidResponse() {
+    return Map.of(new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID);
   }
 
 }

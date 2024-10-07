@@ -5,10 +5,10 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.Map;
 import org.jooq.JSONB;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +32,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
   void testGetDigitalMediaDois() {
     // Given
     populateDb();
-    var expected = Map.of(MEDIA_URL, MEDIA_PID);
+    var expected = givenMediaPidResponse();
 
     // When
     var result = mediaRepository.getDigitalMediaUrisFromId(List.of(MEDIA_PID));

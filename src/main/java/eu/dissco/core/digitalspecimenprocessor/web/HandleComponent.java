@@ -1,6 +1,12 @@
 package eu.dissco.core.digitalspecimenprocessor.web;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.DIGITAL_MEDIA_KEY;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -30,17 +36,27 @@ public class HandleComponent {
   @Qualifier("handleClient")
   private final WebClient handleClient;
   private final TokenAuthenticator tokenAuthenticator;
+  private final ObjectMapper mapper;
 
   private static final String UNEXPECTED_MSG = "Unexpected response from handle API";
   private static final String UNEXPECTED_LOG = "Unexpected response from Handle API. Missing id and/or primarySpecimenObjectId. Response: {}";
 
-  public Map<String, String> postHandle(List<JsonNode> request, String keyAttribute)
+  public Map<String, String> postHandle(List<JsonNode> request)
       throws PidException {
     log.info("Posting Digital Specimens to Handle API");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.POST, requestBody, "batch");
     var responseJsonNode = getFutureResponse(response);
-    return getHandleName(responseJsonNode, keyAttribute);
+    return getHandleName(responseJsonNode);
+  }
+
+  public Map<DigitalMediaKey, String> postMediaHandle(List<JsonNode> request)
+      throws PidException {
+    log.info("Posting Digital Specimens to Handle API");
+    var requestBody = BodyInserters.fromValue(request);
+    var response = sendRequest(HttpMethod.POST, requestBody, "batch");
+    var responseJsonNode = getFutureResponse(response);
+    return getHandleNameMedia(responseJsonNode);
   }
 
   public void updateHandle(List<JsonNode> request)
@@ -111,7 +127,7 @@ public class HandleComponent {
     }
   }
 
-  private HashMap<String, String> getHandleName(JsonNode handleResponse, String keyAttribute)
+  private HashMap<String, String> getHandleName(JsonNode handleResponse)
       throws PidException {
     try {
       var dataNode = handleResponse.get("data");
@@ -122,7 +138,8 @@ public class HandleComponent {
       }
       for (var node : dataNode) {
         var handle = node.get("id");
-        var localId = node.get("attributes").get(keyAttribute);
+        var localId = node.get("attributes")
+            .get(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
         if (handle == null || localId == null) {
           log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
           throw new PidException(UNEXPECTED_MSG);
@@ -131,6 +148,31 @@ public class HandleComponent {
       }
       return handleNames;
     } catch (NullPointerException e) {
+      log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+      throw new PidException(UNEXPECTED_MSG);
+    }
+  }
+
+  private HashMap<DigitalMediaKey, String> getHandleNameMedia(JsonNode handleResponse)
+      throws PidException {
+    try {
+      var dataNode = handleResponse.get("data");
+      HashMap<DigitalMediaKey, String> handleNames = new HashMap<>();
+      if (!dataNode.isArray()) {
+        log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+        throw new PidException(UNEXPECTED_MSG);
+      }
+      for (var node : dataNode) {
+        var handle = node.get("id");
+        var localId = node.get("attributes").get(DIGITAL_MEDIA_KEY.getAttribute());
+        if (handle == null || localId == null) {
+          log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+          throw new PidException(UNEXPECTED_MSG);
+        }
+        handleNames.put(mapper.treeToValue(localId, DigitalMediaKey.class), handle.asText());
+      }
+      return handleNames;
+    } catch (NullPointerException | JsonProcessingException e) {
       log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
       throw new PidException(UNEXPECTED_MSG);
     }

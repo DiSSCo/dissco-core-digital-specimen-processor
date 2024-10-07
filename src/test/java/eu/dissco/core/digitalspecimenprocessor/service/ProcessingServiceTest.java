@@ -1,7 +1,5 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_ORGANISATION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
@@ -12,6 +10,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
@@ -29,10 +28,11 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResultMap;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaProcessResultNew;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaProcessResultMapNew;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaProcessResultUnchanged;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,6 +56,7 @@ import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -157,8 +158,9 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenWithEntityRelationship()));
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        givenMediaProcessResultUnchanged(List.of(givenDigitalSpecimenEvent(true, true))));
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        Map.of(HANDLE,
+            givenMediaProcessResultUnchanged(List.of(givenDigitalSpecimenEvent(true, true)))));
 
     // When
     List<DigitalSpecimenRecord> result = service.handleMessages(
@@ -187,8 +189,8 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        givenEmptyMediaProcessResult());
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        Map.of(HANDLE, givenEmptyMediaProcessResult()));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -220,9 +222,9 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        new DigitalMediaProcessResult(List.of(), List.of(), currentMediaEvent));
-    given(handleComponent.postHandle(any(), any())).willReturn(givenMediaPidResponse());
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        Map.of(HANDLE, new DigitalMediaProcessResult(List.of(), List.of(), currentMediaEvent)));
+    given(handleComponent.postMediaHandle(any())).willReturn(givenMediaPidResponse());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -254,8 +256,8 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        new DigitalMediaProcessResult(List.of(), mediaEr, List.of()));
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        Map.of(HANDLE, new DigitalMediaProcessResult(List.of(), mediaEr, List.of())));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -283,8 +285,8 @@ class ProcessingServiceTest {
         List.of(MAS),
         givenDigitalSpecimenWrapperNoOriginalData(),
         List.of());
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        givenEmptyMediaProcessResult());
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        Map.of(HANDLE, givenEmptyMediaProcessResult()));
 
     // When
     var result = service.handleMessages(List.of(event));
@@ -296,7 +298,6 @@ class ProcessingServiceTest {
     then(repository).should().updateLastChecked(List.of(HANDLE));
     assertThat(result).isEmpty();
   }
-
 
   @Test
   void testHandleRecordDoesNotNeedUpdate() throws Exception {
@@ -310,8 +311,8 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(false);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        givenEmptyMediaProcessResult());
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        Map.of(HANDLE, givenEmptyMediaProcessResult()));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -341,10 +342,9 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
+    given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
-    given(handleComponent.postHandle(anyList(), eq(PRIMARY_MEDIA_ID.getAttribute())))
+    given(handleComponent.postMediaHandle(anyList()))
         .willReturn(givenMediaPidResponse());
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
@@ -369,8 +369,7 @@ class ProcessingServiceTest {
   void testNewSpecimenPidFailed() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()))).willThrow(PidException.class);
+    given(handleComponent.postHandle(anyList())).willThrow(PidException.class);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -385,8 +384,7 @@ class ProcessingServiceTest {
   void testNewSpecimenPidAndKafkaFailed() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()))).willThrow(PidException.class);
+    given(handleComponent.postHandle(anyList())).willThrow(PidException.class);
     doThrow(JsonProcessingException.class).when(kafkaService)
         .deadLetterEvent(givenDigitalSpecimenEvent());
 
@@ -415,8 +413,7 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
+    given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -424,8 +421,8 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenEvent(), duplicateSpecimen));
 
     // Then
-    verify(handleComponent, times(1)).postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    verify(handleComponent, times(1)).postHandle(anyList()
+    );
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
     then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
     then(kafkaService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
@@ -442,8 +439,7 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
     doThrow(PidException.class).when(handleComponent).rollbackHandleCreation(any());
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
+    given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -465,8 +461,7 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willThrow(
         IOException.class);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
+    given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -495,16 +490,16 @@ class ProcessingServiceTest {
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
+    given(handleComponent.postHandle(anyList()))
         .willReturn(Map.of(
             PHYSICAL_SPECIMEN_ID, HANDLE,
             secondPhysicalId, SECOND_HANDLE,
             thirdPhysicalId, THIRD_HANDLE
         ));
-    given(handleComponent.postHandle(anyList(), eq(PRIMARY_MEDIA_ID.getAttribute()))).willReturn(
-        Map.of(MEDIA_URL, MEDIA_PID)
-    );
+    given(handleComponent.postMediaHandle(any())).willReturn(Map.of(
+        new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID_ALT,
+        new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL), MEDIA_PID,
+        new DigitalMediaKey(THIRD_HANDLE, MEDIA_URL), MEDIA_PID));
 
     // When
     var result = service.handleMessages(
@@ -516,8 +511,7 @@ class ProcessingServiceTest {
     then(repository).should().rollbackSpecimen(secondSpecimen.id());
     then(fdoRecordService).should().buildRollbackCreationRequest(List.of(secondSpecimen));
     then(handleComponent).should().rollbackHandleCreation(any());
-    then(handleComponent).should().postHandle(any(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    then(handleComponent).should().postHandle(any());
     then(kafkaService).should()
         .deadLetterEvent(givenDigitalSpecimenEventWithMediaEr(secondPhysicalId));
     then(kafkaService).should()
@@ -535,8 +529,7 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
+    given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(bulkResponse.errors()).willReturn(false);
     given(
@@ -633,8 +626,12 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList()))
-        .willReturn(givenMediaProcessResultNew(events));
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList()))
+        .willReturn(givenMediaProcessResultMapNew(Map.of(
+            THIRD_HANDLE, thirdEvent,
+            SECOND_HANDLE, secondEvent,
+            HANDLE, firstEvent
+        )));
 
     // When
     var result = service.handleMessages(events);
@@ -666,8 +663,13 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        givenMediaProcessResultNew(events));
+    given(
+        digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        givenMediaProcessResultMapNew(Map.of(
+            THIRD_HANDLE, thirdEvent,
+            SECOND_HANDLE, secondEvent,
+            HANDLE, firstEvent
+        )));
     doThrow(PidException.class).when(handleComponent).rollbackHandleUpdate(any());
 
     // When
@@ -696,8 +698,9 @@ class ProcessingServiceTest {
         bulkResponse);
     doThrow(JsonProcessingException.class).when(kafkaService)
         .publishUpdateEvent(givenDigitalSpecimenRecord(2), givenJsonPatch());
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList()))
-        .willReturn(givenMediaProcessResultNew(List.of(givenDigitalSpecimenEvent())));
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList()))
+        .willReturn(givenMediaProcessResultMapNew(Map.of(
+            HANDLE, givenDigitalSpecimenEvent())));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -721,8 +724,8 @@ class ProcessingServiceTest {
         IOException.class);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList())).willReturn(
-        givenEmptyMediaProcessResult());
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
+        givenEmptyMediaProcessResultMap());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -744,8 +747,8 @@ class ProcessingServiceTest {
   void testNewSpecimenPidCreationException() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    doThrow(PidException.class).when(handleComponent).postHandle(any(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    doThrow(PidException.class).when(handleComponent).postHandle(any()
+    );
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -790,8 +793,11 @@ class ProcessingServiceTest {
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
     doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(anyList());
-    given(digitalMediaService.getExistingDigitalMedia(anyList(), anyList()))
-        .willReturn(givenMediaProcessResultNew(events));
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList()))
+        .willReturn(givenMediaProcessResultMapNew(Map.of(
+            THIRD_HANDLE, thirdEvent,
+            SECOND_HANDLE, secondEvent,
+            HANDLE, firstEvent)));
 
     // When
     var result = service.handleMessages(events);
@@ -812,8 +818,7 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList(),
-        eq(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute())))
+    given(handleComponent.postHandle(anyList()))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(any());
 

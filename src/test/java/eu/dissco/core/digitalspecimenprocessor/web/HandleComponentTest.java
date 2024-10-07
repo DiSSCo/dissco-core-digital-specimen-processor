@@ -53,7 +53,7 @@ class HandleComponentTest {
   void setup() {
     WebClient webClient = WebClient.create(
         String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
-    handleComponent = new HandleComponent(webClient, tokenAuthenticator);
+    handleComponent = new HandleComponent(webClient, tokenAuthenticator, MAPPER);
   }
 
   @Test
@@ -67,8 +67,8 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // When
-    var response = handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
+    var response = handleComponent.postHandle(requestBody
+    );
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -96,8 +96,8 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // Then
-    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -110,8 +110,8 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // Then
-    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -129,8 +129,8 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // When
-    var response = handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
+    var response = handleComponent.postHandle(requestBody
+    );
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -182,8 +182,8 @@ class HandleComponentTest {
 
     // When
     var response = assertThrows(PidException.class,
-        () -> handleComponent.postHandle(List.of(requestBody),
-            NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+        () -> handleComponent.postHandle(List.of(requestBody)
+        ));
 
     // Then
     assertThat(response).hasMessage(
@@ -203,8 +203,8 @@ class HandleComponentTest {
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
 
     // Then
-    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
     assertThat(mockHandleServer.getRequestCount() - requestCount).isEqualTo(4);
   }
 
@@ -219,8 +219,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -255,8 +255,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -290,8 +290,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -305,8 +305,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody,
-        NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   private HashMap<String, String> givenHandleNameResponse(JsonNode responseBody) {
