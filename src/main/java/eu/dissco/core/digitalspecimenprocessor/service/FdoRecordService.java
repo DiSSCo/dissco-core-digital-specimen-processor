@@ -57,6 +57,8 @@ public class FdoRecordService {
                       .put("isDerivedFromSpecimen", true)
                       .put("linkedDigitalObjectType", "digital specimen")
                       .put("linkedDigitalObjectPid", specimenId)
+                      .put("licenseUrl",
+                          media.digitalMediaObjectWithoutDoi().attributes().getDctermsLicense())
                       .put(PRIMARY_MEDIA_ID.getAttribute(), media.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()))
           ));
     }
