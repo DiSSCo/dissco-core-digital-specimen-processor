@@ -125,7 +125,8 @@ class FdoRecordServiceTest {
               "isDerivedFromSpecimen": true,
               "linkedDigitalObjectType": "digital specimen",
               "linkedDigitalObjectPid": "20.5000.1025/V1Z-176-LL4",
-              "primaryMediaId": "https://an-image.org"
+              "primaryMediaId": "https://an-image.org",
+              "licenseUrl":null
             }
           }
         }
