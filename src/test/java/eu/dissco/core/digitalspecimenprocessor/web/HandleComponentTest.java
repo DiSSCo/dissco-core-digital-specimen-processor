@@ -5,17 +5,15 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
+import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -60,8 +58,8 @@ class HandleComponentTest {
   @Test
   void testPostHandle() throws Exception {
     // Given
-    var requestBody = List.of(givenHandleRequestFullTypeStatus());
-    var responseBody = givenHandleRequest();
+    var requestBody = List.of(TestUtils.givenHandleRequest());
+    var responseBody = TestUtils.givenHandleRequest();
     var expected = givenHandleNameResponse(responseBody);
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
@@ -152,8 +150,8 @@ class HandleComponentTest {
   @Test
   void testUpdateHandle() throws Exception {
     // Given
-    var requestBody = List.of(givenUpdateHandleRequest());
-    var responseBody = givenHandleRequest();
+    var requestBody = List.of(TestUtils.givenHandleRequest());
+    var responseBody = TestUtils.givenHandleRequest();
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
@@ -165,7 +163,7 @@ class HandleComponentTest {
   @Test
   void testUnauthorized() throws Exception {
     // Given
-    var requestBody = List.of(givenHandleRequestFullTypeStatus());
+    var requestBody = List.of(TestUtils.givenHandleRequest());
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value())
         .addHeader("Content-Type", "application/json"));
@@ -179,7 +177,7 @@ class HandleComponentTest {
   void testBadRequest() throws Exception {
     // Given
     var requestBody = List.of(
-        givenHandleRequestFullTypeStatus());
+        TestUtils.givenHandleRequest());
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value())
         .addHeader("Content-Type", "application/json"));
@@ -193,8 +191,8 @@ class HandleComponentTest {
   void testRetriesSuccess() throws Exception {
     // Given
     var requestBody = List.of(
-        givenHandleRequestFullTypeStatus());
-    var responseBody = givenHandleRequest();
+        TestUtils.givenHandleRequest());
+    var responseBody = TestUtils.givenHandleRequest();
     var expected = givenHandleNameResponse(responseBody);
     int requestCount = mockHandleServer.getRequestCount();
 
@@ -247,7 +245,7 @@ class HandleComponentTest {
   void testInterruptedException() throws Exception {
     // Given
     var requestBody = givenHandleRequestMin();
-    var responseBody = givenHandleRequest();
+    var responseBody = TestUtils.givenHandleRequest();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
@@ -269,7 +267,7 @@ class HandleComponentTest {
   void testRetriesFail() throws Exception {
     // Given
     var requestBody = List.of(
-        givenHandleRequestFullTypeStatus());
+        TestUtils.givenHandleRequest());
     int requestCount = mockHandleServer.getRequestCount();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
@@ -287,7 +285,7 @@ class HandleComponentTest {
   void testDataNodeNotArray() throws Exception {
     // Given
     var requestBody = List.of(
-        givenHandleRequestFullTypeStatus());
+        TestUtils.givenHandleRequest());
     var responseBody = MAPPER.createObjectNode();
     responseBody.put("data", "val");
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
@@ -302,7 +300,7 @@ class HandleComponentTest {
   void testDataMissingId() throws Exception {
     // Given
     var requestBody = List.of(
-        givenHandleRequestFullTypeStatus());
+        TestUtils.givenHandleRequest());
     var responseBody = MAPPER.readTree("""
         {
           "data": [
@@ -338,7 +336,7 @@ class HandleComponentTest {
   void testDataMissingPhysicalId() throws Exception {
     // Given
     var requestBody = List.of(
-        givenHandleRequestFullTypeStatus());
+        TestUtils.givenHandleRequest());
     var responseBody = MAPPER.readTree("""
         {
           "data": [
@@ -373,7 +371,7 @@ class HandleComponentTest {
   void testEmptyResponse() throws Exception {
     // Given
     var requestBody = List.of(
-        givenHandleRequestFullTypeStatus());
+        TestUtils.givenHandleRequest());
     var responseBody = MAPPER.createObjectNode();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())

@@ -5,6 +5,7 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipT
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
@@ -449,49 +450,46 @@ public class TestUtils {
   }
 
   public static JsonNode givenUpdateHandleRequest() throws Exception {
-    return MAPPER.readTree("""
-        {
-          "data": 
-            {
-              "id": "20.5000.1025/V1Z-176-LL4",
-              "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
-              "attributes": {
-                "issuedForAgent": "https://ror.org/0566bfb96",
-                "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                "primarySpecimenObjectIdType":"Global",
-                "specimenHost": "https://ror.org/0443cwa12",
-                "specimenHostName": "National Museum of Natural History",
-                "primarySpecimenObjectIdType": "Global",
-                "topicDiscipline": "Botany",
-                "referentName": "Biota",
-                "livingOrPreserved": "Preserved",
-                "markedAsType": true
-              }
-            }
-        }
-        """);
+    return givenUpdateHandleRequest(null);
   }
 
-  public static JsonNode givenHandleRequestFullTypeStatus() throws Exception {
-    return MAPPER.readTree("""
+  public static JsonNode givenUpdateHandleRequest(Boolean markedAsType) throws Exception {
+    var attributes = givenHandleAttributes(markedAsType);
+    return MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("id", HANDLE)
+            .put("type", TYPE)
+            .set("attributes", attributes));
+  }
+
+  public static JsonNode givenHandleRequest() throws Exception {
+    return givenHandleRequest(null);
+  }
+
+  public static JsonNode givenHandleRequest(Boolean markedAsType) throws Exception {
+    var attributes = (ObjectNode) givenHandleAttributes(markedAsType);
+    return MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("type", TYPE)
+            .set("attributes", attributes));
+  }
+
+  public static JsonNode givenHandleAttributes(Boolean markedAsType) throws Exception {
+    var attributes = (ObjectNode) MAPPER.readTree("""
         {
-          "data": {
-            "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
-            "attributes": {
-              "issuedForAgent": "https://ror.org/0566bfb96",
-              "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-              "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-              "primarySpecimenObjectIdType": "Global",
-              "specimenHost": "https://ror.org/0443cwa12",
-              "specimenHostName": "National Museum of Natural History",
-              "topicDiscipline": "Botany",
-              "referentName": "Biota",
-              "livingOrPreserved": "Preserved",
-              "markedAsType":true
-            }
-          }
-        }""");
+          "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
+          "specimenHost": "https://ror.org/0443cwa12",
+          "specimenHostName": "National Museum of Natural History",
+          "topicDiscipline": "Botany",
+          "referentName": "Biota",
+          "livingOrPreserved": "Preserved",
+          "otherSpecimenIds":[{"identifierType":"physical specimen identifier","identifierValue": "https://geocollections.info/specimen/23602","resolvable":false}]
+        }
+        """);
+    if (markedAsType != null) {
+      attributes.put("markedAsType", markedAsType);
+    }
+    return attributes;
   }
 
   public static JsonNode givenHandleRequestMin() throws Exception {
@@ -500,39 +498,11 @@ public class TestUtils {
           "data": {
             "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
             "attributes": {
-              "issuedForAgent": "https://ror.org/0566bfb96",
-              "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-              "primarySpecimenObjectIdType":"Local",
-              "specimenHost": "https://ror.org/0443cwa12"
+              "specimenHost": "https://ror.org/0443cwa12",
+              "otherSpecimenIds":[{"identifierType":"physical specimen identifier","identifierValue": "https://geocollections.info/specimen/23602","resolvable":false}]
             }
           }
-        }
-        """);
-  }
-
-  public static JsonNode givenHandleRequest() throws Exception {
-    return MAPPER.readTree("""
-        {
-          "data": [
-            {
-              "id": "20.5000.1025/V1Z-176-LL4",
-              "type": "digitalSpecimen",
-              "attributes": {
-                "digitalObjectType": "https://doi.org/21.T11148/894b1e6cad57e921764ee",
-                "issuedForAgent": "https://ror.org/0566bfb96",
-                "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                "specimenHost": "https://ror.org/0443cwa12",
-                "specimenHostName": "National Museum of Natural History",
-                "primarySpecimenObjectIdType": "Global",
-                "referentName": "Biota",
-                "topicDiscipline": "Earth Systems",
-                "livingOrPreserved": "Living",
-                "markedAsType": true
-              }
-            }
-          ]
         }
         """);
   }
@@ -544,6 +514,7 @@ public class TestUtils {
         .withOdsOrganisationID(organisation)
         .withOdsOrganisationName("National Museum of Natural History")
         .withOdsPhysicalSpecimenIDType(PHYSICAL_SPECIMEN_TYPE)
+        .withOdsPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID)
         .withOdsNormalisedPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID)
         .withOdsSpecimenName(specimenName)
         .withOdsTopicDiscipline(TOPIC_DISCIPLINE)

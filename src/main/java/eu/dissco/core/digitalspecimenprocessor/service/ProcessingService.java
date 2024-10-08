@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationConfiguration.DATE_STRING;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
@@ -62,7 +63,6 @@ import org.springframework.stereotype.Service;
 public class ProcessingService {
 
   private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
-  private static final String DOI_STRING = "https://doi.org/";
   private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
       .withZone(ZoneOffset.UTC);
   private final DigitalSpecimenRepository repository;
@@ -666,7 +666,7 @@ public class ProcessingService {
           .attributes();
       var digitalMediaKey = new DigitalMediaKey(digitalSpecimenPid, attributes.getAcAccessURI());
       String mediaPid = mediaPidMap == null ? null :
-          DOI_STRING + mediaPidMap.get(digitalMediaKey);
+          DOI_PREFIX + mediaPidMap.get(digitalMediaKey);
       attributes.getOdsHasEntityRelationship().add(
           buildEntityRelationship(HAS_SPECIMEN.getName(), digitalSpecimenPid));
       var digitalMediaObjectEvent = new DigitalMediaEvent(
@@ -701,7 +701,7 @@ public class ProcessingService {
             .withId(applicationProperties.getPid())
             .withSchemaName(applicationProperties.getName()))
         .withDwcRelatedResourceID(relatedResourceId)
-        .withOdsRelatedResourceURI(URI.create(DOI_STRING + relatedResourceId));
+        .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedResourceId));
   }
 
   private void gatherDigitalMediaObjectForUpdatedRecords(
