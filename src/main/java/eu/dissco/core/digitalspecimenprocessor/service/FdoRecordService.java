@@ -1,9 +1,21 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LIVING_OR_PRESERVED;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MARKED_AS_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MIME_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_DISCIPLINE;
@@ -21,6 +33,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,6 +53,7 @@ public class FdoRecordService {
   private static final String DATA = "data";
   private final ObjectMapper mapper;
   private final FdoProperties fdoProperties;
+  private static final String URL_PATTERN = "http(s)://.+";
 
   private static boolean isEqualString(String currentValue, String newValue) {
     return currentValue != null && !currentValue.equals(newValue);
@@ -50,27 +64,47 @@ public class FdoRecordService {
   }
 
   public List<JsonNode> buildPostRequestMedia(String specimenId,
-      List<DigitalMediaEventWithoutDOI> digitalMedia) {
+      List<DigitalMediaEventWithoutDOI> digitalMediaList) {
     var requests = new ArrayList<JsonNode>();
-    for (var media : digitalMedia) {
-      requests.add(
-          mapper.createObjectNode().set("data",
-              mapper.createObjectNode()
-                  .put("type", fdoProperties.getMediaType())
-                  .set(ATTRIBUTES, mapper.createObjectNode()
-                      .put("mediaHost",
-                          media.digitalMediaObjectWithoutDoi().attributes().getOdsOrganisationID())
-                      .put("isDerivedFromSpecimen", true)
-                      .put("linkedDigitalObjectType", "digital specimen")
-                      .put("linkedDigitalObjectPid", specimenId)
-                      .put("licenseUrl",
-                          media.digitalMediaObjectWithoutDoi().attributes().getDctermsLicense())
-                      .put(PRIMARY_MEDIA_ID.getAttribute(),
-                          media.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()))
-          ));
+    for (var mediaEvent : digitalMediaList) {
+      var media = mediaEvent.digitalMediaObjectWithoutDoi().attributes();
+      var attributes = mapper.createObjectNode()
+          .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
+          .put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
+          .put(LINKED_DO_PID.getAttribute(), specimenId)
+          .put(LINKED_DO_TYPE.getAttribute(), fdoProperties.getSpecimenFdoType())
+          .put(PRIMARY_MEDIA_ID.getAttribute(), media.getAcAccessURI())
+          .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
+          .put(PRIMARY_MEDIA_ID_NAME.getAttribute(), "ac:accessURI")
+          .put(MEDIA_TYPE.getAttribute(), fdoProperties.getDefaultMediaType())
+          .put(MIME_TYPE.getAttribute(), media.getDctermsFormat());
+      setLicense(attributes, media);
+      setRightsHolder(attributes, media);
+      requests.add(mapper.createObjectNode().set("data",
+          mapper.createObjectNode()
+              .put("type", fdoProperties.getMediaFdoType())
+              .set(ATTRIBUTES, attributes)));
     }
     return requests;
   }
+
+  private static void setLicense(ObjectNode attributes, DigitalMedia media) {
+    if (media.getDctermsLicense() != null && media.getDctermsLicense().matches(URL_PATTERN)) {
+      attributes.put(LICENSE_ID.getAttribute(), media.getDctermsLicense());
+    } else if (media.getDctermsLicense() != null) {
+      attributes.put(LICENSE_NAME.getAttribute(), media.getDctermsLicense());
+    }
+  }
+
+  private static void setRightsHolder(ObjectNode attributes, DigitalMedia media) {
+    if (media.getDctermsRightsHolder() != null && media.getDctermsRightsHolder()
+        .matches(URL_PATTERN)) {
+      attributes.put(RIGHTS_HOLDER_ID.getAttribute(), media.getDctermsRightsHolder());
+    } else if (media.getDctermsRightsHolder() != null) {
+      attributes.put(RIGHTS_HOLDER_NAME.getAttribute(), media.getDctermsRightsHolder());
+    }
+  }
+
 
   public List<JsonNode> buildUpdateHandleRequest(
       List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
@@ -93,7 +127,7 @@ public class FdoRecordService {
   private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
     return mapper.createObjectNode()
         .set(DATA, mapper.createObjectNode()
-            .put(TYPE, fdoProperties.getSpecimenType())
+            .put(TYPE, fdoProperties.getSpecimenFdoType())
             .set(ATTRIBUTES, genRequestAttributes(specimen)));
   }
 
@@ -101,7 +135,7 @@ public class FdoRecordService {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put(ID, specimenTuple.currentSpecimen().id().replace(DOI_PREFIX, ""));
-    data.put(TYPE, fdoProperties.getSpecimenType());
+    data.put(TYPE, fdoProperties.getSpecimenFdoType());
     var attributes = genRequestAttributes(
         specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
     data.set(ATTRIBUTES, attributes);
@@ -113,7 +147,7 @@ public class FdoRecordService {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put(ID, specimen.id().replace(DOI_PREFIX, ""));
-    data.put(TYPE, fdoProperties.getSpecimenType());
+    data.put(TYPE, fdoProperties.getSpecimenFdoType());
     var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
     data.set(ATTRIBUTES, attributes);
     request.set(DATA, data);
@@ -174,7 +208,7 @@ public class FdoRecordService {
         otherSpecimenIds.add(new OtherSpecimenId(
             id.getDctermsTitle(),
             id.getDctermsIdentifier(),
-            id.getDctermsIdentifier().matches("http(s)://.+")
+            id.getDctermsIdentifier().matches(URL_PATTERN)
         ));
       }
     }

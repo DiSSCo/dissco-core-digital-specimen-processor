@@ -1,6 +1,5 @@
 package eu.dissco.core.digitalspecimenprocessor.web;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
@@ -11,12 +10,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
@@ -59,8 +59,8 @@ class HandleComponentTest {
   void testPostHandle() throws Exception {
     // Given
     var requestBody = List.of(TestUtils.givenHandleRequest());
-    var responseBody = TestUtils.givenHandleRequest();
-    var expected = givenHandleNameResponse(responseBody);
+    var responseBody = givenHandleResponse();
+    var expected = Map.of(PHYSICAL_SPECIMEN_ID, HANDLE);
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
@@ -192,8 +192,8 @@ class HandleComponentTest {
     // Given
     var requestBody = List.of(
         TestUtils.givenHandleRequest());
-    var responseBody = TestUtils.givenHandleRequest();
-    var expected = givenHandleNameResponse(responseBody);
+    var responseBody = givenHandleResponse();
+    var expected = Map.of(PHYSICAL_SPECIMEN_ID, HANDLE);
     int requestCount = mockHandleServer.getRequestCount();
 
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
@@ -202,8 +202,7 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // When
-    var response = handleComponent.postHandle(requestBody
-    );
+    var response = handleComponent.postHandle(requestBody);
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -358,7 +357,6 @@ class HandleComponentTest {
           ]
         }
         """);
-
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
@@ -382,14 +380,19 @@ class HandleComponentTest {
     ));
   }
 
-  private HashMap<String, String> givenHandleNameResponse(JsonNode responseBody) {
-    HashMap<String, String> handleNames = new HashMap<>();
-    for (var node : responseBody.get("data")) {
-      handleNames.put(
-          node.get("attributes").get(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute()).asText(),
-          node.get("id").asText());
-    }
-    return handleNames;
+  private JsonNode givenHandleResponse() throws JsonProcessingException {
+    return MAPPER.readTree("""
+        {
+          "data": [
+            {
+              "id": "20.5000.1025/V1Z-176-LL4",
+              "attributes": {
+                "normalisedPrimarySpecimenObjectId" : "https://geocollections.info/specimen/23602"
+              }
+            }
+          ]
+        }
+        """);
   }
 
 }

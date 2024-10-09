@@ -1,13 +1,19 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributesPlusIdentifier;
@@ -17,16 +23,21 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleAttributes;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleMediaRequest;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleMediaRequestAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
@@ -95,29 +106,54 @@ class FdoRecordServiceTest {
   }
 
   @Test
-  void testGenRequestMedia() throws Exception {
+  void testGenRequestMedia() {
     // Given
-    var expected = List.of(MAPPER.readTree("""
-        {
-          "data": {
-            "type": "https://doi.org/21.T11148/bbad8c4e101e8af01115",
-            "attributes": {
-              "mediaHost": "https://ror.org/0443cwa12",
-              "isDerivedFromSpecimen": true,
-              "linkedDigitalObjectType": "digital specimen",
-              "linkedDigitalObjectPid": "20.5000.1025/V1Z-176-LL4",
-              "primaryMediaId": "https://an-image.org",
-              "licenseUrl":null
-            }
-          }
-        }
-        """));
+    var expected = List.of(givenHandleMediaRequest());
 
     // When
     var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(givenDigitalMediaEvent()));
 
     // Then
     assertThat(result).isEqualTo(expected);
+  }
+
+  @ParameterizedTest
+  @MethodSource("genLicense")
+  void testGenRequestLicenseAndRightsHolder(String licenseField, String rightsHolderField,
+      String fieldValue) {
+    // Given
+    var media = new DigitalMediaEventWithoutDOI(
+        List.of("image-metadata"),
+        new DigitalMediaWithoutDOI(
+            "StillImage",
+            HANDLE,
+            new DigitalMedia()
+                .withAcAccessURI(MEDIA_URL)
+                .withOdsOrganisationID(ORGANISATION_ID)
+                .withDctermsLicense(fieldValue)
+                .withDctermsRightsHolder(fieldValue),
+            MAPPER.createObjectNode()
+        )
+    );
+    var expected = List.of(MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("type", TYPE_MEDIA)
+            .set("attributes", ((ObjectNode) givenHandleMediaRequestAttributes())
+                .put(licenseField, fieldValue)
+                .put(rightsHolderField, fieldValue))));
+
+    // When
+    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+
+    // Then
+    assertThat(result).isEqualTo(expected);
+  }
+
+  static Stream<Arguments> genLicense() {
+    return Stream.of(
+        Arguments.of(LICENSE_ID.getAttribute(), RIGHTS_HOLDER_ID.getAttribute(),
+            "https://spdx.org/licenses/Apache-2.0.html"),
+        Arguments.of(LICENSE_NAME.getAttribute(), RIGHTS_HOLDER_NAME.getAttribute(), "Apache 2.0"));
   }
 
   @Test

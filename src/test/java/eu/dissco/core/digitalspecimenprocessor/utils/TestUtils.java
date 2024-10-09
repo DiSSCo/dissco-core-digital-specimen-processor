@@ -1,6 +1,15 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MIME_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_TYPE;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -56,6 +65,7 @@ public class TestUtils {
   public static final Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
   public static final String MAS = "OCR";
   public static final String TYPE = "https://doi.org/21.T11148/894b1e6cad57e921764e";
+  public static final String TYPE_MEDIA = "https://doi.org/21.T11148/bbad8c4e101e8af01115";
   public static final String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
   public static final String PHYSICAL_SPECIMEN_ID_ALT = "A second specimen";
   public static final OdsPhysicalSpecimenIDType PHYSICAL_SPECIMEN_TYPE = OdsPhysicalSpecimenIDType.GLOBAL;
@@ -461,6 +471,27 @@ public class TestUtils {
             .put("type", TYPE)
             .set("attributes", attributes));
   }
+
+  public static JsonNode givenHandleMediaRequest() {
+    return MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("type", TYPE_MEDIA)
+            .set("attributes", givenHandleMediaRequestAttributes()));
+  }
+
+  public static JsonNode givenHandleMediaRequestAttributes() {
+    return MAPPER.createObjectNode()
+        .put(MEDIA_HOST.getAttribute(), ORGANISATION_ID)
+        .put(MEDIA_HOST_NAME.getAttribute(), (String) null)
+        .put(LINKED_DO_PID.getAttribute(), HANDLE)
+        .put(LINKED_DO_TYPE.getAttribute(), TYPE)
+        .put(PRIMARY_MEDIA_ID.getAttribute(), MEDIA_URL)
+        .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
+        .put(PRIMARY_MEDIA_ID_NAME.getAttribute(), "ac:accessURI")
+        .put(MEDIA_TYPE.getAttribute(), "image")
+        .put(MIME_TYPE.getAttribute(), (String) null);
+  }
+
 
   public static JsonNode givenHandleRequest() throws Exception {
     return givenHandleRequest(null);

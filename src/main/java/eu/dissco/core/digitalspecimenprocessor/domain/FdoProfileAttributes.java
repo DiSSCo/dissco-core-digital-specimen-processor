@@ -18,8 +18,19 @@ public enum FdoProfileAttributes {
   MARKED_AS_TYPE("markedAsType"),
 
   // Digital Media
-  SOURCE_SYSTEM_ID("sourceSystemId"),
+  MEDIA_HOST("mediaHost"),
+  MEDIA_HOST_NAME("mediaHostName"),
+  LINKED_DO_PID("linkedDigitalObjectPid"),
+  LINKED_DO_TYPE("linkedDigitalObjectType"),
   PRIMARY_MEDIA_ID("primaryMediaId"),
+  PRIMARY_MEDIA_ID_TYPE("primaryMediaIdType"),
+  PRIMARY_MEDIA_ID_NAME("primaryMediaIdName"),
+  MEDIA_TYPE("mediaType"),
+  MIME_TYPE("mimeType"),
+  LICENSE_NAME("licenseName"),
+  LICENSE_ID("licenseId"),
+  RIGHTS_HOLDER_ID("rightsHolderId"),
+  RIGHTS_HOLDER_NAME("rightsHolderName"),
   DIGITAL_MEDIA_KEY("digitalMediaKey");
 
   private final String attribute;

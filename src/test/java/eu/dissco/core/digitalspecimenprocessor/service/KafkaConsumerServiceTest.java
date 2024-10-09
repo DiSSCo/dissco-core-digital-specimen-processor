@@ -84,6 +84,7 @@ class KafkaConsumerServiceTest {
             "ods:type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
             "ods:attributes": {
               "ods:physicalSpecimenIDType": "Global",
+              "ods:physicalSpecimenID":"https://geocollections.info/specimen/23602",
               "ods:organisationID": "https://ror.org/0443cwa12",
               "ods:organisationName": "National Museum of Natural History",
               "ods:normalisedPhysicalSpecimenID": "https://geocollections.info/specimen/23602",
