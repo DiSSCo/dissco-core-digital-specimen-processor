@@ -53,7 +53,7 @@ public class FdoRecordService {
   private static final String DATA = "data";
   private final ObjectMapper mapper;
   private final FdoProperties fdoProperties;
-  private static final String URL_PATTERN = "http(s)://.+";
+  private static final String URL_PATTERN = "http(s)?://.+";
 
   private static boolean isEqualString(String currentValue, String newValue) {
     return currentValue != null && !currentValue.equals(newValue);
