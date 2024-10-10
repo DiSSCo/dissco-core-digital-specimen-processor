@@ -42,6 +42,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -132,9 +133,11 @@ public class ProcessingService {
       var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
       var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
       var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
-      var existingMediaProcessResult = digitalMediaService.getExistingDigitalMedia(currentSpecimens,
-          events.stream().map(DigitalSpecimenEvent::digitalMediaEvents).flatMap(List::stream)
-              .toList());
+      var mediaEvents = events.stream().map(DigitalSpecimenEvent::digitalMediaEvents)
+          .flatMap(List::stream).toList();
+      var existingMediaProcessResult = currentSpecimens.isEmpty() ?
+          new HashMap<String, DigitalMediaProcessResult>() :
+          digitalMediaService.getExistingDigitalMedia(currentSpecimens, mediaEvents);
       for (DigitalSpecimenEvent event : events) {
         var digitalSpecimenWrapper = event.digitalSpecimenWrapper();
         log.debug("ds: {}", digitalSpecimenWrapper);
@@ -257,7 +260,6 @@ public class ProcessingService {
       }
     });
     attributes.setOdsHasEntityRelationship(remainingEntityRelationships);
-
     return mediaEntityRelationships;
   }
 
@@ -666,7 +668,7 @@ public class ProcessingService {
           .attributes();
       var digitalMediaKey = new DigitalMediaKey(digitalSpecimenPid, attributes.getAcAccessURI());
       String mediaPid = mediaPidMap == null ? null :
-          DOI_PREFIX + mediaPidMap.get(digitalMediaKey);
+          mediaPidMap.get(digitalMediaKey);
       attributes.getOdsHasEntityRelationship().add(
           buildEntityRelationship(HAS_SPECIMEN.getName(), digitalSpecimenPid));
       var digitalMediaObjectEvent = new DigitalMediaEvent(
