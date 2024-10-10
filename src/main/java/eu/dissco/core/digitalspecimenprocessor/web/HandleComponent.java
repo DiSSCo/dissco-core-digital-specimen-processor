@@ -52,7 +52,7 @@ public class HandleComponent {
 
   public Map<DigitalMediaKey, String> postMediaHandle(List<JsonNode> request)
       throws PidException {
-    log.info("Posting Digital Specimens to Handle API");
+    log.info("Posting Digital Media to Handle API");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.POST, requestBody, "batch");
     var responseJsonNode = getFutureResponse(response);

@@ -37,8 +37,8 @@ public class DigitalMediaService {
         mediaMap.computeIfAbsent(mediaEvent.digitalMediaObjectWithoutDoi().physicalSpecimenID(),
             k -> new ArrayList<>()).add(mediaEvent)
     );
-    var mediaIds = getAllMediaIds(
-        currentSpecimens.values()); //DigitalMediaKey (specimenId, mediaUrl), mediaId
+    //DigitalMediaKey (specimenId, mediaUrl), mediaId
+    var mediaIds = getAllMediaIds(currentSpecimens.values());
     for (var entry : currentSpecimens.entrySet()) {
       var currentSpecimen = entry.getValue();
       // use physical specimen id to get relevant media events
@@ -46,7 +46,7 @@ public class DigitalMediaService {
           mediaMap.get(entry.getKey()) == null ?
               new ArrayList<DigitalMediaEventWithoutDOI>() : mediaMap.get(entry.getKey());
       var existingMediaForCurrentSpecimen = mediaIds.entrySet().stream()
-          .filter(e -> e.getKey().digitalSpecimenId().equals(currentSpecimen.id()))
+          .filter(mediaId -> mediaId.getKey().digitalSpecimenId().equals(currentSpecimen.id()))
           .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
       var processResult = getExistingDigitalMediaProcessResult(
           currentSpecimen.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship(),
@@ -56,14 +56,12 @@ public class DigitalMediaService {
     return mediaProcessResults;
   }
 
-
   /*
    In our (incoming) mediaEvents, we are missing mediaID but we have the url
    In the existing entity relationships in the specimen, we are missing the media url but we have the id
    This function gets the mediaUrls based on the media id from the ER
    That way we can match incoming media events to existing media objects and find which media are new
    */
-
   private Map<DigitalMediaKey, String> getAllMediaIds(
       Collection<DigitalSpecimenRecord> currentSpecimens) {
     var currentMediaIds = currentSpecimens.stream()
