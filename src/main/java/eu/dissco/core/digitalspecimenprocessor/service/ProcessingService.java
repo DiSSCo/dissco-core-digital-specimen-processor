@@ -616,8 +616,9 @@ public class ProcessingService {
     var totalErs = Stream.concat(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship()
             .stream()
+            // Filters out tombstoned media relations so we don't include then in the new version
             .filter(entityRelationship -> !mediaProcessResult.tombstoneMedia()
-                .contains(entityRelationship)), // remove tombstone ERs
+                .contains(entityRelationship)),
         newEntityRelationshipStream).toList();
     var existingAttributes = digitalSpecimenRecord.digitalSpecimenWrapper().attributes();
     existingAttributes.setOdsHasEntityRelationship(totalErs);

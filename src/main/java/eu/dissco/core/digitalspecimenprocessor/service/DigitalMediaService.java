@@ -37,8 +37,7 @@ public class DigitalMediaService {
         mediaMap.computeIfAbsent(mediaEvent.digitalMediaObjectWithoutDoi().physicalSpecimenID(),
             k -> new ArrayList<>()).add(mediaEvent)
     );
-    var mediaIds = getAllMediaIds(
-        currentSpecimens.values()); //DigitalMediaKey (specimenId, mediaUrl), mediaId
+    var mediaIds = getAllMediaIds(currentSpecimens.values());
     for (var entry : currentSpecimens.entrySet()) {
       var currentSpecimen = entry.getValue();
       // use physical specimen id to get relevant media events
@@ -63,7 +62,6 @@ public class DigitalMediaService {
    This function gets the mediaUrls based on the media id from the ER
    That way we can match incoming media events to existing media objects and find which media are new
    */
-
   private Map<DigitalMediaKey, String> getAllMediaIds(
       Collection<DigitalSpecimenRecord> currentSpecimens) {
     var currentMediaIds = currentSpecimens.stream()
