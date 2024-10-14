@@ -118,7 +118,7 @@ class FdoRecordServiceTest {
   }
 
   @ParameterizedTest
-  @MethodSource("genLicense")
+  @MethodSource("genLicenseAndRightsHolder")
   void testGenRequestLicenseAndRightsHolder(String licenseField, String rightsHolderField,
       String fieldValue) {
     // Given
@@ -149,7 +149,7 @@ class FdoRecordServiceTest {
     assertThat(result).isEqualTo(expected);
   }
 
-  static Stream<Arguments> genLicense() {
+  static Stream<Arguments> genLicenseAndRightsHolder() {
     return Stream.of(
         Arguments.of(LICENSE_ID.getAttribute(), RIGHTS_HOLDER_ID.getAttribute(),
             "https://spdx.org/licenses/Apache-2.0.html"),
