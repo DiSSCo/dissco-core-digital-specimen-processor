@@ -37,7 +37,6 @@ public class DigitalMediaService {
         mediaMap.computeIfAbsent(mediaEvent.digitalMediaObjectWithoutDoi().physicalSpecimenID(),
             k -> new ArrayList<>()).add(mediaEvent)
     );
-    //DigitalMediaKey (specimenId, mediaUrl), mediaId
     var mediaIds = getAllMediaIds(currentSpecimens.values());
     for (var entry : currentSpecimens.entrySet()) {
       var currentSpecimen = entry.getValue();

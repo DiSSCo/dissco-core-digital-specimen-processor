@@ -4,6 +4,8 @@ import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationC
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
@@ -64,6 +66,7 @@ import org.springframework.stereotype.Service;
 public class ProcessingService {
 
   private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
+  private static final String DOI_STRING = "https://doi.org/";
   private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
       .withZone(ZoneOffset.UTC);
   private final DigitalSpecimenRepository repository;
@@ -618,8 +621,9 @@ public class ProcessingService {
     var totalErs = Stream.concat(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship()
             .stream()
+            // Filters out tombstoned media relations so we don't include then in the new version
             .filter(entityRelationship -> !mediaProcessResult.tombstoneMedia()
-                .contains(entityRelationship)), // remove tombstone ERs
+                .contains(entityRelationship)),
         newEntityRelationshipStream).toList();
     var existingAttributes = digitalSpecimenRecord.digitalSpecimenWrapper().attributes();
     existingAttributes.setOdsHasEntityRelationship(totalErs);
