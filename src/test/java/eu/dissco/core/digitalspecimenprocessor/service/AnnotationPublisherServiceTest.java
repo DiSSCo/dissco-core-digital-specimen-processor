@@ -11,6 +11,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYS
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoAcceptedAnnotation;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenNewAcceptedAnnotation;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -20,7 +21,7 @@ import static org.mockito.Mockito.times;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.UpdatedDigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
@@ -230,7 +231,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            List.of(), null, jsonPatch, List.of())));
+            List.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
 
     // Then
     for (var expectedAnnotation : expectedAnnotations) {
@@ -248,7 +249,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            List.of(), null, givenLargeJsonPatch(), List.of())));
+            List.of(), null, givenLargeJsonPatch(), List.of(), givenEmptyMediaProcessResult())));
 
     // Then
     then(kafkaPublisherService).should(times(29))
@@ -270,7 +271,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            List.of(), null, jsonPatch, List.of())));
+            List.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
 
     // Then
     then(kafkaPublisherService).shouldHaveNoInteractions();

@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.util;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import java.util.Date;
 

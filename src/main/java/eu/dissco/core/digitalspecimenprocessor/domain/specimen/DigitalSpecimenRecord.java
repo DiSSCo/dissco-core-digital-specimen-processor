@@ -1,4 +1,4 @@
-package eu.dissco.core.digitalspecimenprocessor.domain;
+package eu.dissco.core.digitalspecimenprocessor.domain.specimen;
 
 import java.time.Instant;
 

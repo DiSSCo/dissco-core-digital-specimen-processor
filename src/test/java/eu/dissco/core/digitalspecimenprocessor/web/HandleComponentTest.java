@@ -8,14 +8,14 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidCreationException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +54,7 @@ class HandleComponentTest {
   void setup() {
     WebClient webClient = WebClient.create(
         String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
-    handleComponent = new HandleComponent(webClient, tokenAuthenticator);
+    handleComponent = new HandleComponent(webClient, tokenAuthenticator, MAPPER);
   }
 
   @Test
@@ -73,6 +73,81 @@ class HandleComponentTest {
     // Then
     assertThat(response).isEqualTo(expected);
   }
+
+  @Test
+  void testPostMediaHandle() throws Exception {
+    // Given
+    var expected = givenMediaPidResponse();
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
+        .setBody("""
+            {
+              "data": [{
+                "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
+                "attributes": {
+                  "digitalMediaKey": {
+                    "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
+                    "mediaUrl":"https://an-image.org"
+                  }
+                }
+              }]
+            }
+            """)
+        .addHeader("Content-Type", "application/json"));
+
+    // When
+    var response = handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode()));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
+  void testPostMediaHandleBadResponse() {
+    // Given
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
+        .setBody("""
+            {
+              "data": {
+                "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
+                "attributes": {
+                  "digitalMediaKey": {
+                    "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
+                    "mediaUrl":"https://an-image.org"
+                  }
+                }
+              }
+            }
+            """)
+        .addHeader("Content-Type", "application/json"));
+
+    // When / Then
+    assertThrows(PidException.class,
+        () -> handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode())));
+  }
+
+  @Test
+  void testPostMediaHandleNPE() {
+    // Given
+    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
+        .setBody("""
+            {
+              "data": {
+                "attributes": {
+                  "digitalMediaKey": {
+                    "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
+                    "mediaUrl":"https://an-image.org"
+                  }
+                }
+              }
+            }
+            """)
+        .addHeader("Content-Type", "application/json"));
+
+    // When / Then
+    assertThrows(PidException.class,
+        () -> handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode())));
+  }
+
 
   @Test
   void testUpdateHandle() throws Exception {
@@ -96,7 +171,8 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // Then
-    assertThrows(PidAuthenticationException.class, () -> handleComponent.postHandle(requestBody));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -109,7 +185,8 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -127,7 +204,8 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // When
-    var response = handleComponent.postHandle(requestBody);
+    var response = handleComponent.postHandle(requestBody
+    );
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -178,8 +256,9 @@ class HandleComponentTest {
     Thread.currentThread().interrupt();
 
     // When
-    var response = assertThrows(PidCreationException.class,
-        () -> handleComponent.postHandle(List.of(requestBody)));
+    var response = assertThrows(PidException.class,
+        () -> handleComponent.postHandle(List.of(requestBody)
+        ));
 
     // Then
     assertThat(response).hasMessage(
@@ -199,7 +278,8 @@ class HandleComponentTest {
     mockHandleServer.enqueue(new MockResponse().setResponseCode(501));
 
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
     assertThat(mockHandleServer.getRequestCount() - requestCount).isEqualTo(4);
   }
 
@@ -214,7 +294,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -249,7 +330,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -283,7 +365,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   @Test
@@ -297,7 +380,8 @@ class HandleComponentTest {
         .setBody(MAPPER.writeValueAsString(responseBody))
         .addHeader("Content-Type", "application/json"));
     // Then
-    assertThrows(PidCreationException.class, () -> handleComponent.postHandle(requestBody));
+    assertThrows(PidException.class, () -> handleComponent.postHandle(requestBody
+    ));
   }
 
   private HashMap<String, String> givenHandleNameResponse(JsonNode responseBody) {

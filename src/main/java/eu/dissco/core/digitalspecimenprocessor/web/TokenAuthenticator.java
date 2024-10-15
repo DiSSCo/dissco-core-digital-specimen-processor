@@ -1,7 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import eu.dissco.core.digitalspecimenprocessor.exception.PidAuthenticationException;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.TokenProperties;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -26,19 +26,19 @@ public class TokenAuthenticator {
   @Qualifier("tokenClient")
   private final WebClient tokenClient;
 
-  public String getToken() throws PidAuthenticationException {
+  public String getToken() throws PidException {
     var response = tokenClient
         .post()
         .body(BodyInserters.fromFormData(properties.getFromFormData()))
         .acceptCharset(StandardCharsets.UTF_8)
         .retrieve()
         .onStatus(HttpStatus.UNAUTHORIZED::equals,
-            r -> Mono.error(new PidAuthenticationException("Service is unauthorized.")))
+            r -> Mono.error(new PidException("Service is unauthorized.")))
         .bodyToMono(JsonNode.class)
         .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(2))
             .filter(WebClientUtils::is5xxServerError)
             .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) ->
-                new PidAuthenticationException(
+                new PidException(
                     "External Service failed to process after max retries")
             ));
     try {
@@ -47,18 +47,18 @@ public class TokenAuthenticator {
     } catch (InterruptedException | ExecutionException e) {
       Thread.currentThread().interrupt();
       log.info("Unable to authenticate processing service with Keycloak. Verify client secret is up to-date");
-      throw new PidAuthenticationException(
+      throw new PidException(
           "Unable to authenticate processing service with Keycloak. More information: "
               + e.getMessage());
     }
   }
 
-  private String getToken(JsonNode tokenNode) throws PidAuthenticationException {
+  private String getToken(JsonNode tokenNode) throws PidException {
     if (tokenNode != null && tokenNode.get("access_token") != null) {
       return tokenNode.get("access_token").asText();
     }
     log.debug("Unexpected response from keycloak server. Unable to parse access_token");
-    throw new PidAuthenticationException(
+    throw new PidException(
         "Unable to authenticate processing service with Keycloak. An error has occurred parsing keycloak response");
   }
 
