@@ -1,13 +1,19 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TOPIC_DISCIPLINE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributesPlusIdentifier;
@@ -16,21 +22,28 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestFullTypeStatus;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleAttributes;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleMediaRequest;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleMediaRequestAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
-import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDomain;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicOrigin;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -51,7 +64,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class FdoRecordServiceTest {
 
-  private static final String ORG_NAME = "National Museum of Natural History";
   private static final String REPLACEMENT_ATTRIBUTE = "this is different";
   private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
   private MockedStatic<Instant> mockedStatic;
@@ -62,27 +74,8 @@ class FdoRecordServiceTest {
     return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
         .withOdsOrganisationID(ORGANISATION_ID)
         .withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)
-        .withOdsNormalisedPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID);
-  }
-
-  private static JsonNode givenDigitalSpecimenOriginalAttributesMinimal() {
-    var attributeNode = MAPPER.createObjectNode();
-    attributeNode.put("ods:organisationId", ORGANISATION_ID);
-    return attributeNode;
-  }
-
-  private static JsonNode givenDigitalSpecimenAttributesFull(Boolean markedAsType) {
-    var attributeNode = MAPPER.createObjectNode();
-    attributeNode.put("ods:organisationId", ORGANISATION_ID);
-    attributeNode.put("ods:organisationName", ORG_NAME);
-    attributeNode.put("ods:specimenName", SPECIMEN_NAME);
-    attributeNode.put("ods:topicDiscipline", TOPIC_DISCIPLINE.value());
-    attributeNode.put("ods:physicalSpecimenIdType", "cetaf");
-    attributeNode.put("ods:livingOrPreserved", "Living");
-    if (markedAsType != null) {
-      attributeNode.put("ods:markedAsType", markedAsType);
-    }
-    return attributeNode;
+        .withOdsNormalisedPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID)
+        .withOdsPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID);
   }
 
   private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
@@ -113,24 +106,9 @@ class FdoRecordServiceTest {
   }
 
   @Test
-  void testGenRequestMedia() throws Exception {
+  void testGenRequestMedia() {
     // Given
-    var expected = List.of(MAPPER.readTree("""
-        {
-          "data": {
-            "type": "https://doi.org/21.T11148/bbad8c4e101e8af01115",
-            "attributes": {
-              "issuedForAgent": "https://ror.org/0566bfb96",
-              "mediaHost": "https://ror.org/0443cwa12",
-              "isDerivedFromSpecimen": true,
-              "linkedDigitalObjectType": "digital specimen",
-              "linkedDigitalObjectPid": "20.5000.1025/V1Z-176-LL4",
-              "primaryMediaId": "https://an-image.org",
-              "licenseUrl":null
-            }
-          }
-        }
-        """));
+    var expected = List.of(givenHandleMediaRequest());
 
     // When
     var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(givenDigitalMediaEvent()));
@@ -139,11 +117,50 @@ class FdoRecordServiceTest {
     assertThat(result).isEqualTo(expected);
   }
 
+  @ParameterizedTest
+  @MethodSource("genLicenseAndRightsHolder")
+  void testGenRequestLicenseAndRightsHolder(String licenseField, String rightsHolderField,
+      String fieldValue) {
+    // Given
+    var media = new DigitalMediaEventWithoutDOI(
+        List.of("image-metadata"),
+        new DigitalMediaWithoutDOI(
+            "StillImage",
+            HANDLE,
+            new DigitalMedia()
+                .withAcAccessURI(MEDIA_URL)
+                .withOdsOrganisationID(ORGANISATION_ID)
+                .withDctermsLicense(fieldValue)
+                .withDctermsRightsHolder(fieldValue),
+            MAPPER.createObjectNode()
+        )
+    );
+    var expected = List.of(MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("type", TYPE_MEDIA)
+            .set("attributes", ((ObjectNode) givenHandleMediaRequestAttributes())
+                .put(licenseField, fieldValue)
+                .put(rightsHolderField, fieldValue))));
+
+    // When
+    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+
+    // Then
+    assertThat(result).isEqualTo(expected);
+  }
+
+  static Stream<Arguments> genLicenseAndRightsHolder() {
+    return Stream.of(
+        Arguments.of(LICENSE_ID.getAttribute(), RIGHTS_HOLDER_ID.getAttribute(),
+            "https://spdx.org/licenses/Apache-2.0.html"),
+        Arguments.of(LICENSE_NAME.getAttribute(), RIGHTS_HOLDER_NAME.getAttribute(), "Apache 2.0"));
+  }
+
   @Test
   void testGenRequestMinimal() throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
+        givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
 
@@ -165,14 +182,14 @@ class FdoRecordServiceTest {
     var response = fdoRecordService.buildUpdateHandleRequest(tupleList);
 
     // Then
-    assertThat(response).isEqualTo(List.of(givenUpdateHandleRequest()));
+    assertThat(response).isEqualTo(List.of(givenUpdateHandleRequest(true)));
   }
 
   @Test
   void testGenRequestMinimalCombined() throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
+        givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
     specimen.attributes().setOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL);
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
@@ -186,24 +203,9 @@ class FdoRecordServiceTest {
 
   @Test
   void testRollbackUpdate() throws Exception {
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenDigitalSpecimenAttributesMinimal(), givenDigitalSpecimenOriginalAttributesMinimal());
+    var specimen = givenDigitalSpecimenWrapper();
     var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen);
-    var expected = MAPPER.readTree("""
-            {
-              "data": {
-                "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
-                "id":"20.5000.1025/V1Z-176-LL4",
-                "attributes": {
-                  "issuedForAgent": "https://ror.org/0566bfb96",
-                  "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                  "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-                  "primarySpecimenObjectIdType":"Local",
-                  "specimenHost": "https://ror.org/0443cwa12"
-                }
-              }
-            }
-        """);
+    var expected = givenUpdateHandleRequest(true);
 
     // When
     var result = fdoRecordService.buildRollbackUpdateRequest(List.of(specimenRecord));
@@ -217,10 +219,17 @@ class FdoRecordServiceTest {
   void testGenRequestFull(boolean markedAsType) throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false),
-        givenDigitalSpecimenAttributesFull(markedAsType));
-    var expectedJson = getExpectedJson(markedAsType);
-    var expected = new ArrayList<>(List.of(expectedJson));
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false)
+            .withOdsTopicDomain(OdsTopicDomain.EARTH_SYSTEM)
+            .withOdsTopicOrigin(OdsTopicOrigin.NATURAL),
+        ORIGINAL_DATA);
+    var expectedAttributes = (ObjectNode) givenHandleAttributes(markedAsType);
+    expectedAttributes.put("topicDomain", OdsTopicDomain.EARTH_SYSTEM.value());
+    expectedAttributes.put("topicOrigin", OdsTopicOrigin.NATURAL.value());
+    var expected = List.of(MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("type", TYPE)
+            .set("attributes", expectedAttributes)));
 
     // When
     var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
@@ -235,48 +244,26 @@ class FdoRecordServiceTest {
     var markedAsType = false;
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         givenAttributesPlusIdentifier(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
-        givenDigitalSpecimenAttributesFull(markedAsType));
+        ORIGINAL_DATA);
     var expectedJson = MAPPER.readTree(
         """
             {
               "data": {
                 "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
                 "attributes": {
-                  "issuedForAgent": "https://ror.org/0566bfb96",
-                  "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
                   "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-                  "primarySpecimenObjectIdType": "Global",
                   "specimenHost": "https://ror.org/0443cwa12",
                   "specimenHostName": "National Museum of Natural History",
                   "topicDiscipline": "Botany",
                   "referentName": "Biota",
                   "livingOrPreserved": "Preserved",
                   "markedAsType": false,
-                  "otherSpecimenIds": [{
-                    "identifierType": "Specimen label",
-                    "identifierValue": "20.5000.1025/V1Z-176-LL4"
-                  }]
+                  "otherSpecimenIds": [{"identifierType":"Specimen label","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},{"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]}}}]
                 }
               }
             }
             """
     );
-    var expected = new ArrayList<>(List.of(expectedJson));
-
-    // When
-    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
-
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
-
-  @Test
-  void testGenRequestFullTypeIsNull() throws Exception {
-    // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, null, false),
-        givenDigitalSpecimenAttributesFull(null));
-    var expectedJson = getExpectedJson(null);
     var expected = new ArrayList<>(List.of(expectedJson));
 
     // When
@@ -301,11 +288,10 @@ class FdoRecordServiceTest {
 
   @ParameterizedTest
   @MethodSource("digitalSpecimensNeedToBeChanged")
-  void testHandleNeedsUpdate(
-      eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen currentAttributes) {
+  void testHandleNeedsUpdate(DigitalSpecimen currentAttributes) {
     var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         currentAttributes,
-        givenDigitalSpecimenOriginalAttributesMinimal());
+        ORIGINAL_DATA);
     // Then
     assertThat(
         fdoRecordService.handleNeedsUpdate(currentDigitalSpecimen,
@@ -327,55 +313,11 @@ class FdoRecordServiceTest {
   @Test
   void testPhysicalSpecimenIdsDifferent() {
     // Given
-    var currentSpecimen = TestUtils.givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
+    var currentSpecimen = givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
         ORGANISATION_ID, false);
 
     // When/then
     assertThat(fdoRecordService.handleNeedsUpdate(currentSpecimen,
         givenDigitalSpecimenWrapper())).isTrue();
-  }
-
-  private JsonNode getExpectedJson(Boolean markedAsType) throws Exception {
-    if (markedAsType != null && markedAsType) {
-      return givenHandleRequestFullTypeStatus();
-    }
-    if (markedAsType != null) {
-      return MAPPER.readTree("""
-          {
-            "data": {
-              "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
-              "attributes": {
-                "issuedForAgent": "https://ror.org/0566bfb96",
-                "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-                "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-                "primarySpecimenObjectIdType": "Global",
-                "specimenHost": "https://ror.org/0443cwa12",
-                "specimenHostName": "National Museum of Natural History",
-                "topicDiscipline": "Botany",
-                "referentName": "Biota",
-                "livingOrPreserved": "Preserved",
-                "markedAsType": false
-              }
-            }
-          }
-          """);
-    }
-    return MAPPER.readTree("""
-        {
-          "data": {
-            "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
-            "attributes": {
-              "issuedForAgent": "https://ror.org/0566bfb96",
-              "primarySpecimenObjectId": "https://geocollections.info/specimen/23602",
-              "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-              "primarySpecimenObjectIdType": "Global",
-              "specimenHost": "https://ror.org/0443cwa12",
-              "specimenHostName": "National Museum of Natural History",
-              "topicDiscipline": "Botany",
-              "referentName": "Biota",
-              "livingOrPreserved": "Preserved"
-            }
-          }
-        }""");
   }
 }

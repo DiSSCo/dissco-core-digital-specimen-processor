@@ -5,7 +5,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SP
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
@@ -359,7 +358,7 @@ class ProcessingServiceTest {
     then(kafkaService).should()
         .publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecordWithMediaEr());
     then(kafkaService).should()
-        .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship(DOI_PREFIX + MEDIA_PID));
+        .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship(MEDIA_PID));
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecordWithMediaEr()));
     then(annotationPublisherService).should()
         .publishAnnotationNewSpecimen(Set.of(givenDigitalSpecimenRecordWithMediaEr()));
