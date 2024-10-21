@@ -45,7 +45,7 @@ public class DigitalMediaService {
           mediaMap.get(entry.getKey()) == null ?
               new ArrayList<DigitalMediaEventWithoutDOI>() : mediaMap.get(entry.getKey());
       var existingMediaForCurrentSpecimen = mediaIds.entrySet().stream()
-          .filter(e -> e.getKey().digitalSpecimenId().equals(currentSpecimen.id()))
+          .filter(mediaId -> mediaId.getKey().digitalSpecimenId().equals(currentSpecimen.id()))
           .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
       var processResult = getExistingDigitalMediaProcessResult(
           currentSpecimen.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship(),
@@ -54,7 +54,6 @@ public class DigitalMediaService {
     }
     return mediaProcessResults;
   }
-
 
   /*
    In our (incoming) mediaEvents, we are missing mediaID but we have the url
