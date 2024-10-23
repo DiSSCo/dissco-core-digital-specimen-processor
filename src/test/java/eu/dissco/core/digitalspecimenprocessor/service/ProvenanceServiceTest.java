@@ -60,7 +60,7 @@ class ProvenanceServiceTest {
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
     var digitalSpecimen = new DigitalSpecimenRecord(HANDLE, 2, 1, CREATED,
-        givenDigitalSpecimenWrapper(true));
+        givenDigitalSpecimenWrapper(true, false));
 
     // When
     var event = service.generateCreateEvent(digitalSpecimen);

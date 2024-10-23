@@ -98,6 +98,7 @@ class KafkaConsumerServiceTest {
               "dcterms:modified": "2022-11-01T09:59:24.000Z",
               "ods:topicDiscipline": "Botany",
               "ods:isMarkedAsType": true,
+              "ods:isKnownToContainMedia": false,
               "ods:livingOrPreserved": "Preserved"
             },
             "ods:originalAttributes": {

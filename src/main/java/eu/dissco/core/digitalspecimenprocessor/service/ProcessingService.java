@@ -209,7 +209,10 @@ public class ProcessingService {
       currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
-      digitalSpecimen.attributes().getOdsHasEntityRelationship().addAll(mediaRelationships);
+      var mediaRelations = new ArrayList<>(
+          digitalSpecimen.attributes().getOdsHasEntityRelationship());
+      mediaRelations.addAll(mediaRelationships);
+      currentDigitalSpecimen.attributes().setOdsHasEntityRelationship(mediaRelations);
       return false;
     }
   }
@@ -309,10 +312,14 @@ public class ProcessingService {
             .physicalSpecimenID(),
         DigitalSpecimenRecord::id
     ));
+    // Events contain the incoming media information, the record contains the id. We need to link both
+    // to publish media events
     for (var event : events) {
-      var digitalSpecimenPid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
-      var digitalMedia = event.digitalMediaEvents();
-      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, null);
+      if (pidMap.containsKey(event.digitalSpecimenWrapper().physicalSpecimenID())) {
+        var digitalSpecimenPid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
+        var digitalMedia = event.digitalMediaEvents();
+        publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, null);
+      }
     }
   }
 
@@ -721,13 +728,19 @@ public class ProcessingService {
       throws PidException {
     var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
     var request = fdoRecordService.buildPostHandleRequest(specimenList);
-    return handleComponent.postHandle(request
-    );
+    if (!request.isEmpty()) {
+      return handleComponent.postHandle(request);
+    } else {
+      return Map.of();
+    }
+
   }
 
   private Map<DigitalMediaKey, String> createMediaPidsForNewRecords(
       Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords) {
     var specimenMediaPairs = digitalSpecimenRecords.entrySet().stream()
+        .filter(specimenRecord -> specimenRecord.getKey().digitalSpecimenWrapper().attributes()
+            .getOdsIsKnownToContainMedia())
         .map(e -> Pair.of(e.getKey().id(),
             e.getValue().getRight())) // specimen id -> digitalMediaRecords
         .toList();

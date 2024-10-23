@@ -63,7 +63,7 @@ class KafkaPublisherServiceTest {
     // Given
 
     // When
-    service.publishUpdateEvent(givenDigitalSpecimenRecord(2), givenJsonPatch());
+    service.publishUpdateEvent(givenDigitalSpecimenRecord(2, false), givenJsonPatch());
 
     // Then
     then(kafkaTemplate).should().send(eq("createUpdateDeleteTopic"), anyString());

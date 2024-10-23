@@ -79,7 +79,7 @@ class FdoRecordServiceTest {
   }
 
   private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
-    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false);
+    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false);
     return Stream.of(Arguments.of(attributes.withOdsOrganisationID(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withOdsOrganisationName(REPLACEMENT_ATTRIBUTE)),
         Arguments.of(attributes.withOdsSpecimenName(REPLACEMENT_ATTRIBUTE)),
@@ -219,7 +219,7 @@ class FdoRecordServiceTest {
   void testGenRequestFull(boolean markedAsType) throws Exception {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false)
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false, false)
             .withOdsTopicDomain(OdsTopicDomain.EARTH_SYSTEM)
             .withOdsTopicOrigin(OdsTopicOrigin.NATURAL),
         ORIGINAL_DATA);
@@ -302,7 +302,7 @@ class FdoRecordServiceTest {
   void testHandleDoesNotNeedsUpdate() {
     // Given
     var currentDigitalSpecimen = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID,
-        null, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
+        null, false, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
 
     // Then
     assertThat(fdoRecordService.handleNeedsUpdate(
@@ -314,7 +314,7 @@ class FdoRecordServiceTest {
   void testPhysicalSpecimenIdsDifferent() {
     // Given
     var currentSpecimen = givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
-        ORGANISATION_ID, false);
+        ORGANISATION_ID, false, false);
 
     // When/then
     assertThat(fdoRecordService.handleNeedsUpdate(currentSpecimen,

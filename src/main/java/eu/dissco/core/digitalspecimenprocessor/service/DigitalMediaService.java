@@ -101,9 +101,13 @@ public class DigitalMediaService {
             new DigitalMediaKey(digitalSpecimenId,
                 event.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI())))
         .forEach(newMedia::add);
-    log.info(
-        "Identified {} unchanged media relationships, {} tombstoned media relationships, and {} new media for specimen {}",
-        unchangedMedia.size(), tombstoneMedia.size(), newMedia.size(), digitalSpecimenId);
+    if (!unchangedMedia.isEmpty() || !tombstoneMedia.isEmpty() || !newMedia.isEmpty()) {
+      log.info(
+          "Identified {} unchanged media relationships, {} tombstoned media relationships, and {} new media for specimen {}",
+          unchangedMedia.size(), tombstoneMedia.size(), newMedia.size(), digitalSpecimenId);
+    } else {
+      log.debug("No media relationships associated with specimen {}", digitalSpecimenId);
+    }
     return new DigitalMediaProcessResult(unchangedMedia, tombstoneMedia, newMedia);
   }
 
