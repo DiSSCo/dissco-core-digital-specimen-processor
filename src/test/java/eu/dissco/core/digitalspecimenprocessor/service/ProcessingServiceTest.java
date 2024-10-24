@@ -179,6 +179,27 @@ class ProcessingServiceTest {
     assertThat(result).isEmpty();
   }
 
+  @Test
+  void testEqualSpecimenNoMedia() throws DisscoRepositoryException {
+    // Given
+    given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenDigitalSpecimenRecord()));
+    given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(Map.of(
+        HANDLE, givenEmptyMediaProcessResult()));
+
+    // When
+    List<DigitalSpecimenRecord> result = service.handleMessages(
+        List.of(givenDigitalSpecimenEvent(false, false)));
+
+    // Then
+    verifyNoInteractions(handleComponent);
+    verifyNoInteractions(fdoRecordService);
+    verifyNoInteractions(annotationPublisherService);
+    then(repository).should().updateLastChecked(List.of(HANDLE));
+    then(kafkaService).shouldHaveNoInteractions();
+    assertThat(result).isEmpty();
+  }
+
   @ParameterizedTest
   @MethodSource("provideUnequalDigitalSpecimen")
   void testUnequalSpecimen(DigitalSpecimenRecord currentSpecimenRecord) throws Exception {
