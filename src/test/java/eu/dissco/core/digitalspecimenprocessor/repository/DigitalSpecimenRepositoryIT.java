@@ -72,7 +72,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
             givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
 
     // When
-    var result = repository.createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord(2)));
+    var result = repository.createDigitalSpecimenRecord(
+        List.of(givenDigitalSpecimenRecord(2, false)));
 
     // Then
     assertThat(result).isEqualTo(new int[]{1});
