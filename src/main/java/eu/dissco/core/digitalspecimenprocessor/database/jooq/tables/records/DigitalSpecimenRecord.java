@@ -215,6 +215,20 @@ public class DigitalSpecimenRecord extends UpdatableRecordImpl<DigitalSpecimenRe
         return (JSONB) get(13);
     }
 
+  /**
+   * Setter for <code>public.digital_specimen.modified</code>.
+   */
+  public void setModified(Instant value) {
+    set(14, value);
+  }
+
+  /**
+   * Getter for <code>public.digital_specimen.modified</code>.
+   */
+  public Instant getModified() {
+    return (Instant) get(14);
+  }
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -238,8 +252,11 @@ public class DigitalSpecimenRecord extends UpdatableRecordImpl<DigitalSpecimenRe
     /**
      * Create a detached, initialised DigitalSpecimenRecord
      */
-    public DigitalSpecimenRecord(String id, Integer version, String type, Short midslevel, String physicalSpecimenId, String physicalSpecimenType, String specimenName, String organizationId, String sourceSystemId, Instant created, Instant lastChecked, Instant deleted, JSONB data, JSONB originalData) {
-        super(DigitalSpecimen.DIGITAL_SPECIMEN);
+    public DigitalSpecimenRecord(String id, Integer version, String type, Short midslevel,
+        String physicalSpecimenId, String physicalSpecimenType, String specimenName,
+        String organizationId, String sourceSystemId, Instant created, Instant lastChecked,
+        Instant deleted, JSONB data, JSONB originalData, Instant modified) {
+      super(DigitalSpecimen.DIGITAL_SPECIMEN);
 
         setId(id);
         setVersion(version);
@@ -255,6 +272,7 @@ public class DigitalSpecimenRecord extends UpdatableRecordImpl<DigitalSpecimenRe
         setDeleted(deleted);
         setData(data);
         setOriginalData(originalData);
-        resetChangedOnNotNull();
+      setModified(modified);
+      resetChangedOnNotNull();
     }
 }

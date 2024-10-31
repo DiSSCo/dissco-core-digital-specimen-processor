@@ -123,6 +123,12 @@ public class DigitalSpecimen extends TableImpl<DigitalSpecimenRecord> {
      */
     public final TableField<DigitalSpecimenRecord, JSONB> ORIGINAL_DATA = createField(DSL.name("original_data"), SQLDataType.JSONB, this, "");
 
+    /**
+     * The column <code>public.digital_specimen.modified</code>.
+     */
+    public final TableField<DigitalSpecimenRecord, Instant> MODIFIED = createField(
+        DSL.name("modified"), SQLDataType.INSTANT, this, "");
+
     private DigitalSpecimen(Name alias, Table<DigitalSpecimenRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

@@ -77,44 +77,44 @@ public class SourceSystemRecord extends UpdatableRecordImpl<SourceSystemRecord> 
     }
 
     /**
-     * Setter for <code>public.source_system.date_created</code>.
+     * Setter for <code>public.source_system.created</code>.
      */
-    public void setDateCreated(Instant value) {
+    public void setCreated(Instant value) {
         set(4, value);
     }
 
     /**
-     * Getter for <code>public.source_system.date_created</code>.
+     * Getter for <code>public.source_system.created</code>.
      */
-    public Instant getDateCreated() {
+    public Instant getCreated() {
         return (Instant) get(4);
     }
 
     /**
-     * Setter for <code>public.source_system.date_modified</code>.
+     * Setter for <code>public.source_system.modified</code>.
      */
-    public void setDateModified(Instant value) {
+    public void setModified(Instant value) {
         set(5, value);
     }
 
     /**
-     * Getter for <code>public.source_system.date_modified</code>.
+     * Getter for <code>public.source_system.modified</code>.
      */
-    public Instant getDateModified() {
+    public Instant getModified() {
         return (Instant) get(5);
     }
 
     /**
-     * Setter for <code>public.source_system.date_tombstoned</code>.
+     * Setter for <code>public.source_system.tombstoned</code>.
      */
-    public void setDateTombstoned(Instant value) {
+    public void setTombstoned(Instant value) {
         set(6, value);
     }
 
     /**
-     * Getter for <code>public.source_system.date_tombstoned</code>.
+     * Getter for <code>public.source_system.tombstoned</code>.
      */
-    public Instant getDateTombstoned() {
+    public Instant getTombstoned() {
         return (Instant) get(6);
     }
 
@@ -197,16 +197,18 @@ public class SourceSystemRecord extends UpdatableRecordImpl<SourceSystemRecord> 
     /**
      * Create a detached, initialised SourceSystemRecord
      */
-    public SourceSystemRecord(String id, Integer version, String name, String endpoint, Instant dateCreated, Instant dateModified, Instant dateTombstoned, String mappingId, String creator, TranslatorType translatorType, JSONB data) {
+    public SourceSystemRecord(String id, Integer version, String name, String endpoint,
+        Instant created, Instant modified, Instant tombstoned, String mappingId, String creator,
+        TranslatorType translatorType, JSONB data) {
         super(SourceSystem.SOURCE_SYSTEM);
 
         setId(id);
         setVersion(version);
         setName(name);
         setEndpoint(endpoint);
-        setDateCreated(dateCreated);
-        setDateModified(dateModified);
-        setDateTombstoned(dateTombstoned);
+      setCreated(created);
+      setModified(modified);
+      setTombstoned(tombstoned);
         setMappingId(mappingId);
         setCreator(creator);
         setTranslatorType(translatorType);

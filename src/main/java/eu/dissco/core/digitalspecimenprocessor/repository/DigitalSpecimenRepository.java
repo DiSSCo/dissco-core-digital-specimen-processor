@@ -85,6 +85,7 @@ public class DigitalSpecimenRepository {
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID())
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
+        .set(DIGITAL_SPECIMEN.MODIFIED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA, mapToJsonB(digitalSpecimenRecord))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(
@@ -106,6 +107,7 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID,
             digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID())
         .set(DIGITAL_SPECIMEN.CREATED, digitalSpecimenRecord.created())
+        .set(DIGITAL_SPECIMEN.MODIFIED, Instant.now())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,
             mapToJsonB(digitalSpecimenRecord));

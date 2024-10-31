@@ -71,19 +71,22 @@ public class SourceSystem extends TableImpl<SourceSystemRecord> {
     public final TableField<SourceSystemRecord, String> ENDPOINT = createField(DSL.name("endpoint"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.source_system.date_created</code>.
+     * The column <code>public.source_system.created</code>.
      */
-    public final TableField<SourceSystemRecord, Instant> DATE_CREATED = createField(DSL.name("date_created"), SQLDataType.INSTANT.nullable(false), this, "");
+    public final TableField<SourceSystemRecord, Instant> CREATED = createField(DSL.name("created"),
+        SQLDataType.INSTANT.nullable(false), this, "");
 
     /**
-     * The column <code>public.source_system.date_modified</code>.
+     * The column <code>public.source_system.modified</code>.
      */
-    public final TableField<SourceSystemRecord, Instant> DATE_MODIFIED = createField(DSL.name("date_modified"), SQLDataType.INSTANT.nullable(false), this, "");
+    public final TableField<SourceSystemRecord, Instant> MODIFIED = createField(
+        DSL.name("modified"), SQLDataType.INSTANT.nullable(false), this, "");
 
     /**
-     * The column <code>public.source_system.date_tombstoned</code>.
+     * The column <code>public.source_system.tombstoned</code>.
      */
-    public final TableField<SourceSystemRecord, Instant> DATE_TOMBSTONED = createField(DSL.name("date_tombstoned"), SQLDataType.INSTANT, this, "");
+    public final TableField<SourceSystemRecord, Instant> TOMBSTONED = createField(
+        DSL.name("tombstoned"), SQLDataType.INSTANT, this, "");
 
     /**
      * The column <code>public.source_system.mapping_id</code>.

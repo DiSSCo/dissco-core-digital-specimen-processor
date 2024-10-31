@@ -15,10 +15,10 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.SourceSystem
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class Tables {
 
-  /**
-   * The table <code>public.digital_media_object</code>.
-   */
-  public static final DigitalMediaObject DIGITAL_MEDIA_OBJECT = DigitalMediaObject.DIGITAL_MEDIA_OBJECT;
+    /**
+     * The table <code>public.digital_media_object</code>.
+     */
+    public static final DigitalMediaObject DIGITAL_MEDIA_OBJECT = DigitalMediaObject.DIGITAL_MEDIA_OBJECT;
 
     /**
      * The table <code>public.digital_specimen</code>.

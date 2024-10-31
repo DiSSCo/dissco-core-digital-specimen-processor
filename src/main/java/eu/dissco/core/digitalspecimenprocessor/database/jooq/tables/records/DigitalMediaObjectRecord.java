@@ -159,6 +159,20 @@ public class DigitalMediaObjectRecord extends UpdatableRecordImpl<DigitalMediaOb
     return (JSONB) get(9);
   }
 
+  /**
+   * Setter for <code>public.digital_media_object.modified</code>.
+   */
+  public void setModified(Instant value) {
+    set(10, value);
+  }
+
+  /**
+   * Getter for <code>public.digital_media_object.modified</code>.
+   */
+  public Instant getModified() {
+    return (Instant) get(10);
+  }
+
   // -------------------------------------------------------------------------
   // Primary key information
   // -------------------------------------------------------------------------
@@ -184,7 +198,7 @@ public class DigitalMediaObjectRecord extends UpdatableRecordImpl<DigitalMediaOb
    */
   public DigitalMediaObjectRecord(String id, Integer version, String type, String digitalSpecimenId,
       String mediaUrl, Instant created, Instant lastChecked, Instant deleted, JSONB data,
-      JSONB originalData) {
+      JSONB originalData, Instant modified) {
     super(DigitalMediaObject.DIGITAL_MEDIA_OBJECT);
 
     setId(id);
@@ -197,6 +211,7 @@ public class DigitalMediaObjectRecord extends UpdatableRecordImpl<DigitalMediaOb
     setDeleted(deleted);
     setData(data);
     setOriginalData(originalData);
+    setModified(modified);
     resetChangedOnNotNull();
   }
 }
