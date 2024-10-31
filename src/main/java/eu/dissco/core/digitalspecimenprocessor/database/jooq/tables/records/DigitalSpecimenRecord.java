@@ -229,7 +229,7 @@ public class DigitalSpecimenRecord extends UpdatableRecordImpl<DigitalSpecimenRe
     return (Instant) get(14);
   }
 
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
@@ -258,7 +258,7 @@ public class DigitalSpecimenRecord extends UpdatableRecordImpl<DigitalSpecimenRe
         Instant deleted, JSONB data, JSONB originalData, Instant modified) {
       super(DigitalSpecimen.DIGITAL_SPECIMEN);
 
-        setId(id);
+      setId(id);
         setVersion(version);
         setType(type);
         setMidslevel(midslevel);
