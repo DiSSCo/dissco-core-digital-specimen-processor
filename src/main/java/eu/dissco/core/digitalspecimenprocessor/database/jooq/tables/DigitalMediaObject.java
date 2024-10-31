@@ -113,6 +113,12 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
   public final TableField<DigitalMediaObjectRecord, JSONB> ORIGINAL_DATA = createField(
       DSL.name("original_data"), SQLDataType.JSONB.nullable(false), this, "");
 
+  /**
+   * The column <code>public.digital_media_object.modified</code>.
+   */
+  public final TableField<DigitalMediaObjectRecord, Instant> MODIFIED = createField(
+      DSL.name("modified"), SQLDataType.INSTANT, this, "");
+
   private DigitalMediaObject(Name alias, Table<DigitalMediaObjectRecord> aliased) {
     this(alias, aliased, (Field<?>[]) null, null);
   }
@@ -123,14 +129,16 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
   }
 
   /**
-   * Create an aliased <code>public.digital_media_object</code> table reference
+   * Create an aliased <code>public.digital_media_object</code> table
+   * reference
    */
   public DigitalMediaObject(String alias) {
     this(DSL.name(alias), DIGITAL_MEDIA_OBJECT);
   }
 
   /**
-   * Create an aliased <code>public.digital_media_object</code> table reference
+   * Create an aliased <code>public.digital_media_object</code> table
+   * reference
    */
   public DigitalMediaObject(Name alias) {
     this(alias, DIGITAL_MEDIA_OBJECT);
