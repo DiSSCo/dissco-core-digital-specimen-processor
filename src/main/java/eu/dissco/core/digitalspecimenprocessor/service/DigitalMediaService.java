@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
@@ -48,7 +49,7 @@ public class DigitalMediaService {
           .filter(mediaId -> mediaId.getKey().digitalSpecimenId().equals(currentSpecimen.id()))
           .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
       var processResult = getExistingDigitalMediaProcessResult(
-          currentSpecimen.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship(),
+          currentSpecimen.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships(),
           mediaEventsForSpecimen, existingMediaForCurrentSpecimen, currentSpecimen.id());
       mediaProcessResults.put(currentSpecimen.id(), processResult);
     }
@@ -65,7 +66,7 @@ public class DigitalMediaService {
       Collection<DigitalSpecimenRecord> currentSpecimens) {
     var currentMediaIds = currentSpecimens.stream()
         .map(digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-            .getOdsHasEntityRelationship())
+            .getOdsHasEntityRelationships())
         .flatMap(List::stream)
         .filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
             .equals(HAS_MEDIA.getName()))
@@ -117,6 +118,7 @@ public class DigitalMediaService {
         .map(specimenRecord -> specimenRecord.digitalMediaProcessResult().tombstoneMedia())
         .flatMap(List::stream)
         .map(EntityRelationship::getDwcRelatedResourceID)
+        .map(mediaId -> mediaId.replace(DOI_PREFIX, ""))
         .toList();
     if (!mediaIds.isEmpty()) {
       log.info("Removing {} tombstoned media relationships from database", mediaIds.size());
@@ -127,7 +129,7 @@ public class DigitalMediaService {
   private static EntityRelationship findErByMediaPid(List<EntityRelationship> entityRelationships,
       String mediaPid) {
     for (var entityRelationship : entityRelationships) {
-      if (entityRelationship.getDwcRelatedResourceID().equals(mediaPid)) {
+      if (entityRelationship.getDwcRelatedResourceID().equals(DOI_PREFIX + mediaPid)) {
         return entityRelationship;
       }
     }

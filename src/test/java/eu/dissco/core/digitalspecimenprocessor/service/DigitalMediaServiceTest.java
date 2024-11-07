@@ -79,7 +79,7 @@ class DigitalMediaServiceTest {
     var secondRecord = givenDigitalSpecimenRecordWithMediaEr(SECOND_HANDLE,
         PHYSICAL_SPECIMEN_ID_ALT, true, 1, MEDIA_PID_ALT);
     var secondRecordMediaER = secondRecord.digitalSpecimenWrapper().attributes()
-        .getOdsHasEntityRelationship().stream()
+        .getOdsHasEntityRelationships().stream()
         .filter(er -> er.getDwcRelationshipOfResource().equals(HAS_MEDIA.getName()))
         .toList();
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, firstRecord, PHYSICAL_SPECIMEN_ID_ALT,
@@ -88,7 +88,7 @@ class DigitalMediaServiceTest {
         givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT, MEDIA_URL_ALT));
     var expected = Map.of(
         HANDLE, new DigitalMediaProcessResult(firstRecord.digitalSpecimenWrapper().attributes()
-            .getOdsHasEntityRelationship(), List.of(), List.of()),
+            .getOdsHasEntityRelationships(), List.of(), List.of()),
         SECOND_HANDLE, new DigitalMediaProcessResult(secondRecordMediaER, List.of(), List.of()));
     given(mediaRepository.getDigitalMediaUrisFromId(anyList())).willReturn(Map.of(
         new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
@@ -111,10 +111,10 @@ class DigitalMediaServiceTest {
         secondRecord);
     var expected = Map.of(
         HANDLE, new DigitalMediaProcessResult(List.of(),
-            firstRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship(),
+            firstRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships(),
             List.of()),
         SECOND_HANDLE, new DigitalMediaProcessResult(List.of(),
-            secondRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship(),
+            secondRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships(),
             List.of()));
     given(mediaRepository.getDigitalMediaUrisFromId(anyList())).willReturn(Map.of(
         new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
@@ -147,7 +147,7 @@ class DigitalMediaServiceTest {
     var currentDigitalSpecimenRecord = givenDigitalSpecimenRecordWithMediaEr(HANDLE,
         PHYSICAL_SPECIMEN_ID, true);
     var tombstonedEr = currentDigitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsHasEntityRelationship().stream().filter(
+        .getOdsHasEntityRelationships().stream().filter(
             entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
                 .equals(HAS_MEDIA.getName()))
         .toList();

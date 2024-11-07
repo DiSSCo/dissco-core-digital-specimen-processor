@@ -1,5 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.RIGHTS_OWNER;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
@@ -33,11 +34,13 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
+import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -51,12 +54,43 @@ public class FdoRecordService {
   private static final String TYPE = "type";
   private static final String ID = "id";
   private static final String DATA = "data";
+  private static final String URL_PATTERN = "http(s)?://.+";
   private final ObjectMapper mapper;
   private final FdoProperties fdoProperties;
-  private static final String URL_PATTERN = "http(s)?://.+";
 
   private static boolean isEqualString(String currentValue, String newValue) {
     return currentValue != null && !currentValue.equals(newValue);
+  }
+
+  private static void setLicense(ObjectNode attributes, DigitalMedia media) {
+    if (media.getDctermsRights() != null && media.getDctermsRights().matches(URL_PATTERN)) {
+      attributes.put(LICENSE_ID.getAttribute(), media.getDctermsRights());
+    } else if (media.getDctermsRights() != null) {
+      attributes.put(LICENSE_NAME.getAttribute(), media.getDctermsRights());
+    }
+  }
+
+  private static void setRightsHolder(ObjectNode attributes, DigitalMedia media) {
+    var rightsHolderId = collectRightsHolder(media, false);
+    var rightsHolderName = collectRightsHolder(media, true);
+    if (rightsHolderId != null) {
+      attributes.put(RIGHTS_HOLDER_ID.getAttribute(), rightsHolderId);
+    }
+    if (rightsHolderName != null) {
+      attributes.put(RIGHTS_HOLDER_NAME.getAttribute(), rightsHolderName);
+    }
+  }
+
+  private static String collectRightsHolder(DigitalMedia media, boolean name) {
+    var rightsHolderStream = media.getOdsHasAgents().stream()
+        .filter(agent -> agent.getOdsHasRoles().stream()
+            .anyMatch(role -> role.getSchemaRoleName().equals(RIGHTS_OWNER.getName())));
+    if (name) {
+      return rightsHolderStream.map(Agent::getSchemaName).filter(Objects::nonNull).reduce((a, b) -> a + " | " + b)
+          .orElse(null);
+    } else {
+      return rightsHolderStream.map(Agent::getId).filter(Objects::nonNull).reduce((a, b) -> a + " | " + b).orElse(null);
+    }
   }
 
   public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimenWrapper> digitalSpecimens) {
@@ -87,24 +121,6 @@ public class FdoRecordService {
     }
     return requests;
   }
-
-  private static void setLicense(ObjectNode attributes, DigitalMedia media) {
-    if (media.getDctermsLicense() != null && media.getDctermsLicense().matches(URL_PATTERN)) {
-      attributes.put(LICENSE_ID.getAttribute(), media.getDctermsLicense());
-    } else if (media.getDctermsLicense() != null) {
-      attributes.put(LICENSE_NAME.getAttribute(), media.getDctermsLicense());
-    }
-  }
-
-  private static void setRightsHolder(ObjectNode attributes, DigitalMedia media) {
-    if (media.getDctermsRightsHolder() != null && media.getDctermsRightsHolder()
-        .matches(URL_PATTERN)) {
-      attributes.put(RIGHTS_HOLDER_ID.getAttribute(), media.getDctermsRightsHolder());
-    } else if (media.getDctermsRightsHolder() != null) {
-      attributes.put(RIGHTS_HOLDER_NAME.getAttribute(), media.getDctermsRightsHolder());
-    }
-  }
-
 
   public List<JsonNode> buildUpdateHandleRequest(
       List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
@@ -203,8 +219,8 @@ public class FdoRecordService {
         specimen.attributes().getOdsPhysicalSpecimenIDType()
             .equals(OdsPhysicalSpecimenIDType.RESOLVABLE))
     );
-    if (specimen.attributes().getOdsHasIdentifier() != null) {
-      for (var id : specimen.attributes().getOdsHasIdentifier()) {
+    if (specimen.attributes().getOdsHasIdentifiers() != null) {
+      for (var id : specimen.attributes().getOdsHasIdentifiers()) {
         otherSpecimenIds.add(new OtherSpecimenId(
             id.getDctermsTitle(),
             id.getDctermsIdentifier(),

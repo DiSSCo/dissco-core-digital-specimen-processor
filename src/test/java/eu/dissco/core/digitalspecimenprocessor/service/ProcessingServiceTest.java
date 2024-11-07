@@ -68,6 +68,7 @@ import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
@@ -120,12 +121,9 @@ class ProcessingServiceTest {
 
   private static Stream<Arguments> provideUnequalDigitalSpecimen() {
     return Stream.of(
-        Arguments.of(
-            givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
-                true)),
         Arguments.of(new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED,
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
-                new DigitalSpecimen(), null))),
+                new DigitalSpecimen().withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY), null))),
         Arguments.of(new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED,
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
                 new DigitalSpecimen(), null)))
@@ -270,7 +268,7 @@ class ProcessingServiceTest {
     // Given
     var currentSpecimenRecord = givenDigitalSpecimenRecordWithMediaEr();
     var mediaEr = currentSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsHasEntityRelationship();
+        .getOdsHasEntityRelationships();
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));

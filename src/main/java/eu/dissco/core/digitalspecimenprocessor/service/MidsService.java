@@ -1,8 +1,13 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.COLLECTOR;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.IDENTIFIER;
+
+import eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType;
+import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
+import eu.dissco.core.digitalspecimenprocessor.schema.Event;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +28,8 @@ public class MidsService {
     return value != null && !value.trim().isEmpty() && !value.equalsIgnoreCase("null");
   }
 
-  public int calculateMids(DigitalSpecimenWrapper digitalSpecimenWrapper) {
+  public int calculateMids(
+      eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper digitalSpecimenWrapper) {
     var attributes = digitalSpecimenWrapper.attributes();
     if (!compliesToMidsOne(attributes)) {
       return 0;
@@ -61,7 +67,9 @@ public class MidsService {
     if (PALEO_GEO_DISCIPLINES.contains(attributes.getOdsTopicDiscipline())) {
       return checkMidsThreeGeneric(attributes);
     } else {
-      return checkMidsThreeGeneric(attributes) && isValid(attributes.getDwcRecordedByID());
+      return checkMidsThreeGeneric(attributes) && hasAgentWithRole(COLLECTOR,
+          attributes.getOdsHasEvents().stream()
+              .map(Event::getOdsHasAgents).flatMap(List::stream).toList(), true);
     }
   }
 
@@ -71,13 +79,13 @@ public class MidsService {
   }
 
   private boolean geographicalValuesComply(DigitalSpecimen attributes) {
-    if (attributes.getOdsHasEvent() != null
-        && attributes.getOdsHasEvent().get(0).getOdsLocation() != null) {
-      var location = attributes.getOdsHasEvent().get(0).getOdsLocation();
+    if (attributes.getOdsHasEvents() != null
+        && attributes.getOdsHasEvents().get(0).getOdsHasLocation() != null) {
+      var location = attributes.getOdsHasEvents().get(0).getOdsHasLocation();
       if (isValid(location.getDwcLocationID())) {
         return true;
-      } else if (location.getOdsGeoReference() != null) {
-        var geoReference = location.getOdsGeoReference();
+      } else if (location.getOdsHasGeoreference() != null) {
+        var geoReference = location.getOdsHasGeoreference();
         return (geoReference.getDwcDecimalLatitude() != null
             && geoReference.getDwcDecimalLongitude() != null
             && isValid(geoReference.getDwcGeodeticDatum())
@@ -93,11 +101,11 @@ public class MidsService {
   private boolean taxValuesComply(DigitalSpecimen attributes) {
     var hasScientificNameId = false;
     var hasIdentifiedById = false;
-    for (var identifications : attributes.getOdsHasIdentification()) {
-      if (isValid(identifications.getDwcIdentifiedByID())) {
+    for (var identifications : attributes.getOdsHasIdentifications()) {
+      if (hasAgentWithRole(IDENTIFIER, identifications.getOdsHasAgents(), true)) {
         hasIdentifiedById = true;
       }
-      for (var taxonIdentification : identifications.getOdsHasTaxonIdentification()) {
+      for (var taxonIdentification : identifications.getOdsHasTaxonIdentifications()) {
         if (isValid(taxonIdentification.getDwcScientificNameID())) {
           hasScientificNameId = true;
         }
@@ -112,13 +120,32 @@ public class MidsService {
         && qualitativeLocationIsValid(attributes)
         && quantitativeLocationIsValid(attributes)
         && (eventIsPresent(attributes) && hasValue(
-        attributes.getOdsHasEvent().get(0).getDwcEventDate(),
-        attributes.getOdsHasEvent().get(0).getDwcVerbatimEventDate(),
-        convertInteger(attributes.getOdsHasEvent().get(0).getDwcYear())))
+        attributes.getOdsHasEvents().get(0).getDwcEventDate(),
+        attributes.getOdsHasEvents().get(0).getDwcVerbatimEventDate(),
+        convertInteger(attributes.getOdsHasEvents().get(0).getDwcYear())))
         && (eventIsPresent(attributes) &&
-        hasValue(attributes.getOdsHasEvent().get(0).getDwcFieldNumber(),
-            attributes.getOdsHasEvent().get(0).getDwcRecordNumber()))
-        && hasValue(attributes.getDwcRecordedBy(), attributes.getDwcRecordedByID());
+        hasValue(attributes.getOdsHasEvents().get(0).getDwcFieldNumber()
+//            ,
+//            attributes.getOdsHasEvents().get(0).getDwcRecordNumber())
+        )
+        && hasAgentWithRole(COLLECTOR,
+        attributes.getOdsHasEvents().stream().map(Event::getOdsHasAgents).flatMap(List::stream)
+            .toList(), false));
+  }
+
+  private boolean hasAgentWithRole(AgenRoleType roleType, List<Agent> agents, boolean idRequired) {
+    for (var agent : agents) {
+      for (var role : agent.getOdsHasRoles()) {
+        if (role.getSchemaRoleName().equals(roleType.getName())) {
+          if (idRequired) {
+            return isValid(agent.getId());
+          } else {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   private String convertInteger(Integer integer) {
@@ -148,10 +175,10 @@ public class MidsService {
 
   private boolean quantitativeLocationIsValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOdsHasEvent().get(0).getOdsLocation().getOdsGeoReference()
+        && digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation().getOdsHasGeoreference()
         != null) {
-      var location = digitalSpecimen.getOdsHasEvent().get(0).getOdsLocation();
-      var geoReference = location.getOdsGeoReference();
+      var location = digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation();
+      var geoReference = location.getOdsHasGeoreference();
       return hasValue(location.getDwcLocationID(), geoReference.getDwcFootprintWKT()) || (
           geoReference.getDwcDecimalLatitude() != null
               && geoReference.getDwcDecimalLongitude() != null);
@@ -160,19 +187,19 @@ public class MidsService {
   }
 
   private boolean eventIsPresent(DigitalSpecimen attributes) {
-    return attributes.getOdsHasEvent() != null && !attributes.getOdsHasEvent().isEmpty()
-        && attributes.getOdsHasEvent().get(0) != null;
+    return attributes.getOdsHasEvents() != null && !attributes.getOdsHasEvents().isEmpty()
+        && attributes.getOdsHasEvents().get(0) != null;
   }
 
   private boolean locationIsPresent(DigitalSpecimen digitalSpecimen) {
     return eventIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOdsHasEvent().get(0).getOdsLocation() != null;
+        && digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation() != null;
   }
 
   private boolean qualitativeLocationIsValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)) {
       var isValidValue = false;
-      var location = digitalSpecimen.getOdsHasEvent().get(0).getOdsLocation();
+      var location = digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation();
       isValidValue = hasValue(
           location.getDwcContinent(),
           location.getDwcCountry(),
@@ -186,12 +213,12 @@ public class MidsService {
           location.getDwcStateProvince(),
           location.getDwcWaterBody(),
           location.getDwcHigherGeography());
-      if (!isValidValue && (location.getOdsGeoReference() != null)) {
-        isValidValue = isValid(location.getOdsGeoReference().getDwcVerbatimCoordinates());
+      if (!isValidValue && (location.getOdsHasGeoreference() != null)) {
+        isValidValue = isValid(location.getOdsHasGeoreference().getDwcVerbatimCoordinates());
         if (!isValidValue) {
-          isValidValue = (isValid(location.getOdsGeoReference().getDwcVerbatimLatitude())
+          isValidValue = (isValid(location.getOdsHasGeoreference().getDwcVerbatimLatitude())
               && isValid(
-              location.getOdsGeoReference().getDwcVerbatimLongitude()));
+              location.getOdsHasGeoreference().getDwcVerbatimLongitude()));
         }
       }
       return isValidValue;
@@ -201,10 +228,10 @@ public class MidsService {
 
   private boolean stratigraphyIsValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOdsHasEvent().get(0).getOdsLocation().getOdsGeologicalContext()
+        && digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation().getOdsHasGeologicalContext()
         != null) {
-      var geologicalContext = digitalSpecimen.getOdsHasEvent().get(0).getOdsLocation()
-          .getOdsGeologicalContext();
+      var geologicalContext = digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation()
+          .getOdsHasGeologicalContext();
       return hasValue(geologicalContext.getDwcBed(),
           geologicalContext.getDwcMember(),
           geologicalContext.getDwcFormation(),

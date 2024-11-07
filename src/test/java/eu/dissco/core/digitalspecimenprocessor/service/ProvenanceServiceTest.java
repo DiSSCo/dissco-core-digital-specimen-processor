@@ -1,5 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.SOURCE_SYSTEM;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.PROV_SOFTWARE_AGENT;
+import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
@@ -16,10 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
+import eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType;
 import eu.dissco.core.digitalspecimenprocessor.schema.OdsChangeValue;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,14 +42,10 @@ class ProvenanceServiceTest {
 
   private static List<Agent> givenExpectedAgents() {
     return List.of(
-        new Agent()
-            .withId(SOURCE_SYSTEM_ID)
-            .withType(Type.AS_APPLICATION)
-            .withSchemaName(SOURCE_SYSTEM_NAME),
-        new Agent()
-            .withId(APP_HANDLE)
-            .withType(Type.AS_APPLICATION)
-            .withSchemaName(APP_NAME)
+        createMachineAgent(SOURCE_SYSTEM_NAME, SOURCE_SYSTEM_ID, SOURCE_SYSTEM,
+            DctermsType.HANDLE, PROV_SOFTWARE_AGENT),
+        createMachineAgent(APP_NAME, APP_HANDLE, AgenRoleType.PROCESSING_SERVICE,
+            DctermsType.DOI, PROV_SOFTWARE_AGENT)
     );
   }
 
@@ -66,10 +66,11 @@ class ProvenanceServiceTest {
     var event = service.generateCreateEvent(digitalSpecimen);
 
     // Then
-    assertThat(event.getOdsID()).isEqualTo(DOI_PREFIX + HANDLE + "/" + VERSION);
+    assertThat(event.getDctermsIdentifier()).isEqualTo(
+        DOI_PREFIX + HANDLE + "/" + VERSION);
     assertThat(event.getProvActivity().getOdsChangeValue()).isNull();
     assertThat(event.getProvEntity().getProvValue()).isNotNull();
-    assertThat(event.getOdsHasProvAgent()).isEqualTo(givenExpectedAgents());
+    assertThat(event.getOdsHasAgents()).isEqualTo(givenExpectedAgents());
   }
 
   @Test
@@ -83,10 +84,11 @@ class ProvenanceServiceTest {
     var event = service.generateUpdateEvent(anotherDigitalSpecimen, givenJsonPatch());
 
     // Then
-    assertThat(event.getOdsID()).isEqualTo(DOI_PREFIX + HANDLE + "/" + VERSION);
+    assertThat(event.getDctermsIdentifier()).isEqualTo(
+        DOI_PREFIX + HANDLE + "/" + VERSION);
     assertThat(event.getProvActivity().getOdsChangeValue()).isEqualTo(givenChangeValue());
     assertThat(event.getProvEntity().getProvValue()).isNotNull();
-    assertThat(event.getOdsHasProvAgent()).isEqualTo(givenExpectedAgents());
+    assertThat(event.getOdsHasAgents()).isEqualTo(givenExpectedAgents());
   }
 
   List<OdsChangeValue> givenChangeValue() {

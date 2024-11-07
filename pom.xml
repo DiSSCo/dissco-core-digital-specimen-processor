@@ -189,10 +189,10 @@
         <configuration>
           <mainClass>eu.dissco.core.digitalspecimenprocessor.maven.MavenRunner</mainClass>
           <arguments>
-            <argument>https://schemas.dissco.tech/schemas/fdo-type/digital-specimen/0.3.0/digital-specimen.json</argument>
-            <argument>https://schemas.dissco.tech/schemas/fdo-type/digital-media/0.3.0/digital-media.json</argument>
-            <argument>https://schemas.dissco.tech/schemas/fdo-type/create-update-tombstone-event/0.3.0/create-update-tombstone-event.json</argument>
-            <argument>https://schemas.dissco.tech/schemas/developer-schema/annotation/0.3.0/annotation-processing-request.json</argument>
+            <argument>https://schemas.dissco.tech/schemas/fdo-type/digital-specimen/0.4.0/digital-specimen.json</argument>
+            <argument>https://schemas.dissco.tech/schemas/fdo-type/digital-media/0.4.0/digital-media.json</argument>
+            <argument>https://schemas.dissco.tech/schemas/fdo-type/create-update-tombstone-event/0.4.0/create-update-tombstone-event.json</argument>
+            <argument>https://schemas.dissco.tech/schemas/developer-schema/annotation/0.4.0/annotation-processing-request.json</argument>
           </arguments>
         </configuration>
       </plugin>

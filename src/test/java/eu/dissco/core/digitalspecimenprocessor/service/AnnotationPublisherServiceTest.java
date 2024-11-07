@@ -21,15 +21,17 @@ import static org.mockito.Mockito.times;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationBody;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest.OaMotivation;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationTarget;
+import eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType;
 import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
+import eu.dissco.core.digitalspecimenprocessor.util.AgentUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -162,15 +164,14 @@ class AnnotationPublisherServiceTest {
         .withOaMotivation(motivation)
         .withOaHasBody(body)
         .withOaHasTarget(new AnnotationTarget()
-            .withOdsType("ods:DigitalSpecimen")
+            .withOdsFdoType("ods:DigitalSpecimen")
             .withType(TYPE)
             .withId(DOI_PREFIX + HANDLE)
-            .withOdsID(DOI_PREFIX + HANDLE)
+            .withDctermsIdentifier(DOI_PREFIX + HANDLE)
             .withOaHasSelector(selector))
         .withDctermsCreated(Date.from(CREATED))
-        .withDctermsCreator(
-            new Agent().withType(Type.AS_APPLICATION).withId(SOURCE_SYSTEM_ID)
-                .withSchemaName(SOURCE_SYSTEM_NAME));
+        .withDctermsCreator(AgentUtils.createMachineAgent(SOURCE_SYSTEM_NAME, SOURCE_SYSTEM_ID,
+            AgenRoleType.SOURCE_SYSTEM, DctermsType.HANDLE, Type.SCHEMA_SOFTWARE_APPLICATION));
     if (motivation == OaMotivation.OA_EDITING) {
       annotation.withOaMotivatedBy("Received update information from Source System with id: "
           + SOURCE_SYSTEM_ID);

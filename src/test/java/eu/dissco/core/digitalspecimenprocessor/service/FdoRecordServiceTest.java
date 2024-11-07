@@ -1,9 +1,12 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.RIGHTS_OWNER;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_ORGANIZATION;
+import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
@@ -37,6 +40,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
+import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
@@ -89,6 +93,35 @@ class FdoRecordServiceTest {
         Arguments.of(attributes.withOdsIsMarkedAsType(false)));
   }
 
+  static Stream<Arguments> genLicense() {
+    return Stream.of(
+        Arguments.of(LICENSE_ID.getAttribute(), "https://spdx.org/licenses/Apache-2.0.html"),
+        Arguments.of(LICENSE_NAME.getAttribute(), "Apache 2.0"));
+  }
+
+  static Stream<Arguments> genRightsHolder() {
+    return Stream.of(
+        Arguments.of(List.of(
+                createMachineAgent("Naturalis Biodiversity Center", "https://ror.org/0566bfb96",
+                    RIGHTS_OWNER, null,
+                    SCHEMA_ORGANIZATION)), "Naturalis Biodiversity Center",
+            "https://ror.org/0566bfb96"),
+        Arguments.of(List.of(
+            createMachineAgent("Naturalis Biodiversity Center", null, RIGHTS_OWNER, null,
+                SCHEMA_ORGANIZATION)), "Naturalis Biodiversity Center", null),
+        Arguments.of(List.of(
+            createMachineAgent(null, "https://ror.org/0566bfb96", RIGHTS_OWNER, null,
+                SCHEMA_ORGANIZATION)), null, "https://ror.org/0566bfb96"),
+        Arguments.of(List.of(
+                createMachineAgent("Naturalis Biodiversity Center", "https://ror.org/0566bfb96",
+                    RIGHTS_OWNER, null,
+                    SCHEMA_ORGANIZATION),
+                createMachineAgent("Natural History Museum Rotterdam", "https://ror.org/01s8f2180",
+                    RIGHTS_OWNER, null, SCHEMA_ORGANIZATION)),
+            "Naturalis Biodiversity Center | Natural History Museum Rotterdam",
+            "https://ror.org/0566bfb96 | https://ror.org/01s8f2180"));
+  }
+
   @BeforeEach
   void setup() {
     fdoRecordService = new FdoRecordService(MAPPER, new FdoProperties());
@@ -118,9 +151,8 @@ class FdoRecordServiceTest {
   }
 
   @ParameterizedTest
-  @MethodSource("genLicenseAndRightsHolder")
-  void testGenRequestLicenseAndRightsHolder(String licenseField, String rightsHolderField,
-      String fieldValue) {
+  @MethodSource("genLicense")
+  void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
     // Given
     var media = new DigitalMediaEventWithoutDOI(
         List.of("image-metadata"),
@@ -130,8 +162,7 @@ class FdoRecordServiceTest {
             new DigitalMedia()
                 .withAcAccessURI(MEDIA_URL)
                 .withOdsOrganisationID(ORGANISATION_ID)
-                .withDctermsLicense(fieldValue)
-                .withDctermsRightsHolder(fieldValue),
+                .withDctermsRights(fieldValue),
             MAPPER.createObjectNode()
         )
     );
@@ -139,8 +170,7 @@ class FdoRecordServiceTest {
         .set("data", MAPPER.createObjectNode()
             .put("type", TYPE_MEDIA)
             .set("attributes", ((ObjectNode) givenHandleMediaRequestAttributes())
-                .put(licenseField, fieldValue)
-                .put(rightsHolderField, fieldValue))));
+                .put(licenseField, fieldValue))));
 
     // When
     var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
@@ -149,11 +179,40 @@ class FdoRecordServiceTest {
     assertThat(result).isEqualTo(expected);
   }
 
-  static Stream<Arguments> genLicenseAndRightsHolder() {
-    return Stream.of(
-        Arguments.of(LICENSE_ID.getAttribute(), RIGHTS_HOLDER_ID.getAttribute(),
-            "https://spdx.org/licenses/Apache-2.0.html"),
-        Arguments.of(LICENSE_NAME.getAttribute(), RIGHTS_HOLDER_NAME.getAttribute(), "Apache 2.0"));
+  @ParameterizedTest
+  @MethodSource("genRightsHolder")
+  void testGenRequestLicenseAndRightsHolder(List<Agent> rightHolders, String expectedName,
+      String expectedId) {
+    // Given
+    var media = new DigitalMediaEventWithoutDOI(
+        List.of("image-metadata"),
+        new DigitalMediaWithoutDOI(
+            "StillImage",
+            HANDLE,
+            new DigitalMedia()
+                .withAcAccessURI(MEDIA_URL)
+                .withOdsOrganisationID(ORGANISATION_ID)
+                .withOdsHasAgents(rightHolders),
+            MAPPER.createObjectNode()
+        )
+    );
+    var attributes = (ObjectNode) givenHandleMediaRequestAttributes();
+    if (expectedName != null) {
+      attributes.put(RIGHTS_HOLDER_NAME.getAttribute(), expectedName);
+    }
+    if (expectedId != null) {
+      attributes.put(RIGHTS_HOLDER_ID.getAttribute(), expectedId);
+    }
+    var expected = List.of(MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("type", TYPE_MEDIA)
+            .set("attributes", attributes)));
+
+    // When
+    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+
+    // Then
+    assertThat(result).isEqualTo(expected);
   }
 
   @Test

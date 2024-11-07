@@ -1,12 +1,17 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.PROCESSING_SERVICE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.SOURCE_SYSTEM;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.PROV_SOFTWARE_AGENT;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
 import eu.dissco.core.digitalspecimenprocessor.schema.CreateUpdateTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.OdsChangeValue;
@@ -41,14 +46,14 @@ public class ProvenanceService {
   private CreateUpdateTombstoneEvent generateCreateUpdateTombStoneEvent(
       DigitalSpecimen digitalSpecimen, ProvActivity.Type activityType,
       JsonNode jsonPatch) {
-    var entityID = digitalSpecimen.getOdsID() + "/" + digitalSpecimen.getOdsVersion();
+    var entityID = digitalSpecimen.getDctermsIdentifier() + "/" + digitalSpecimen.getOdsVersion();
     var activityID = UUID.randomUUID().toString();
     var sourceSystemID = digitalSpecimen.getOdsSourceSystemID();
     return new CreateUpdateTombstoneEvent()
         .withId(entityID)
         .withType("ods:CreateUpdateTombstoneEvent")
-        .withOdsID(entityID)
-        .withOdsType(properties.getCreateUpdateTombstoneEventType())
+        .withDctermsIdentifier(entityID)
+        .withOdsFdoType(properties.getCreateUpdateTombstoneEventType())
         .withProvActivity(new ProvActivity()
             .withId(activityID)
             .withType(activityType)
@@ -57,13 +62,13 @@ public class ProvenanceService {
             .withProvWasAssociatedWith(List.of(
                 new ProvWasAssociatedWith()
                     .withId(sourceSystemID)
-                    .withProvHadRole(ProvHadRole.ODS_REQUESTOR),
+                    .withProvHadRole(ProvHadRole.REQUESTOR),
                 new ProvWasAssociatedWith()
                     .withId(properties.getPid())
-                    .withProvHadRole(ProvHadRole.ODS_APPROVER),
+                    .withProvHadRole(ProvHadRole.APPROVER),
                 new ProvWasAssociatedWith()
                     .withId(properties.getPid())
-                    .withProvHadRole(ProvHadRole.ODS_GENERATOR)))
+                    .withProvHadRole(ProvHadRole.GENERATOR)))
             .withProvUsed(entityID)
             .withRdfsComment(determineComment(activityType)))
         .withProvEntity(new ProvEntity()
@@ -71,16 +76,11 @@ public class ProvenanceService {
             .withType("ods:DigitalSpecimen")
             .withProvValue(mapEntityToProvValue(digitalSpecimen))
             .withProvWasGeneratedBy(activityID))
-        .withOdsHasProvAgent(List.of(
-            new Agent()
-                .withType(Type.AS_APPLICATION)
-                .withId(sourceSystemID)
-                .withSchemaName(digitalSpecimen.getOdsSourceSystemName()),
-            new Agent()
-                .withType(Type.AS_APPLICATION)
-                .withId(properties.getPid())
-                .withSchemaName(properties.getName())
-        ));
+        .withOdsHasAgents(List.of(
+            createMachineAgent(digitalSpecimen.getOdsSourceSystemName(), sourceSystemID,
+                SOURCE_SYSTEM, HANDLE, PROV_SOFTWARE_AGENT),
+            createMachineAgent(properties.getName(), properties.getPid(), PROCESSING_SERVICE,
+                DOI, PROV_SOFTWARE_AGENT)));
   }
 
   private String determineComment(ProvActivity.Type activityType) {

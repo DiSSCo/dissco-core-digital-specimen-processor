@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.PROCESSING_SERVICE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.SOURCE_SYSTEM;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_TYPE;
@@ -10,6 +12,9 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
+import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,8 +30,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationBody;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest.OaMotivation;
@@ -38,6 +41,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysica
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identifier;
+import eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType;
 import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
 import java.net.URI;
@@ -278,7 +282,8 @@ public class TestUtils {
       List<DigitalSpecimenEvent> events) {
     return new DigitalMediaProcessResult(
         events.stream()
-            .map(event -> event.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship())
+            .map(
+                event -> event.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships())
             .flatMap(List::stream)
             .filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
                 .equals("hasDigitalMedia"))
@@ -302,10 +307,6 @@ public class TestUtils {
     );
   }
 
-  public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr() {
-    return givenDigitalSpecimenWrapperWithMediaEr(SPECIMEN_NAME, false);
-  }
-
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId,
       Boolean addOtherEntityRelationship) {
     return givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship,
@@ -316,21 +317,18 @@ public class TestUtils {
       Boolean addOtherEntityRelationship, String mediaId) {
     var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true,
         addOtherEntityRelationship, true);
-    var entityRelationships = new ArrayList<>(attributes.getOdsHasEntityRelationship());
+    var entityRelationships = new ArrayList<>(attributes.getOdsHasEntityRelationships());
     entityRelationships.add(
         new EntityRelationship()
             .withType("ods:EntityRelationship")
             .withDwcRelationshipEstablishedDate(Date.from(CREATED))
             .withDwcRelationshipOfResource(HAS_MEDIA.getName())
-            .withDwcRelationshipAccordingTo(APP_NAME)
-            .withOdsRelationshipAccordingToAgent(new Agent()
-                .withType(Type.AS_APPLICATION)
-                .withId(APP_HANDLE)
-                .withSchemaName(APP_NAME))
-            .withDwcRelatedResourceID(mediaId)
+            .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE,
+                DOI, SCHEMA_SOFTWARE_APPLICATION)))
+            .withDwcRelatedResourceID(DOI_PREFIX + mediaId)
             .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + mediaId))
     );
-    attributes.setOdsHasEntityRelationship(entityRelationships);
+    attributes.setOdsHasEntityRelationships(entityRelationships);
     return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
         ORIGINAL_DATA);
   }
@@ -365,28 +363,25 @@ public class TestUtils {
   }
 
   public static DigitalMediaEvent givenDigitalMediaEventWithRelationship(String id) {
+    var digitalMedia = new DigitalMedia().withAcAccessURI(MEDIA_URL)
+        .withId(id)
+        .withDctermsIdentifier(id)
+        .withOdsOrganisationID(ORGANISATION_ID)
+        .withOdsHasEntityRelationships(
+            List.of(new EntityRelationship()
+                .withType("ods:EntityRelationship")
+                .withDwcRelationshipOfResource("hasDigitalSpecimen")
+                .withDwcRelationshipEstablishedDate(Date.from(CREATED))
+                .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
+                .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
+                .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
+                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))));
     return new DigitalMediaEvent(
         List.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
-            new DigitalMedia().withAcAccessURI(MEDIA_URL)
-                .withId(id)
-                .withOdsID(id)
-                .withOdsOrganisationID(ORGANISATION_ID)
-                .withOdsHasEntityRelationship(
-                    List.of(new EntityRelationship()
-                        .withType("ods:EntityRelationship")
-                        .withDwcRelationshipOfResource("hasDigitalSpecimen")
-                        .withDwcRelationshipEstablishedDate(Date.from(CREATED))
-                        .withDwcRelationshipAccordingTo("dissco-digital-specimen-processor")
-                        .withOdsRelationshipAccordingToAgent(new Agent()
-                            .withId("https://hdl.handle.net/TEST/123-123-123")
-                            .withType(Type.AS_APPLICATION)
-                            .withSchemaName("dissco-digital-specimen-processor"))
-                        .withDwcRelatedResourceID(HANDLE)
-                        .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE)))
-                ),
+            digitalMedia,
             MAPPER.createObjectNode()
         ));
   }
@@ -569,7 +564,7 @@ public class TestUtils {
         .withDwcPreparations("")
         .withDctermsModified("2022-11-01T09:59:24.000Z");
     if (addEntityRelationShip) {
-      ds.withOdsHasEntityRelationship(
+      ds.withOdsHasEntityRelationships(
           List.of(new EntityRelationship()
               .withDwcRelationshipOfResource("hasDigitalSpecimen")
               .withDwcRelatedResourceID(SPECIMEN_BASE_URL + HANDLE)
@@ -581,16 +576,15 @@ public class TestUtils {
   public static DigitalSpecimen givenAttributesPlusIdentifier(String specimenName,
       String organisation, Boolean markedAsType) {
     return givenAttributes(specimenName, organisation, markedAsType, false, false)
-        .withOdsHasIdentifier(List.of(
+        .withOdsHasIdentifiers(List.of(
             new Identifier().withDctermsTitle("Specimen label").withDctermsIdentifier(HANDLE)));
   }
 
   public static AutoAcceptedAnnotation givenAutoAcceptedAnnotation(
       AnnotationProcessingRequest annotation) {
-    return new AutoAcceptedAnnotation(new Agent()
-        .withType(Type.AS_APPLICATION)
-        .withId(APP_HANDLE)
-        .withSchemaName(APP_NAME), annotation);
+    return new AutoAcceptedAnnotation(
+        createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE, DOI,
+            SCHEMA_SOFTWARE_APPLICATION), annotation);
   }
 
   public static AnnotationProcessingRequest givenNewAcceptedAnnotation()
@@ -605,15 +599,13 @@ public class TestUtils {
                 DigitalSpecimenUtils.flattenToDigitalSpecimen(givenDigitalSpecimenRecord()))))
             .withDctermsReferences(SOURCE_SYSTEM_ID))
         .withDctermsCreated(Date.from(CREATED))
-        .withDctermsCreator(new Agent()
-            .withType(Type.AS_APPLICATION)
-            .withId(SOURCE_SYSTEM_ID)
-            .withSchemaName(SOURCE_SYSTEM_NAME))
+        .withDctermsCreator(createMachineAgent(SOURCE_SYSTEM_NAME, SOURCE_SYSTEM_ID, SOURCE_SYSTEM,
+            DctermsType.HANDLE, SCHEMA_SOFTWARE_APPLICATION))
         .withOaHasTarget(new AnnotationTarget()
             .withId(DOI_PREFIX + HANDLE)
-            .withOdsID(DOI_PREFIX + HANDLE)
+            .withDctermsIdentifier(DOI_PREFIX + HANDLE)
             .withType(TYPE)
-            .withOdsType("ods:DigitalSpecimen")
+            .withOdsFdoType("ods:DigitalSpecimen")
             .withOaHasSelector(new OaHasSelector()
                 .withAdditionalProperty("@type", "ods:ClassSelector")
                 .withAdditionalProperty("ods:class", "$")));
