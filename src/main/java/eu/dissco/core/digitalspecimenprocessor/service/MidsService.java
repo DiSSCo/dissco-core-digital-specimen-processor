@@ -124,10 +124,7 @@ public class MidsService {
         attributes.getOdsHasEvents().get(0).getDwcVerbatimEventDate(),
         convertInteger(attributes.getOdsHasEvents().get(0).getDwcYear())))
         && (eventIsPresent(attributes) &&
-        hasValue(attributes.getOdsHasEvents().get(0).getDwcFieldNumber()
-//            ,
-//            attributes.getOdsHasEvents().get(0).getDwcRecordNumber())
-        )
+        hasValue(attributes.getOdsHasEvents().get(0).getDwcFieldNumber())
         && hasAgentWithRole(COLLECTOR,
         attributes.getOdsHasEvents().stream().map(Event::getOdsHasAgents).flatMap(List::stream)
             .toList(), false));
