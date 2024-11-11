@@ -1,6 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.domain;
 
-public enum AgenRoleType {
+import lombok.Getter;
+
+@Getter
+public enum AgentRoleType {
 
   COLLECTOR("collector"),
   DATA_TRANSLATOR("data-translator"),
@@ -13,11 +16,7 @@ public enum AgenRoleType {
 
   private final String name;
 
-  AgenRoleType(String name) {
+  AgentRoleType(String name) {
     this.name = name;
-  }
-
-  public String getName() {
-    return name;
   }
 }

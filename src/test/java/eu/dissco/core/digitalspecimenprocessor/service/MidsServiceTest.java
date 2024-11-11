@@ -1,7 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.COLLECTOR;
-import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.IDENTIFIER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.COLLECTOR;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.IDENTIFIER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
@@ -11,7 +11,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_N
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType;
+import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
@@ -366,7 +366,7 @@ class MidsServiceTest {
         .withOdsIsKnownToContainMedia(hasMedia);
   }
 
-  private static List<Agent> createAgent(String id, AgenRoleType role) {
+  private static List<Agent> createAgent(String id, AgentRoleType role) {
     return List.of(AgentUtils.createMachineAgent("Sam Leeflang", id, role, null,
         Type.SCHEMA_PERSON));
   }

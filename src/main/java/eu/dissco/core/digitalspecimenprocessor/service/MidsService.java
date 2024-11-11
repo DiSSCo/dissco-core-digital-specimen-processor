@@ -1,9 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.COLLECTOR;
-import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.IDENTIFIER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.COLLECTOR;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.IDENTIFIER;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType;
+import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
@@ -130,7 +130,7 @@ public class MidsService {
             .toList(), false));
   }
 
-  private boolean hasAgentWithRole(AgenRoleType roleType, List<Agent> agents, boolean idRequired) {
+  private boolean hasAgentWithRole(AgentRoleType roleType, List<Agent> agents, boolean idRequired) {
     for (var agent : agents) {
       for (var role : agent.getOdsHasRoles()) {
         if (role.getSchemaRoleName().equals(roleType.getName())) {

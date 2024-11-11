@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType.SOURCE_SYSTEM;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.SOURCE_SYSTEM;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.PROV_SOFTWARE_AGENT;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType;
+import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
@@ -44,7 +44,7 @@ class ProvenanceServiceTest {
     return List.of(
         createMachineAgent(SOURCE_SYSTEM_NAME, SOURCE_SYSTEM_ID, SOURCE_SYSTEM,
             DctermsType.HANDLE, PROV_SOFTWARE_AGENT),
-        createMachineAgent(APP_NAME, APP_HANDLE, AgenRoleType.PROCESSING_SERVICE,
+        createMachineAgent(APP_NAME, APP_HANDLE, AgentRoleType.PROCESSING_SERVICE,
             DctermsType.DOI, PROV_SOFTWARE_AGENT)
     );
   }

@@ -21,7 +21,7 @@ import static org.mockito.Mockito.times;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.AgenRoleType;
+import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
@@ -171,7 +171,7 @@ class AnnotationPublisherServiceTest {
             .withOaHasSelector(selector))
         .withDctermsCreated(Date.from(CREATED))
         .withDctermsCreator(AgentUtils.createMachineAgent(SOURCE_SYSTEM_NAME, SOURCE_SYSTEM_ID,
-            AgenRoleType.SOURCE_SYSTEM, DctermsType.HANDLE, Type.SCHEMA_SOFTWARE_APPLICATION));
+            AgentRoleType.SOURCE_SYSTEM, DctermsType.HANDLE, Type.SCHEMA_SOFTWARE_APPLICATION));
     if (motivation == OaMotivation.OA_EDITING) {
       annotation.withOaMotivatedBy("Received update information from Source System with id: "
           + SOURCE_SYSTEM_ID);
