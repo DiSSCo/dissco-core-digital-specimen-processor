@@ -1,5 +1,11 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.SOURCE_SYSTEM;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,8 +15,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationBody;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest.OaMotivation;
@@ -55,9 +59,9 @@ public class AnnotationPublisherService {
         var annotationProcessingRequest = mapNewSpecimenToAnnotation(digitalSpecimenRecord);
         kafkaPublisherService.publishAcceptedAnnotation(
             new AutoAcceptedAnnotation(
-                new Agent().withId(applicationProperties.getPid())
-                    .withSchemaName(applicationProperties.getName())
-                    .withType(Type.AS_APPLICATION),
+                createMachineAgent(applicationProperties.getName(),
+                    applicationProperties.getPid(), PROCESSING_SERVICE, DOI,
+                    SCHEMA_SOFTWARE_APPLICATION),
                 annotationProcessingRequest));
       } catch (JsonProcessingException e) {
         log.error("Unable to send auto-accepted annotation for new specimen: {}",
@@ -81,8 +85,8 @@ public class AnnotationPublisherService {
         .withOaHasTarget(buildTarget(digitalSpecimenRecord, buildNewSpecimenSelector()))
         .withDctermsCreated(Date.from(Instant.now()))
         .withDctermsCreator(
-            new Agent().withType(Type.AS_APPLICATION).withId(sourceSystemID)
-                .withSchemaName(sourceSystemName));
+            createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+                SCHEMA_SOFTWARE_APPLICATION));
   }
 
   private AnnotationBody buildBody(String value, String sourceSystemID) {
@@ -97,9 +101,9 @@ public class AnnotationPublisherService {
     var targetId = DOI_PREFIX + digitalSpecimenRecord.id();
     return new AnnotationTarget()
         .withId(targetId)
-        .withOdsID(targetId)
+        .withDctermsIdentifier(targetId)
         .withType(digitalSpecimenRecord.digitalSpecimenWrapper().type())
-        .withOdsType("ods:DigitalSpecimen")
+        .withOdsFdoType("ods:DigitalSpecimen")
         .withOaHasSelector(selector);
   }
 
@@ -112,9 +116,8 @@ public class AnnotationPublisherService {
             updatedDigitalSpecimenRecord.jsonPatch());
         for (var annotationProcessingRequest : annotations) {
           kafkaPublisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
-              new Agent().withId(applicationProperties.getPid())
-                  .withSchemaName(applicationProperties.getName())
-                  .withType(Type.AS_APPLICATION),
+              createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+                  PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
               annotationProcessingRequest));
         }
       } catch (JsonProcessingException e) {
@@ -138,8 +141,8 @@ public class AnnotationPublisherService {
               buildSpecimenSelector(action.get("path").asText())))
           .withDctermsCreated(Date.from(Instant.now()))
           .withDctermsCreator(
-              new Agent().withType(Type.AS_APPLICATION).withId(sourceSystemID)
-                  .withSchemaName(sourceSystemName));
+              createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+                  SCHEMA_SOFTWARE_APPLICATION));
       if (action.get(OP).asText().equals("replace")) {
         annotations.add(addReplaceOperation(action, annotationProcessingRequest, sourceSystemID));
       } else if (action.get(OP).asText().equals("add")) {
@@ -156,8 +159,7 @@ public class AnnotationPublisherService {
       } else if (action.get(OP).asText().equals("move")) {
         annotations.addAll(
             addMoveOperation(digitalSpecimenRecord, action, annotationProcessingRequest,
-                sourceSystemID,
-                sourceSystemName));
+                sourceSystemID, sourceSystemName));
       }
     }
     return annotations;
@@ -180,8 +182,8 @@ public class AnnotationPublisherService {
             buildSpecimenSelector(action.get(FROM).asText())))
         .withDctermsCreated(Date.from(Instant.now()))
         .withDctermsCreator(
-            new Agent().withType(Type.AS_APPLICATION).withId(sourceSystemID)
-                .withSchemaName(sourceSystemName))
+            createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+                SCHEMA_SOFTWARE_APPLICATION))
         .withOaMotivation(OaMotivation.ODS_DELETING)
         .withOaMotivatedBy(
             "Received delete information from Source System with id: " + sourceSystemID);
@@ -189,8 +191,8 @@ public class AnnotationPublisherService {
   }
 
   private AnnotationProcessingRequest addCopyOperation(DigitalSpecimenRecord digitalSpecimenRecord,
-      JsonNode action,
-      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID)
+      JsonNode action, AnnotationProcessingRequest annotationProcessingRequest,
+      String sourceSystemID)
       throws JsonProcessingException {
     var digitalSpecimenJson = mapper.convertValue(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes(), JsonNode.class);

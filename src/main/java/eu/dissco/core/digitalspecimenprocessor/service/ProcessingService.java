@@ -1,8 +1,11 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationConfiguration.DATE_STRING;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
@@ -29,10 +32,9 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
+import eu.dissco.core.digitalspecimenprocessor.util.AgentUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.net.URI;
@@ -63,8 +65,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ProcessingService {
 
-  private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: ";
   private static final String DOI_STRING = "https://doi.org/";
+  private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: {}";
   private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
       .withZone(ZoneOffset.UTC);
   private final DigitalSpecimenRepository repository;
@@ -91,7 +93,8 @@ public class ProcessingService {
     var uniqueBatch = removeDuplicatesInBatch(events);
     var processResult = processSpecimens(uniqueBatch);
     log.info("Batch consists of: {} new, {} update and {} equal specimen",
-        processResult.newSpecimens().size(), processResult.changedSpecimens().size(),
+        processResult.newSpecimens().size(),
+        processResult.changedSpecimens().size(),
         processResult.equalSpecimens().size());
     var results = new ArrayList<DigitalSpecimenRecord>();
     if (!processResult.equalSpecimens().isEmpty()) {
@@ -190,8 +193,8 @@ public class ProcessingService {
     var currentModified = currentDigitalSpecimen.attributes().getDctermsModified();
     var currentCreated = currentDigitalSpecimen.attributes().getDctermsCreated();
     setGeneratedTimestampToNull(currentDigitalSpecimen, digitalSpecimen);
-    setTimestampsEntityRelationships(digitalSpecimen.attributes().getOdsHasEntityRelationship(),
-        currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
+    setTimestampsEntityRelationships(digitalSpecimen.attributes().getOdsHasEntityRelationships(),
+        currentDigitalSpecimen.attributes().getOdsHasEntityRelationships());
     var mediaRelationships = removeMediaEntityRelationships(currentDigitalSpecimen.attributes());
     verifyOriginalData(currentDigitalSpecimen, digitalSpecimen);
     if (currentDigitalSpecimen.type().equals(digitalSpecimen.type()) &&
@@ -200,9 +203,9 @@ public class ProcessingService {
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
-      var ers = new ArrayList<>(currentDigitalSpecimen.attributes().getOdsHasEntityRelationship());
+      var ers = new ArrayList<>(currentDigitalSpecimen.attributes().getOdsHasEntityRelationships());
       ers.addAll(mediaRelationships);
-      currentDigitalSpecimen.attributes().setOdsHasEntityRelationship(ers);
+      currentDigitalSpecimen.attributes().setOdsHasEntityRelationships(ers);
       return true;
     } else {
       digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
@@ -210,19 +213,19 @@ public class ProcessingService {
       digitalSpecimen.attributes().setDctermsCreated(currentCreated);
       currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
       var mediaRelations = new ArrayList<>(
-          digitalSpecimen.attributes().getOdsHasEntityRelationship());
+          digitalSpecimen.attributes().getOdsHasEntityRelationships());
       mediaRelations.addAll(mediaRelationships);
-      currentDigitalSpecimen.attributes().setOdsHasEntityRelationship(mediaRelations);
+      currentDigitalSpecimen.attributes().setOdsHasEntityRelationships(mediaRelations);
       return false;
     }
   }
 
   /*
-  When all fields are equal except the timestamp we assume tha relationships are equal and the
-  timestamp can be taken over from the current entity relationship.
-  This will reduce the amount of updates and will only update the ER timestamp when there was an
-  actual change
-  */
+When all fields are equal except the timestamp we assume tha relationships are equal and the
+timestamp can be taken over from the current entity relationship.
+This will reduce the amount of updates and will only update the ER timestamp when there was an
+actual change
+*/
   private void setTimestampsEntityRelationships(List<EntityRelationship> entityRelationships,
       List<EntityRelationship> currentEntityRelationships) {
     for (var entityRelationship : entityRelationships) {
@@ -237,12 +240,8 @@ public class ProcessingService {
                 currentEntityrelationship.getDwcRelatedResourceID()) &&
             Objects.equals(entityRelationship.getOdsRelatedResourceURI(),
                 currentEntityrelationship.getOdsRelatedResourceURI()) &&
-            Objects.equals(entityRelationship.getDwcRelationshipAccordingTo(),
-                currentEntityrelationship.getDwcRelationshipAccordingTo()) &&
-            Objects.equals(entityRelationship.getOdsRelationshipAccordingToAgent(),
-                currentEntityrelationship.getOdsRelationshipAccordingToAgent()) &&
-            Objects.equals(entityRelationship.getOdsEntityRelationshipOrder(),
-                currentEntityrelationship.getOdsEntityRelationshipOrder()) &&
+            Objects.equals(entityRelationship.getOdsHasAgents(),
+                currentEntityrelationship.getOdsHasAgents()) &&
             Objects.equals(entityRelationship.getDwcRelationshipRemarks(),
                 currentEntityrelationship.getDwcRelationshipRemarks())
         ) {
@@ -256,14 +255,14 @@ public class ProcessingService {
   private List<EntityRelationship> removeMediaEntityRelationships(DigitalSpecimen attributes) {
     var mediaEntityRelationships = new ArrayList<EntityRelationship>();
     var remainingEntityRelationships = new ArrayList<EntityRelationship>();
-    attributes.getOdsHasEntityRelationship().forEach(entityRelationship -> {
+    attributes.getOdsHasEntityRelationships().forEach(entityRelationship -> {
       if (entityRelationship.getDwcRelationshipOfResource().equals(HAS_MEDIA.getName())) {
         mediaEntityRelationships.add(entityRelationship);
       } else {
         remainingEntityRelationships.add(entityRelationship);
       }
     });
-    attributes.setOdsHasEntityRelationship(remainingEntityRelationships);
+    attributes.setOdsHasEntityRelationships(remainingEntityRelationships);
     return mediaEntityRelationships;
   }
 
@@ -333,7 +332,7 @@ public class ProcessingService {
     var mediaPidMap = createMediaPidsForUpdatedRecords(
         updatedDigitalSpecimenTuples);
     var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples, mediaPidMap);
-    log.info("Persisting to db");
+    log.info("Persisting {} updated record to the database", digitalSpecimenRecords.size());
     try {
       repository.createDigitalSpecimenRecord(
           digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
@@ -344,7 +343,7 @@ public class ProcessingService {
       return Collections.emptySet();
     }
     removeSpecimenRelationshipsFromMedia(digitalSpecimenRecords);
-    log.info("Persisting to elastic");
+    log.info("Persisting {} updated records to elastic", digitalSpecimenRecords.size());
     try {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(
           digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
@@ -357,7 +356,7 @@ public class ProcessingService {
       var successfullyProcessedRecords = digitalSpecimenRecords.stream()
           .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
               Collectors.toSet());
-      log.info("Successfully updated {} digitalSpecimenWrapper",
+      log.info("Successfully updated {} digitalSpecimen records",
           successfullyProcessedRecords.size());
       annotationPublisherService.publishAnnotationUpdatedSpecimen(digitalSpecimenRecords);
       gatherDigitalMediaObjectForUpdatedRecords(digitalSpecimenRecords);
@@ -484,6 +483,7 @@ public class ProcessingService {
 
     if (!digitalSpecimensToUpdate.isEmpty()) {
       try {
+        log.info("Updating {} handle records", digitalSpecimensToUpdate.size());
         var requests = fdoRecordService.buildUpdateHandleRequest(digitalSpecimensToUpdate);
         handleComponent.updateHandle(requests);
       } catch (PidException e) {
@@ -493,7 +493,7 @@ public class ProcessingService {
             kafkaService.deadLetterEvent(tuple.digitalSpecimenEvent());
           }
         } catch (JsonProcessingException jsonEx) {
-          log.error(DLQ_FAILED + "{}", updatedDigitalSpecimenTuples, jsonEx);
+          log.error(DLQ_FAILED, updatedDigitalSpecimenTuples, jsonEx);
         }
         return false;
       }
@@ -531,7 +531,7 @@ public class ProcessingService {
                   .digitalSpecimenWrapper(),
               updatedDigitalSpecimenRecord.digitalMediaObjectEvents()));
     } catch (JsonProcessingException e) {
-      log.error(DLQ_FAILED + updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
+      log.error(DLQ_FAILED, updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
   }
 
@@ -624,14 +624,14 @@ public class ProcessingService {
               digitalMediaKey));
         });
     var totalErs = Stream.concat(
-        digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationship()
+        digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships()
             .stream()
             // Filters out tombstoned media relations so we don't include then in the new version
             .filter(entityRelationship -> !mediaProcessResult.tombstoneMedia()
                 .contains(entityRelationship)),
         newEntityRelationshipStream).toList();
     var existingAttributes = digitalSpecimenRecord.digitalSpecimenWrapper().attributes();
-    existingAttributes.setOdsHasEntityRelationship(totalErs);
+    existingAttributes.setOdsHasEntityRelationships(totalErs);
     return new DigitalSpecimenRecord(
         digitalSpecimenRecord.id(),
         digitalSpecimenRecord.midsLevel(),
@@ -678,7 +678,7 @@ public class ProcessingService {
       var digitalMediaKey = new DigitalMediaKey(digitalSpecimenPid, attributes.getAcAccessURI());
       String mediaPid = mediaPidMap == null ? null :
           mediaPidMap.get(digitalMediaKey);
-      attributes.getOdsHasEntityRelationship().add(
+      attributes.getOdsHasEntityRelationships().add(
           buildEntityRelationship(HAS_SPECIMEN.getName(), digitalSpecimenPid));
       var digitalMediaObjectEvent = new DigitalMediaEvent(
           digitalMediaObjectEventWithoutDoi.enrichmentList(),
@@ -687,7 +687,7 @@ public class ProcessingService {
               digitalSpecimenPid,
               attributes
                   .withId(mediaPid)
-                  .withOdsID(mediaPid),
+                  .withDctermsIdentifier(mediaPid),
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
       );
       try {
@@ -706,12 +706,9 @@ public class ProcessingService {
         .withType("ods:EntityRelationship")
         .withDwcRelationshipEstablishedDate(Date.from(Instant.now()))
         .withDwcRelationshipOfResource(relationshipType)
-        .withDwcRelationshipAccordingTo(applicationProperties.getName())
-        .withOdsRelationshipAccordingToAgent(new Agent()
-            .withType(Type.AS_APPLICATION)
-            .withId(applicationProperties.getPid())
-            .withSchemaName(applicationProperties.getName()))
-        .withDwcRelatedResourceID(relatedResourceId)
+        .withOdsHasAgents(List.of(AgentUtils.createMachineAgent(applicationProperties.getName(),
+            applicationProperties.getPid(), PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))
+        .withDwcRelatedResourceID(DOI_PREFIX + relatedResourceId)
         .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedResourceId));
   }
 
@@ -889,7 +886,7 @@ public class ProcessingService {
       try {
         elasticRepository.rollbackSpecimen(digitalSpecimenRecord);
       } catch (IOException | ElasticsearchException e) {
-        log.error("Fatal exception, unable to roll back: " + digitalSpecimenRecord.id(), e);
+        log.error("Fatal exception, unable to roll back: {}", digitalSpecimenRecord.id(), e);
       }
     }
     repository.rollbackSpecimen(digitalSpecimenRecord.id());
@@ -899,7 +896,7 @@ public class ProcessingService {
               digitalSpecimenRecord.digitalSpecimenWrapper(),
               additionalInfo.getRight()));
     } catch (JsonProcessingException e) {
-      log.error(DLQ_FAILED + digitalSpecimenRecord.id(), e);
+      log.error(DLQ_FAILED, digitalSpecimenRecord.id(), e);
     }
   }
 

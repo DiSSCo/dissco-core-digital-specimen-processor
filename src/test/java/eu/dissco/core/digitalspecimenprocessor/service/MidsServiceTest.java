@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.COLLECTOR;
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.IDENTIFIER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
@@ -9,15 +11,19 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_N
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
+import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.Event;
+import eu.dissco.core.digitalspecimenprocessor.schema.GeologicalContext;
+import eu.dissco.core.digitalspecimenprocessor.schema.Georeference;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identification;
 import eu.dissco.core.digitalspecimenprocessor.schema.Location;
-import eu.dissco.core.digitalspecimenprocessor.schema.OdsGeoReference;
-import eu.dissco.core.digitalspecimenprocessor.schema.OdsGeologicalContext;
-import eu.dissco.core.digitalspecimenprocessor.schema.OdsHasTaxonIdentification;
+import eu.dissco.core.digitalspecimenprocessor.schema.TaxonIdentification;
+import eu.dissco.core.digitalspecimenprocessor.util.AgentUtils;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.util.ArrayList;
 import java.util.List;
@@ -96,11 +102,11 @@ class MidsServiceTest {
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenMidsThreeGenericSpecimen(
-                    new Location().withOdsGeoReference(new OdsGeoReference())),
+                    new Location().withOdsHasGeoreference(new Georeference())),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-                givenMidsThreeGenericSpecimen(new Location().withOdsGeoReference(null)),
+                givenMidsThreeGenericSpecimen(new Location().withOdsHasGeoreference(null)),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -115,11 +121,11 @@ class MidsServiceTest {
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-                givenFullBioSpecimenMissingTax(true, false),
+                givenFullBioSpecimenMissingTax(true, null),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
-                givenFullBioSpecimenMissingTax(false, true),
+                givenFullBioSpecimenMissingTax(false, "ID2"),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
@@ -152,43 +158,43 @@ class MidsServiceTest {
   }
 
   private static DigitalSpecimen givenFullBioSpecimenMissingTax(boolean missingName,
-      boolean missingIdentificationId) {
+      String identifierId) {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
-        .withDwcRecordedByID("ORCID")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withOdsHasIdentification(List.of(
-            new Identification().withDwcIdentifiedByID(missingIdentificationId ? null : "ID1")
-                .withOdsHasTaxonIdentification(
-                    List.of(new OdsHasTaxonIdentification().withDwcScientificNameID(
-                        missingName ? null : "ID2")))))
+        .withOdsHasIdentifications(List.of(
+            new Identification().withOdsHasAgents(createAgent(identifierId, IDENTIFIER))
+                .withOdsHasTaxonIdentifications(
+                    List.of(new TaxonIdentification().withDwcScientificNameID(
+                        missingName ? "ID2" : null)))))
         .withOdsIsKnownToContainMedia(true)
         .withOdsIsMarkedAsType(false)
-        .withOdsHasEvent(List.of(new Event()
+        .withOdsHasEvents(List.of(new Event()
             .withDwcVerbatimEventDate("A verbatim date as is on the label")
             .withDwcFieldNumber("1202")
-            .withOdsLocation(new Location()
+            .withOdsHasAgents(createAgent("ORCID", COLLECTOR))
+            .withOdsHasLocation(new Location()
                 .withDwcCountry("Estonia")
                 .withDwcCountryCode("EE")
-                .withOdsGeoReference(new OdsGeoReference()
+                .withOdsHasGeoreference(new Georeference()
                     .withDwcDecimalLatitude(59.465625)
                     .withDwcDecimalLongitude(25.059035)
                     .withDwcGeodeticDatum("WGS84")
                     .withDwcCoordinateUncertaintyInMeters(10.0)
                     .withDwcCoordinatePrecision(0.0001))
-                .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
+                .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
   }
 
   private static DigitalSpecimen givenBotanySpecimenMissingFieldNumber() {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withDwcRecordedBy("sam Leeflang")
         .withOdsIsMarkedAsType(false)
-        .withOdsHasEvent(List.of(
+        .withOdsHasEvents(List.of(
             new Event()
                 .withDwcYear(2023)
-                .withOdsLocation(
+                .withOdsHasAgents(createAgent(null, COLLECTOR))
+                .withOdsHasLocation(
                     new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
-                        .withOdsGeoReference(new OdsGeoReference()
+                        .withOdsHasGeoreference(new Georeference()
                             .withDwcDecimalLatitude(59.465625)
                             .withDwcDecimalLongitude(25.059035)))))
         .withOdsIsKnownToContainMedia(true);
@@ -197,24 +203,23 @@ class MidsServiceTest {
   private static DigitalSpecimen givenBotanyNoOccurrenceSpecimen(List<Event> events) {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withDwcRecordedBy("sam Leeflang")
         .withOdsIsMarkedAsType(true)
-        .withOdsHasEvent(events)
+        .withOdsHasEvents(events)
         .withOdsIsKnownToContainMedia(true);
   }
 
   private static DigitalSpecimen givenBotanySpecimenAlternative() {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withDwcRecordedBy("sam Leeflang")
         .withOdsIsMarkedAsType(false)
-        .withOdsHasEvent(List.of(
+        .withOdsHasEvents(List.of(
             new Event()
                 .withDwcYear(2023)
-                .withDwcRecordNumber("A record number")
-                .withOdsLocation(
+                .withDwcFieldNumber("A record number")
+                .withOdsHasAgents(createAgent(null, COLLECTOR))
+                .withOdsHasLocation(
                     new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
-                        .withOdsGeoReference(new OdsGeoReference()
+                        .withOdsHasGeoreference(new Georeference()
                             .withDwcDecimalLatitude(59.465625)
                             .withDwcDecimalLongitude(25.059035)))))
         .withOdsIsKnownToContainMedia(true);
@@ -223,37 +228,37 @@ class MidsServiceTest {
   private static DigitalSpecimen givenMissingLocation() {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withOdsIsMarkedAsType(true)
-        .withDwcRecordedByID("ORCID")
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
-        .withOdsHasIdentification(List.of(new Identification().withDwcIdentificationID("ID1")
-            .withOdsHasTaxonIdentification(
-                List.of(new OdsHasTaxonIdentification().withDwcScientificNameID("ID2")))))
-        .withOdsHasEvent(List.of(new Event()));
+        .withOdsHasIdentifications(List.of(new Identification().withDwcIdentificationID("ID1")
+            .withOdsHasTaxonIdentifications(
+                List.of(new TaxonIdentification().withDwcScientificNameID("ID2")))))
+        .withOdsHasEvents(List.of(new Event().withOdsHasAgents(createAgent("ORCID", COLLECTOR))));
   }
 
   private static DigitalSpecimen givenMidsThreeBioSpecimen() {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withOdsIsMarkedAsType(true)
-        .withDwcRecordedByID("ORCID")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withOdsHasIdentification(List.of(new Identification().withDwcIdentifiedByID("ID1")
-            .withOdsHasTaxonIdentification(
-                List.of(new OdsHasTaxonIdentification().withDwcScientificNameID("ID2")))))
+        .withOdsHasIdentifications(
+            List.of(new Identification().withOdsHasAgents(createAgent("ID1", IDENTIFIER))
+                .withOdsHasTaxonIdentifications(
+                    List.of(new TaxonIdentification().withDwcScientificNameID("ID2")))))
         .withOdsIsKnownToContainMedia(true)
         .withOdsIsMarkedAsType(false)
-        .withOdsHasEvent(List.of(new Event()
+        .withOdsHasEvents(List.of(new Event()
             .withDwcVerbatimEventDate("A verbatim date as is on the label")
             .withDwcFieldNumber("1202")
-            .withOdsLocation(new Location()
+            .withOdsHasAgents(createAgent("ORCID", COLLECTOR))
+            .withOdsHasLocation(new Location()
                 .withDwcCountry("Estonia")
                 .withDwcCountryCode("EE")
-                .withOdsGeoReference(new OdsGeoReference()
+                .withOdsHasGeoreference(new Georeference()
                     .withDwcDecimalLatitude(59.465625)
                     .withDwcDecimalLongitude(25.059035)
                     .withDwcGeodeticDatum("WGS84")
                     .withDwcCoordinateUncertaintyInMeters(10.0)
                     .withDwcCoordinatePrecision(0.0001))
-                .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
+                .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
   }
 
   private static Location givenLocationId() {
@@ -261,61 +266,61 @@ class MidsServiceTest {
         .withDwcCountry("Estonia")
         .withDwcCountryCode("EE")
         .withDwcLocationID("LOC_ID")
-        .withOdsGeoReference(new OdsGeoReference()
+        .withOdsHasGeoreference(new Georeference()
             .withDwcDecimalLatitude(59.465625)
             .withDwcDecimalLongitude(25.059035))
-        .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group"));
+        .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group"));
   }
 
   private static Location givenFootprintLocation() {
     return new Location()
         .withDwcCountry("Estonia")
         .withDwcCountryCode("EE")
-        .withOdsGeoReference(new OdsGeoReference()
+        .withOdsHasGeoreference(new Georeference()
             .withDwcDecimalLatitude(59.465625)
             .withDwcDecimalLongitude(25.059035)
             .withDwcFootprintSRS("Some footprint SRS, WGS84 for example")
             .withDwcFootprintWKT("POINT (12.559220 55.702230)"))
-        .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group"));
+        .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group"));
   }
 
 
   private static Location givenVerbatimCoordinateLocation() {
     return new Location()
         .withDwcLocationID("LOC_ID")
-        .withOdsGeoReference(new OdsGeoReference()
+        .withOdsHasGeoreference(new Georeference()
             .withDwcVerbatimCoordinates("59.465625, 25.059035"))
-        .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group"));
+        .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group"));
   }
 
   private static Location givenVerbatimLatLongLocation() {
     return new Location()
         .withDwcLocationID("LOC_ID")
-        .withOdsGeoReference(new OdsGeoReference()
+        .withOdsHasGeoreference(new Georeference()
             .withDwcVerbatimLatitude("59.465625")
             .withDwcVerbatimLongitude("25.059035"))
-        .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group"));
+        .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group"));
   }
 
   private static Location givenMissingUncertaintyLocation() {
     return new Location()
         .withDwcCountry("The Netherlands")
-        .withOdsGeoReference(new OdsGeoReference()
+        .withOdsHasGeoreference(new Georeference()
             .withDwcDecimalLatitude(59.465625)
             .withDwcDecimalLongitude(25.059035)
             .withDwcGeodeticDatum("WGS84"))
-        .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group"));
+        .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group"));
   }
 
   private static Location givenMissingPercisionLocation() {
     return new Location()
         .withDwcCountry("The Netherlands")
-        .withOdsGeoReference(new OdsGeoReference()
+        .withOdsHasGeoreference(new Georeference()
             .withDwcDecimalLatitude(59.465625)
             .withDwcDecimalLongitude(25.059035)
             .withDwcGeodeticDatum("WGS84")
             .withDwcCoordinateUncertaintyInMeters(100.00))
-        .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group"));
+        .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group"));
   }
 
   private static DigitalSpecimen givenMidsThreeGenericSpecimen(Location location) {
@@ -323,41 +328,47 @@ class MidsServiceTest {
         .withDwcPreparations("single specimen")
         .withOdsIsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
-        .withOdsHasIdentification(List.of(new Identification().withDwcIdentifiedByID("ID1")
-            .withOdsHasTaxonIdentification(
-                List.of(new OdsHasTaxonIdentification().withDwcScientificNameID("ID2")))))
-        .withOdsHasEvent(List.of(new Event().withOdsLocation(location)));
+        .withOdsHasIdentifications(List.of(new Identification().withOdsHasAgents(createAgent("ID1",
+                IDENTIFIER))
+            .withOdsHasTaxonIdentifications(
+                List.of(new TaxonIdentification().withDwcScientificNameID("ID2")))))
+        .withOdsHasEvents(List.of(new Event().withOdsHasLocation(location)));
   }
 
   private static DigitalSpecimen givenFullPaleoSpecimen() {
     return baseDigitalSpecimen().withDwcPreparations("single specimen")
         .withOdsIsMarkedAsType(false)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
-        .withOdsHasEvent(List.of(new Event().withOdsLocation(
+        .withOdsHasEvents(List.of(new Event().withOdsHasLocation(
             new Location()
                 .withDwcCountry("Estonia")
                 .withDwcCountryCode("EE")
-                .withOdsGeoReference(new OdsGeoReference()
+                .withOdsHasGeoreference(new Georeference()
                     .withDwcDecimalLatitude(59.465625)
                     .withDwcDecimalLongitude(25.059035))
-                .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
+                .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
   }
 
   private static DigitalSpecimen givenBotanySpecimen(Boolean hasMedia) {
     return baseDigitalSpecimen().withDwcPreparations("in alcohol")
         .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
-        .withDwcRecordedBy("sam Leeflang")
         .withOdsIsMarkedAsType(true)
-        .withOdsHasEvent(List.of(
+        .withOdsHasEvents(List.of(
             new Event()
+                .withOdsHasAgents(createAgent(null, COLLECTOR))
                 .withDwcEventDate("22-09-2023")
                 .withDwcFieldNumber("A field number")
-                .withOdsLocation(
+                .withOdsHasLocation(
                     new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
-                        .withOdsGeoReference(new OdsGeoReference()
+                        .withOdsHasGeoreference(new Georeference()
                             .withDwcDecimalLatitude(59.465625)
                             .withDwcDecimalLongitude(25.059035)))))
         .withOdsIsKnownToContainMedia(hasMedia);
+  }
+
+  private static List<Agent> createAgent(String id, AgentRoleType role) {
+    return List.of(AgentUtils.createMachineAgent("Sam Leeflang", id, role, null,
+        Type.SCHEMA_PERSON));
   }
 
   private static DigitalSpecimen givenInvalidType() {
@@ -371,13 +382,13 @@ class MidsServiceTest {
         .withDwcPreparations("single specimen")
         .withOdsIsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
-        .withOdsHasEvent(List.of(new Event().withOdsLocation(
+        .withOdsHasEvents(List.of(new Event().withOdsHasLocation(
             new Location()
-                .withOdsGeoReference(new OdsGeoReference()
+                .withOdsHasGeoreference(new Georeference()
                     .withDwcDecimalLatitude(59.465625)
                     .withDwcDecimalLongitude(25.059035))
-                .withOdsGeologicalContext(
-                    new OdsGeologicalContext().withDwcEarliestEonOrLowestEonothem("Archean")))));
+                .withOdsHasGeologicalContext(
+                    new GeologicalContext().withDwcEarliestEonOrLowestEonothem("Archean")))));
   }
 
   private static DigitalSpecimen givenMissingTopic() {
@@ -411,10 +422,10 @@ class MidsServiceTest {
         .withDwcPreparations("single specimen")
         .withOdsIsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
-        .withOdsHasEvent(List.of(new Event().withOdsLocation(
+        .withOdsHasEvents(List.of(new Event().withOdsHasLocation(
             new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
-                .withOdsGeoReference(new OdsGeoReference().withDwcDecimalLatitude(59.465625))
-                .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
+                .withOdsHasGeoreference(new Georeference().withDwcDecimalLatitude(59.465625))
+                .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
   }
 
   private static DigitalSpecimen givenMissingGeoReference() {
@@ -422,10 +433,10 @@ class MidsServiceTest {
         .withDwcPreparations("single specimen")
         .withOdsIsMarkedAsType(true)
         .withOdsTopicDiscipline(OdsTopicDiscipline.PALAEONTOLOGY)
-        .withOdsHasEvent(List.of(new Event().withOdsLocation(
+        .withOdsHasEvents(List.of(new Event().withOdsHasLocation(
             new Location().withDwcCountry("Estonia").withDwcCountryCode("EE")
-                .withOdsGeoReference(null)
-                .withOdsGeologicalContext(new OdsGeologicalContext().withDwcGroup("Group")))));
+                .withOdsHasGeoreference(null)
+                .withOdsHasGeologicalContext(new GeologicalContext().withDwcGroup("Group")))));
   }
 
 

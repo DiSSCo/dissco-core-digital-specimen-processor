@@ -16,7 +16,7 @@ public class DigitalSpecimenUtils {
       DigitalSpecimenRecord digitalSpecimenrecord) {
     var digitalSpecimen = digitalSpecimenrecord.digitalSpecimenWrapper().attributes();
     digitalSpecimen.setId(DOI_PREFIX + digitalSpecimenrecord.id());
-    digitalSpecimen.setOdsID(DOI_PREFIX + digitalSpecimenrecord.id());
+    digitalSpecimen.setDctermsIdentifier(DOI_PREFIX + digitalSpecimenrecord.id());
     digitalSpecimen.setOdsVersion(digitalSpecimenrecord.version());
     digitalSpecimen.setOdsMidsLevel(digitalSpecimenrecord.midsLevel());
     digitalSpecimen.setDctermsCreated(Date.from(digitalSpecimenrecord.created()));

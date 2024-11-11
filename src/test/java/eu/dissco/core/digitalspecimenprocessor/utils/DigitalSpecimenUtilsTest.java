@@ -18,7 +18,7 @@ class DigitalSpecimenUtilsTest {
 
     // Then
     assertThat(digitalSpecimen.getId()).isEqualTo(DOI_PREFIX + digitalSpecimenRecord.id());
-    assertThat(digitalSpecimen.getOdsID()).isEqualTo(DOI_PREFIX + digitalSpecimenRecord.id());
+    assertThat(digitalSpecimen.getDctermsIdentifier()).isEqualTo(DOI_PREFIX + digitalSpecimenRecord.id());
     assertThat(digitalSpecimen.getOdsVersion()).isEqualTo(digitalSpecimenRecord.version());
     assertThat(digitalSpecimen.getOdsMidsLevel()).isEqualTo(digitalSpecimenRecord.midsLevel());
     assertThat(digitalSpecimen.getDctermsCreated()).isEqualTo(digitalSpecimenRecord.created());
