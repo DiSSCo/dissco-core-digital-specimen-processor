@@ -30,14 +30,17 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class DigitalMediaServiceTest {
 
+  @Captor
+  ArgumentCaptor<List<String>> mediaPidsCaptor;
   private DigitalMediaService mediaService;
-
   @Mock
   private DigitalMediaRepository mediaRepository;
 
@@ -99,6 +102,8 @@ class DigitalMediaServiceTest {
 
     // Then
     assertThat(expected).isEqualTo(result);
+    then(mediaRepository).should().getDigitalMediaUrisFromId(mediaPidsCaptor.capture());
+    assertThat(mediaPidsCaptor.getValue()).containsExactly(MEDIA_PID, MEDIA_PID_ALT);
   }
 
   @Test
@@ -125,6 +130,8 @@ class DigitalMediaServiceTest {
 
     // Then
     assertThat(expected).isEqualTo(result);
+    then(mediaRepository).should().getDigitalMediaUrisFromId(mediaPidsCaptor.capture());
+    assertThat(mediaPidsCaptor.getValue()).containsExactly(MEDIA_PID, MEDIA_PID_ALT);
   }
 
   @Test
