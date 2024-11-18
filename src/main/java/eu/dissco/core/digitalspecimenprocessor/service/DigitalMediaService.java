@@ -13,6 +13,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,6 +29,16 @@ import org.springframework.stereotype.Service;
 public class DigitalMediaService {
 
   private final DigitalMediaRepository mediaRepository;
+
+  private static EntityRelationship findErByMediaPid(List<EntityRelationship> entityRelationships,
+      String mediaPid) {
+    for (var entityRelationship : entityRelationships) {
+      if (entityRelationship.getDwcRelatedResourceID().equals(DOI_PREFIX + mediaPid)) {
+        return entityRelationship;
+      }
+    }
+    throw new IllegalStateException();
+  }
 
   public Map<String, DigitalMediaProcessResult> getExistingDigitalMedia(
       Map<String, DigitalSpecimenRecord> currentSpecimens,
@@ -70,11 +81,11 @@ public class DigitalMediaService {
         .flatMap(List::stream)
         .filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
             .equals(HAS_MEDIA.getName()))
-        .map(EntityRelationship::getDwcRelatedResourceID)
+        .map(EntityRelationship::getOdsRelatedResourceURI)
+        .map(mediaId -> mediaId.toString().replace(DOI_PREFIX, ""))
         .toList();
     return mediaRepository.getDigitalMediaUrisFromId(currentMediaIds);
   }
-
 
   private DigitalMediaProcessResult getExistingDigitalMediaProcessResult(
       List<EntityRelationship> currentEntityRelationships,
@@ -124,16 +135,6 @@ public class DigitalMediaService {
       log.info("Removing {} tombstoned media relationships from database", mediaIds.size());
       mediaRepository.removeSpecimenRelationshipsFromMedia(mediaIds);
     }
-  }
-
-  private static EntityRelationship findErByMediaPid(List<EntityRelationship> entityRelationships,
-      String mediaPid) {
-    for (var entityRelationship : entityRelationships) {
-      if (entityRelationship.getDwcRelatedResourceID().equals(DOI_PREFIX + mediaPid)) {
-        return entityRelationship;
-      }
-    }
-    throw new IllegalStateException();
   }
 
 }
