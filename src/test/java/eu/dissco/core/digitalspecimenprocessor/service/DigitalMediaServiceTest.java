@@ -15,6 +15,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -104,6 +105,25 @@ class DigitalMediaServiceTest {
     assertThat(expected).isEqualTo(result);
     then(mediaRepository).should().getDigitalMediaUrisFromId(mediaPidsCaptor.capture());
     assertThat(mediaPidsCaptor.getValue()).containsExactlyInAnyOrder(MEDIA_PID, MEDIA_PID_ALT);
+  }
+
+  @Test
+  void testGetExistingMediaRelationshipsException() {
+    // Given
+    var firstRecord = givenDigitalSpecimenRecord();
+    var secondRecord = givenDifferentUnequalSpecimen(SECOND_HANDLE,
+        PHYSICAL_SPECIMEN_ID_ALT);
+    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, firstRecord, PHYSICAL_SPECIMEN_ID_ALT,
+        secondRecord);
+    var mediaEvents = List.of(givenDigitalMediaEvent(),
+        givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT, MEDIA_URL_ALT));
+    given(mediaRepository.getDigitalMediaUrisFromId(anyList())).willReturn(Map.of(
+        new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
+        new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL_ALT), MEDIA_PID_ALT));
+
+    // When / Then
+    assertThrows(IllegalStateException.class,
+        () -> mediaService.getExistingDigitalMedia(currentSpecimens, mediaEvents));
   }
 
   @Test
