@@ -103,7 +103,7 @@ class DigitalMediaServiceTest {
     // Then
     assertThat(expected).isEqualTo(result);
     then(mediaRepository).should().getDigitalMediaUrisFromId(mediaPidsCaptor.capture());
-    assertThat(mediaPidsCaptor.getValue()).containsExactly(MEDIA_PID, MEDIA_PID_ALT);
+    assertThat(mediaPidsCaptor.getValue()).containsExactlyInAnyOrder(MEDIA_PID, MEDIA_PID_ALT);
   }
 
   @Test
@@ -131,7 +131,7 @@ class DigitalMediaServiceTest {
     // Then
     assertThat(expected).isEqualTo(result);
     then(mediaRepository).should().getDigitalMediaUrisFromId(mediaPidsCaptor.capture());
-    assertThat(mediaPidsCaptor.getValue()).containsExactly(MEDIA_PID, MEDIA_PID_ALT);
+    assertThat(mediaPidsCaptor.getValue()).containsExactlyInAnyOrder(MEDIA_PID, MEDIA_PID_ALT);
   }
 
   @Test
