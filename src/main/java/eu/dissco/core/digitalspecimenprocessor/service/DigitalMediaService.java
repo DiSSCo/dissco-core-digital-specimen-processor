@@ -13,7 +13,6 @@ import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
