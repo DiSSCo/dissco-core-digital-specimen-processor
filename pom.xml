@@ -272,6 +272,7 @@
           <includeConstructors>true</includeConstructors>
           <includeDynamicBuilders>true</includeDynamicBuilders>
           <includeAdditionalProperties>true</includeAdditionalProperties>
+          <inclusionLevel>NON_EMPTY</inclusionLevel>
         </configuration>
         <executions>
           <execution>
