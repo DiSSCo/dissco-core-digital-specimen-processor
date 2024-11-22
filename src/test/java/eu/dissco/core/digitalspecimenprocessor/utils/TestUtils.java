@@ -561,7 +561,6 @@ public class TestUtils {
         .withDwcDatasetName(DATASET_ID)
         .withOdsIsMarkedAsType(markedAsType)
         .withOdsIsKnownToContainMedia(containsMedia)
-        .withDwcPreparations("")
         .withDctermsModified("2022-11-01T09:59:24.000Z");
     if (addEntityRelationShip) {
       ds.withOdsHasEntityRelationships(
