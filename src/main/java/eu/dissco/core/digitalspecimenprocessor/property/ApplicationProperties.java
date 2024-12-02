@@ -20,6 +20,6 @@ public class ApplicationProperties {
   private String pid = "https://hdl.handle.net/TEST/123-123-123";
 
   @NotBlank
-  private String createUpdateTombstoneEventType = "https://hdl.handle.net/TEST/123-123-123";
+  private String createUpdateTombstoneEventType = "https://doi.org/21.T11148/d7570227982f70256af3";
 
 }
