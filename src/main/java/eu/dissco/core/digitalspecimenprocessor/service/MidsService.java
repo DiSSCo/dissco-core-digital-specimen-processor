@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class MidsService {
 
+  private static final List<String> UNACCEPTED_VALUES = List.of("null", "unknown",
+      "unknown:undigitized");
+
   private static final List<OdsTopicDiscipline> BIO_DISCIPLINES = List.of(OdsTopicDiscipline.BOTANY,
       OdsTopicDiscipline.MICROBIOLOGY, OdsTopicDiscipline.ZOOLOGY,
       OdsTopicDiscipline.OTHER_BIODIVERSITY);
@@ -25,7 +28,10 @@ public class MidsService {
       OdsTopicDiscipline.ECOLOGY, OdsTopicDiscipline.OTHER_GEODIVERSITY);
 
   private static boolean isValid(String value) {
-    return value != null && !value.trim().isEmpty() && !value.equalsIgnoreCase("null");
+    if (value == null || value.trim().isEmpty()) {
+      return false;
+    }
+    return !UNACCEPTED_VALUES.contains(value.toLowerCase());
   }
 
   public int calculateMids(
@@ -115,16 +121,15 @@ public class MidsService {
   }
 
   private boolean compliesToMidsTwoBio(DigitalSpecimen attributes) {
-    return attributes.getOdsIsMarkedAsType() != null
-        && Boolean.TRUE.equals(attributes.getOdsIsKnownToContainMedia())
+    return Boolean.TRUE.equals(attributes.getOdsIsKnownToContainMedia())
         && qualitativeLocationIsValid(attributes)
         && quantitativeLocationIsValid(attributes)
-        && (eventIsPresent(attributes) && hasValue(
-        attributes.getOdsHasEvents().get(0).getDwcEventDate(),
+        && (eventIsPresent(attributes)
+        && hasValue(attributes.getOdsHasEvents().get(0).getDwcEventDate(),
         attributes.getOdsHasEvents().get(0).getDwcVerbatimEventDate(),
         convertInteger(attributes.getOdsHasEvents().get(0).getDwcYear())))
-        && (eventIsPresent(attributes) &&
-        hasValue(attributes.getOdsHasEvents().get(0).getDwcFieldNumber())
+        && (eventIsPresent(attributes) && hasValue(
+        attributes.getOdsHasEvents().get(0).getDwcFieldNumber())
         && hasAgentWithRole(COLLECTOR,
         attributes.getOdsHasEvents().stream().map(Event::getOdsHasAgents).flatMap(List::stream)
             .toList(), false));

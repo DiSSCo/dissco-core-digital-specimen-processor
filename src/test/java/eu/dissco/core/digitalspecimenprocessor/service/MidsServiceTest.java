@@ -127,6 +127,7 @@ class MidsServiceTest {
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenFullBioSpecimenMissingTax(false, "ID2"),
                 MAPPER.createObjectNode()), 2),
+
         Arguments.of(
             new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
                 givenMidsThreeGenericSpecimen(givenMissingUncertaintyLocation()),
