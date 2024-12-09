@@ -1,10 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.RIGHTS_OWNER;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_ID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_URL;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_PID;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_ORGANIZATION;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
@@ -95,7 +95,7 @@ class FdoRecordServiceTest {
 
   static Stream<Arguments> genLicense() {
     return Stream.of(
-        Arguments.of(LICENSE_ID.getAttribute(), "https://spdx.org/licenses/Apache-2.0.html"),
+        Arguments.of(LICENSE_URL.getAttribute(), "https://spdx.org/licenses/Apache-2.0.html"),
         Arguments.of(LICENSE_NAME.getAttribute(), "Apache 2.0"));
   }
 
@@ -198,10 +198,10 @@ class FdoRecordServiceTest {
     );
     var attributes = (ObjectNode) givenHandleMediaRequestAttributes();
     if (expectedName != null) {
-      attributes.put(RIGHTS_HOLDER_NAME.getAttribute(), expectedName);
+      attributes.put(RIGHTS_HOLDER.getAttribute(), expectedName);
     }
     if (expectedId != null) {
-      attributes.put(RIGHTS_HOLDER_ID.getAttribute(), expectedId);
+      attributes.put(RIGHTS_HOLDER_PID.getAttribute(), expectedId);
     }
     var expected = List.of(MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()

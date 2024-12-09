@@ -1,8 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.RIGHTS_OWNER;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_URL;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LIVING_OR_PRESERVED;
@@ -15,8 +15,8 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_ID;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.RIGHTS_HOLDER_PID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.SPECIMEN_HOST_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_DISCIPLINE;
@@ -64,7 +64,7 @@ public class FdoRecordService {
 
   private static void setLicense(ObjectNode attributes, DigitalMedia media) {
     if (media.getDctermsRights() != null && media.getDctermsRights().matches(URL_PATTERN)) {
-      attributes.put(LICENSE_ID.getAttribute(), media.getDctermsRights());
+      attributes.put(LICENSE_URL.getAttribute(), media.getDctermsRights());
     } else if (media.getDctermsRights() != null) {
       attributes.put(LICENSE_NAME.getAttribute(), media.getDctermsRights());
     }
@@ -74,10 +74,10 @@ public class FdoRecordService {
     var rightsHolderId = collectRightsHolder(media, false);
     var rightsHolderName = collectRightsHolder(media, true);
     if (rightsHolderId != null) {
-      attributes.put(RIGHTS_HOLDER_ID.getAttribute(), rightsHolderId);
+      attributes.put(RIGHTS_HOLDER_PID.getAttribute(), rightsHolderId);
     }
     if (rightsHolderName != null) {
-      attributes.put(RIGHTS_HOLDER_NAME.getAttribute(), rightsHolderName);
+      attributes.put(RIGHTS_HOLDER.getAttribute(), rightsHolderName);
     }
   }
 
