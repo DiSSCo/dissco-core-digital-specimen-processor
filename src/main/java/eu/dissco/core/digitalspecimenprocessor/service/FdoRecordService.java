@@ -86,10 +86,12 @@ public class FdoRecordService {
         .filter(agent -> agent.getOdsHasRoles().stream()
             .anyMatch(role -> role.getSchemaRoleName().equals(RIGHTS_OWNER.getName())));
     if (name) {
-      return rightsHolderStream.map(Agent::getSchemaName).filter(Objects::nonNull).reduce((a, b) -> a + " | " + b)
+      return rightsHolderStream.map(Agent::getSchemaName).filter(Objects::nonNull)
+          .reduce((a, b) -> a + " | " + b)
           .orElse(null);
     } else {
-      return rightsHolderStream.map(Agent::getId).filter(Objects::nonNull).reduce((a, b) -> a + " | " + b).orElse(null);
+      return rightsHolderStream.map(Agent::getId).filter(Objects::nonNull)
+          .reduce((a, b) -> a + " | " + b).orElse(null);
     }
   }
 
@@ -103,6 +105,7 @@ public class FdoRecordService {
     for (var mediaEvent : digitalMediaList) {
       var media = mediaEvent.digitalMediaObjectWithoutDoi().attributes();
       var attributes = mapper.createObjectNode()
+          .put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
           .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
           .put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
           .put(LINKED_DO_PID.getAttribute(), specimenId)
@@ -197,10 +200,6 @@ public class FdoRecordService {
       attributes.put(TOPIC_DISCIPLINE.getAttribute(),
           specimen.attributes().getOdsTopicDiscipline().value());
     }
-    if (specimen.attributes().getOdsSpecimenName() != null) {
-      attributes.put(REFERENT_NAME.getAttribute(),
-          specimen.attributes().getOdsSpecimenName());
-    }
     if (specimen.attributes().getOdsLivingOrPreserved() != null) {
       attributes.put(LIVING_OR_PRESERVED.getAttribute(),
           specimen.attributes().getOdsLivingOrPreserved().value());
@@ -208,6 +207,17 @@ public class FdoRecordService {
     if (specimen.attributes().getOdsIsMarkedAsType() != null) {
       attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsIsMarkedAsType());
     }
+    if (specimen.attributes().getOdsSpecimenName() != null) {
+      attributes.put(REFERENT_NAME.getAttribute(),
+          specimen.attributes().getOdsSpecimenName());
+    } else if (specimen.attributes().getOdsOrganisationName() != null) {
+      attributes.put(REFERENT_NAME.getAttribute(),
+          "Specimen from " + specimen.attributes().getOdsOrganisationName());
+    } else {
+      attributes.put(REFERENT_NAME.getAttribute(),
+          "Specimen from " + specimen.attributes().getOdsOrganisationID());
+    }
+
     attributes.set("otherSpecimenIds", buildOtherSpecimenIdArray(specimen));
   }
 
