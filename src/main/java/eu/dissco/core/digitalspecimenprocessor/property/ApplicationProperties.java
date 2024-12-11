@@ -14,10 +14,10 @@ public class ApplicationProperties {
   private String specimenBaseUrl = "https://doi.org/";
 
   @NotBlank
-  private String name = "dissco-core-digital-specimen-processor";
+  private String name = "DiSSCo Digital Specimen Processing Service";
 
   @NotBlank
-  private String pid = "https://hdl.handle.net/TEST/123-123-123";
+  private String pid = "https://doi.org/10.5281/zenodo.14383054";
 
   @NotBlank
   private String createUpdateTombstoneEventType = "https://doi.org/21.T11148/d7570227982f70256af3";
