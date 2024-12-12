@@ -16,6 +16,7 @@ public enum FdoProfileAttributes {
   TOPIC_DISCIPLINE("topicDiscipline"),
   LIVING_OR_PRESERVED("livingOrPreserved"),
   MARKED_AS_TYPE("markedAsType"),
+  CATALOG_NUMBER("catalogNumber"),
 
   // Digital Media
   MEDIA_HOST("mediaHost"),

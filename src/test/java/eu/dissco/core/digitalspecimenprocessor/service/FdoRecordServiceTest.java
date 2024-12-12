@@ -48,6 +48,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysica
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDomain;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicOrigin;
+import eu.dissco.core.digitalspecimenprocessor.schema.Identifier;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -285,6 +286,43 @@ class FdoRecordServiceTest {
     var expectedAttributes = (ObjectNode) givenHandleAttributes(markedAsType);
     expectedAttributes.put("topicDomain", OdsTopicDomain.EARTH_SYSTEM.value());
     expectedAttributes.put("topicOrigin", OdsTopicOrigin.NATURAL.value());
+    var expected = List.of(MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("type", TYPE)
+            .set("attributes", expectedAttributes)));
+
+    // When
+    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
+
+    // Then
+    assertThat(response).isEqualTo(expected);
+  }
+
+  @Test
+  void testGenRequestIdentifier() throws Exception {
+    // Given
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, false, false, false)
+            .withOdsHasIdentifiers(List.of(
+                new Identifier().withDctermsTitle("Other id").withDctermsIdentifier("123"),
+                new Identifier().withDctermsTitle("dwc:catalogNumber").withDctermsIdentifier(HANDLE)
+            )),
+        ORIGINAL_DATA);
+    var expectedAttributes = MAPPER.readTree("""
+        {
+          "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
+          "specimenHost": "https://ror.org/0443cwa12",
+          "specimenHostName": "National Museum of Natural History",
+          "topicDiscipline": "Botany",
+          "livingOrPreserved": "Preserved",
+          "markedAsType": false,
+          "referentName": "Biota",
+          "catalogNumber":"20.5000.1025/V1Z-176-LL4",
+          "otherSpecimenIds":[{"identifierType":"Other id", "identifierValue":"123","resolvable":false},
+            {"identifierType":"dwc:catalogNumber","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},
+            {"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]
+        }
+        """);
     var expected = List.of(MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
             .put("type", TYPE)
