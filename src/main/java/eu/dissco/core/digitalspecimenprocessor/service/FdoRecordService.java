@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.RIGHTS_OWNER;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.CATALOG_NUMBER;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_URL;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
@@ -217,7 +218,13 @@ public class FdoRecordService {
       attributes.put(REFERENT_NAME.getAttribute(),
           "Specimen from " + specimen.attributes().getOdsOrganisationID());
     }
-
+    if (specimen.attributes().getOdsHasIdentifiers() != null) {
+      for (var identifier : specimen.attributes().getOdsHasIdentifiers()) {
+        if ("dwc:catalogNumber".equals(identifier.getDctermsTitle())) {
+          attributes.put(CATALOG_NUMBER.getAttribute(), identifier.getDctermsIdentifier());
+        }
+      }
+    }
     attributes.set("otherSpecimenIds", buildOtherSpecimenIdArray(specimen));
   }
 
