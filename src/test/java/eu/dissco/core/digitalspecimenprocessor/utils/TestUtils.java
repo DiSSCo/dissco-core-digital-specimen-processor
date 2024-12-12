@@ -12,6 +12,7 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID_TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.REFERENT_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
@@ -485,6 +486,7 @@ public class TestUtils {
 
   public static JsonNode givenHandleMediaRequestAttributes() {
     return MAPPER.createObjectNode()
+        .put(REFERENT_NAME.getAttribute(), MEDIA_URL)
         .put(MEDIA_HOST.getAttribute(), ORGANISATION_ID)
         .put(MEDIA_HOST_NAME.getAttribute(), (String) null)
         .put(LINKED_DO_PID.getAttribute(), HANDLE)
@@ -535,6 +537,7 @@ public class TestUtils {
             "attributes": {
               "normalisedPrimarySpecimenObjectId": "https://geocollections.info/specimen/23602",
               "specimenHost": "https://ror.org/0443cwa12",
+              "referentName": "Specimen from https://ror.org/0443cwa12",
               "otherSpecimenIds":[{"identifierType":"physical specimen identifier","identifierValue": "https://geocollections.info/specimen/23602","resolvable":false}]
             }
           }
