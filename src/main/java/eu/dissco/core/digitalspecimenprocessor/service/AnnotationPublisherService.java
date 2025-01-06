@@ -255,8 +255,8 @@ public class AnnotationPublisherService {
           .withAdditionalProperty("ods:class", path);
     } else {
       return new OaHasSelector()
-          .withAdditionalProperty(TYPE, "ods:FieldSelector")
-          .withAdditionalProperty("ods:field", path);
+          .withAdditionalProperty(TYPE, "ods:TermSelector")
+          .withAdditionalProperty("ods:term", path);
     }
   }
 
