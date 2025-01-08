@@ -30,6 +30,7 @@ public class EqualityService {
       "dcterms:modified",
       "dwc:relationshipEstablishedDate"
   );
+  private static final String ATTRIBUTES = "ods:attributes";
 
   public boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
@@ -37,12 +38,11 @@ public class EqualityService {
       return false;
     }
     try {
-      var jsonCurrentSpecimen = normalizeJsonNode(mapper.createObjectNode()
-          .set("root", mapper.valueToTree(currentDigitalSpecimenWrapper.attributes())));
-      var jsonSpecimen = normalizeJsonNode(mapper.createObjectNode()
-          .set("root", mapper.valueToTree(digitalSpecimenWrapper.attributes())));
+      var jsonCurrentSpecimen = normalizeJsonNode(
+          mapper.valueToTree(currentDigitalSpecimenWrapper));
+      var jsonSpecimen = normalizeJsonNode(mapper.valueToTree(digitalSpecimenWrapper));
       verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
-      var isEqual = jsonCurrentSpecimen.equals(jsonSpecimen);
+      var isEqual = jsonCurrentSpecimen.get(ATTRIBUTES).equals(jsonSpecimen.get(ATTRIBUTES));
       if (!isEqual) {
         log.info("Specimen {} has changed. JsonDiff: {}",
             currentDigitalSpecimenWrapper.physicalSpecimenID(),
@@ -79,7 +79,7 @@ public class EqualityService {
   private static void removeMediaEntityRelationships(DocumentContext context) {
     var filter = filter(where("dwc:relationshipOfResource").eq(HAS_MEDIA.getName()));
     var paths = new HashSet<String>(
-        context.read("$['root']['ods:hasEntityRelationships'][?]", filter));
+        context.read("$['" + ATTRIBUTES + "']['ods:hasEntityRelationships'][?]", filter));
     for (var path : paths) {
       context.set(path, null);
     }
