@@ -50,7 +50,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -65,7 +64,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ProcessingService {
 
-  private static final String DOI_STRING = "https://doi.org/";
   private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: {}";
   private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
       .withZone(ZoneOffset.UTC);
@@ -79,14 +77,7 @@ public class ProcessingService {
   private final AnnotationPublisherService annotationPublisherService;
   private final ObjectMapper mapper;
   private final DigitalMediaService digitalMediaService;
-
-  private static void setGeneratedTimestampToNull(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen) {
-    currentDigitalSpecimen.attributes().setDctermsModified(null);
-    digitalSpecimen.attributes().setDctermsModified(null);
-    currentDigitalSpecimen.attributes().setDctermsCreated(null);
-    digitalSpecimen.attributes().setDctermsCreated(null);
-  }
+  private final EqualityService equalityService;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -154,7 +145,8 @@ public class ProcessingService {
               digitalSpecimenWrapper.physicalSpecimenID());
           var digitalMediaProcessResult = existingMediaProcessResult.get(
               currentDigitalSpecimen.id());
-          if (isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(), digitalSpecimenWrapper)
+          if (equalityService.isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(),
+              digitalSpecimenWrapper)
               && digitalMediaProcessResult.newMedia().isEmpty()
               && digitalMediaProcessResult.tombstoneMedia().isEmpty()) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
@@ -173,107 +165,6 @@ public class ProcessingService {
       log.error("Republishing messages, Unable to retrieve current specimen from repository", ex);
       events.forEach(this::republishEvent);
       return new ProcessResult(List.of(), List.of(), List.of());
-    }
-  }
-
-  /*
-  We need to remove the Modified and EntityRelationshipDate from the comparison.
-  We take over the ERDate from the current entity relationship if the ER is equal.
-
-  To establish equality, we only compare type and attributes, not original data or
-  physical specimen id. We ignore original data because original data is not updated
-  if it does change, and we ignore physical specimen id because that's how the specimens
-  were identified to be the same in the first place.
-  */
-  private boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen) {
-    if (currentDigitalSpecimen.attributes() == null) {
-      return false;
-    }
-    var currentModified = currentDigitalSpecimen.attributes().getDctermsModified();
-    var currentCreated = currentDigitalSpecimen.attributes().getDctermsCreated();
-    setGeneratedTimestampToNull(currentDigitalSpecimen, digitalSpecimen);
-    setTimestampsEntityRelationships(digitalSpecimen.attributes().getOdsHasEntityRelationships(),
-        currentDigitalSpecimen.attributes().getOdsHasEntityRelationships());
-    var mediaRelationships = removeMediaEntityRelationships(currentDigitalSpecimen.attributes());
-    verifyOriginalData(currentDigitalSpecimen, digitalSpecimen);
-    if (currentDigitalSpecimen.type().equals(digitalSpecimen.type()) &&
-        currentDigitalSpecimen.attributes().equals(digitalSpecimen.attributes())) {
-      digitalSpecimen.attributes().setDctermsModified(currentModified);
-      currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
-      currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
-      digitalSpecimen.attributes().setDctermsCreated(currentCreated);
-      var ers = new ArrayList<>(currentDigitalSpecimen.attributes().getOdsHasEntityRelationships());
-      ers.addAll(mediaRelationships);
-      currentDigitalSpecimen.attributes().setOdsHasEntityRelationships(ers);
-      return true;
-    } else {
-      digitalSpecimen.attributes().setDctermsModified(formatter.format(Instant.now()));
-      currentDigitalSpecimen.attributes().setDctermsCreated(currentCreated);
-      digitalSpecimen.attributes().setDctermsCreated(currentCreated);
-      currentDigitalSpecimen.attributes().setDctermsModified(currentModified);
-      var mediaRelations = new ArrayList<>(
-          digitalSpecimen.attributes().getOdsHasEntityRelationships());
-      mediaRelations.addAll(mediaRelationships);
-      currentDigitalSpecimen.attributes().setOdsHasEntityRelationships(mediaRelations);
-      return false;
-    }
-  }
-
-  /*
-When all fields are equal except the timestamp we assume tha relationships are equal and the
-timestamp can be taken over from the current entity relationship.
-This will reduce the amount of updates and will only update the ER timestamp when there was an
-actual change
-*/
-  private void setTimestampsEntityRelationships(List<EntityRelationship> entityRelationships,
-      List<EntityRelationship> currentEntityRelationships) {
-    for (var entityRelationship : entityRelationships) {
-      for (var currentEntityrelationship : currentEntityRelationships) {
-        if (Objects.equals(entityRelationship.getId(), currentEntityrelationship.getId()) &&
-            Objects.equals(entityRelationship.getType(), currentEntityrelationship.getType()) &&
-            Objects.equals(entityRelationship.getDwcRelationshipOfResource(),
-                currentEntityrelationship.getDwcRelationshipOfResource()) &&
-            Objects.equals(entityRelationship.getDwcRelationshipOfResourceID(),
-                currentEntityrelationship.getDwcRelationshipOfResourceID()) &&
-            Objects.equals(entityRelationship.getDwcRelatedResourceID(),
-                currentEntityrelationship.getDwcRelatedResourceID()) &&
-            Objects.equals(entityRelationship.getOdsRelatedResourceURI(),
-                currentEntityrelationship.getOdsRelatedResourceURI()) &&
-            Objects.equals(entityRelationship.getOdsHasAgents(),
-                currentEntityrelationship.getOdsHasAgents()) &&
-            Objects.equals(entityRelationship.getDwcRelationshipRemarks(),
-                currentEntityrelationship.getDwcRelationshipRemarks())
-        ) {
-          entityRelationship.setDwcRelationshipEstablishedDate(
-              currentEntityrelationship.getDwcRelationshipEstablishedDate());
-        }
-      }
-    }
-  }
-
-  private List<EntityRelationship> removeMediaEntityRelationships(DigitalSpecimen attributes) {
-    var mediaEntityRelationships = new ArrayList<EntityRelationship>();
-    var remainingEntityRelationships = new ArrayList<EntityRelationship>();
-    attributes.getOdsHasEntityRelationships().forEach(entityRelationship -> {
-      if (entityRelationship.getDwcRelationshipOfResource().equals(HAS_MEDIA.getName())) {
-        mediaEntityRelationships.add(entityRelationship);
-      } else {
-        remainingEntityRelationships.add(entityRelationship);
-      }
-    });
-    attributes.setOdsHasEntityRelationships(remainingEntityRelationships);
-    return mediaEntityRelationships;
-  }
-
-  private void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen) {
-    var currentOriginalData = currentDigitalSpecimen.originalAttributes();
-    var originalData = digitalSpecimen.originalAttributes();
-    if (currentOriginalData != null && !currentOriginalData.equals(originalData)) {
-      log.info(
-          "Original data for specimen with physical id {} has changed. Ignoring new original data.",
-          digitalSpecimen.physicalSpecimenID());
     }
   }
 

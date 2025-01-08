@@ -10,7 +10,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperWithMediaEr;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Option;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
@@ -43,7 +42,7 @@ class EqualityServiceTest {
   @ParameterizedTest
   @MethodSource("provideEqualSpecimens")
   void testEqualSpecimens(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen) throws JsonProcessingException {
+      DigitalSpecimenWrapper digitalSpecimen) {
     // When
     var result = equalityService.isEqual(currentDigitalSpecimen, digitalSpecimen);
 
@@ -52,7 +51,7 @@ class EqualityServiceTest {
   }
 
   @Test
-  void testUnequalSpecimens() throws JsonProcessingException {
+  void testUnequalSpecimens() {
     // Given
     var currentDigitalSpecimen = givenDigitalSpecimenWrapper();
     var digitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,

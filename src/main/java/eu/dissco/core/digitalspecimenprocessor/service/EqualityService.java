@@ -32,24 +32,30 @@ public class EqualityService {
   );
 
   public boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
-      DigitalSpecimenWrapper digitalSpecimenWrapper) throws JsonProcessingException {
+      DigitalSpecimenWrapper digitalSpecimenWrapper) {
     if (currentDigitalSpecimenWrapper == null) {
       return false;
     }
-    var jsonCurrentSpecimen = normalizeJsonNode(mapper.createObjectNode()
-        .set("root", mapper.valueToTree(currentDigitalSpecimenWrapper.attributes())));
-    var jsonSpecimen = normalizeJsonNode(mapper.createObjectNode()
-        .set("root", mapper.valueToTree(digitalSpecimenWrapper.attributes())));
-    var isEqual = jsonCurrentSpecimen.equals(jsonSpecimen);
-    if (!isEqual) {
-      log.info("Specimen {} has changed. JsonDiff: {}",
-          currentDigitalSpecimenWrapper.physicalSpecimenID(),
-          JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
+    try {
+      var jsonCurrentSpecimen = normalizeJsonNode(mapper.createObjectNode()
+          .set("root", mapper.valueToTree(currentDigitalSpecimenWrapper.attributes())));
+      var jsonSpecimen = normalizeJsonNode(mapper.createObjectNode()
+          .set("root", mapper.valueToTree(digitalSpecimenWrapper.attributes())));
+      verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
+      var isEqual = jsonCurrentSpecimen.equals(jsonSpecimen);
+      if (!isEqual) {
+        log.info("Specimen {} has changed. JsonDiff: {}",
+            currentDigitalSpecimenWrapper.physicalSpecimenID(),
+            JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
+      }
+      return isEqual;
+    } catch (JsonProcessingException e) {
+      log.error("Unable to re-serialize JSON. Can not determine equality.", e);
+      return false;
     }
-    return isEqual;
   }
 
-  public JsonNode normalizeJsonNode(JsonNode specimen) throws JsonProcessingException {
+  private JsonNode normalizeJsonNode(JsonNode specimen) throws JsonProcessingException {
     var specimenString = mapper.writeValueAsString(specimen);
     var context = using(jsonPathConfig).parse(specimenString);
     removeGeneratedTimestamps(context);
@@ -88,6 +94,17 @@ public class EqualityService {
       } else {
         stripNulls(child);
       }
+    }
+  }
+
+  private static void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+      DigitalSpecimenWrapper digitalSpecimenWrapper) {
+    var currentOriginalData = currentDigitalSpecimenWrapper.originalAttributes();
+    var originalData = digitalSpecimenWrapper.originalAttributes();
+    if (currentOriginalData != null && !currentOriginalData.equals(originalData)) {
+      log.info(
+          "Original data for specimen with physical id {} has changed. Ignoring new original data.",
+          digitalSpecimenWrapper.physicalSpecimenID());
     }
   }
 
