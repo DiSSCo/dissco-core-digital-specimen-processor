@@ -94,8 +94,8 @@ class AnnotationPublisherServiceTest {
                       }]
                     """),
             List.of(givenAcceptedAnnotation(OaMotivation.OA_EDITING,
-                new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
-                    .withAdditionalProperty("ods:field",
+                new OaHasSelector().withAdditionalProperty("@type", "ods:TermSelector")
+                    .withAdditionalProperty("ods:term",
                         "$['ods:hasIdentification'][0]['ods:hasTaxonIdentification'][0]['dwc:scientificName']"),
                 new AnnotationBody().withOaValue(List.of("Echinorhynchus haeruca Rudolphi, 1809"))
                     .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)))
@@ -117,8 +117,8 @@ class AnnotationPublisherServiceTest {
                       }]
                     """),
             List.of(givenAcceptedAnnotation(OaMotivation.ODS_DELETING,
-                new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
-                    .withAdditionalProperty("ods:field",
+                new OaHasSelector().withAdditionalProperty("@type", "ods:TermSelector")
+                    .withAdditionalProperty("ods:term",
                         "$['ods:hasEntityRelationship'][1]['dwc:relationshipEstablishedDate']"), null))
         ),
         Arguments.of(
@@ -131,8 +131,8 @@ class AnnotationPublisherServiceTest {
                       }]
                     """),
             List.of(givenAcceptedAnnotation(OaMotivation.ODS_ADDING,
-                new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
-                    .withAdditionalProperty("ods:field",
+                new OaHasSelector().withAdditionalProperty("@type", "ods:TermSelector")
+                    .withAdditionalProperty("ods:term",
                         "$['ods:sourceSystemName']"),
                 new AnnotationBody().withOaValue(List.of(SOURCE_SYSTEM_ID))
                     .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)))
@@ -147,14 +147,14 @@ class AnnotationPublisherServiceTest {
                       }]
                     """),
             List.of(givenAcceptedAnnotation(OaMotivation.ODS_ADDING,
-                    new OaHasSelector().withAdditionalProperty("@type", "ods:FieldSelector")
-                        .withAdditionalProperty("ods:field",
+                    new OaHasSelector().withAdditionalProperty("@type", "ods:TermSelector")
+                        .withAdditionalProperty("ods:term",
                             "$['ods:sourceSystemName']"),
                     new AnnotationBody().withOaValue(List.of(SOURCE_SYSTEM_ID))
                         .withType("oa:TextualBody").withDctermsReferences(SOURCE_SYSTEM_ID)),
                 givenAcceptedAnnotation(OaMotivation.ODS_DELETING, new OaHasSelector()
-                    .withAdditionalProperty("@type", "ods:FieldSelector")
-                    .withAdditionalProperty("ods:field", "$['ods:sourceSystemID']"), null))
+                    .withAdditionalProperty("@type", "ods:TermSelector")
+                    .withAdditionalProperty("ods:term", "$['ods:sourceSystemID']"), null))
         ));
   }
 
