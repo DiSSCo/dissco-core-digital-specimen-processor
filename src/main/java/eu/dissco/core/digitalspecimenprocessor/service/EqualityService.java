@@ -44,9 +44,11 @@ public class EqualityService {
       verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
       var isEqual = jsonCurrentSpecimen.get(ATTRIBUTES).equals(jsonSpecimen.get(ATTRIBUTES));
       if (!isEqual) {
-        log.info("Specimen {} has changed. JsonDiff: {}",
+        log.debug("Specimen {} has changed. JsonDiff: {}",
             currentDigitalSpecimenWrapper.physicalSpecimenID(),
             JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
+      } else {
+        log.info("Equal");
       }
       return isEqual;
     } catch (JsonProcessingException e) {

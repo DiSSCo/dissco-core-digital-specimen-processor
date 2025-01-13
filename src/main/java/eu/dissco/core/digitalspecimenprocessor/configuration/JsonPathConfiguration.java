@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class JsonPathConfiguration {
 
   @Bean
-  public com.jayway.jsonpath.Configuration jsonPathConfiguration() {
+  public com.jayway.jsonpath.Configuration jsonPathConfig() {
     return com.jayway.jsonpath.Configuration.builder()
         .options(Option.AS_PATH_LIST, Option.SUPPRESS_EXCEPTIONS, Option.ALWAYS_RETURN_LIST)
         .build();

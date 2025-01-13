@@ -113,7 +113,7 @@ public class DigitalMediaService {
                 event.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI())))
         .forEach(newMedia::add);
     if (!unchangedMedia.isEmpty() || !tombstoneMedia.isEmpty() || !newMedia.isEmpty()) {
-      log.info(
+      log.debug(
           "Identified {} unchanged media relationships, {} tombstoned media relationships, and {} new media for specimen {}",
           unchangedMedia.size(), tombstoneMedia.size(), newMedia.size(), digitalSpecimenId);
     } else {
