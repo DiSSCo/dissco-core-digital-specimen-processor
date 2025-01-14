@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import java.util.HashSet;
 import java.util.List;
@@ -33,22 +34,28 @@ public class EqualityService {
   private static final String ATTRIBUTES = "ods:attributes";
 
   public boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+      DigitalSpecimenWrapper digitalSpecimenWrapper,
+      DigitalMediaProcessResult digitalMediaProcessResult) {
+    return specimensAreEqual(currentDigitalSpecimenWrapper, digitalSpecimenWrapper)
+        && digitalMediaProcessResult.newMedia().isEmpty()
+        && digitalMediaProcessResult.tombstoneMedia().isEmpty();
+  }
+
+  private boolean specimensAreEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
     if (currentDigitalSpecimenWrapper == null) {
       return false;
     }
     try {
+      verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
       var jsonCurrentSpecimen = normalizeJsonNode(
           mapper.valueToTree(currentDigitalSpecimenWrapper));
       var jsonSpecimen = normalizeJsonNode(mapper.valueToTree(digitalSpecimenWrapper));
-      verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
       var isEqual = jsonCurrentSpecimen.get(ATTRIBUTES).equals(jsonSpecimen.get(ATTRIBUTES));
       if (!isEqual) {
         log.debug("Specimen {} has changed. JsonDiff: {}",
             currentDigitalSpecimenWrapper.physicalSpecimenID(),
-            JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
-      } else {
-        log.info("Equal");
+            JsonDiff.asJson(jsonCurrentSpecimen.get(ATTRIBUTES), jsonSpecimen.get(ATTRIBUTES)));
       }
       return isEqual;
     } catch (JsonProcessingException e) {
@@ -70,8 +77,10 @@ public class EqualityService {
   private static void removeGeneratedTimestamps(DocumentContext context) {
     for (var field : IGNORED_FIELDS) {
       var filter = filter(where(field).exists(true));
+      // Find the paths for the fields we want to set to null
       var paths = new HashSet<String>(context.read("$..*[?]", filter));
       for (var path : paths) {
+        // We add the field name here because our jsonpath library omits it from its results
         var fullPath = path + "['" + field + "']";
         context.set(fullPath, null);
       }
@@ -104,7 +113,7 @@ public class EqualityService {
     var currentOriginalData = currentDigitalSpecimenWrapper.originalAttributes();
     var originalData = digitalSpecimenWrapper.originalAttributes();
     if (currentOriginalData != null && !currentOriginalData.equals(originalData)) {
-      log.info(
+      log.debug(
           "Original data for specimen with physical id {} has changed. Ignoring new original data.",
           digitalSpecimenWrapper.physicalSpecimenID());
     }

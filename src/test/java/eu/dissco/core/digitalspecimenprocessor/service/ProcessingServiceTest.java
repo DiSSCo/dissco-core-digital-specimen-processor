@@ -143,7 +143,7 @@ class ProcessingServiceTest {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenDigitalSpecimenWithEntityRelationship()));
-    given(equalityService.isEqual(any(), any())).willReturn(true);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
@@ -171,7 +171,8 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenRecord()));
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(Map.of(
         HANDLE, givenEmptyMediaProcessResult()));
-    given(equalityService.isEqual(any(), any())).willReturn(true);
+    given(equalityService.isEqual(any(), any(), eq(givenEmptyMediaProcessResult()))).willReturn(
+        true);
 
     // When
     List<DigitalSpecimenRecord> result = service.handleMessages(
@@ -193,7 +194,7 @@ class ProcessingServiceTest {
         new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
             new DigitalSpecimen().withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY), null));
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
@@ -227,7 +228,8 @@ class ProcessingServiceTest {
         givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID, false, 2));
     var currentSpecimenRecord = givenDigitalSpecimenRecord();
     var currentMediaEvent = List.of(givenDigitalMediaEvent());
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    var newMediaResult = new DigitalMediaProcessResult(List.of(), List.of(), currentMediaEvent);
+    given(equalityService.isEqual(any(), any(), eq(newMediaResult))).willReturn(false);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
@@ -237,7 +239,7 @@ class ProcessingServiceTest {
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
-        Map.of(HANDLE, new DigitalMediaProcessResult(List.of(), List.of(), currentMediaEvent)));
+        Map.of(HANDLE, newMediaResult));
     given(handleComponent.postMediaHandle(any())).willReturn(givenMediaPidResponse());
 
     // When
@@ -261,8 +263,9 @@ class ProcessingServiceTest {
     var currentSpecimenRecord = givenDigitalSpecimenRecordWithMediaEr();
     var mediaEr = currentSpecimenRecord.digitalSpecimenWrapper().attributes()
         .getOdsHasEntityRelationships();
+    var tombstoneResult = new DigitalMediaProcessResult(List.of(), mediaEr, List.of());
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
-    given(equalityService.isEqual(any(), any())).willReturn(true);
+    given(equalityService.isEqual(any(), any(), eq(tombstoneResult))).willReturn(false);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
@@ -272,7 +275,7 @@ class ProcessingServiceTest {
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
-        Map.of(HANDLE, new DigitalMediaProcessResult(List.of(), mediaEr, List.of())));
+        Map.of(HANDLE, tombstoneResult));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -294,7 +297,7 @@ class ProcessingServiceTest {
   void testHandleRecordDoesNotNeedUpdate() throws Exception {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
             true)));
@@ -581,7 +584,7 @@ class ProcessingServiceTest {
   void testUpdateSpecimenHandleFailed() throws Exception {
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
@@ -611,7 +614,7 @@ class ProcessingServiceTest {
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
             givenUnequalDigitalSpecimenRecord()
         ));
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
     doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any());
@@ -637,7 +640,7 @@ class ProcessingServiceTest {
             givenUnequalDigitalSpecimenRecord()
         ));
     givenBulkResponse();
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
@@ -668,7 +671,7 @@ class ProcessingServiceTest {
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
     var events = List.of(firstEvent, secondEvent, thirdEvent);
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(repository.getDigitalSpecimens(
         List.of(PHYSICAL_SPECIMEN_ID, "A third Specimen", "Another Specimen")))
         .willReturn(List.of(
@@ -708,7 +711,7 @@ class ProcessingServiceTest {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord()));
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(
@@ -737,7 +740,7 @@ class ProcessingServiceTest {
     var unequalCurrentDigitalSpecimen = givenUnequalDigitalSpecimenRecord(ANOTHER_ORGANISATION);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(unequalCurrentDigitalSpecimen));
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(
             List.of(givenDigitalSpecimenRecord(2, false)))).willThrow(
@@ -810,7 +813,7 @@ class ProcessingServiceTest {
         givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
         givenUnequalDigitalSpecimenRecord()
     );
-    given(equalityService.isEqual(any(), any())).willReturn(false);
+    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(unequalOriginalSpecimens);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);

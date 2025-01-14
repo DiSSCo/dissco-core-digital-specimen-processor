@@ -146,9 +146,7 @@ public class ProcessingService {
           var digitalMediaProcessResult = existingMediaProcessResult.get(
               currentDigitalSpecimen.id());
           if (equalityService.isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(),
-              digitalSpecimenWrapper)
-              && digitalMediaProcessResult.newMedia().isEmpty()
-              && digitalMediaProcessResult.tombstoneMedia().isEmpty()) {
+              digitalSpecimenWrapper, digitalMediaProcessResult)) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
             equalSpecimens.add(currentDigitalSpecimen);
