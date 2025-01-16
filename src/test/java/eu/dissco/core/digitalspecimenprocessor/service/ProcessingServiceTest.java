@@ -195,6 +195,7 @@ class ProcessingServiceTest {
             new DigitalSpecimen().withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY), null));
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
@@ -230,6 +231,7 @@ class ProcessingServiceTest {
     var currentMediaEvent = List.of(givenDigitalMediaEvent());
     var newMediaResult = new DigitalMediaProcessResult(List.of(), List.of(), currentMediaEvent);
     given(equalityService.isEqual(any(), any(), eq(newMediaResult))).willReturn(false);
+    mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
@@ -266,6 +268,7 @@ class ProcessingServiceTest {
     var tombstoneResult = new DigitalMediaProcessResult(List.of(), mediaEr, List.of());
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
     given(equalityService.isEqual(any(), any(), eq(tombstoneResult))).willReturn(false);
+    mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
     given(bulkResponse.errors()).willReturn(false);
@@ -298,6 +301,7 @@ class ProcessingServiceTest {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
             true)));
@@ -584,7 +588,9 @@ class ProcessingServiceTest {
   void testUpdateSpecimenHandleFailed() throws Exception {
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
+    var events = List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent);
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(events);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
@@ -594,8 +600,7 @@ class ProcessingServiceTest {
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
 
     // When
-    var result = service.handleMessages(
-        List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent));
+    var result = service.handleMessages(events);
 
     // Then
     then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
@@ -609,19 +614,20 @@ class ProcessingServiceTest {
   void testUpdateSpecimenHandleAndKafkaFailed() throws Exception {
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
+    var events = List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
             givenUnequalDigitalSpecimenRecord()
         ));
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(events);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
     doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any());
 
     // When
-    var result = service.handleMessages(
-        List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent));
+    var result = service.handleMessages(events);
 
     // Then
     assertThat(result).isEmpty();
@@ -641,6 +647,7 @@ class ProcessingServiceTest {
         ));
     givenBulkResponse();
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(events);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
@@ -672,6 +679,7 @@ class ProcessingServiceTest {
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
     var events = List.of(firstEvent, secondEvent, thirdEvent);
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(events);
     given(repository.getDigitalSpecimens(
         List.of(PHYSICAL_SPECIMEN_ID, "A third Specimen", "Another Specimen")))
         .willReturn(List.of(
@@ -712,6 +720,7 @@ class ProcessingServiceTest {
         List.of(givenUnequalDigitalSpecimenRecord()));
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent()));
     given(bulkResponse.errors()).willReturn(false);
     given(
         elasticRepository.indexDigitalSpecimen(
@@ -741,6 +750,7 @@ class ProcessingServiceTest {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(unequalCurrentDigitalSpecimen));
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent()));
     given(
         elasticRepository.indexDigitalSpecimen(
             List.of(givenDigitalSpecimenRecord(2, false)))).willThrow(
@@ -814,6 +824,7 @@ class ProcessingServiceTest {
         givenUnequalDigitalSpecimenRecord()
     );
     given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    mockEqualityServiceSetDates(events);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(unequalOriginalSpecimens);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
@@ -857,6 +868,13 @@ class ProcessingServiceTest {
     then(handleComponent).should().rollbackHandleCreation(any());
     then(kafkaService).should().deadLetterEvent(newSpecimenEvent);
     assertThat(result).isEmpty();
+  }
+
+  private void mockEqualityServiceSetDates(List<DigitalSpecimenEvent> events) throws Exception {
+    for (var event : events) {
+      given(equalityService.setEventDates(any(), eq(event))).willReturn(event);
+    }
+
   }
 
 }

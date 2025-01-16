@@ -28,6 +28,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWr
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
+import eu.dissco.core.digitalspecimenprocessor.exception.EqualityParsingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
@@ -152,8 +153,10 @@ public class ProcessingService {
             equalSpecimens.add(currentDigitalSpecimen);
           } else {
             log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
+            var eventWithUpdatedEr = equalityService.setEventDates(
+                currentDigitalSpecimen.digitalSpecimenWrapper(), event);
             changedSpecimens.add(
-                new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, event,
+                new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, eventWithUpdatedEr,
                     digitalMediaProcessResult));
           }
         }
@@ -161,6 +164,10 @@ public class ProcessingService {
       return new ProcessResult(equalSpecimens, changedSpecimens, newSpecimens);
     } catch (DisscoRepositoryException ex) {
       log.error("Republishing messages, Unable to retrieve current specimen from repository", ex);
+      events.forEach(this::republishEvent);
+      return new ProcessResult(List.of(), List.of(), List.of());
+    } catch (EqualityParsingException ex2) {
+      log.error("Republishing messages, Unable to parse entity relationship", ex2);
       events.forEach(this::republishEvent);
       return new ProcessResult(List.of(), List.of(), List.of());
     }

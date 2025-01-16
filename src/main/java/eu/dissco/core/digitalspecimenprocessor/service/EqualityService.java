@@ -12,7 +12,10 @@ import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.exception.EqualityParsingException;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.HashSet;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +34,6 @@ public class EqualityService {
       "dcterms:modified",
       "dwc:relationshipEstablishedDate"
   );
-  private static final String ATTRIBUTES = "ods:attributes";
 
   public boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper,
@@ -43,19 +45,21 @@ public class EqualityService {
 
   private boolean specimensAreEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
-    if (currentDigitalSpecimenWrapper == null) {
+    if (currentDigitalSpecimenWrapper == null
+        || currentDigitalSpecimenWrapper.attributes() == null) {
       return false;
     }
     try {
       verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
       var jsonCurrentSpecimen = normaliseJsonNode(
-          mapper.valueToTree(currentDigitalSpecimenWrapper));
-      var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper));
-      var isEqual = jsonCurrentSpecimen.get(ATTRIBUTES).equals(jsonSpecimen.get(ATTRIBUTES));
+          mapper.valueToTree(currentDigitalSpecimenWrapper.attributes()), true);
+      var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper.attributes()),
+          true);
+      var isEqual = jsonCurrentSpecimen.equals(jsonSpecimen);
       if (!isEqual) {
         log.debug("Specimen {} has changed. JsonDiff: {}",
             currentDigitalSpecimenWrapper.physicalSpecimenID(),
-            JsonDiff.asJson(jsonCurrentSpecimen.get(ATTRIBUTES), jsonSpecimen.get(ATTRIBUTES)));
+            JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
       }
       return isEqual;
     } catch (JsonProcessingException e) {
@@ -64,11 +68,62 @@ public class EqualityService {
     }
   }
 
-  private JsonNode normaliseJsonNode(JsonNode specimen) throws JsonProcessingException {
-    var specimenString = mapper.writeValueAsString(specimen);
-    var context = using(jsonPathConfig).parse(specimenString);
+  public DigitalSpecimenEvent setEventDates(
+      DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+      DigitalSpecimenEvent digitalSpecimenEvent) throws EqualityParsingException {
+
+    var digitalSpecimen = digitalSpecimenEvent.digitalSpecimenWrapper().attributes();
+
+    var currentEntityRelationships = currentDigitalSpecimenWrapper.attributes()
+        .getOdsHasEntityRelationships();
+    var entityRelationships = digitalSpecimen.getOdsHasEntityRelationships();
+
+    // Set Entity Relationship dates
+    for (var entityRelationship : entityRelationships) {
+      for (var currentEntityRelationship : currentEntityRelationships) {
+        if (entityRelationshipsAreEqual(currentEntityRelationship, entityRelationship)) {
+          entityRelationship.setDwcRelationshipEstablishedDate(
+              currentEntityRelationship.getDwcRelationshipEstablishedDate());
+        }
+      }
+    }
+
+    // Set created dates
+    digitalSpecimen.withDctermsCreated(
+        currentDigitalSpecimenWrapper.attributes().getDctermsCreated());
+
+    // We create a new object because the events are immutable, and we don't want the hash code to be out of sync
+    return new DigitalSpecimenEvent(digitalSpecimenEvent.enrichmentList(),
+        new DigitalSpecimenWrapper(
+            digitalSpecimenEvent.digitalSpecimenWrapper().physicalSpecimenID(),
+            digitalSpecimenEvent.digitalSpecimenWrapper().type(),
+            digitalSpecimenEvent.digitalSpecimenWrapper().attributes(),
+            digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
+        digitalSpecimenEvent.digitalMediaEvents());
+  }
+
+  private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
+      EntityRelationship entityRelationship) throws EqualityParsingException {
+    try {
+      var jsonCurrentEntityRelationship = normaliseJsonNode(
+          mapper.valueToTree(currentEntityRelationship), false);
+      var jsonEntityRelationship = normaliseJsonNode(mapper.valueToTree(entityRelationship), false);
+      return jsonCurrentEntityRelationship.equals(jsonEntityRelationship);
+    } catch (JsonProcessingException e) {
+      // Todo - What happens here? This should pretty much never happen
+      log.error("Unable to serialize entity relationships", e);
+      throw new EqualityParsingException();
+    }
+  }
+
+
+  private JsonNode normaliseJsonNode(JsonNode node, boolean isSpecimen)
+      throws JsonProcessingException {
+    var context = using(jsonPathConfig).parse(mapper.writeValueAsString(node));
     removeGeneratedTimestamps(context);
-    removeMediaEntityRelationships(context);
+    if (isSpecimen) {
+      removeMediaEntityRelationships(context);
+    }
     var jsonNode = mapper.readTree(context.jsonString());
     stripNulls(jsonNode);
     return jsonNode;
@@ -78,7 +133,7 @@ public class EqualityService {
     for (var field : IGNORED_FIELDS) {
       var filter = filter(where(field).exists(true));
       // Find the paths for the fields we want to set to null
-      var paths = new HashSet<String>(context.read("$..*[?]", filter));
+      var paths = new HashSet<String>(context.read("$..[?]", filter));
       for (var path : paths) {
         // We add the field name here because our jsonpath library omits it from its results
         var fullPath = path + "['" + field + "']";
@@ -90,7 +145,7 @@ public class EqualityService {
   private static void removeMediaEntityRelationships(DocumentContext context) {
     var filter = filter(where("dwc:relationshipOfResource").eq(HAS_MEDIA.getName()));
     var paths = new HashSet<String>(
-        context.read("$['" + ATTRIBUTES + "']['ods:hasEntityRelationships'][?]", filter));
+        context.read("$['ods:hasEntityRelationships'][?]", filter));
     for (var path : paths) {
       context.set(path, null);
     }

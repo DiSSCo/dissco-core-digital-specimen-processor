@@ -1,10 +1,15 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED_STR;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
@@ -17,6 +22,7 @@ import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Option;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
@@ -104,6 +110,44 @@ class EqualityServiceTest {
 
     // Then
     assertThat(result).isFalse();
+  }
+
+  @Test
+  void testSetEntityRelationshipDate() throws Exception {
+    // Given
+    var currentDigitalSpecimen = givenDigitalSpecimenWrapperWithMediaEr(PHYSICAL_SPECIMEN_ID, true);
+    var digitalSpecimenWrapper = changeTimestamps(givenDigitalSpecimenWrapper(true, true));
+    var digitalSpecimenEvent = new DigitalSpecimenEvent(
+        List.of(MAS),
+        digitalSpecimenWrapper,
+        List.of(givenDigitalMediaEvent())
+    );
+    var targetEr = currentDigitalSpecimen.attributes().getOdsHasEntityRelationships().stream()
+        .filter(entityRelationship -> !entityRelationship.getDwcRelationshipOfResource()
+            .equals(HAS_MEDIA.getName()))
+        .toList();
+
+    var attributes = givenDigitalSpecimenWrapper(true)
+        .attributes()
+        .withDctermsCreated(null)
+        .withOdsIsKnownToContainMedia(true)
+        .withDctermsModified(UPDATED_STR)
+        .withOdsHasEntityRelationships(
+            targetEr
+        );
+    var expected = new DigitalSpecimenEvent(
+        List.of(MAS),
+        new DigitalSpecimenWrapper(
+            PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA
+        ),
+        List.of(givenDigitalMediaEvent())
+    );
+
+    // When
+    var result = equalityService.setEventDates(currentDigitalSpecimen, digitalSpecimenEvent);
+
+    // Then
+    assertThat(result).isEqualTo(expected);
   }
 
   private static Stream<Arguments> provideEqualSpecimens() {
