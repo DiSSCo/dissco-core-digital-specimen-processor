@@ -48,9 +48,9 @@ public class EqualityService {
     }
     try {
       verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
-      var jsonCurrentSpecimen = normalizeJsonNode(
+      var jsonCurrentSpecimen = normaliseJsonNode(
           mapper.valueToTree(currentDigitalSpecimenWrapper));
-      var jsonSpecimen = normalizeJsonNode(mapper.valueToTree(digitalSpecimenWrapper));
+      var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper));
       var isEqual = jsonCurrentSpecimen.get(ATTRIBUTES).equals(jsonSpecimen.get(ATTRIBUTES));
       if (!isEqual) {
         log.debug("Specimen {} has changed. JsonDiff: {}",
@@ -64,7 +64,7 @@ public class EqualityService {
     }
   }
 
-  private JsonNode normalizeJsonNode(JsonNode specimen) throws JsonProcessingException {
+  private JsonNode normaliseJsonNode(JsonNode specimen) throws JsonProcessingException {
     var specimenString = mapper.writeValueAsString(specimen);
     var context = using(jsonPathConfig).parse(specimenString);
     removeGeneratedTimestamps(context);
