@@ -43,6 +43,35 @@ public class EqualityService {
         && digitalMediaProcessResult.tombstoneMedia().isEmpty();
   }
 
+  public DigitalSpecimenEvent setEventDates(
+      DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+      DigitalSpecimenEvent digitalSpecimenEvent) throws EqualityParsingException {
+    var digitalSpecimen = digitalSpecimenEvent.digitalSpecimenWrapper().attributes();
+    var currentEntityRelationships = currentDigitalSpecimenWrapper.attributes()
+        .getOdsHasEntityRelationships();
+    var entityRelationships = digitalSpecimen.getOdsHasEntityRelationships();
+    // Set Entity Relationship dates
+    for (var entityRelationship : entityRelationships) {
+      for (var currentEntityRelationship : currentEntityRelationships) {
+        if (entityRelationshipsAreEqual(currentEntityRelationship, entityRelationship)) {
+          entityRelationship.setDwcRelationshipEstablishedDate(
+              currentEntityRelationship.getDwcRelationshipEstablishedDate());
+        }
+      }
+    }
+    // Set dcterms:created to original date
+    digitalSpecimen.withDctermsCreated(
+        currentDigitalSpecimenWrapper.attributes().getDctermsCreated());
+    // We create a new object because the wrappers are immutable, and we don't want the hash code to be out of sync
+    return new DigitalSpecimenEvent(digitalSpecimenEvent.enrichmentList(),
+        new DigitalSpecimenWrapper(
+            digitalSpecimenEvent.digitalSpecimenWrapper().physicalSpecimenID(),
+            digitalSpecimenEvent.digitalSpecimenWrapper().type(),
+            digitalSpecimen,
+            digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
+        digitalSpecimenEvent.digitalMediaEvents());
+  }
+
   private boolean specimensAreEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
     if (currentDigitalSpecimenWrapper == null
@@ -58,7 +87,7 @@ public class EqualityService {
       var isEqual = jsonCurrentSpecimen.equals(jsonSpecimen);
       if (!isEqual) {
         log.debug("Specimen {} has changed. JsonDiff: {}",
-            currentDigitalSpecimenWrapper.physicalSpecimenID(),
+            currentDigitalSpecimenWrapper.attributes().getDctermsIdentifier(),
             JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
       }
       return isEqual;
@@ -66,40 +95,6 @@ public class EqualityService {
       log.error("Unable to re-serialize JSON. Can not determine equality.", e);
       return false;
     }
-  }
-
-  public DigitalSpecimenEvent setEventDates(
-      DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
-      DigitalSpecimenEvent digitalSpecimenEvent) throws EqualityParsingException {
-
-    var digitalSpecimen = digitalSpecimenEvent.digitalSpecimenWrapper().attributes();
-
-    var currentEntityRelationships = currentDigitalSpecimenWrapper.attributes()
-        .getOdsHasEntityRelationships();
-    var entityRelationships = digitalSpecimen.getOdsHasEntityRelationships();
-
-    // Set Entity Relationship dates
-    for (var entityRelationship : entityRelationships) {
-      for (var currentEntityRelationship : currentEntityRelationships) {
-        if (entityRelationshipsAreEqual(currentEntityRelationship, entityRelationship)) {
-          entityRelationship.setDwcRelationshipEstablishedDate(
-              currentEntityRelationship.getDwcRelationshipEstablishedDate());
-        }
-      }
-    }
-
-    // Set created dates
-    digitalSpecimen.withDctermsCreated(
-        currentDigitalSpecimenWrapper.attributes().getDctermsCreated());
-
-    // We create a new object because the events are immutable, and we don't want the hash code to be out of sync
-    return new DigitalSpecimenEvent(digitalSpecimenEvent.enrichmentList(),
-        new DigitalSpecimenWrapper(
-            digitalSpecimenEvent.digitalSpecimenWrapper().physicalSpecimenID(),
-            digitalSpecimenEvent.digitalSpecimenWrapper().type(),
-            digitalSpecimenEvent.digitalSpecimenWrapper().attributes(),
-            digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
-        digitalSpecimenEvent.digitalMediaEvents());
   }
 
   private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
@@ -110,12 +105,10 @@ public class EqualityService {
       var jsonEntityRelationship = normaliseJsonNode(mapper.valueToTree(entityRelationship), false);
       return jsonCurrentEntityRelationship.equals(jsonEntityRelationship);
     } catch (JsonProcessingException e) {
-      // Todo - What happens here? This should pretty much never happen
       log.error("Unable to serialize entity relationships", e);
       throw new EqualityParsingException();
     }
   }
-
 
   private JsonNode normaliseJsonNode(JsonNode node, boolean isSpecimen)
       throws JsonProcessingException {
