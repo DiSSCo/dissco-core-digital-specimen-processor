@@ -1,6 +1,5 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationConfiguration.DATE_STRING;
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
@@ -28,7 +27,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWr
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
-import eu.dissco.core.digitalspecimenprocessor.exception.EqualityParsingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
@@ -40,8 +38,6 @@ import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -66,8 +62,6 @@ import org.springframework.stereotype.Service;
 public class ProcessingService {
 
   private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: {}";
-  private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_STRING)
-      .withZone(ZoneOffset.UTC);
   private final DigitalSpecimenRepository repository;
   private final FdoRecordService fdoRecordService;
   private final ElasticSearchRepository elasticRepository;
@@ -164,10 +158,6 @@ public class ProcessingService {
       return new ProcessResult(equalSpecimens, changedSpecimens, newSpecimens);
     } catch (DisscoRepositoryException ex) {
       log.error("Republishing messages, Unable to retrieve current specimen from repository", ex);
-      events.forEach(this::republishEvent);
-      return new ProcessResult(List.of(), List.of(), List.of());
-    } catch (EqualityParsingException ex2) {
-      log.error("Republishing messages, Unable to parse entity relationship", ex2);
       events.forEach(this::republishEvent);
       return new ProcessResult(List.of(), List.of(), List.of());
     }
