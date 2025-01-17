@@ -870,7 +870,7 @@ class ProcessingServiceTest {
     assertThat(result).isEmpty();
   }
 
-  private void mockEqualityServiceSetDates(List<DigitalSpecimenEvent> events) throws Exception {
+  private void mockEqualityServiceSetDates(List<DigitalSpecimenEvent> events) {
     for (var event : events) {
       given(equalityService.setEventDates(any(), eq(event))).willReturn(event);
     }

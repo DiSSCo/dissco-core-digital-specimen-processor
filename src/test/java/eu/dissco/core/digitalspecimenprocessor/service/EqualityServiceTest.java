@@ -113,7 +113,7 @@ class EqualityServiceTest {
   }
 
   @Test
-  void testSetEntityRelationshipDate() throws Exception {
+  void testSetEntityRelationshipDate() {
     // Given
     var currentDigitalSpecimen = givenDigitalSpecimenWrapperWithMediaEr(PHYSICAL_SPECIMEN_ID, true);
     var digitalSpecimenWrapper = changeTimestamps(givenDigitalSpecimenWrapper(true, true));
