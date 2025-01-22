@@ -133,12 +133,9 @@ public class FdoRecordService {
 
   public List<JsonNode> buildRollbackUpdateRequest(
       List<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    List<JsonNode> requestBody = new ArrayList<>();
-    for (var specimen : digitalSpecimenRecords) {
-      requestBody.add(buildSingleRollbackUpdateRequest(specimen));
-    }
-    return requestBody;
+    return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequest).toList();
   }
+
 
   public List<String> buildRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
     return digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
@@ -164,14 +161,12 @@ public class FdoRecordService {
   }
 
   private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
-    var request = mapper.createObjectNode();
-    var data = mapper.createObjectNode();
-    data.put(ID, specimen.id().replace(DOI_PREFIX, ""));
-    data.put(TYPE, fdoProperties.getSpecimenFdoType());
-    var attributes = genRequestAttributes(specimen.digitalSpecimenWrapper());
-    data.set(ATTRIBUTES, attributes);
-    request.set(DATA, data);
-    return request;
+    return mapper.createObjectNode()
+        .set(DATA, mapper.createObjectNode()
+            .put(ID, specimen.id().replace(DOI_PREFIX, ""))
+            .put(TYPE, fdoProperties.getSpecimenFdoType())
+            .set(ATTRIBUTES, genRequestAttributes(specimen.digitalSpecimenWrapper())));
+
   }
 
   private JsonNode genRequestAttributes(DigitalSpecimenWrapper specimen) {

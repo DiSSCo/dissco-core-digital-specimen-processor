@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.exception.DataAccessException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -131,8 +132,12 @@ public class DigitalMediaService {
         .map(mediaId -> mediaId.replace(DOI_PREFIX, ""))
         .toList();
     if (!mediaIds.isEmpty()) {
-      log.info("Removing {} tombstoned media relationships from database", mediaIds.size());
-      mediaRepository.removeSpecimenRelationshipsFromMedia(mediaIds);
+      try {
+        log.info("Removing {} tombstoned media relationships from database", mediaIds.size());
+        mediaRepository.removeSpecimenRelationshipsFromMedia(mediaIds);
+      } catch (DataAccessException e) {
+        log.warn("Unable to remove outdated media relationships from the database");
+      }
     }
   }
 
