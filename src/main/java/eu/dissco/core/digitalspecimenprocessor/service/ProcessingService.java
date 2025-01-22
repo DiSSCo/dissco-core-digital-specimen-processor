@@ -352,7 +352,7 @@ actual change
         handleSuccessfulElasticUpdate(digitalSpecimenRecords, mediaPidMap);
       } else {
         digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticUpdate(
-            digitalSpecimenRecords, bulkResponse);
+            digitalSpecimenRecords, mediaPidMap, bulkResponse);
       }
       var successfullyProcessedRecords = digitalSpecimenRecords.stream()
           .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
@@ -496,8 +496,7 @@ actual change
         handleSuccessfulElasticInsert(digitalSpecimenRecords, mediaPidMap);
       } else {
         digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticInsert(
-            digitalSpecimenRecords,
-            bulkResponse);
+            digitalSpecimenRecords, mediaPidMap, bulkResponse);
       }
       log.info("Successfully created {} new digitalSpecimenRecord",
           digitalSpecimenRecords.size());

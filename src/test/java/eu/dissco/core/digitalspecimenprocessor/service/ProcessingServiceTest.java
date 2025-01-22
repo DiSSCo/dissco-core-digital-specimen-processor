@@ -489,7 +489,7 @@ class ProcessingServiceTest {
         new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID_ALT,
         new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL), MEDIA_PID,
         new DigitalMediaKey(THIRD_HANDLE, MEDIA_URL), MEDIA_PID));
-    given(rollbackService.handlePartiallyFailedElasticInsert(any(), eq(bulkResponse)))
+    given(rollbackService.handlePartiallyFailedElasticInsert(any(), any(), eq(bulkResponse)))
         .willReturn(Map.of(
             givenDigitalSpecimenRecord(),
             Pair.of(List.of(MEDIA_PID), List.of(givenDigitalMediaEvent())),
@@ -611,7 +611,7 @@ class ProcessingServiceTest {
             SECOND_HANDLE, secondEvent,
             HANDLE, firstEvent
         )));
-    given(rollbackService.handlePartiallyFailedElasticUpdate(any(), eq(bulkResponse)))
+    given(rollbackService.handlePartiallyFailedElasticUpdate(any(), anyMap(), eq(bulkResponse)))
         .willReturn(Set.of(
             givenUpdatedDigitalSpecimenRecord(givenUnequalDigitalSpecimenRecord(), true),
             givenUpdatedDigitalSpecimenRecord(thirdRecord, false)

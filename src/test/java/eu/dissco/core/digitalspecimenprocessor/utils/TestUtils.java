@@ -132,6 +132,16 @@ public class TestUtils {
     }
   }
 
+  public static DigitalSpecimenRecord givenDigitalSpecimenRecord(String handle) {
+    return new DigitalSpecimenRecord(
+        handle,
+        MIDS_LEVEL,
+        1,
+        CREATED,
+        givenDigitalSpecimenWrapper()
+    );
+  }
+
   public static DigitalSpecimenRecord givenDigitalSpecimenRecord(int version, boolean hasMedia) {
     return new DigitalSpecimenRecord(
         HANDLE,
@@ -552,6 +562,10 @@ public class TestUtils {
           }
         }
         """);
+  }
+
+  public static UpdatedDigitalSpecimenRecord givenUpdatedDigitalSpecimenRecord(boolean hasMedia) {
+    return givenUpdatedDigitalSpecimenRecord(givenUnequalDigitalSpecimenRecord(), hasMedia);
   }
 
   public static UpdatedDigitalSpecimenRecord givenUpdatedDigitalSpecimenRecord(
