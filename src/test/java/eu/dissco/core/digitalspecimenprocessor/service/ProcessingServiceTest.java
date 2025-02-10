@@ -370,6 +370,8 @@ class ProcessingServiceTest {
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(handleComponent.postMediaHandle(anyList()))
         .willReturn(givenMediaPidResponse());
+    given(fdoRecordService.buildPostRequestMedia(any(), any())).willReturn(
+        List.of(MAPPER.createObjectNode()));
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
 
@@ -521,6 +523,8 @@ class ProcessingServiceTest {
     givenBulkResponse();
     given(fdoRecordService.buildPostHandleRequest(anyList())).willReturn(
         List.of(givenHandleRequest()));
+    given(fdoRecordService.buildPostRequestMedia(any(), any())).willReturn(
+        List.of(MAPPER.createObjectNode()));
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
