@@ -614,7 +614,7 @@ public class TestUtils {
             .withId(DOI_PREFIX + HANDLE)
             .withDctermsIdentifier(DOI_PREFIX + HANDLE)
             .withType(TYPE)
-            .withOdsFdoType("ods:DigitalSpecimen")
+            .withOdsFdoType("https://doi.org/21.T11148/894b1e6cad57e921764e")
             .withOaHasSelector(new OaHasSelector()
                 .withAdditionalProperty("@type", "ods:ClassSelector")
                 .withAdditionalProperty("ods:class", "$")));

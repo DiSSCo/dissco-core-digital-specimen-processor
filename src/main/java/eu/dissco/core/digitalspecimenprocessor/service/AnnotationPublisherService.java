@@ -110,7 +110,7 @@ public class AnnotationPublisherService {
         .withId(targetId)
         .withDctermsIdentifier(targetId)
         .withType(digitalSpecimenRecord.digitalSpecimenWrapper().type())
-        .withOdsFdoType("ods:DigitalSpecimen")
+        .withOdsFdoType("https://doi.org/21.T11148/894b1e6cad57e921764e")
         .withOaHasSelector(selector);
   }
 
