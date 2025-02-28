@@ -44,12 +44,15 @@ public class TokenAuthenticator {
     try {
       var tokenNode = response.toFuture().get();
       return getToken(tokenNode);
-    } catch (InterruptedException | ExecutionException e) {
-      Thread.currentThread().interrupt();
+    } catch (ExecutionException e) {
       log.info("Unable to authenticate processing service with Keycloak. Verify client secret is up to-date");
       throw new PidException(
           "Unable to authenticate processing service with Keycloak. More information: "
               + e.getMessage());
+    } catch (InterruptedException e){
+      log.error("A critical interrupted exception has occurred while communicating with the keycloak service.");
+      Thread.currentThread().interrupt();
+      throw new PidException("Unable to create PID.");
     }
   }
 
