@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -26,7 +27,9 @@ public class TokenAuthenticator {
   @Qualifier("tokenClient")
   private final WebClient tokenClient;
 
+  @Cacheable("token-cache")
   public String getToken() throws PidException {
+    log.info("Requesting new token from keycloak");
     var response = tokenClient
         .post()
         .body(BodyInserters.fromFormData(properties.getFromFormData()))

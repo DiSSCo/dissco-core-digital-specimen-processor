@@ -10,6 +10,6 @@ public class SpringCacheConfiguration {
 
   @Bean
   public CacheManager cacheManager() {
-    return new ConcurrentMapCacheManager("source-system-name");
+    return new ConcurrentMapCacheManager("token-cache");
   }
 }
