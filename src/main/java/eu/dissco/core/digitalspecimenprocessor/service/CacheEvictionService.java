@@ -14,11 +14,10 @@ public class CacheEvictionService {
 
   private final CacheManager cacheManager;
 
-  @Scheduled(fixedRateString = "${caching.spring.ttl}")
+  @Scheduled(fixedRateString = "PT30M")
   public void evictAllCaches() {
     log.info("Evicting all caches");
     cacheManager.getCacheNames()
         .forEach(cacheName -> Objects.requireNonNull(cacheManager.getCache(cacheName)).clear());
   }
-
 }

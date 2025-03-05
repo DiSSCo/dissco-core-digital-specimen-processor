@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -26,7 +27,9 @@ public class TokenAuthenticator {
   @Qualifier("tokenClient")
   private final WebClient tokenClient;
 
+  @Cacheable("token-cache")
   public String getToken() throws PidException {
+    log.info("Requesting new token from keycloak");
     var response = tokenClient
         .post()
         .body(BodyInserters.fromFormData(properties.getFromFormData()))
@@ -44,12 +47,15 @@ public class TokenAuthenticator {
     try {
       var tokenNode = response.toFuture().get();
       return getToken(tokenNode);
-    } catch (InterruptedException | ExecutionException e) {
-      Thread.currentThread().interrupt();
+    } catch (ExecutionException e) {
       log.info("Unable to authenticate processing service with Keycloak. Verify client secret is up to-date");
       throw new PidException(
           "Unable to authenticate processing service with Keycloak. More information: "
               + e.getMessage());
+    } catch (InterruptedException e){
+      log.error("A critical interrupted exception has occurred while communicating with the keycloak service.");
+      Thread.currentThread().interrupt();
+      throw new PidException("Unable to create PID.");
     }
   }
 

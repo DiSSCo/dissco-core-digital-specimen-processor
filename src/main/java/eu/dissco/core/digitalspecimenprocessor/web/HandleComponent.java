@@ -81,9 +81,13 @@ public class HandleComponent {
       var requestBody = BodyInserters.fromValue(physIds);
       var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
       response.toFuture().get();
-    } catch (InterruptedException | ExecutionException e){
-      Thread.currentThread().interrupt();
+    } catch (ExecutionException e){
+
       log.error("Unable to rollback handles based on physical identifier: {}", physIds);
+    } catch (InterruptedException e){
+      Thread.currentThread().interrupt();
+      log.error("A critical interrupted exception has occurred.");
+      throw new PidException("Interrupted exception");
     }
   }
 
