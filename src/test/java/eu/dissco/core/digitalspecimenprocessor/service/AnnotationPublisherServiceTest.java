@@ -119,7 +119,8 @@ class AnnotationPublisherServiceTest {
             List.of(givenAcceptedAnnotation(OaMotivation.ODS_DELETING,
                 new OaHasSelector().withAdditionalProperty("@type", "ods:TermSelector")
                     .withAdditionalProperty("ods:term",
-                        "$['ods:hasEntityRelationship'][1]['dwc:relationshipEstablishedDate']"), null))
+                        "$['ods:hasEntityRelationship'][1]['dwc:relationshipEstablishedDate']"),
+                null))
         ),
         Arguments.of(
             MAPPER.readTree(
@@ -164,7 +165,7 @@ class AnnotationPublisherServiceTest {
         .withOaMotivation(motivation)
         .withOaHasBody(body)
         .withOaHasTarget(new AnnotationTarget()
-            .withOdsFdoType("ods:DigitalSpecimen")
+            .withOdsFdoType("https://doi.org/21.T11148/894b1e6cad57e921764e")
             .withType(TYPE)
             .withId(DOI_PREFIX + HANDLE)
             .withDctermsIdentifier(DOI_PREFIX + HANDLE)
@@ -235,10 +236,9 @@ class AnnotationPublisherServiceTest {
             List.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
 
     // Then
-    for (var expectedAnnotation : expectedAnnotations) {
-      then(kafkaPublisherService).should()
-          .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(expectedAnnotation));
-    }
+    then(kafkaPublisherService).should()
+        .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(expectedAnnotations));
+
   }
 
   @Test
@@ -253,8 +253,8 @@ class AnnotationPublisherServiceTest {
             List.of(), null, givenLargeJsonPatch(), List.of(), givenEmptyMediaProcessResult())));
 
     // Then
-    then(kafkaPublisherService).should(times(29))
-        .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(any()));
+    then(kafkaPublisherService).should(times(1))
+        .publishAcceptedAnnotation(any());
   }
 
   @Test
