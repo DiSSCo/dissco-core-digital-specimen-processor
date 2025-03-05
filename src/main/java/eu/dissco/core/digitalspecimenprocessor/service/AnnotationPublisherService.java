@@ -124,6 +124,7 @@ public class AnnotationPublisherService {
           .flatMap(List::stream)
           .toList();
       if (!annotations.isEmpty()) {
+        log.info("Publishing auto-accepted annotation batch");
         kafkaPublisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
             createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
                 PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
