@@ -39,7 +39,7 @@ public class HandleComponent {
   private final ObjectMapper mapper;
 
   private static final String UNEXPECTED_MSG = "Unexpected response from handle API";
-  private static final String UNEXPECTED_LOG = "Unexpected response from Handle API. Missing id and/or primarySpecimenObjectId. Response: {}";
+  private static final String UNEXPECTED_LOG = "Unexpected response from Handle API. Error: {}. Response: {}";
 
   public Map<String, String> postHandle(List<JsonNode> request)
       throws PidException {
@@ -81,9 +81,13 @@ public class HandleComponent {
       var requestBody = BodyInserters.fromValue(physIds);
       var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
       response.toFuture().get();
-    } catch (InterruptedException | ExecutionException e){
-      Thread.currentThread().interrupt();
+    } catch (ExecutionException e){
+
       log.error("Unable to rollback handles based on physical identifier: {}", physIds);
+    } catch (InterruptedException e){
+      Thread.currentThread().interrupt();
+      log.error("A critical interrupted exception has occurred.");
+      throw new PidException("Interrupted exception");
     }
   }
 
@@ -133,7 +137,7 @@ public class HandleComponent {
       var dataNode = handleResponse.get("data");
       HashMap<String, String> handleNames = new HashMap<>();
       if (!dataNode.isArray()) {
-        log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+        log.error(UNEXPECTED_LOG, "Data is not an array", handleResponse);
         throw new PidException(UNEXPECTED_MSG);
       }
       for (var node : dataNode) {
@@ -141,14 +145,14 @@ public class HandleComponent {
         var localId = node.get("attributes")
             .get(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
         if (handle == null || localId == null) {
-          log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+          log.error(UNEXPECTED_LOG, "Missing handle and/or localId", handleResponse);
           throw new PidException(UNEXPECTED_MSG);
         }
         handleNames.put(localId.asText(), handle.asText());
       }
       return handleNames;
     } catch (NullPointerException e) {
-      log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+      log.error(UNEXPECTED_LOG, "Unexpected null", handleResponse);
       throw new PidException(UNEXPECTED_MSG);
     }
   }
@@ -159,21 +163,21 @@ public class HandleComponent {
       var dataNode = handleResponse.get("data");
       HashMap<DigitalMediaKey, String> handleNames = new HashMap<>();
       if (!dataNode.isArray()) {
-        log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+        log.error(UNEXPECTED_LOG, "Data is not an array", handleResponse);
         throw new PidException(UNEXPECTED_MSG);
       }
       for (var node : dataNode) {
         var handle = node.get("id");
         var localId = node.get("attributes").get(DIGITAL_MEDIA_KEY.getAttribute());
         if (handle == null || localId == null) {
-          log.error(UNEXPECTED_LOG, handleResponse.toPrettyString());
+          log.error(UNEXPECTED_LOG, "Missing handle and/or localId", handleResponse);
           throw new PidException(UNEXPECTED_MSG);
         }
         handleNames.put(mapper.treeToValue(localId, DigitalMediaKey.class), handle.asText());
       }
       return handleNames;
     } catch (NullPointerException | JsonProcessingException e) {
-      log.error(UNEXPECTED_LOG, handleResponse.toPrettyString(), e);
+      log.error(UNEXPECTED_LOG, "Unexpected null", handleResponse, e);
       throw new PidException(UNEXPECTED_MSG);
     }
   }
