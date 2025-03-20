@@ -371,6 +371,8 @@ class ProcessingServiceTest {
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(handleComponent.postMediaHandle(anyList()))
         .willReturn(givenMediaPidResponse());
+    given(fdoRecordService.buildPostRequestMedia(any(), any())).willReturn(
+        List.of(MAPPER.createObjectNode()));
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
 

@@ -637,6 +637,9 @@ actual change
                 specimenMediaPair.getRight()))
         .flatMap(List::stream)
         .toList();
+    if (requests.isEmpty()) {
+      return Collections.emptyMap();
+    }
     return postMediaHandles(requests);
   }
 
