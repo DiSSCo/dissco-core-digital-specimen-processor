@@ -462,6 +462,7 @@ class ProcessingServiceTest {
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
+    given(fdoRecordService.buildPostRequestMedia(any(), any())).willReturn(List.of(MAPPER.createObjectNode()));
     given(handleComponent.postHandle(anyList()))
         .willReturn(Map.of(
             PHYSICAL_SPECIMEN_ID, HANDLE,
