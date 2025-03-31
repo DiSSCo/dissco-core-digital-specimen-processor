@@ -88,7 +88,6 @@ public class EqualityService {
       return false;
     }
     try {
-      verifyOriginalData(currentDigitalSpecimenWrapper, digitalSpecimenWrapper);
       var jsonCurrentSpecimen = normaliseJsonNode(
           mapper.valueToTree(currentDigitalSpecimenWrapper.attributes()), true);
       var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper.attributes()),
@@ -146,17 +145,6 @@ public class EqualityService {
     new HashSet<String>(
         context.read("$['ods:hasEntityRelationships'][?]", filter))
         .forEach(context::delete);
-  }
-
-  private static void verifyOriginalData(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
-      DigitalSpecimenWrapper digitalSpecimenWrapper) {
-    var currentOriginalData = currentDigitalSpecimenWrapper.originalAttributes();
-    var originalData = digitalSpecimenWrapper.originalAttributes();
-    if (currentOriginalData != null && !currentOriginalData.equals(originalData)) {
-      log.debug(
-          "Original data for specimen with physical id {} has changed. Ignoring new original data.",
-          digitalSpecimenWrapper.physicalSpecimenID());
-    }
   }
 
 }
