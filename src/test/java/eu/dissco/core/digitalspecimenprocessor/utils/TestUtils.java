@@ -68,6 +68,8 @@ public class TestUtils {
   public static final int MIDS_LEVEL = 1;
   public static final int VERSION = 1;
   public static final Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
+  public static final String UPDATED_STR = "2023-11-01T09:59:24.000Z";
+  public static final Date UPDATED = Date.from(Instant.parse(UPDATED_STR));
   public static final String MAS = "OCR";
   public static final String TYPE = "https://doi.org/21.T11148/894b1e6cad57e921764e";
   public static final String TYPE_MEDIA = "https://doi.org/21.T11148/bbad8c4e101e8af01115";
@@ -449,16 +451,6 @@ public class TestUtils {
     Map<String, String> response = new HashMap<>();
     for (var specimenRecord : records) {
       response.put(specimenRecord.digitalSpecimenWrapper().physicalSpecimenID(),
-          specimenRecord.id());
-    }
-    return response;
-  }
-
-  public static Map<DigitalMediaKey, String> givenHandleComponentResponseMedia(
-      List<DigitalSpecimenRecord> records) {
-    Map<DigitalMediaKey, String> response = new HashMap<>();
-    for (var specimenRecord : records) {
-      response.put(new DigitalMediaKey(null, null),
           specimenRecord.id());
     }
     return response;
