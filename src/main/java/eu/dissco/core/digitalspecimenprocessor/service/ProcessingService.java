@@ -73,6 +73,7 @@ public class ProcessingService {
   private final DigitalMediaService digitalMediaService;
   private final EqualityService equalityService;
   private final RollbackService rollbackService;
+  private final EqualityService equalityService;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
