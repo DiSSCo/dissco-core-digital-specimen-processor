@@ -128,7 +128,6 @@ public class RollbackService {
   }
 
   // Elastic Failures
-
   public Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> handlePartiallyFailedElasticInsert(
       Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords,
       Map<DigitalMediaKey, String> mediaPidMap,
