@@ -107,7 +107,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testGetInvalidMessages() throws InterruptedException {
+  void testGetInvalidMessages() {
     // Given
     var message = givenInvalidMessage();
 
@@ -122,7 +122,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testPublishCreateEvent() throws JsonProcessingException, InterruptedException {
+  void testPublishCreateEvent() throws JsonProcessingException {
     // Given
 
     // When
@@ -134,7 +134,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testPublishUpdateEvent() throws JsonProcessingException, InterruptedException {
+  void testPublishUpdateEvent() throws JsonProcessingException {
     // Given
 
     // When
@@ -146,7 +146,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testPublishAnnotationRequestEvent() throws JsonProcessingException, InterruptedException {
+  void testPublishAnnotationRequestEvent() throws JsonProcessingException {
     // Given
     var message = givenDigitalSpecimenRecord();
 
@@ -161,7 +161,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testRepublishEvent() throws JsonProcessingException, InterruptedException {
+  void testRepublishEvent() throws JsonProcessingException {
     // Given
     var message = givenDigitalSpecimenEvent();
 
@@ -176,7 +176,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testDeadLetterEvent() throws JsonProcessingException, InterruptedException {
+  void testDeadLetterEvent() throws JsonProcessingException {
     // Given
     var message = givenDigitalSpecimenEvent();
 
@@ -191,7 +191,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testPublishDigitalMediaObjectEvent() throws JsonProcessingException, InterruptedException {
+  void testPublishDigitalMediaObjectEvent() throws JsonProcessingException {
     // Given
     var message = givenDigitalMediaEventWithRelationship();
 
@@ -206,7 +206,7 @@ class RabbitMQServiceTest {
   }
 
   @Test
-  void testPublishAcceptedAnnotation() throws JsonProcessingException, InterruptedException {
+  void testPublishAcceptedAnnotation() throws JsonProcessingException {
     // Given
     var message = givenAutoAcceptedAnnotation(givenNewAcceptedAnnotation());
 
