@@ -68,6 +68,7 @@ class RabbitMQServiceTest {
     factory.setUsername(container.getAdminUsername());
     factory.setPassword(container.getAdminPassword());
     rabbitTemplate = new RabbitTemplate(factory);
+    rabbitTemplate.setReceiveTimeout(100L);
   }
 
 
@@ -110,12 +111,11 @@ class RabbitMQServiceTest {
     // Given
     var message = givenInvalidMessage();
 
+
     // When
     rabbitMQService.getMessages(List.of(message));
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var dlqMessage = rabbitTemplate.receive("digital-specimen-queue-dlq");
     assertThat(new String(dlqMessage.getBody())).isEqualTo(message);
     then(processingService).should().handleMessages(List.of());
@@ -129,8 +129,6 @@ class RabbitMQServiceTest {
     rabbitMQService.publishCreateEvent(givenDigitalSpecimenRecord());
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var dlqMessage = rabbitTemplate.receive("create-update-tombstone-queue");
     assertThat(new String(dlqMessage.getBody())).isNotNull();
   }
@@ -143,8 +141,6 @@ class RabbitMQServiceTest {
     rabbitMQService.publishUpdateEvent(givenDigitalSpecimenRecord(2, false), givenJsonPatch());
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var dlqMessage = rabbitTemplate.receive("create-update-tombstone-queue");
     assertThat(new String(dlqMessage.getBody())).isNotNull();
   }
@@ -158,8 +154,6 @@ class RabbitMQServiceTest {
     rabbitMQService.publishAnnotationRequestEvent(MAS, message);
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var result = rabbitTemplate.receive("mas-ocr-queue");
     assertThat(
         MAPPER.readValue(new String(result.getBody()), DigitalSpecimenRecord.class)).isEqualTo(
@@ -175,8 +169,6 @@ class RabbitMQServiceTest {
     rabbitMQService.republishEvent(message);
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var result = rabbitTemplate.receive("digital-specimen-queue");
     assertThat(
         MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(
@@ -192,8 +184,6 @@ class RabbitMQServiceTest {
     rabbitMQService.deadLetterEvent(message);
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var result = rabbitTemplate.receive("digital-specimen-queue-dlq");
     assertThat(
         MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(
@@ -209,8 +199,6 @@ class RabbitMQServiceTest {
     rabbitMQService.publishDigitalMediaObject(message);
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var result = rabbitTemplate.receive("digital-media-queue");
     assertThat(
         MAPPER.readValue(new String(result.getBody()), DigitalMediaEvent.class)).isEqualTo(
@@ -226,8 +214,6 @@ class RabbitMQServiceTest {
     rabbitMQService.publishAcceptedAnnotation(message);
 
     // Then
-    Thread.sleep(
-        100); // Avoid race condition between rabbitMQ and test, give RabbitMQ 100 milisec to process
     var result = rabbitTemplate.receive("auto-annotation-queue");
     assertThat(
         MAPPER.readValue(new String(result.getBody()), AutoAcceptedAnnotation.class)).isEqualTo(
