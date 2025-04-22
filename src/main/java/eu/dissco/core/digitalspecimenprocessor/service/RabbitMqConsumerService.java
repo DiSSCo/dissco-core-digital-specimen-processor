@@ -9,22 +9,23 @@ import java.util.List;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.context.annotation.Profile;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-@Profile(Profiles.KAFKA)
+@Profile(Profiles.RABBIT_MQ)
 @AllArgsConstructor
-public class KafkaConsumerService {
+public class RabbitMqConsumerService {
 
   private final ObjectMapper mapper;
   private final ProcessingService processingService;
-  private final KafkaPublisherService publisherService;
+  private final RabbitMqPublisherService publisherService;
 
-  @KafkaListener(topics = "${kafka.consumer.topic}")
+  @RabbitListener(queues = {
+      "${rabbitmq.queue-name:digital-specimen-queue}"}, containerFactory = "consumerBatchContainerFactory")
   public void getMessages(@Payload List<String> messages) {
     var events = messages.stream().map(message -> {
       try {

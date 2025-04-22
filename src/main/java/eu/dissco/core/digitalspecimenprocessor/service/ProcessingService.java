@@ -46,6 +46,7 @@ public class ProcessingService {
   private final DigitalMediaService digitalMediaService;
   private final EntityRelationshipService entityRelationshipService;
   private final EqualityService equalityService;
+  private final RabbitMqPublisherService publisherService;
   private final FdoRecordService fdoRecordService;
   private final HandleComponent handleComponent;
 
@@ -378,7 +379,7 @@ public class ProcessingService {
 
   private void republishMediaEvent(DigitalMediaEventWithoutDOI event) {
     try {
-      kafkaService.republishMediaEvent(event);
+      publisherService.republishEvent(event);
     } catch (JsonProcessingException e) {
       log.error("Fatal exception, unable to republish message due to invalid json", e);
     }

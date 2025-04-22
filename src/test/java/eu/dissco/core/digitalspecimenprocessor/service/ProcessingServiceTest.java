@@ -98,7 +98,7 @@ class ProcessingServiceTest {
   @Mock
   private ElasticSearchRepository elasticRepository;
   @Mock
-  private KafkaPublisherService kafkaService;
+  private RabbitMqPublisherService rabbitMQService;
   @Mock
   private BulkResponse bulkResponse;
   @Mock
@@ -127,7 +127,7 @@ class ProcessingServiceTest {
   @BeforeEach
   void setup() {
     service = new ProcessingService(repository, mediaRepository, kafkaService,
-        digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService);
+        digitalSpecimenService, rabbitMQService, digitalMediaService, entityRelationshipService, equalityService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -166,7 +166,7 @@ class ProcessingServiceTest {
     verifyNoInteractions(fdoRecordService);
     verifyNoInteractions(annotationPublisherService);
     then(repository).should().updateLastChecked(List.of(HANDLE));
-    then(kafkaService).should(times(1))
+    then(rabbitMQService).should(times(1))
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEmpty();
   }
@@ -191,7 +191,7 @@ class ProcessingServiceTest {
     verifyNoInteractions(fdoRecordService);
     verifyNoInteractions(annotationPublisherService);
     then(repository).should().updateLastChecked(List.of(HANDLE));
-    then(kafkaService).shouldHaveNoInteractions();
+    then(rabbitMQService).shouldHaveNoInteractions();
     assertThat(result).isEmpty();
   }
 
@@ -222,9 +222,9 @@ class ProcessingServiceTest {
     then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishUpdateEvent(eq(givenDigitalSpecimenRecord(2, true)), any(JsonNode.class));
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2, true)));
     then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
@@ -259,9 +259,9 @@ class ProcessingServiceTest {
     then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishUpdateEvent(eq(expected.get(0)), any(JsonNode.class));
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(expected);
     then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
@@ -295,9 +295,9 @@ class ProcessingServiceTest {
     then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishUpdateEvent(eq(givenDigitalSpecimenRecord(2, true)), any(JsonNode.class));
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2, true)));
     then(digitalMediaService).should().removeSpecimenRelationshipsFromMedia(any());
@@ -329,9 +329,9 @@ class ProcessingServiceTest {
     verifyNoMoreInteractions(fdoRecordService);
     verifyNoMoreInteractions(handleComponent);
     then(repository).should().createDigitalSpecimenRecord(expected);
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishUpdateEvent(givenDigitalSpecimenRecord(2, true), givenJsonPatch());
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2, true)));
     then(annotationPublisherService).should().publishAnnotationUpdatedSpecimen(anySet());
@@ -367,10 +367,10 @@ class ProcessingServiceTest {
     then(equalityService).shouldHaveNoInteractions();
     then(repository).should()
         .createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecordWithMediaEr()));
-    then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecordWithMediaEr());
-    then(kafkaService).should()
+    then(rabbitMQService).should().publishCreateEvent(givenDigitalSpecimenRecordWithMediaEr());
+    then(rabbitMQService).should()
         .publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecordWithMediaEr());
-    then(kafkaService).should()
+    then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship(MEDIA_PID));
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecordWithMediaEr()));
     then(annotationPublisherService).should()
@@ -423,9 +423,9 @@ class ProcessingServiceTest {
     verify(handleComponent, times(1)).postHandle(anyList(),
         true);
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
-    then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
-    then(kafkaService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
-    then(kafkaService).should().republishSpecimenEvent(duplicateSpecimen);
+    then(rabbitMQService).should().publishCreateEvent(givenDigitalSpecimenRecord());
+    then(rabbitMQService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
+    then(rabbitMQService).should().republishEvent(duplicateSpecimen);
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord()));
   }
 
@@ -450,7 +450,7 @@ class ProcessingServiceTest {
     then(equalityService).shouldHaveNoInteractions();
     then(rollbackService).should()
         .rollbackNewSpecimens(anyMap(), eq(false), eq(true));
-    then(kafkaService).shouldHaveNoInteractions();
+    then(rabbitMQService).shouldHaveNoInteractions();
     assertThat(result).isEmpty();
   }
 
@@ -495,10 +495,10 @@ class ProcessingServiceTest {
     // Then
     then(equalityService).shouldHaveNoInteractions();
     then(repository).should().createDigitalSpecimenRecord(anySet());
-    then(handleComponent).should().postHandle(any(), true);
-    then(kafkaService).should()
+    then(handleComponent).should().postHandle(any());
+    then(rabbitMQService).should()
         .publishDigitalMediaObject(any(DigitalMediaEvent.class));
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     assertThat(result).contains(givenDigitalSpecimenRecord(), thirdSpecimen);
     then(annotationPublisherService).should()
         .publishAnnotationNewSpecimen(Set.of(givenDigitalSpecimenRecord(), thirdSpecimen));
@@ -518,7 +518,7 @@ class ProcessingServiceTest {
     given(
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
-    doThrow(JsonProcessingException.class).when(kafkaService)
+    doThrow(JsonProcessingException.class).when(rabbitMQService)
         .publishCreateEvent(any(DigitalSpecimenRecord.class));
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
 
@@ -529,7 +529,7 @@ class ProcessingServiceTest {
     then(equalityService).shouldHaveNoInteractions();
     then(repository).should().createDigitalSpecimenRecord(anySet());
     then(rollbackService).should().rollbackNewSpecimens(any(), eq(true), eq(true));
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     then(annotationPublisherService).should().publishAnnotationNewSpecimen(Set.of());
     assertThat(result).isEmpty();
   }
@@ -553,10 +553,10 @@ class ProcessingServiceTest {
     var result = service.handleMessages(events);
 
     // Then
-    then(kafkaService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
-    then(kafkaService).should().deadLetterEventSpecimen(secondEvent);
-    then(kafkaService).should().deadLetterEventSpecimen(thirdEvent);
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).should().deadLetterEvent(givenDigitalSpecimenEvent());
+    then(rabbitMQService).should().deadLetterEvent(secondEvent);
+    then(rabbitMQService).should().deadLetterEvent(thirdEvent);
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
 
@@ -574,7 +574,7 @@ class ProcessingServiceTest {
     mockEqualityServiceSetDates(events);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEventSpecimen(any());
+    doThrow(JsonProcessingException.class).when(rabbitMQService).deadLetterEvent(any());
 
     // When
     var result = service.handleMessages(events);
@@ -623,9 +623,9 @@ class ProcessingServiceTest {
     // Then
     then(handleComponent).should().updateHandle(anyList());
     then(repository).should(times(1)).createDigitalSpecimenRecord(anyList());
-    then(kafkaService).should(times(1))
+    then(rabbitMQService).should(times(1))
         .publishDigitalMediaObject(any(DigitalMediaEvent.class));
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     assertThat(result).hasSize(2);
   }
 
@@ -641,7 +641,7 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(
             List.of(givenDigitalSpecimenRecord(2, false)))).willReturn(
         bulkResponse);
-    doThrow(JsonProcessingException.class).when(kafkaService)
+    doThrow(JsonProcessingException.class).when(rabbitMQService)
         .publishUpdateEvent(givenDigitalSpecimenRecord(2, false), givenJsonPatch());
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList()))
         .willReturn(givenMediaProcessResultMapNew(Map.of(
@@ -653,7 +653,7 @@ class ProcessingServiceTest {
     // Then
     then(repository).should(times(1)).createDigitalSpecimenRecord(anyList());
     then(rollbackService).should().rollbackUpdatedSpecimens(any(), eq(true), eq(true));
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
 
@@ -682,7 +682,7 @@ class ProcessingServiceTest {
     then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
     then(handleComponent).should().updateHandle(any());
     then(repository).should(times(1)).createDigitalSpecimenRecord(anyList());
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
 
@@ -716,8 +716,8 @@ class ProcessingServiceTest {
     // Then
     assertThat(result).isEmpty();
     then(equalityService).shouldHaveNoInteractions();
-    then(kafkaService).should().republishSpecimenEvent(givenDigitalSpecimenEvent());
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).should().republishEvent(givenDigitalSpecimenEvent());
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     then(fdoRecordService).shouldHaveNoInteractions();
   }
 
@@ -755,7 +755,7 @@ class ProcessingServiceTest {
 
     // Then
     then(rollbackService).should().rollbackUpdatedSpecimens(any(), eq(false), eq(false));
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
 
@@ -778,7 +778,7 @@ class ProcessingServiceTest {
 
     // Then
     then(rollbackService).should().rollbackNewSpecimens(any(), eq(false), eq(false));
-    then(kafkaService).shouldHaveNoInteractions();
+    then(rabbitMQService).shouldHaveNoInteractions();
     assertThat(result).isEmpty();
   }
 

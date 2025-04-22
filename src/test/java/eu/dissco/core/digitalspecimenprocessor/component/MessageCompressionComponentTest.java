@@ -1,76 +1,67 @@
-package eu.dissco.core.digitalspecimenprocessor.service;
+package eu.dissco.core.digitalspecimenprocessor.component;
 
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
-import static org.mockito.BDDMockito.then;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.support.converter.MessageConversionException;
 
 @ExtendWith(MockitoExtension.class)
-class KafkaConsumerServiceTest {
+class MessageCompressionComponentTest {
 
-  @Mock
-  private ProcessingService processingService;
-  @Mock
-  private KafkaPublisherService publisherService;
-
-  private KafkaConsumerService service;
+  private MessageCompressionComponent messageCompressionComponent;
 
   @BeforeEach
-  void setup() {
-    service = new KafkaConsumerService(MAPPER, processingService, publisherService);
+  void setUp() {
+    messageCompressionComponent = new MessageCompressionComponent();
   }
 
   @Test
-  void testGetMessages() {
+  void testCompressMessage() {
     // Given
-    var message = givenMessage();
+    var messageString = givenMessage();
 
     // When
-    service.getMessages(List.of(message));
+    var compressedMessage = messageCompressionComponent.toMessage(messageString,
+        new MessageProperties());
 
     // Then
-    then(processingService).should().handleMessages(List.of(givenDigitalSpecimenEvent()));
+    assertThat(compressedMessage.getMessageProperties().getContentEncoding()).isEqualTo("gzip");
+    assertThat(compressedMessage.getMessageProperties().getContentType()).isEqualTo(
+        "application/json");
+    var decompressedMessage = messageCompressionComponent.fromMessage(compressedMessage);
+    assertThat(decompressedMessage).isEqualTo(messageString);
   }
 
   @Test
-  void testGetInvalidMessages() {
+  void testInvalidMessage() {
     // Given
-    var message = givenInvalidMessage();
+    var messageInteger = 1234;
+    var messageProperties = new MessageProperties();
 
-    // When
-    service.getMessages(List.of(message));
-
-    // Then
-    then(processingService).should().handleMessages(List.of());
-
+    // When / Then
+    assertThrows(MessageConversionException.class,
+        () -> messageCompressionComponent.toMessage(messageInteger, messageProperties));
   }
 
-  private String givenInvalidMessage() {
-    return """
-        {
-          "enrichmentList": [
-            "OCR"
-          ],
-          "digitalSpecimen": {
-            "type": "GeologyRockSpecimen",
-            "physicalSpecimenID": "https://geocollections.info/specimen/23602",
-            "physicalSpecimenIDType": "global",
-            "specimenName": "Biota",
-            "organisationID": "https://ror.org/0443cwa12",
-            "datasetId": null,
-            "physicalSpecimenCollection": null,
-            "sourceSystemID": "20.5000.1025/MN0-5XP-FFD",
-            "data": {},
-            "originalData": {},
-            "dwcaID": null
-          }
-        }""";
+  @Test
+  void testPlainMessage() {
+    // Given
+    var messageProperties = new MessageProperties();
+    messageProperties.setContentType("text/plain");
+    var message = new Message(givenMessage().getBytes(StandardCharsets.UTF_8), messageProperties);
+
+    // When
+    var result = messageCompressionComponent.fromMessage(message);
+
+    // Then
+    assertThat(result).isEqualTo(givenMessage());
   }
 
   private String givenMessage() {
@@ -134,6 +125,4 @@ class KafkaConsumerServiceTest {
           "digitalMediaEvents": []
         }""";
   }
-
-
 }

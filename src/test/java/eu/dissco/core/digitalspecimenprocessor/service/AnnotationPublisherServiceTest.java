@@ -54,7 +54,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class AnnotationPublisherServiceTest {
 
   @Mock
-  private KafkaPublisherService kafkaPublisherService;
+  private RabbitMqPublisherService rabbitMQService;
   @Mock
   private ApplicationProperties applicationProperties;
 
@@ -189,7 +189,7 @@ class AnnotationPublisherServiceTest {
 
   @BeforeEach
   void setup() {
-    service = new AnnotationPublisherService(kafkaPublisherService, applicationProperties, MAPPER);
+    service = new AnnotationPublisherService(rabbitMQService, applicationProperties, MAPPER);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -216,7 +216,7 @@ class AnnotationPublisherServiceTest {
     service.publishAnnotationNewSpecimen(Set.of(givenDigitalSpecimenRecord()));
 
     // Then
-    then(kafkaPublisherService).should()
+    then(rabbitMQService).should()
         .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(givenNewAcceptedAnnotation()));
   }
 
@@ -236,7 +236,7 @@ class AnnotationPublisherServiceTest {
 
     // Then
     for (var expectedAnnotation : expectedAnnotations) {
-      then(kafkaPublisherService).should()
+      then(rabbitMQService).should()
           .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(expectedAnnotation));
     }
   }
@@ -253,7 +253,7 @@ class AnnotationPublisherServiceTest {
             List.of(), null, givenLargeJsonPatch(), List.of(), givenEmptyMediaProcessResult())));
 
     // Then
-    then(kafkaPublisherService).should(times(29))
+    then(rabbitMQService).should(times(29))
         .publishAcceptedAnnotation(givenAutoAcceptedAnnotation(any()));
   }
 
@@ -275,7 +275,7 @@ class AnnotationPublisherServiceTest {
             List.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
 
     // Then
-    then(kafkaPublisherService).shouldHaveNoInteractions();
+    then(rabbitMQService).shouldHaveNoInteractions();
   }
 
   private JsonNode givenLargeJsonPatch() throws JsonProcessingException {

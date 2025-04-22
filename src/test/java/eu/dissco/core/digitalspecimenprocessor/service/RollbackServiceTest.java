@@ -53,7 +53,7 @@ class RollbackServiceTest {
   @Mock
   ElasticSearchRepository elasticSearchRepository;
   @Mock
-  KafkaPublisherService kafkaService;
+  RabbitMqPublisherService rabbitMQService;
   @Mock
   DigitalSpecimenRepository repository;
   @Mock
@@ -75,7 +75,7 @@ class RollbackServiceTest {
 
   @BeforeEach
   void init() {
-    rollbackService = new RollbackService(elasticSearchRepository, kafkaService, repository,
+    rollbackService = new RollbackService(elasticSearchRepository, rabbitMQService, repository,
         fdoRecordService, handleComponent);
   }
 
@@ -92,7 +92,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(repository).shouldHaveNoInteractions();
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
   }
 
@@ -107,7 +107,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(repository).should().rollbackSpecimen(HANDLE);
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
   }
 
@@ -122,7 +122,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
     then(repository).should().rollbackSpecimen(HANDLE);
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
   }
 
@@ -137,7 +137,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(repository).shouldHaveNoInteractions();
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
   }
@@ -153,7 +153,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(repository).should().rollbackSpecimen(HANDLE);
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
   }
@@ -169,7 +169,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
     then(repository).should().rollbackSpecimen(HANDLE);
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
   }
@@ -187,7 +187,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
     then(repository).should().rollbackSpecimen(HANDLE);
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
   }
@@ -196,7 +196,7 @@ class RollbackServiceTest {
   void testRollbackNewSpecimensHasMediaCase3KafkaFailed() throws Exception {
     // Given
     var specimenRecords = Map.of(givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR);
-    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEventSpecimen(any());
+    doThrow(JsonProcessingException.class).when(rabbitMQService).deadLetterEvent(any());
 
     // When
     rollbackService.rollbackNewSpecimens(specimenRecords, true, true);
@@ -204,7 +204,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
     then(repository).should().rollbackSpecimen(HANDLE);
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
   }
@@ -221,7 +221,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
     then(repository).should().rollbackSpecimen(HANDLE);
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
   }
@@ -240,7 +240,7 @@ class RollbackServiceTest {
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(repository).shouldHaveNoInteractions();
     then(handleComponent).shouldHaveNoInteractions();
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -256,7 +256,7 @@ class RollbackServiceTest {
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(repository).shouldHaveNoInteractions();
     then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -272,7 +272,7 @@ class RollbackServiceTest {
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(repository).should().createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord()));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -289,7 +289,7 @@ class RollbackServiceTest {
     then(elasticSearchRepository).should().rollbackVersion(originalSpecimen);
     then(repository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
 
@@ -308,7 +308,7 @@ class RollbackServiceTest {
     then(repository).shouldHaveNoInteractions();
     then(handleComponent).should().rollbackHandleUpdate(anyList());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -325,7 +325,7 @@ class RollbackServiceTest {
     then(repository).should().createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord()));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -343,7 +343,7 @@ class RollbackServiceTest {
     then(repository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -363,7 +363,7 @@ class RollbackServiceTest {
     then(repository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -372,7 +372,7 @@ class RollbackServiceTest {
     var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
     var originalSpecimen = givenDigitalSpecimenRecord();
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
-    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEventSpecimen(any());
+    doThrow(JsonProcessingException.class).when(rabbitMQService).deadLetterEvent(any());
 
     // When
     rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
@@ -382,7 +382,7 @@ class RollbackServiceTest {
     then(repository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -401,7 +401,7 @@ class RollbackServiceTest {
     then(repository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   @Test
@@ -420,7 +420,7 @@ class RollbackServiceTest {
     then(repository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
     then(handleComponent).should().rollbackHandleUpdate(anyList());
     then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
   }
 
   /* Elastic Insert Failures */
@@ -441,8 +441,8 @@ class RollbackServiceTest {
 
     // Then
     then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE));
-    then(kafkaService).should(times(2)).publishCreateEvent(any());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(2)).publishCreateEvent(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(repository).should().rollbackSpecimen(SECOND_HANDLE);
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
     assertThat(result).hasSize(2);
@@ -459,7 +459,7 @@ class RollbackServiceTest {
     );
 
     givenBulkResponse();
-    doThrow(JsonProcessingException.class).when(kafkaService).publishCreateEvent(firstRecord);
+    doThrow(JsonProcessingException.class).when(rabbitMQService).publishCreateEvent(firstRecord);
 
     // When
     var result = rollbackService.handlePartiallyFailedElasticInsert(specimenRecords, Map.of(),
@@ -467,8 +467,8 @@ class RollbackServiceTest {
 
     // Then
     then(handleComponent).should().rollbackHandleCreation(List.of(HANDLE, SECOND_HANDLE));
-    then(kafkaService).should(times(2)).publishCreateEvent(any());
-    then(kafkaService).should(times(2)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(2)).publishCreateEvent(any());
+    then(rabbitMQService).should(times(2)).deadLetterEvent(any());
     then(repository).should().rollbackSpecimen(SECOND_HANDLE);
     then(repository).should().rollbackSpecimen(HANDLE);
     then(repository).shouldHaveNoMoreInteractions();
@@ -493,8 +493,8 @@ class RollbackServiceTest {
 
     // Then
     then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE, MEDIA_PID));
-    then(kafkaService).should(times(2)).publishCreateEvent(any());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
+    then(rabbitMQService).should(times(2)).publishCreateEvent(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
     then(repository).should().rollbackSpecimen(SECOND_HANDLE);
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
     assertThat(result).hasSize(2);
@@ -516,9 +516,9 @@ class RollbackServiceTest {
 
     // Then
     then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE));
-    then(kafkaService).should(times(2)).publishCreateEvent(any());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
-    then(kafkaService).should(times(1)).publishAnnotationRequestEvent(any(), any());
+    then(rabbitMQService).should(times(2)).publishCreateEvent(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
+    then(rabbitMQService).should(times(1)).publishAnnotationRequestEvent(any(), any());
     then(repository).should().rollbackSpecimen(SECOND_HANDLE);
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
     assertThat(result).hasSize(2);
@@ -533,7 +533,7 @@ class RollbackServiceTest {
         givenDigitalSpecimenRecord(THIRD_HANDLE), MEDIA_EVENT_PAIR_EMPTY
     );
     givenBulkResponse();
-    doThrow(JsonProcessingException.class).when(kafkaService)
+    doThrow(JsonProcessingException.class).when(rabbitMQService)
         .publishAnnotationRequestEvent(any(), eq(givenDigitalSpecimenRecord()));
 
     // When
@@ -542,9 +542,9 @@ class RollbackServiceTest {
 
     // Then
     then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE));
-    then(kafkaService).should(times(2)).publishCreateEvent(any());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
-    then(kafkaService).should(times(1)).publishAnnotationRequestEvent(any(), any());
+    then(rabbitMQService).should(times(2)).publishCreateEvent(any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
+    then(rabbitMQService).should(times(1)).publishAnnotationRequestEvent(any(), any());
     then(repository).should().rollbackSpecimen(SECOND_HANDLE);
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
     assertThat(result).hasSize(2);
@@ -583,9 +583,9 @@ class RollbackServiceTest {
 
     // Then
     assertThat(result).hasSize(2);
-    then(kafkaService).should(times(2)).publishUpdateEvent(any(), any());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).should(times(2)).publishUpdateEvent(any(), any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     then(repository).should()
         .createDigitalSpecimenRecord(List.of(secondSpecimenUpdated.currentDigitalSpecimen()));
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
@@ -613,9 +613,9 @@ class RollbackServiceTest {
 
     // Then
     assertThat(result).hasSize(2);
-    then(kafkaService).should(times(2)).publishUpdateEvent(any(), any());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).should(times(2)).publishUpdateEvent(any(), any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     then(repository).should()
         .createDigitalSpecimenRecord(List.of(secondSpecimenUpdated.currentDigitalSpecimen()));
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
@@ -643,9 +643,9 @@ class RollbackServiceTest {
 
     // Then
     assertThat(result).hasSize(2);
-    then(kafkaService).should(times(2)).publishUpdateEvent(any(), any());
-    then(kafkaService).should(times(1)).deadLetterEventSpecimen(any());
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).should(times(2)).publishUpdateEvent(any(), any());
+    then(rabbitMQService).should(times(1)).deadLetterEvent(any());
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     then(repository).should()
         .createDigitalSpecimenRecord(List.of(secondSpecimenUpdated.currentDigitalSpecimen()));
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
@@ -668,7 +668,7 @@ class RollbackServiceTest {
     );
     givenBulkResponse();
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
-    doThrow(JsonProcessingException.class).when(kafkaService)
+    doThrow(JsonProcessingException.class).when(rabbitMQService)
         .publishUpdateEvent(eq(givenUnequalDigitalSpecimenRecord()), any());
 
     // When
@@ -677,9 +677,9 @@ class RollbackServiceTest {
 
     // Then
     assertThat(result).hasSize(1);
-    then(kafkaService).should(times(2)).publishUpdateEvent(any(), any());
-    then(kafkaService).should(times(2)).deadLetterEventSpecimen(any());
-    then(kafkaService).shouldHaveNoMoreInteractions();
+    then(rabbitMQService).should(times(2)).publishUpdateEvent(any(), any());
+    then(rabbitMQService).should(times(2)).deadLetterEvent(any());
+    then(rabbitMQService).shouldHaveNoMoreInteractions();
     then(repository).should(times(2)).createDigitalSpecimenRecord(anyList());
     then(elasticSearchRepository).should().rollbackVersion(firstSpecimenOriginal);
     then(handleComponent).should().rollbackHandleCreation(List.of(MEDIA_PID));
@@ -705,7 +705,7 @@ class RollbackServiceTest {
     rollbackService.pidCreationFailed(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    then(kafkaService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    then(rabbitMQService).should().deadLetterEvent(givenDigitalSpecimenEvent());
   }
 
   @Test
@@ -713,8 +713,8 @@ class RollbackServiceTest {
     // Given
     doThrow(PidException.class).when(handleComponent)
         .rollbackFromPhysId(List.of(PHYSICAL_SPECIMEN_ID));
-    doThrow(JsonProcessingException.class).when(kafkaService)
-        .deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    doThrow(JsonProcessingException.class).when(rabbitMQService)
+        .deadLetterEvent(givenDigitalSpecimenEvent());
 
     // When / Then
     assertDoesNotThrow(

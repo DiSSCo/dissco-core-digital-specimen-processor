@@ -34,7 +34,7 @@ import org.springframework.stereotype.Service;
 public class RollbackService {
 
   private final ElasticSearchRepository elasticRepository;
-  private final KafkaPublisherService kafkaService;
+  private final RabbitMqPublisherService publisherService;
   private final DigitalSpecimenRepository repository;
   private final FdoRecordService fdoRecordService;
   private final HandleComponent handleComponent;
@@ -67,7 +67,7 @@ public class RollbackService {
       rollBackToEarlierDatabaseVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
     }
     try {
-      kafkaService.deadLetterEventSpecimen(
+      kafkaService.deadLetterEvent(
           new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                   .digitalSpecimenWrapper(),
@@ -237,7 +237,7 @@ public class RollbackService {
     /*
     additionalInfo.getLeft().forEach(aas -> {
       try {
-        kafkaService.publishAnnotationRequestEvent(aas, digitalSpecimenRecord);
+        kafkaService.publishAnnotationRequestEvent(aas, key);
       } catch (JsonProcessingException e) {
         log.error(
             "No action taken, failed to publish annotation request event for aas: {} digital specimen: {}",
