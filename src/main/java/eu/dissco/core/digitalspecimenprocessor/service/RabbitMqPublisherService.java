@@ -64,8 +64,8 @@ public class RabbitMqPublisherService {
   }
     public void publishUpdateEventMedia(DigitalMediaRecord digitalMediaRecord,
       JsonNode jsonPatch) throws JsonProcessingException {
-    var event = provenanceService.generateUpdateEventMedia(digitalMediaRecord, jsonPatch);
-    rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
+      var event = provenanceService.generateUpdateEventMedia(digitalMediaRecord, jsonPatch);
+      rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
         rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName(),
         mapper.writeValueAsString(event));
   }

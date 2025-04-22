@@ -14,7 +14,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
-import eu.dissco.core.digitalspecimenprocessor.property.RabbitMqProperties.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
@@ -423,16 +422,14 @@ public class RollbackService {
 
   private boolean publishEventsSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
       DigitalSpecimenEvent event) {
-    {
-      try {
-        publisherService.publishCreateEventSpecimen(digitalSpecimenRecord);
-      } catch (JsonProcessingException e) {
-        log.error("Rolling back, failed to publish Create event", e);
-        rollbackNewSpecimen(digitalSpecimenRecord.id(), event, true, true);
-        return false;
-      }
-      return true;
+    try {
+      publisherService.publishCreateEventSpecimen(digitalSpecimenRecord);
+    } catch (JsonProcessingException e) {
+      log.error("Rolling back, failed to publish Create event", e);
+      rollbackNewSpecimen(digitalSpecimenRecord.id(), event, true, true);
+      return false;
     }
+    return true;
   }
 
   private boolean publishEventsMedia(DigitalMediaRecord digitalMediaRecord,

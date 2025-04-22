@@ -39,7 +39,6 @@ public class ProvenanceService {
 
   private final ObjectMapper mapper;
   private final ApplicationProperties properties;
-  private final DigitalMediaService digitalMediaService;
 
   public CreateUpdateTombstoneEvent generateCreateEventSpecimen(
       DigitalSpecimenRecord digitalSpecimenRecord) {
