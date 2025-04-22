@@ -14,17 +14,17 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @ExtendWith(MockitoExtension.class)
-class RabbitMQConsumerServiceTest {
+class RabbitMqConsumerServiceTest {
 
   @Mock
   private ProcessingService processingService;
   @Mock
   private RabbitMqPublisherService rabbitMqPublisherService;
-  private RabbitMqConsumerService rabbitMQConsumerServiceTest;
+  private RabbitMqConsumerService rabbitMqConsumerServiceTest;
 
   @BeforeEach
   void setup() {
-    rabbitMQConsumerServiceTest = new RabbitMqConsumerService(MAPPER, processingService,
+    rabbitMqConsumerServiceTest = new RabbitMqConsumerService(MAPPER, processingService,
         rabbitMqPublisherService);
   }
 
@@ -34,7 +34,7 @@ class RabbitMQConsumerServiceTest {
     var message = givenMessage();
 
     // When
-    rabbitMQConsumerServiceTest.getMessages(List.of(message));
+    rabbitMqConsumerServiceTest.getMessages(List.of(message));
 
     // Then
     then(processingService).should().handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -46,7 +46,7 @@ class RabbitMQConsumerServiceTest {
     var message = givenInvalidMessage();
 
     // When
-    rabbitMQConsumerServiceTest.getMessages(List.of(message));
+    rabbitMqConsumerServiceTest.getMessages(List.of(message));
 
     // Then
     then(rabbitMqPublisherService).should().deadLetterRaw(message);
