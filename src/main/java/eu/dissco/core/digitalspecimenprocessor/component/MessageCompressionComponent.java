@@ -24,9 +24,9 @@ public class MessageCompressionComponent implements MessageConverter {
   final MessageConverter simpleConverter = new SimpleMessageConverter();
 
   private static byte[] deflateMessage(byte[] message) throws IOException {
-    final int BUFFER_SIZE = 8192; // 8KB
-    try (var rstBao = new ByteArrayOutputStream(BUFFER_SIZE)) {
-      try (var zos = new GZIPOutputStream(rstBao, BUFFER_SIZE)) {
+    var bufferSize = 8192; // 8KB
+    try (var rstBao = new ByteArrayOutputStream(bufferSize)) {
+      try (var zos = new GZIPOutputStream(rstBao, bufferSize)) {
         zos.write(message);
         zos.flush();
       }

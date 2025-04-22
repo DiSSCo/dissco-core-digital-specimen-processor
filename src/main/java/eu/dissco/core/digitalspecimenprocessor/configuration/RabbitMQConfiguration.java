@@ -1,7 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.configuration;
 
 import eu.dissco.core.digitalspecimenprocessor.component.MessageCompressionComponent;
-import eu.dissco.core.digitalspecimenprocessor.property.RabbitMQProperties;
+import eu.dissco.core.digitalspecimenprocessor.property.RabbitMqProperties;
 import lombok.AllArgsConstructor;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -13,14 +13,14 @@ import org.springframework.context.annotation.Configuration;
 @AllArgsConstructor
 public class RabbitMQConfiguration {
   private final MessageCompressionComponent compressedMessageConverter;
-  private final RabbitMQProperties rabbitMQProperties;
+  private final RabbitMqProperties rabbitMQProperties;
 
   @Bean
   public SimpleRabbitListenerContainerFactory consumerBatchContainerFactory(
       ConnectionFactory connectionFactory) {
     SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
     factory.setConnectionFactory(connectionFactory);
-    factory.setBatchListener(true); // configures a BatchMessageListenerAdapter
+    factory.setBatchListener(true);
     factory.setBatchSize(rabbitMQProperties.getBatchSize());
     factory.setConsumerBatchEnabled(true);
     factory.setMessageConverter(compressedMessageConverter);

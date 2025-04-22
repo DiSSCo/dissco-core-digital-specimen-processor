@@ -64,7 +64,7 @@ public class ProcessingService {
   private final DigitalSpecimenRepository repository;
   private final FdoRecordService fdoRecordService;
   private final ElasticSearchRepository elasticRepository;
-  private final RabbitMQService rabbitMQService;
+  private final RabbitMqPublisherService publisherService;
   private final MidsService midsService;
   private final HandleComponent handleComponent;
   private final ApplicationProperties applicationProperties;
@@ -165,7 +165,7 @@ public class ProcessingService {
 
   private void republishEvent(DigitalSpecimenEvent event) {
     try {
-      rabbitMQService.republishEvent(event);
+      publisherService.republishEvent(event);
     } catch (JsonProcessingException e) {
       log.error("Fatal exception, unable to republish message due to invalid json", e);
     }
@@ -210,7 +210,7 @@ public class ProcessingService {
 
   private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    log.info("Persisting to Handle Server");
+    log.info("Persisting to DOI Server");
     var successfullyUpdatedHandles = updateHandles(updatedDigitalSpecimenTuples);
     if (!successfullyUpdatedHandles) {
       return Set.of();
@@ -306,14 +306,14 @@ public class ProcessingService {
 
     if (!digitalSpecimensToUpdate.isEmpty()) {
       try {
-        log.info("Updating {} handle records", digitalSpecimensToUpdate.size());
+        log.info("Updating {} doi records", digitalSpecimensToUpdate.size());
         var requests = fdoRecordService.buildUpdateHandleRequest(digitalSpecimensToUpdate);
         handleComponent.updateHandle(requests);
       } catch (PidException e) {
-        log.error("Unable to update Handle record. Not proceeding with update. ", e);
+        log.error("Unable to update DOI record. Not proceeding with update. ", e);
         try {
           for (var tuple : updatedDigitalSpecimenTuples) {
-            rabbitMQService.deadLetterEvent(tuple.digitalSpecimenEvent());
+            publisherService.deadLetterEvent(tuple.digitalSpecimenEvent());
           }
         } catch (JsonProcessingException jsonEx) {
           log.error(DLQ_FAILED, updatedDigitalSpecimenTuples, jsonEx);
@@ -326,7 +326,7 @@ public class ProcessingService {
 
   private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
     try {
-      rabbitMQService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
+      publisherService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
           updatedDigitalSpecimenRecord.jsonPatch());
       return true;
     } catch (JsonProcessingException e) {
@@ -368,7 +368,7 @@ public class ProcessingService {
     try {
       repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
     } catch (DataAccessException e) {
-      log.error("Unable to insert new specimens into the database. Rolling back handles", e);
+      log.error("Unable to insert new specimens into the database. Rolling back dois", e);
       rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, mediaPidMap, false,
           false);
       return Collections.emptySet();
@@ -464,7 +464,7 @@ public class ProcessingService {
               digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
       );
       try {
-        rabbitMQService.publishDigitalMediaObject(digitalMediaObjectEvent);
+        publisherService.publishDigitalMediaObject(digitalMediaObjectEvent);
       } catch (JsonProcessingException e) {
         log.warn("Failed to publish digitalMediaEvent: {} for specimen {}",
             digitalMediaObjectEvent.digitalMediaWrapper().attributes().getAcAccessURI(),
@@ -579,14 +579,14 @@ public class ProcessingService {
   private boolean publishEvents(DigitalSpecimenRecord key,
       Pair<List<String>, List<DigitalMediaEventWithoutDOI>> additionalInfo) {
     try {
-      rabbitMQService.publishCreateEvent(key);
+      publisherService.publishCreateEvent(key);
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish Create event", e);
       return false;
     }
     additionalInfo.getLeft().forEach(aas -> {
       try {
-        rabbitMQService.publishAnnotationRequestEvent(aas, key);
+        publisherService.publishAnnotationRequestEvent(aas, key);
       } catch (JsonProcessingException e) {
         log.error(
             "No action taken, failed to publish annotation request event for aas: {} digital specimen: {}",
@@ -601,9 +601,9 @@ public class ProcessingService {
     var handle = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
     if (handle == null) {
       try {
-        log.error("Handle not created for Digital Specimen {}",
+        log.error("DOI not created for Digital Specimen {}",
             event.digitalSpecimenWrapper().physicalSpecimenID());
-        rabbitMQService.deadLetterEvent(event);
+        publisherService.deadLetterEvent(event);
       } catch (JsonProcessingException e) {
         log.error("DLQ failed for specimen {}, no recovery possible",
             event.digitalSpecimenWrapper().physicalSpecimenID());

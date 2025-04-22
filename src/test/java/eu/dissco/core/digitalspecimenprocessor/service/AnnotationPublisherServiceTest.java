@@ -54,7 +54,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class AnnotationPublisherServiceTest {
 
   @Mock
-  private RabbitMQService rabbitMQService;
+  private RabbitMqPublisherService rabbitMQService;
   @Mock
   private ApplicationProperties applicationProperties;
 

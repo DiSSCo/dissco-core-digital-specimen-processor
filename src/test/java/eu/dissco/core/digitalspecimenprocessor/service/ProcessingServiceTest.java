@@ -95,7 +95,7 @@ class ProcessingServiceTest {
   @Mock
   private ElasticSearchRepository elasticRepository;
   @Mock
-  private RabbitMQService rabbitMQService;
+  private RabbitMqPublisherService rabbitMQService;
   @Mock
   private BulkResponse bulkResponse;
   @Mock

@@ -53,7 +53,7 @@ class RollbackServiceTest {
   @Mock
   ElasticSearchRepository elasticSearchRepository;
   @Mock
-  RabbitMQService rabbitMQService;
+  RabbitMqPublisherService rabbitMQService;
   @Mock
   DigitalSpecimenRepository repository;
   @Mock

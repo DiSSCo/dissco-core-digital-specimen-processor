@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
 public class RollbackService {
 
   private final ElasticSearchRepository elasticRepository;
-  private final RabbitMQService rabbitMQService;
+  private final RabbitMqPublisherService publisherService;
   private final DigitalSpecimenRepository repository;
   private final FdoRecordService fdoRecordService;
   private final HandleComponent handleComponent;
@@ -71,7 +71,7 @@ public class RollbackService {
       rollBackToEarlierDatabaseVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
     }
     try {
-      rabbitMQService.deadLetterEvent(
+      publisherService.deadLetterEvent(
           new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                   .digitalSpecimenWrapper(),
@@ -118,7 +118,7 @@ public class RollbackService {
       repository.rollbackSpecimen(digitalSpecimenRecord.id());
     }
     try {
-      rabbitMQService.deadLetterEvent(
+      publisherService.deadLetterEvent(
           new DigitalSpecimenEvent(additionalInfo.getLeft(),
               digitalSpecimenRecord.digitalSpecimenWrapper(),
               additionalInfo.getRight()));
@@ -227,7 +227,7 @@ public class RollbackService {
   // Event publishing
   private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
     try {
-      rabbitMQService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
+      publisherService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
           updatedDigitalSpecimenRecord.jsonPatch());
       return true;
     } catch (JsonProcessingException e) {
@@ -240,7 +240,7 @@ public class RollbackService {
   private boolean publishEvents(DigitalSpecimenRecord key,
       Pair<List<String>, List<DigitalMediaEventWithoutDOI>> additionalInfo) {
     try {
-      rabbitMQService.publishCreateEvent(key);
+      publisherService.publishCreateEvent(key);
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish Create event", e);
       rollbackNewSpecimen(key, additionalInfo, true, true);
@@ -248,7 +248,7 @@ public class RollbackService {
     }
     additionalInfo.getLeft().forEach(aas -> {
       try {
-        rabbitMQService.publishAnnotationRequestEvent(aas, key);
+        publisherService.publishAnnotationRequestEvent(aas, key);
       } catch (JsonProcessingException e) {
         log.error(
             "No action taken, failed to publish annotation request event for aas: {} digital specimen: {}",
@@ -270,7 +270,7 @@ public class RollbackService {
     List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
     for (var event : events) {
       try {
-        rabbitMQService.deadLetterEvent(event);
+        publisherService.deadLetterEvent(event);
       } catch (JsonProcessingException e2) {
         failedDlq.add(event);
       }

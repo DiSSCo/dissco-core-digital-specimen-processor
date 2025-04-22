@@ -8,48 +8,30 @@ import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.property.RabbitMQProperties;
-import java.util.List;
-import java.util.Objects;
+import eu.dissco.core.digitalspecimenprocessor.property.RabbitMqProperties;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.context.annotation.Profile;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
 @Profile(Profiles.RABBIT_MQ)
 @AllArgsConstructor
-public class RabbitMQService {
+public class RabbitMqPublisherService {
 
   private final ObjectMapper mapper;
-  private final ProcessingService processingService;
   private final ProvenanceService provenanceService;
   private final RabbitTemplate rabbitTemplate;
-  private final RabbitMQProperties rabbitMQProperties;
-
-  @RabbitListener(queues = "#{rabbitMQProperties.specimenQueueName}", containerFactory = "consumerBatchContainerFactory")
-  public void getMessages(@Payload List<String> messages) {
-    var events = messages.stream().map(message -> {
-      try {
-        return mapper.readValue(message, DigitalSpecimenEvent.class);
-      } catch (JsonProcessingException e) {
-        log.error("Moving message to DLQ, failed to parse event message", e);
-        deadLetterRaw(message);
-        return null;
-      }
-    }).filter(Objects::nonNull).toList();
-    processingService.handleMessages(events);
-  }
+  private final RabbitMqProperties rabbitMQProperties;
 
   public void publishCreateEvent(DigitalSpecimenRecord digitalSpecimenRecord)
       throws JsonProcessingException {
     var event = provenanceService.generateCreateEvent(digitalSpecimenRecord);
-    rabbitTemplate.convertAndSend(rabbitMQProperties.getCreateUpdateTombstoneExchangeName(),
-        rabbitMQProperties.getCreateUpdateTombstoneRoutingKeyName(), mapper.writeValueAsString(event));
+    rabbitTemplate.convertAndSend(rabbitMQProperties.getCreateUpdateTombstone().getExchangeName(),
+        rabbitMQProperties.getCreateUpdateTombstone().getRoutingKeyName(),
+        mapper.writeValueAsString(event));
   }
 
   public void publishAnnotationRequestEvent(String enrichmentRoutingKey,
@@ -61,35 +43,38 @@ public class RabbitMQService {
   public void publishUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
       JsonNode jsonPatch) throws JsonProcessingException {
     var event = provenanceService.generateUpdateEvent(digitalSpecimenRecord, jsonPatch);
-    rabbitTemplate.convertAndSend(rabbitMQProperties.getCreateUpdateTombstoneExchangeName(),
-        rabbitMQProperties.getCreateUpdateTombstoneRoutingKeyName(), mapper.writeValueAsString(event));
+    rabbitTemplate.convertAndSend(rabbitMQProperties.getCreateUpdateTombstone().getExchangeName(),
+        rabbitMQProperties.getCreateUpdateTombstone().getRoutingKeyName(),
+        mapper.writeValueAsString(event));
   }
 
   public void republishEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
-    rabbitTemplate.convertAndSend(rabbitMQProperties.getSpecimenExchangeName(),
-        rabbitMQProperties.getSpecimenRoutingKeyName(), mapper.writeValueAsString(event));
+    rabbitTemplate.convertAndSend(rabbitMQProperties.getSpecimen().getExchangeName(),
+        rabbitMQProperties.getSpecimen().getRoutingKeyName(), mapper.writeValueAsString(event));
   }
 
   public void deadLetterEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
-    rabbitTemplate.convertAndSend(rabbitMQProperties.getSpecimenDlqExchangeName(),
-        rabbitMQProperties.getSpecimenDlqRoutingKeyName(), mapper.writeValueAsString(event));
+    rabbitTemplate.convertAndSend(rabbitMQProperties.getSpecimen().getDlqExchangeName(),
+        rabbitMQProperties.getSpecimen().getDlqRoutingKeyName(), mapper.writeValueAsString(event));
   }
 
   public void deadLetterRaw(String event) {
-    rabbitTemplate.convertAndSend(rabbitMQProperties.getSpecimenDlqExchangeName(),
-        rabbitMQProperties.getSpecimenDlqRoutingKeyName(), event);
+    rabbitTemplate.convertAndSend(rabbitMQProperties.getSpecimen().getDlqExchangeName(),
+        rabbitMQProperties.getSpecimen().getDlqRoutingKeyName(), event);
   }
 
   public void publishDigitalMediaObject(DigitalMediaEvent digitalMediaObjectEvent)
       throws JsonProcessingException {
-    rabbitTemplate.convertAndSend(rabbitMQProperties.getDigitalMediaExchangeName(),
-        rabbitMQProperties.getDigitalMediaRoutingKeyName(), mapper.writeValueAsString(digitalMediaObjectEvent));
+    rabbitTemplate.convertAndSend(rabbitMQProperties.getDigitalMedia().getExchangeName(),
+        rabbitMQProperties.getDigitalMedia().getRoutingKeyName(),
+        mapper.writeValueAsString(digitalMediaObjectEvent));
   }
 
   public void publishAcceptedAnnotation(AutoAcceptedAnnotation annotation)
       throws JsonProcessingException {
-    rabbitTemplate.convertAndSend(rabbitMQProperties.getAutoAnnotationExchangeName(),
-        rabbitMQProperties.getAutoAnnotationRoutingKeyName(), mapper.writeValueAsString(annotation));
+    rabbitTemplate.convertAndSend(rabbitMQProperties.getAutoAcceptedAnnotation().getExchangeName(),
+        rabbitMQProperties.getAutoAcceptedAnnotation().getRoutingKeyName(),
+        mapper.writeValueAsString(annotation));
   }
 
 }
