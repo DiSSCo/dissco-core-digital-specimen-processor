@@ -23,11 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -254,7 +251,7 @@ public class TestUtils {
 
   public static DigitalMediaRecord givenDigitalMediaRecord(){
     return new DigitalMediaRecord(
-        MEDIA_PID, MEDIA_URL, new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationID(ORGANISATION_ID)
+        MEDIA_PID, MEDIA_URL, List.of(), new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationID(ORGANISATION_ID)
     );
 
   }
@@ -352,11 +349,11 @@ public class TestUtils {
     return givenDigitalSpecimenEvent(hasMedia, false);
   }
 
-  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent(String specimenId,
+  public static DigitalMediaEvent givenDigitalMediaEvent(String specimenId,
       String mediaUrl) {
-    return new DigitalMediaEventWithoutDOI(
+    return new DigitalMediaEvent(
         List.of("image-metadata"),
-        new DigitalMediaWithoutDOI(
+        new DigitalMediaWrapper(
             "StillImage",
             specimenId,
             new DigitalMedia().withAcAccessURI(mediaUrl).withOdsOrganisationID(ORGANISATION_ID),
@@ -365,11 +362,11 @@ public class TestUtils {
     );
   }
 
-  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent(String specimenId) {
+  public static DigitalMediaEvent givenDigitalMediaEvent(String specimenId) {
     return givenDigitalMediaEvent(specimenId, MEDIA_URL);
   }
 
-  public static DigitalMediaEventWithoutDOI givenDigitalMediaEvent() {
+  public static DigitalMediaEvent givenDigitalMediaEvent() {
     return givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID);
   }
 

@@ -55,7 +55,7 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void testGenerateCreateEvent() {
+  void testGenerateCreateEventSpecimen() {
     // Given
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
@@ -63,7 +63,7 @@ class ProvenanceServiceTest {
         givenDigitalSpecimenWrapper(true, false));
 
     // When
-    var event = service.generateCreateEvent(digitalSpecimen);
+    var event = service.generateCreateEventSpecimen(digitalSpecimen);
 
     // Then
     assertThat(event.getDctermsIdentifier()).isEqualTo(

@@ -3,9 +3,10 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
@@ -28,7 +29,7 @@ public class EntityRelationshipService {
       DigitalSpecimenEvent digitalSpecimenEvent,
       Map<String, DigitalMediaRecord> currentMedia
   ) {
-    if (currentMedia.isEmpty()){
+    if (currentMedia.isEmpty()) {
       return new MediaRelationshipProcessResult(List.of(), List.of());
     }
     // Media Uri -> DOI
@@ -39,6 +40,14 @@ public class EntityRelationshipService {
     var tombstonedMedia = getTombstonedMediaRelationships(digitalSpecimenEvent, currentSpecimen,
         mediaIdMap);
     return new MediaRelationshipProcessResult(tombstonedMedia, newMediaErs);
+  }
+
+  public List<String> findNewSpecimenRelationshipsForMedia(
+      DigitalMediaRecord digitalMediaRecord, PidProcessResult pidProcessResult) {
+    var existingLinkedDois = digitalMediaRecord.attributes().getOdsHasEntityRelationships()
+        .stream().map(EntityRelationship::getDwcRelatedResourceID).toList();
+    return pidProcessResult.relatedDois().stream()
+        .filter(relatedDoi -> !existingLinkedDois.contains(relatedDoi)).toList();
   }
 
   /*
@@ -54,11 +63,11 @@ public class EntityRelationshipService {
         ));
   }
 
-  private List<DigitalMediaEventWithoutDOI> getNewLinkedMedia(
+  private List<DigitalMediaEvent> getNewLinkedMedia(
       DigitalSpecimenEvent digitalSpecimenEvent, Map<String, String> mediaIdMap) {
     return digitalSpecimenEvent.digitalMediaEvents().stream()
         .filter(mediaEvent -> mediaIdMap.containsKey(
-            mediaEvent.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()))
+            mediaEvent.digitalMediaWrapper().attributes().getAcAccessURI()))
         .toList();
   }
 
@@ -71,7 +80,7 @@ public class EntityRelationshipService {
         .collect(Collectors.toMap(Entry::getValue, Entry::getKey));
     // Get media URIs from this batch
     var incomingMediaUris = digitalSpecimenEvent.digitalMediaEvents().stream()
-        .map(event -> event.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI()).toList();
+        .map(event -> event.digitalMediaWrapper().attributes().getAcAccessURI()).toList();
     var currentErs = getMediaEntityRelationshipsForSpecimen(currentSpecimen);
     // If a media ER is NOT associated with a URI that is in this current batch, that means the relationship no longer exists
     return currentErs.stream().filter(

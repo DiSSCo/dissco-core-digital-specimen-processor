@@ -12,10 +12,8 @@ import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.relation.SpecimenRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
@@ -49,13 +47,13 @@ public class EqualityService {
   }
 
   public boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
-      DigitalMediaWithoutDOI digitalMedia,
-      SpecimenRelationshipProcessResult specimenRelationshipProcessResult) {
-    // Todo
-    return specimenRelationshipProcessResult.newLinkedObjects().isEmpty();
+      DigitalMediaWrapper digitalMedia,
+      List<String> newSpecimenRelationships) {
+   return mediaAreEqual(currentDigitalMedia, digitalMedia)
+       && newSpecimenRelationships.isEmpty();
   }
 
-  public DigitalSpecimenEvent setEventDates(
+  public DigitalSpecimenEvent setEventDatesSpecimen(
       DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenEvent digitalSpecimenEvent) {
     var digitalSpecimen = digitalSpecimenEvent.digitalSpecimenWrapper().attributes();
@@ -103,17 +101,38 @@ public class EqualityService {
           mapper.valueToTree(currentDigitalSpecimenWrapper.attributes()), true);
       var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper.attributes()),
           true);
-      var isEqual = jsonCurrentSpecimen.equals(jsonSpecimen);
-      if (!isEqual) {
-        log.debug("Specimen {} has changed. JsonDiff: {}",
-            currentDigitalSpecimenWrapper.attributes().getDctermsIdentifier(),
-            JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
-      }
-      return isEqual;
+      return isEqual(jsonCurrentSpecimen, jsonSpecimen, digitalSpecimenWrapper.attributes().getId());
     } catch (JsonProcessingException e) {
       log.error("Unable to re-serialize JSON. Can not determine equality.", e);
       return false;
     }
+  }
+
+  private boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
+      DigitalMediaWrapper digitalMedia) {
+    if (currentDigitalMedia == null
+        || currentDigitalMedia.attributes() == null) {
+      return false;
+    }
+    try {
+      var jsonCurrentMedia = normaliseJsonNode(
+          mapper.valueToTree(currentDigitalMedia.attributes()), false);
+      var jsonMedia = normaliseJsonNode(
+          mapper.valueToTree(digitalMedia.attributes()), false);
+     return isEqual(jsonCurrentMedia, jsonMedia, currentDigitalMedia.id());
+    } catch (JsonProcessingException e) {
+      log.error("Unable to re-serialize JSON. Can not determine equality.", e);
+      return false;
+    }
+  }
+
+  private static boolean isEqual(JsonNode currentJson, JsonNode json, String id){
+    var isEqual = currentJson.equals(json);
+    if (!isEqual) {
+      log.debug("Media {} has changed. JsonDiff: {}", id,
+          JsonDiff.asJson(currentJson, json));
+    }
+    return isEqual;
   }
 
   private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,

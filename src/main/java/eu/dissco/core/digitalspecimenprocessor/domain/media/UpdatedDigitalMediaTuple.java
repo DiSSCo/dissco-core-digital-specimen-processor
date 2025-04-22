@@ -1,8 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.media;
 
+import java.util.List;
+
 public record UpdatedDigitalMediaTuple(
     DigitalMediaRecord currentDigitalMediaRecord,
-    DigitalMediaEventWithoutDOI digitalMediaEvent
-) {
+    DigitalMediaEvent digitalMediaEvent,
+    List<String> newRelatedSpecimenDois) {
 
 }

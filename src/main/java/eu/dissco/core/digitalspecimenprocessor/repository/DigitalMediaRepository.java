@@ -4,16 +4,12 @@ import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGIT
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalMediaObject;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
@@ -29,19 +25,6 @@ public class DigitalMediaRepository {
 
   private final DSLContext context;
   private final ObjectMapper mapper;
-
-  public Map<DigitalMediaKey, String> getDigitalMediaUrisFromIdKey(List<String> mediaPids) {
-    return context.select(DIGITAL_MEDIA_OBJECT.DIGITAL_SPECIMEN_ID, DIGITAL_MEDIA_OBJECT.MEDIA_URL,
-            DIGITAL_MEDIA_OBJECT.ID)
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.in(mediaPids))
-        .fetch()
-        .stream()
-        .collect(Collectors.toMap(
-            DigitalMediaRepository::toDigitalMediaKey,
-            r -> r.get(DIGITAL_MEDIA_OBJECT.ID)
-        ));
-  }
 
   // Maps Media URI to its DOI
   public List<DigitalMediaRecord> getExistingDigitalMedia(Set<String> mediaURIs) {
@@ -59,18 +42,13 @@ public class DigitalMediaRepository {
         .execute();
   }
 
-  private static DigitalMediaKey toDigitalMediaKey(Record dbRecord) {
-    return new DigitalMediaKey(dbRecord.get(DIGITAL_MEDIA_OBJECT.DIGITAL_SPECIMEN_ID),
-        dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL));
-  }
-
 
   private DigitalMediaRecord mapDigitalMedia(Record dbRecord) {
     try {
       return new DigitalMediaRecord(
           dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),
           dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL),
-          mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class));
+          List.of(), mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class));
     } catch (JsonProcessingException e) {
       log.error("Unable to map record data to json: {}", dbRecord);
       return null;

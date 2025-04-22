@@ -34,8 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
@@ -155,9 +155,9 @@ class FdoRecordServiceTest {
   @MethodSource("genLicense")
   void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
     // Given
-    var media = new DigitalMediaEventWithoutDOI(
+    var media = new DigitalMediaEvent(
         List.of("image-metadata"),
-        new DigitalMediaWithoutDOI(
+        new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
             new DigitalMedia()
@@ -185,9 +185,9 @@ class FdoRecordServiceTest {
   void testGenRequestLicenseAndRightsHolder(List<Agent> rightHolders, String expectedName,
       String expectedId) {
     // Given
-    var media = new DigitalMediaEventWithoutDOI(
+    var media = new DigitalMediaEvent(
         List.of("image-metadata"),
-        new DigitalMediaWithoutDOI(
+        new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
             new DigitalMedia()
@@ -385,13 +385,13 @@ class FdoRecordServiceTest {
 
   @ParameterizedTest
   @MethodSource("digitalSpecimensNeedToBeChanged")
-  void testHandleNeedsUpdate(DigitalSpecimen currentAttributes) {
+  void testHandleNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
     var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         currentAttributes,
         ORIGINAL_DATA);
     // Then
     assertThat(
-        fdoRecordService.handleNeedsUpdate(currentDigitalSpecimen,
+        fdoRecordService.handleNeedsUpdateSpecimen(currentDigitalSpecimen,
             givenDigitalSpecimenWrapper())).isTrue();
   }
 
@@ -402,7 +402,7 @@ class FdoRecordServiceTest {
         null, false, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
 
     // Then
-    assertThat(fdoRecordService.handleNeedsUpdate(
+    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(
         new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
             generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
   }
@@ -414,7 +414,7 @@ class FdoRecordServiceTest {
         ORGANISATION_ID, false, false);
 
     // When/then
-    assertThat(fdoRecordService.handleNeedsUpdate(currentSpecimen,
+    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(currentSpecimen,
         givenDigitalSpecimenWrapper())).isTrue();
   }
 }

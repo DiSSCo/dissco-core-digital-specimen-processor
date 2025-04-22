@@ -54,8 +54,6 @@ import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nimbusds.jose.util.Pair;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -126,8 +124,8 @@ class ProcessingServiceTest {
 
   @BeforeEach
   void setup() {
-    service = new ProcessingService(repository, mediaRepository, kafkaService,
-        digitalSpecimenService, rabbitMQService, digitalMediaService, entityRelationshipService, equalityService);
+    service = new ProcessingService(repository, mediaRepository,
+        digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService, rabbitMQService, fdoRecordService, handleComponent);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -209,7 +207,7 @@ class ProcessingServiceTest {
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper(true))).willReturn(1);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
@@ -223,7 +221,7 @@ class ProcessingServiceTest {
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(rabbitMQService).should()
-        .publishUpdateEvent(eq(givenDigitalSpecimenRecord(2, true)), any(JsonNode.class));
+        .publishUpdateEventSpecimen(eq(givenDigitalSpecimenRecord(2, true)), any(JsonNode.class));
     then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2, true)));
@@ -245,7 +243,7 @@ class ProcessingServiceTest {
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper(true))).willReturn(1);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
@@ -260,7 +258,7 @@ class ProcessingServiceTest {
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(rabbitMQService).should()
-        .publishUpdateEvent(eq(expected.get(0)), any(JsonNode.class));
+        .publishUpdateEventSpecimen(eq(expected.get(0)), any(JsonNode.class));
     then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(expected);
@@ -282,7 +280,7 @@ class ProcessingServiceTest {
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper(true))).willReturn(1);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
@@ -296,7 +294,7 @@ class ProcessingServiceTest {
     then(handleComponent).should().updateHandle(any());
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(rabbitMQService).should()
-        .publishUpdateEvent(eq(givenDigitalSpecimenRecord(2, true)), any(JsonNode.class));
+        .publishUpdateEventSpecimen(eq(givenDigitalSpecimenRecord(2, true)), any(JsonNode.class));
     then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2, true)));
@@ -316,7 +314,7 @@ class ProcessingServiceTest {
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(expected)).willReturn(bulkResponse);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper(true))).willReturn(1);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(false);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(false);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
@@ -330,7 +328,7 @@ class ProcessingServiceTest {
     verifyNoMoreInteractions(handleComponent);
     then(repository).should().createDigitalSpecimenRecord(expected);
     then(rabbitMQService).should()
-        .publishUpdateEvent(givenDigitalSpecimenRecord(2, true), givenJsonPatch());
+        .publishUpdateEventSpecimen(givenDigitalSpecimenRecord(2, true), givenJsonPatch());
     then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship());
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord(2, true)));
@@ -367,9 +365,9 @@ class ProcessingServiceTest {
     then(equalityService).shouldHaveNoInteractions();
     then(repository).should()
         .createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecordWithMediaEr()));
-    then(rabbitMQService).should().publishCreateEvent(givenDigitalSpecimenRecordWithMediaEr());
+    then(rabbitMQService).should().publishCreateEventSpecimen(givenDigitalSpecimenRecordWithMediaEr());
     then(rabbitMQService).should()
-        .publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecordWithMediaEr());
+        .publishAnnotationRequestEventSpecimen(MAS, givenDigitalSpecimenRecordWithMediaEr());
     then(rabbitMQService).should()
         .publishDigitalMediaObject(givenDigitalMediaEventWithRelationship(MEDIA_PID));
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecordWithMediaEr()));
@@ -423,9 +421,9 @@ class ProcessingServiceTest {
     verify(handleComponent, times(1)).postHandle(anyList(),
         true);
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
-    then(rabbitMQService).should().publishCreateEvent(givenDigitalSpecimenRecord());
-    then(rabbitMQService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
-    then(rabbitMQService).should().republishEvent(duplicateSpecimen);
+    then(rabbitMQService).should().publishCreateEventSpecimen(givenDigitalSpecimenRecord());
+    then(rabbitMQService).should().publishAnnotationRequestEventSpecimen(MAS, givenDigitalSpecimenRecord());
+    then(rabbitMQService).should().republishSpecimenEvent(duplicateSpecimen);
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord()));
   }
 
@@ -481,7 +479,7 @@ class ProcessingServiceTest {
         new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID_ALT,
         new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL), MEDIA_PID,
         new DigitalMediaKey(THIRD_HANDLE, MEDIA_URL), MEDIA_PID));
-    given(rollbackService.handlePartiallyFailedElasticInsert(any(), any(), eq(bulkResponse)))
+    given(rollbackService.handlePartiallyFailedElasticInsertSpecimen(any(), any(), eq(bulkResponse)))
         .willReturn(Map.of(
             givenDigitalSpecimenRecord(),
             Pair.of(List.of(MEDIA_PID), List.of(givenDigitalMediaEvent())),
@@ -519,7 +517,7 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()))).willReturn(
         bulkResponse);
     doThrow(JsonProcessingException.class).when(rabbitMQService)
-        .publishCreateEvent(any(DigitalSpecimenRecord.class));
+        .publishCreateEventSpecimen(any(DigitalSpecimenRecord.class));
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
 
     // When
@@ -546,16 +544,16 @@ class ProcessingServiceTest {
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
             givenUnequalDigitalSpecimenRecord()
         ));
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
 
     // When
     var result = service.handleMessages(events);
 
     // Then
-    then(rabbitMQService).should().deadLetterEvent(givenDigitalSpecimenEvent());
-    then(rabbitMQService).should().deadLetterEvent(secondEvent);
-    then(rabbitMQService).should().deadLetterEvent(thirdEvent);
+    then(rabbitMQService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    then(rabbitMQService).should().deadLetterEventSpecimen(secondEvent);
+    then(rabbitMQService).should().deadLetterEventSpecimen(thirdEvent);
     then(rabbitMQService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
@@ -572,9 +570,9 @@ class ProcessingServiceTest {
         ));
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(events);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(rabbitMQService).deadLetterEvent(any());
+    doThrow(JsonProcessingException.class).when(rabbitMQService).deadLetterEventSpecimen(any());
 
     // When
     var result = service.handleMessages(events);
@@ -601,7 +599,7 @@ class ProcessingServiceTest {
             thirdRecord,
             secondRecord));
     given(bulkResponse.errors()).willReturn(true);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(anyList())).willReturn(bulkResponse);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
     given(
@@ -611,7 +609,7 @@ class ProcessingServiceTest {
             SECOND_HANDLE, secondEvent,
             HANDLE, firstEvent
         )));
-    given(rollbackService.handlePartiallyFailedElasticUpdate(any(), eq(bulkResponse)))
+    given(rollbackService.handlePartiallyFailedElasticUpdateSpecimen(any(), eq(bulkResponse)))
         .willReturn(Set.of(
             givenUpdatedDigitalSpecimenRecord(givenUnequalDigitalSpecimenRecord(), true),
             givenUpdatedDigitalSpecimenRecord(thirdRecord, false)
@@ -642,7 +640,7 @@ class ProcessingServiceTest {
             List.of(givenDigitalSpecimenRecord(2, false)))).willReturn(
         bulkResponse);
     doThrow(JsonProcessingException.class).when(rabbitMQService)
-        .publishUpdateEvent(givenDigitalSpecimenRecord(2, false), givenJsonPatch());
+        .publishUpdateEventSpecimen(givenDigitalSpecimenRecord(2, false), givenJsonPatch());
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList()))
         .willReturn(givenMediaProcessResultMapNew(Map.of(
             HANDLE, givenDigitalSpecimenEvent())));
@@ -669,7 +667,7 @@ class ProcessingServiceTest {
         elasticRepository.indexDigitalSpecimen(
             List.of(givenDigitalSpecimenRecord(2, false)))).willThrow(
         IOException.class);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
         givenEmptyMediaProcessResultMap());
@@ -716,7 +714,7 @@ class ProcessingServiceTest {
     // Then
     assertThat(result).isEmpty();
     then(equalityService).shouldHaveNoInteractions();
-    then(rabbitMQService).should().republishEvent(givenDigitalSpecimenEvent());
+    then(rabbitMQService).should().republishSpecimenEvent(givenDigitalSpecimenEvent());
     then(rabbitMQService).shouldHaveNoMoreInteractions();
     then(fdoRecordService).shouldHaveNoInteractions();
   }
@@ -744,7 +742,7 @@ class ProcessingServiceTest {
     mockEqualityServiceSetDates(events);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(unequalOriginalSpecimens);
-    given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(midsService.calculateMids(firstEvent.digitalSpecimenWrapper())).willReturn(1);
     doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(anyList());
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList()))
@@ -784,7 +782,7 @@ class ProcessingServiceTest {
 
   private void mockEqualityServiceSetDates(List<DigitalSpecimenEvent> events) {
     for (var event : events) {
-      given(equalityService.setEventDates(any(), eq(event))).willReturn(event);
+      given(equalityService.setEventDatesSpecimen(any(), eq(event))).willReturn(event);
     }
 
   }

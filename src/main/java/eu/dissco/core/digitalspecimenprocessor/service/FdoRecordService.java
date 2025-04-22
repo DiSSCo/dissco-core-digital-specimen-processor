@@ -4,7 +4,6 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.RIGHT
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.CATALOG_NUMBER;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_URL;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LIVING_OR_PRESERVED;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MARKED_AS_TYPE;
@@ -30,7 +29,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
@@ -100,28 +101,32 @@ public class FdoRecordService {
     return digitalSpecimens.stream().map(this::buildSinglePostHandleRequest).toList();
   }
 
-  public List<JsonNode> buildPostRequestMedia(List<DigitalMediaEventWithoutDOI> digitalMediaList) {
+  public List<JsonNode> buildPostRequestMedia(List<DigitalMediaEvent> digitalMediaList) {
     var requests = new ArrayList<JsonNode>();
     for (var mediaEvent : digitalMediaList) {
-      var media = mediaEvent.digitalMediaObjectWithoutDoi().attributes();
-      var attributes = mapper.createObjectNode()
-          .put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
-          .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
-          .put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
-          .put(LINKED_DO_TYPE.getAttribute(), fdoProperties.getSpecimenFdoType())
-          .put(PRIMARY_MEDIA_ID.getAttribute(), media.getAcAccessURI())
-          .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
-          .put(PRIMARY_MEDIA_ID_NAME.getAttribute(), "ac:accessURI")
-          .put(MEDIA_TYPE.getAttribute(), fdoProperties.getDefaultMediaType())
-          .put(MIME_TYPE.getAttribute(), media.getDctermsFormat());
-      setLicense(attributes, media);
-      setRightsHolder(attributes, media);
+      var media = mediaEvent.digitalMediaWrapper().attributes();
       requests.add(mapper.createObjectNode().set("data",
           mapper.createObjectNode()
               .put("type", fdoProperties.getMediaFdoType())
-              .set(ATTRIBUTES, attributes)));
+              .set(ATTRIBUTES, generateMediaAttributes(media))));
     }
     return requests;
+  }
+
+  private JsonNode generateMediaAttributes(DigitalMedia media){
+    var attributes = mapper.createObjectNode()
+        .put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
+        .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
+        .put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
+        .put(LINKED_DO_TYPE.getAttribute(), fdoProperties.getSpecimenFdoType())
+        .put(PRIMARY_MEDIA_ID.getAttribute(), media.getAcAccessURI())
+        .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
+        .put(PRIMARY_MEDIA_ID_NAME.getAttribute(), "ac:accessURI")
+        .put(MEDIA_TYPE.getAttribute(), fdoProperties.getDefaultMediaType())
+        .put(MIME_TYPE.getAttribute(), media.getDctermsFormat());
+    setLicense(attributes, media);
+    setRightsHolder(attributes, media);
+    return attributes;
   }
 
   public List<JsonNode> buildUpdateHandleRequest(
@@ -129,9 +134,22 @@ public class FdoRecordService {
     return digitalSpecimens.stream().map(this::buildSingleUpdateHandleRequest).toList();
   }
 
+  public List<JsonNode> buildUpdateHandleRequestMedia(List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
+    List<JsonNode> requestBody = new ArrayList<>();
+    for (var media : digitalMediaTuples) {
+      requestBody.add(buildSingleUpdateRequestMedia(media.digitalMediaEvent(), media.currentDigitalMediaRecord().id()));
+    }
+    return requestBody;
+  }
+
   public List<JsonNode> buildRollbackUpdateRequest(
       List<DigitalSpecimenRecord> digitalSpecimenRecords) {
     return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequest).toList();
+  }
+
+  public List<JsonNode> buildRollbackUpdateRequestMedia(List<DigitalMediaRecord> digitalMediaRecords){
+    // todo
+    return List.of();
   }
 
 
@@ -144,6 +162,14 @@ public class FdoRecordService {
         .set(DATA, mapper.createObjectNode()
             .put(TYPE, fdoProperties.getSpecimenFdoType())
             .set(ATTRIBUTES, genRequestAttributes(specimen)));
+  }
+
+  private JsonNode buildSingleUpdateRequestMedia(DigitalMediaEvent mediaEvent, String id) {
+    return mapper.createObjectNode()
+        .set("data", mapper.createObjectNode()
+            .put("type", fdoProperties.getMediaFdoType())
+            .put("id", id.replace(DOI_PREFIX, ""))
+            .set(ATTRIBUTES, generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
   }
 
   private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
@@ -241,7 +267,7 @@ public class FdoRecordService {
     return mapper.convertValue(otherSpecimenIds, ArrayNode.class);
   }
 
-  public boolean handleNeedsUpdate(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+  public boolean handleNeedsUpdateSpecimen(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
     var currentAttributes = currentDigitalSpecimenWrapper.attributes();
     var attributes = digitalSpecimenWrapper.attributes();
@@ -265,6 +291,11 @@ public class FdoRecordService {
         || isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
         || (currentAttributes.getOdsIsMarkedAsType() != null
         && !currentAttributes.getOdsIsMarkedAsType().equals(attributes.getOdsIsMarkedAsType()));
+  }
+
+  public boolean handleNeedsUpdateMedia(DigitalMedia currentDigitalMedia,
+      DigitalMedia digitalMedia) {
+    return false;  // todo
   }
 
   private record OtherSpecimenId(

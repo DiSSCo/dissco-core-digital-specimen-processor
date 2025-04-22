@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Option;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
@@ -86,7 +86,7 @@ class EqualityServiceTest {
     var currentDigitalSpecimen = givenDigitalSpecimenWrapper();
     var digitalSpecimen = givenDigitalSpecimenWrapper();
     var mediaProcessResult = new MediaRelationshipProcessResult(List.of(),
-        List.of(new DigitalMediaEventWithoutDOI(null, null)));
+        List.of(new DigitalMediaEvent(null, null)));
 
     // When
     var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
@@ -144,7 +144,7 @@ class EqualityServiceTest {
     );
 
     // When
-    var result = equalityService.setEventDates(currentDigitalSpecimen, digitalSpecimenEvent);
+    var result = equalityService.setEventDatesSpecimen(currentDigitalSpecimen, digitalSpecimenEvent);
 
     // Then
     assertThat(result).isEqualTo(expected);

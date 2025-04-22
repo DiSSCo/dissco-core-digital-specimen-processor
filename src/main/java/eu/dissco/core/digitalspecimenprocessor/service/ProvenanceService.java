@@ -10,10 +10,14 @@ import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMach
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.CreateUpdateTombstoneEvent;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
+import eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType;
 import eu.dissco.core.digitalspecimenprocessor.schema.OdsChangeValue;
 import eu.dissco.core.digitalspecimenprocessor.schema.ProvActivity;
 import eu.dissco.core.digitalspecimenprocessor.schema.ProvEntity;
@@ -35,15 +39,23 @@ public class ProvenanceService {
 
   private final ObjectMapper mapper;
   private final ApplicationProperties properties;
+  private final DigitalMediaService digitalMediaService;
 
-  public CreateUpdateTombstoneEvent generateCreateEvent(
+  public CreateUpdateTombstoneEvent generateCreateEventSpecimen(
       DigitalSpecimenRecord digitalSpecimenRecord) {
     var digitalSpecimen = DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
-    return generateCreateUpdateTombStoneEvent(digitalSpecimen, ProvActivity.Type.ODS_CREATE,
+    return generateCreateUpdateTombStoneEventSpecimen(digitalSpecimen, ProvActivity.Type.ODS_CREATE,
         null);
   }
 
-  private CreateUpdateTombstoneEvent generateCreateUpdateTombStoneEvent(
+  public CreateUpdateTombstoneEvent generateCreateEventMedia(
+      DigitalMediaRecord digitalMediaRecord) {
+    var digitalMedia = DigitalObjectUtils.flattenToDigitalMedia(digitalMediaRecord);
+    return generateCreateUpdateTombstoneEventMedia(digitalMedia, ProvActivity.Type.ODS_CREATE,
+        null);
+  }
+
+  private CreateUpdateTombstoneEvent generateCreateUpdateTombStoneEventSpecimen(
       DigitalSpecimen digitalSpecimen, ProvActivity.Type activityType,
       JsonNode jsonPatch) {
     var entityID = digitalSpecimen.getDctermsIdentifier() + "/" + digitalSpecimen.getOdsVersion();
@@ -74,7 +86,7 @@ public class ProvenanceService {
         .withProvEntity(new ProvEntity()
             .withId(entityID)
             .withType("ods:DigitalSpecimen")
-            .withProvValue(mapEntityToProvValue(digitalSpecimen))
+            .withProvValue(mapEntityToProvValueSpecimen(digitalSpecimen))
             .withProvWasGeneratedBy(activityID))
         .withOdsHasAgents(List.of(
             createMachineAgent(digitalSpecimen.getOdsSourceSystemName(), sourceSystemID,
@@ -82,6 +94,48 @@ public class ProvenanceService {
             createMachineAgent(properties.getName(), properties.getPid(), PROCESSING_SERVICE,
                 DOI, PROV_SOFTWARE_AGENT)));
   }
+
+  private CreateUpdateTombstoneEvent generateCreateUpdateTombstoneEventMedia(
+      DigitalMedia digitalMedia, ProvActivity.Type activityType,
+      JsonNode jsonPatch) {
+    var entityID = digitalMedia.getDctermsIdentifier() + "/" + digitalMedia.getOdsVersion();
+    var activityID = UUID.randomUUID().toString();
+    var sourceSystemID = digitalMedia.getOdsSourceSystemID();
+    var sourceSystemName = digitalMedia.getOdsSourceSystemName();
+    return new CreateUpdateTombstoneEvent()
+        .withId(entityID)
+        .withType("ods:CreateUpdateTombstoneEvent")
+        .withDctermsIdentifier(entityID)
+        .withOdsFdoType(properties.getCreateUpdateTombstoneEventType())
+        .withProvActivity(new ProvActivity()
+            .withId(activityID)
+            .withType(activityType)
+            .withOdsChangeValue(mapJsonPatch(jsonPatch))
+            .withProvEndedAtTime(Date.from(Instant.now()))
+            .withProvWasAssociatedWith(List.of(
+                new ProvWasAssociatedWith()
+                    .withId(sourceSystemID)
+                    .withProvHadRole(ProvHadRole.REQUESTOR),
+                new ProvWasAssociatedWith()
+                    .withId(properties.getPid())
+                    .withProvHadRole(ProvHadRole.APPROVER),
+                new ProvWasAssociatedWith()
+                    .withId(properties.getPid())
+                    .withProvHadRole(ProvHadRole.GENERATOR)))
+            .withProvUsed(entityID)
+            .withRdfsComment("Digital Media newly created"))
+        .withProvEntity(new ProvEntity()
+            .withId(entityID)
+            .withType("ods:DigitalMedia")
+            .withProvValue(mapEntityToProvValueMedia(digitalMedia))
+            .withProvWasGeneratedBy(activityID))
+        .withOdsHasAgents(List.of(
+            createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+                PROV_SOFTWARE_AGENT),
+            createMachineAgent(properties.getName(), properties.getPid(),
+                AgentRoleType.PROCESSING_SERVICE, DctermsType.DOI, PROV_SOFTWARE_AGENT)));
+  }
+
 
   private String determineComment(ProvActivity.Type activityType) {
     if (activityType == ProvActivity.Type.ODS_CREATE) {
@@ -104,13 +158,31 @@ public class ProvenanceService {
   public CreateUpdateTombstoneEvent generateUpdateEventSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
       JsonNode jsonPatch) {
     var digitalSpecimen = DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
-    return generateCreateUpdateTombStoneEvent(digitalSpecimen, ProvActivity.Type.ODS_UPDATE,
+    return generateCreateUpdateTombStoneEventSpecimen(digitalSpecimen, ProvActivity.Type.ODS_UPDATE,
         jsonPatch);
   }
 
-  private ProvValue mapEntityToProvValue(DigitalSpecimen digitalSpecimen) {
+  public CreateUpdateTombstoneEvent generateUpdateEventMedia(
+      DigitalMediaRecord digitalMediaRecord,
+      JsonNode jsonPatch) {
+    var digitalMediaService = DigitalObjectUtils.flattenToDigitalMedia(digitalMediaRecord);
+    return generateCreateUpdateTombstoneEventMedia(digitalMediaService, ProvActivity.Type.ODS_UPDATE,
+        jsonPatch);
+  }
+
+  private ProvValue mapEntityToProvValueSpecimen(DigitalSpecimen digitalSpecimen) {
     var provValue = new ProvValue();
     var node = mapper.convertValue(digitalSpecimen, new TypeReference<Map<String, Object>>() {
+    });
+    for (var entry : node.entrySet()) {
+      provValue.setAdditionalProperty(entry.getKey(), entry.getValue());
+    }
+    return provValue;
+  }
+
+  private ProvValue mapEntityToProvValueMedia(DigitalMedia digitalMedia) {
+    var provValue = new ProvValue();
+    var node = mapper.convertValue(digitalMedia, new TypeReference<Map<String, Object>>() {
     });
     for (var entry : node.entrySet()) {
       provValue.setAdditionalProperty(entry.getKey(), entry.getValue());

@@ -39,7 +39,6 @@ public class RabbitMqConsumerService {
     processingService.handleMessages(events);
   }
 
-  @KafkaListener(topics = "digital-media")
   public void getMessagesMedia(@Payload List<String> messages) {
     var events = messages.stream().map(message -> {
       try {

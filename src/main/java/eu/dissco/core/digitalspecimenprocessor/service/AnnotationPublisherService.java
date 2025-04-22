@@ -71,7 +71,7 @@ public class AnnotationPublisherService {
     for (DigitalMediaRecord digitalMediaRecord : digitalMediaRecords) {
       try {
         var annotationProcessingRequest = mapNewMediaToAnnotation(digitalMediaRecord);
-        kafkaPublisherService.publishAcceptedAnnotation(
+        publisherService.publishAcceptedAnnotation(
             new AutoAcceptedAnnotation(
                 createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
                     PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
@@ -168,7 +168,7 @@ public class AnnotationPublisherService {
             updatedDigitalMediaRecord.digitalMediaRecord(),
             updatedDigitalMediaRecord.jsonPatch());
         for (var annotationProcessingRequest : annotations) {
-          kafkaPublisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
+         publisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
               createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
                   PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
               annotationProcessingRequest));
