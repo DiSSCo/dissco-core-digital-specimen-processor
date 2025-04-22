@@ -27,9 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
 @ExtendWith(MockitoExtension.class)
 class RabbitMqPublisherServiceTest {
 
