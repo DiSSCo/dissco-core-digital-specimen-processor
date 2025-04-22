@@ -145,7 +145,7 @@ class FdoRecordServiceTest {
     var expected = List.of(givenHandleMediaRequest());
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(givenDigitalMediaEvent()));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(givenDigitalMediaEvent()));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -174,7 +174,7 @@ class FdoRecordServiceTest {
                 .put(licenseField, fieldValue))));
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -210,7 +210,7 @@ class FdoRecordServiceTest {
             .set("attributes", attributes)));
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
     // Then
     assertThat(result).isEqualTo(expected);

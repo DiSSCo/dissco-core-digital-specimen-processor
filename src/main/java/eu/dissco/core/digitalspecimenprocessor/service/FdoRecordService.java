@@ -23,7 +23,7 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_DISCIPLINE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_DOMAIN;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_ORIGIN;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -100,8 +100,7 @@ public class FdoRecordService {
     return digitalSpecimens.stream().map(this::buildSinglePostHandleRequest).toList();
   }
 
-  public List<JsonNode> buildPostRequestMedia(String specimenId,
-      List<DigitalMediaEventWithoutDOI> digitalMediaList) {
+  public List<JsonNode> buildPostRequestMedia(List<DigitalMediaEventWithoutDOI> digitalMediaList) {
     var requests = new ArrayList<JsonNode>();
     for (var mediaEvent : digitalMediaList) {
       var media = mediaEvent.digitalMediaObjectWithoutDoi().attributes();
@@ -109,7 +108,6 @@ public class FdoRecordService {
           .put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
           .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
           .put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
-          .put(LINKED_DO_PID.getAttribute(), specimenId)
           .put(LINKED_DO_TYPE.getAttribute(), fdoProperties.getSpecimenFdoType())
           .put(PRIMARY_MEDIA_ID.getAttribute(), media.getAcAccessURI())
           .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")

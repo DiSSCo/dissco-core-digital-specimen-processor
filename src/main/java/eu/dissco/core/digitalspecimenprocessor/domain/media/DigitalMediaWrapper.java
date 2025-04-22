@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 
-
+// todo delete
 public record DigitalMediaWrapper(
     @JsonProperty("ods:type")
     String type,

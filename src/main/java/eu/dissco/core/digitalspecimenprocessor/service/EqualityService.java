@@ -11,7 +11,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.SpecimenRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
@@ -36,12 +40,19 @@ public class EqualityService {
       "dwc:relationshipEstablishedDate"
   );
 
-  public boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+  public boolean specimensAreEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper,
-      DigitalMediaProcessResult digitalMediaProcessResult) {
+      MediaRelationshipProcessResult mediaRelationshipProcessResult) {
     return specimensAreEqual(currentDigitalSpecimenWrapper, digitalSpecimenWrapper)
-        && digitalMediaProcessResult.newMedia().isEmpty()
-        && digitalMediaProcessResult.tombstoneMedia().isEmpty();
+        && mediaRelationshipProcessResult.newLinkedObjects().isEmpty()
+        && mediaRelationshipProcessResult.tombstonedRelationships().isEmpty();
+  }
+
+  public boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
+      DigitalMediaWithoutDOI digitalMedia,
+      SpecimenRelationshipProcessResult specimenRelationshipProcessResult) {
+    // Todo
+    return specimenRelationshipProcessResult.newLinkedObjects().isEmpty();
   }
 
   public DigitalSpecimenEvent setEventDates(

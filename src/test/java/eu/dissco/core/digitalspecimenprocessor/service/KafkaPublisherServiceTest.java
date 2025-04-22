@@ -70,11 +70,11 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testRepublishEvent() throws JsonProcessingException {
+  void testRepublishSpecimenEvent() throws JsonProcessingException {
     // Given
 
     // When
-    service.republishEvent(givenDigitalSpecimenEvent());
+    service.republishSpecimenEvent(givenDigitalSpecimenEvent());
 
     // Then
     then(kafkaTemplate).should()
@@ -82,11 +82,11 @@ class KafkaPublisherServiceTest {
   }
 
   @Test
-  void testDeadLetterEvent() throws JsonProcessingException {
+  void testDeadLetterEventSpecimen() throws JsonProcessingException {
     // Given
 
     // When
-    service.deadLetterEvent(givenDigitalSpecimenEvent());
+    service.deadLetterEventSpecimen(givenDigitalSpecimenEvent());
 
     // Then
     then(kafkaTemplate).should()

@@ -2,7 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.domain.specimen;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import java.util.List;
 
 public record UpdatedDigitalSpecimenRecord(
@@ -11,6 +11,6 @@ public record UpdatedDigitalSpecimenRecord(
     DigitalSpecimenRecord currentDigitalSpecimen,
     JsonNode jsonPatch,
     List<DigitalMediaEventWithoutDOI> digitalMediaObjectEvents,
-    DigitalMediaProcessResult digitalMediaProcessResult) {
+    MediaRelationshipProcessResult mediaRelationshipProcessResult) {
 
 }

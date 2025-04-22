@@ -56,13 +56,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.nimbusds.jose.util.Pair;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
+import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
@@ -91,6 +92,8 @@ class ProcessingServiceTest {
   @Mock
   private DigitalSpecimenRepository repository;
   @Mock
+  private DigitalMediaRepository mediaRepository;
+  @Mock
   private FdoRecordService fdoRecordService;
   @Mock
   private ElasticSearchRepository elasticRepository;
@@ -109,9 +112,13 @@ class ProcessingServiceTest {
   @Mock
   private DigitalMediaService digitalMediaService;
   @Mock
+  private EntityRelationshipService entityRelationshipService;
+  @Mock
   private RollbackService rollbackService;
   @Mock
   private EqualityService equalityService;
+  @Mock
+  private DigitalSpecimenService digitalSpecimenService;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -119,9 +126,8 @@ class ProcessingServiceTest {
 
   @BeforeEach
   void setup() {
-    service = new ProcessingService(repository, fdoRecordService, elasticRepository, kafkaService,
-        midsService, handleComponent, applicationProperties, annotationPublisherService, MAPPER,
-        digitalMediaService, equalityService, rollbackService);
+    service = new ProcessingService(repository, mediaRepository, kafkaService,
+        digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -144,7 +150,7 @@ class ProcessingServiceTest {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenDigitalSpecimenWithEntityRelationship()));
-    given(equalityService.isEqual(any(), any(), any())).willReturn(true);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(
@@ -172,7 +178,8 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenRecord()));
     given(digitalMediaService.getExistingDigitalMedia(any(), anyList())).willReturn(Map.of(
         HANDLE, givenEmptyMediaProcessResult()));
-    given(equalityService.isEqual(any(), any(), eq(givenEmptyMediaProcessResult()))).willReturn(
+    given(equalityService.specimensAreEqual(any(), any(),
+        eq(givenEmptyMediaProcessResult()))).willReturn(
         true);
 
     // When
@@ -195,7 +202,7 @@ class ProcessingServiceTest {
         new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
             new DigitalSpecimen().withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY), null));
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
@@ -230,8 +237,8 @@ class ProcessingServiceTest {
         givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID, false, 2));
     var currentSpecimenRecord = givenDigitalSpecimenRecord();
     var currentMediaEvent = List.of(givenDigitalMediaEvent());
-    var newMediaResult = new DigitalMediaProcessResult(List.of(), List.of(), currentMediaEvent);
-    given(equalityService.isEqual(any(), any(), eq(newMediaResult))).willReturn(false);
+    var newMediaResult = new MediaRelationshipProcessResult(List.of(), currentMediaEvent);
+    given(equalityService.specimensAreEqual(any(), any(), eq(newMediaResult))).willReturn(false);
     mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
@@ -266,9 +273,9 @@ class ProcessingServiceTest {
     var currentSpecimenRecord = givenDigitalSpecimenRecordWithMediaEr();
     var mediaEr = currentSpecimenRecord.digitalSpecimenWrapper().attributes()
         .getOdsHasEntityRelationships();
-    var tombstoneResult = new DigitalMediaProcessResult(List.of(), mediaEr, List.of());
+    var tombstoneResult = new MediaRelationshipProcessResult(mediaEr, List.of());
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
-    given(equalityService.isEqual(any(), any(), eq(tombstoneResult))).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), eq(tombstoneResult))).willReturn(false);
     mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(currentSpecimenRecord));
@@ -301,7 +308,7 @@ class ProcessingServiceTest {
   void testHandleRecordDoesNotNeedUpdate() throws Exception {
     // Given
     var expected = List.of(givenDigitalSpecimenRecord(2, true));
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent(true)));
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
@@ -344,11 +351,11 @@ class ProcessingServiceTest {
         fdoRecordService.buildPostHandleRequest(
             List.of(givenDigitalSpecimenWrapper(true)))).willReturn(
         List.of(givenHandleRequest()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(), true))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(handleComponent.postMediaHandle(anyList()))
         .willReturn(givenMediaPidResponse());
-    given(fdoRecordService.buildPostRequestMedia(any(), any())).willReturn(
+    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(
         List.of(MAPPER.createObjectNode()));
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
@@ -374,7 +381,7 @@ class ProcessingServiceTest {
   void testNewSpecimenPidFailed() throws Exception {
     // Given
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-    given(handleComponent.postHandle(anyList())).willThrow(PidException.class);
+    given(handleComponent.postHandle(anyList(), true)).willThrow(PidException.class);
     given(fdoRecordService.buildPostHandleRequest(anyList())).willReturn(
         List.of(givenHandleRequest()));
 
@@ -404,7 +411,7 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(), true))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -413,12 +420,12 @@ class ProcessingServiceTest {
 
     // Then
     then(equalityService).shouldHaveNoInteractions();
-    verify(handleComponent, times(1)).postHandle(anyList()
-    );
+    verify(handleComponent, times(1)).postHandle(anyList(),
+        true);
     then(repository).should().createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
     then(kafkaService).should().publishCreateEvent(givenDigitalSpecimenRecord());
     then(kafkaService).should().publishAnnotationRequestEvent(MAS, givenDigitalSpecimenRecord());
-    then(kafkaService).should().republishEvent(duplicateSpecimen);
+    then(kafkaService).should().republishSpecimenEvent(duplicateSpecimen);
     assertThat(result).isEqualTo(List.of(givenDigitalSpecimenRecord()));
   }
 
@@ -433,7 +440,7 @@ class ProcessingServiceTest {
     given(fdoRecordService.buildPostHandleRequest(anyList())).willReturn(
         List.of(givenHandleRequest()));
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(), true))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
 
     // When
@@ -442,7 +449,7 @@ class ProcessingServiceTest {
     // Then
     then(equalityService).shouldHaveNoInteractions();
     then(rollbackService).should()
-        .rollbackNewSpecimens(anyMap(), eq(Map.of()), eq(false), eq(true));
+        .rollbackNewSpecimens(anyMap(), eq(false), eq(true));
     then(kafkaService).shouldHaveNoInteractions();
     assertThat(result).isEmpty();
   }
@@ -462,8 +469,9 @@ class ProcessingServiceTest {
     given(elasticRepository.indexDigitalSpecimen(anySet())).willReturn(bulkResponse);
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
-    given(fdoRecordService.buildPostRequestMedia(any(), any())).willReturn(List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(
+        List.of(MAPPER.createObjectNode()));
+    given(handleComponent.postHandle(anyList(), true))
         .willReturn(Map.of(
             PHYSICAL_SPECIMEN_ID, HANDLE,
             secondPhysicalId, SECOND_HANDLE,
@@ -487,7 +495,7 @@ class ProcessingServiceTest {
     // Then
     then(equalityService).shouldHaveNoInteractions();
     then(repository).should().createDigitalSpecimenRecord(anySet());
-    then(handleComponent).should().postHandle(any());
+    then(handleComponent).should().postHandle(any(), true);
     then(kafkaService).should()
         .publishDigitalMediaObject(any(DigitalMediaEvent.class));
     then(kafkaService).shouldHaveNoMoreInteractions();
@@ -504,7 +512,7 @@ class ProcessingServiceTest {
     given(
         fdoRecordService.buildPostHandleRequest(List.of(givenDigitalSpecimenWrapper()))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(), true))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     given(bulkResponse.errors()).willReturn(false);
     given(
@@ -520,7 +528,7 @@ class ProcessingServiceTest {
     // Then
     then(equalityService).shouldHaveNoInteractions();
     then(repository).should().createDigitalSpecimenRecord(anySet());
-    then(rollbackService).should().rollbackNewSpecimens(any(), anyMap(), eq(true), eq(true));
+    then(rollbackService).should().rollbackNewSpecimens(any(), eq(true), eq(true));
     then(kafkaService).shouldHaveNoMoreInteractions();
     then(annotationPublisherService).should().publishAnnotationNewSpecimen(Set.of());
     assertThat(result).isEmpty();
@@ -531,7 +539,7 @@ class ProcessingServiceTest {
     var secondEvent = givenDigitalSpecimenEvent("Another Specimen");
     var thirdEvent = givenDigitalSpecimenEvent("A third Specimen");
     var events = List.of(givenDigitalSpecimenEvent(), secondEvent, thirdEvent);
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(events);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(List.of(givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen"),
@@ -545,9 +553,9 @@ class ProcessingServiceTest {
     var result = service.handleMessages(events);
 
     // Then
-    then(kafkaService).should().deadLetterEvent(givenDigitalSpecimenEvent());
-    then(kafkaService).should().deadLetterEvent(secondEvent);
-    then(kafkaService).should().deadLetterEvent(thirdEvent);
+    then(kafkaService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    then(kafkaService).should().deadLetterEventSpecimen(secondEvent);
+    then(kafkaService).should().deadLetterEventSpecimen(thirdEvent);
     then(kafkaService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
@@ -562,11 +570,11 @@ class ProcessingServiceTest {
             givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen"),
             givenUnequalDigitalSpecimenRecord()
         ));
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(events);
     given(fdoRecordService.handleNeedsUpdate(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEvent(any());
+    doThrow(JsonProcessingException.class).when(kafkaService).deadLetterEventSpecimen(any());
 
     // When
     var result = service.handleMessages(events);
@@ -584,7 +592,7 @@ class ProcessingServiceTest {
     var secondRecord = givenDifferentUnequalSpecimen(SECOND_HANDLE, "Another Specimen");
     var thirdRecord = givenDifferentUnequalSpecimen(THIRD_HANDLE, "A third Specimen");
     var events = List.of(firstEvent, secondEvent, thirdEvent);
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(events);
     given(repository.getDigitalSpecimens(
         List.of(PHYSICAL_SPECIMEN_ID, "A third Specimen", "Another Specimen")))
@@ -603,7 +611,7 @@ class ProcessingServiceTest {
             SECOND_HANDLE, secondEvent,
             HANDLE, firstEvent
         )));
-    given(rollbackService.handlePartiallyFailedElasticUpdate(any(), anyMap(), eq(bulkResponse)))
+    given(rollbackService.handlePartiallyFailedElasticUpdate(any(), eq(bulkResponse)))
         .willReturn(Set.of(
             givenUpdatedDigitalSpecimenRecord(givenUnequalDigitalSpecimenRecord(), true),
             givenUpdatedDigitalSpecimenRecord(thirdRecord, false)
@@ -626,7 +634,7 @@ class ProcessingServiceTest {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord()));
     given(midsService.calculateMids(givenDigitalSpecimenWrapper())).willReturn(1);
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent()));
     given(bulkResponse.errors()).willReturn(false);
     given(
@@ -644,7 +652,7 @@ class ProcessingServiceTest {
 
     // Then
     then(repository).should(times(1)).createDigitalSpecimenRecord(anyList());
-    then(rollbackService).should().rollbackUpdatedSpecimens(any(), any(), eq(true), eq(true));
+    then(rollbackService).should().rollbackUpdatedSpecimens(any(), eq(true), eq(true));
     then(kafkaService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
@@ -655,7 +663,7 @@ class ProcessingServiceTest {
     var unequalCurrentDigitalSpecimen = givenUnequalDigitalSpecimenRecord(ANOTHER_ORGANISATION);
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(unequalCurrentDigitalSpecimen));
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(List.of(givenDigitalSpecimenEvent()));
     given(
         elasticRepository.indexDigitalSpecimen(
@@ -670,7 +678,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    then(rollbackService).should().rollbackUpdatedSpecimens(any(), any(), eq(false), eq(true));
+    then(rollbackService).should().rollbackUpdatedSpecimens(any(), eq(false), eq(true));
     then(fdoRecordService).should().buildUpdateHandleRequest(anyList());
     then(handleComponent).should().updateHandle(any());
     then(repository).should(times(1)).createDigitalSpecimenRecord(anyList());
@@ -684,7 +692,7 @@ class ProcessingServiceTest {
     given(repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
     given(fdoRecordService.buildPostHandleRequest(anyList())).willReturn(
         List.of(givenHandleRequest()));
-    doThrow(PidException.class).when(handleComponent).postHandle(any());
+    doThrow(PidException.class).when(handleComponent).postHandle(any(), true);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -708,7 +716,7 @@ class ProcessingServiceTest {
     // Then
     assertThat(result).isEmpty();
     then(equalityService).shouldHaveNoInteractions();
-    then(kafkaService).should().republishEvent(givenDigitalSpecimenEvent());
+    then(kafkaService).should().republishSpecimenEvent(givenDigitalSpecimenEvent());
     then(kafkaService).shouldHaveNoMoreInteractions();
     then(fdoRecordService).shouldHaveNoInteractions();
   }
@@ -732,7 +740,7 @@ class ProcessingServiceTest {
         THIRD_HANDLE, thirdEvent,
         SECOND_HANDLE, secondEvent,
         HANDLE, firstEvent)));
-    given(equalityService.isEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     mockEqualityServiceSetDates(events);
     given(repository.getDigitalSpecimens(anyList()))
         .willReturn(unequalOriginalSpecimens);
@@ -746,7 +754,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(events);
 
     // Then
-    then(rollbackService).should().rollbackUpdatedSpecimens(any(), any(), eq(false), eq(false));
+    then(rollbackService).should().rollbackUpdatedSpecimens(any(), eq(false), eq(false));
     then(kafkaService).shouldHaveNoMoreInteractions();
     assertThat(result).isEmpty();
   }
@@ -761,7 +769,7 @@ class ProcessingServiceTest {
         fdoRecordService.buildPostHandleRequest(
             List.of(givenDigitalSpecimenWrapper(true)))).willReturn(
         List.of(MAPPER.createObjectNode()));
-    given(handleComponent.postHandle(anyList()))
+    given(handleComponent.postHandle(anyList(), true))
         .willReturn(givenHandleComponentResponse(List.of(givenDigitalSpecimenRecord())));
     doThrow(DataAccessException.class).when(repository).createDigitalSpecimenRecord(any());
 
@@ -769,7 +777,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(newSpecimenEvent));
 
     // Then
-    then(rollbackService).should().rollbackNewSpecimens(any(), any(), eq(false), eq(false));
+    then(rollbackService).should().rollbackNewSpecimens(any(), eq(false), eq(false));
     then(kafkaService).shouldHaveNoInteractions();
     assertThat(result).isEmpty();
   }

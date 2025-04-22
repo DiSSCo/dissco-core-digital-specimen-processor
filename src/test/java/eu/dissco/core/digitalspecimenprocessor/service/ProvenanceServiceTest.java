@@ -74,14 +74,14 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void testGenerateUpdateEvent() throws JsonProcessingException {
+  void testGenerateUpdateEventSpecimen() throws JsonProcessingException {
     // Given
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
     var anotherDigitalSpecimen = givenUnequalDigitalSpecimenRecord();
 
     // When
-    var event = service.generateUpdateEvent(anotherDigitalSpecimen, givenJsonPatch());
+    var event = service.generateUpdateEventSpecimen(anotherDigitalSpecimen, givenJsonPatch());
 
     // Then
     assertThat(event.getDctermsIdentifier()).isEqualTo(

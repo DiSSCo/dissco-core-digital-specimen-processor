@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,9 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KafkaPublisherService {
 
-  private static final String DLQ_SUBJECT = "digital-specimen-dlq";
+  private static final String DLQ_SUBJECT_SPECIMEN = "digital-specimen-dlq";
+  private static final String DLQ_SUBJECT_MEDIA = "digital-media-dlq";
+
 
   private final ObjectMapper mapper;
   private final KafkaTemplate<String, String> kafkaTemplate;
@@ -34,20 +37,34 @@ public class KafkaPublisherService {
 
   public void publishUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
       JsonNode jsonPatch) throws JsonProcessingException {
-    var event = provenanceService.generateUpdateEvent(digitalSpecimenRecord, jsonPatch);
+    var event = provenanceService.generateUpdateEventSpecimen(digitalSpecimenRecord, jsonPatch);
     kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
   }
 
-  public void republishEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
+  public void publishUpdateEventMedia(DigitalMediaEventWithoutDOI digitalMediaEvent,
+      JsonNode jsonPatch) throws JsonProcessingException {
+    var event = provenanceService.generateUpdateEventSpecimen(digitalMediaEvent, jsonPatch);
+    kafkaTemplate.send("createUpdateDeleteTopic", mapper.writeValueAsString(event));
+  }
+
+  public void republishSpecimenEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
     kafkaTemplate.send("digital-specimen", mapper.writeValueAsString(event));
   }
 
-  public void deadLetterEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
-    kafkaTemplate.send(DLQ_SUBJECT, mapper.writeValueAsString(event));
+  public void republishMediaEvent(DigitalMediaEventWithoutDOI event) throws JsonProcessingException {
+    kafkaTemplate.send("digital-media", mapper.writeValueAsString(event));
+  }
+
+  public void deadLetterEventSpecimen(DigitalSpecimenEvent event) throws JsonProcessingException {
+    kafkaTemplate.send(DLQ_SUBJECT_SPECIMEN, mapper.writeValueAsString(event));
+  }
+
+  public void deadLetterEventMedia(DigitalMediaEventWithoutDOI event) throws JsonProcessingException {
+    kafkaTemplate.send(DLQ_SUBJECT_MEDIA, mapper.writeValueAsString(event));
   }
 
   public void deadLetterRaw(String event) {
-    kafkaTemplate.send(DLQ_SUBJECT, event);
+    kafkaTemplate.send(DLQ_SUBJECT_SPECIMEN, event);
   }
 
 

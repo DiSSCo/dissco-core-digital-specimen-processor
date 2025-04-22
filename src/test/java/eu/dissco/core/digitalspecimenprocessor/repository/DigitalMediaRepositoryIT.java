@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.repository;
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGITAL_MEDIA_OBJECT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
@@ -20,7 +21,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
 
   @BeforeEach
   void setup() {
-    mediaRepository = new DigitalMediaRepository(context);
+    mediaRepository = new DigitalMediaRepository(context, MAPPER);
   }
 
   @AfterEach
@@ -35,7 +36,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
     var expected = givenMediaPidResponse();
 
     // When
-    var result = mediaRepository.getDigitalMediaUrisFromId(List.of(MEDIA_PID));
+    var result = mediaRepository.getDigitalMediaUrisFromIdKey(List.of(MEDIA_PID));
 
     // Then
     assertThat(result).isEqualTo(expected);

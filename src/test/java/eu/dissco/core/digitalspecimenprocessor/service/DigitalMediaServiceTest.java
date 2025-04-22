@@ -21,7 +21,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import java.util.Collections;
@@ -61,12 +61,12 @@ class DigitalMediaServiceTest {
     var firstMediaEventB = givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID, MEDIA_URL_ALT);
     var secondMediaEvent = givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT);
     var expected = Map.of(
-        HANDLE, new DigitalMediaProcessResult(List.of(), List.of(),
+        HANDLE, new MediaRelationshipProcessResult(List.of(),
             List.of(firstMediaEventA, firstMediaEventB)),
         SECOND_HANDLE,
-        new DigitalMediaProcessResult(List.of(), List.of(), List.of(secondMediaEvent))
+        new MediaRelationshipProcessResult(List.of(), List.of(secondMediaEvent))
     );
-    given(mediaRepository.getDigitalMediaUrisFromId(List.of())).willReturn(Map.of());
+    given(mediaRepository.getDigitalMediaUrisFromIdKey(List.of())).willReturn(Map.of());
 
     // When
     var result = mediaService.getExistingDigitalMedia(currentSpecimens,
@@ -91,10 +91,9 @@ class DigitalMediaServiceTest {
     var mediaEvents = List.of(givenDigitalMediaEvent(),
         givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT, MEDIA_URL_ALT));
     var expected = Map.of(
-        HANDLE, new DigitalMediaProcessResult(firstRecord.digitalSpecimenWrapper().attributes()
-            .getOdsHasEntityRelationships(), List.of(), List.of()),
-        SECOND_HANDLE, new DigitalMediaProcessResult(secondRecordMediaER, List.of(), List.of()));
-    given(mediaRepository.getDigitalMediaUrisFromId(anyList())).willReturn(Map.of(
+        HANDLE, new MediaRelationshipProcessResult(List.of(), List.of()),
+        SECOND_HANDLE, new MediaRelationshipProcessResult(List.of(), List.of()));
+    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of(
         new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
         new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL_ALT), MEDIA_PID_ALT));
 
@@ -103,7 +102,7 @@ class DigitalMediaServiceTest {
 
     // Then
     assertThat(expected).isEqualTo(result);
-    then(mediaRepository).should().getDigitalMediaUrisFromId(mediaPidsCaptor.capture());
+    then(mediaRepository).should().getDigitalMediaUrisFromIdKey(mediaPidsCaptor.capture());
     assertThat(mediaPidsCaptor.getValue()).containsExactlyInAnyOrder(MEDIA_PID, MEDIA_PID_ALT);
   }
 
@@ -117,7 +116,7 @@ class DigitalMediaServiceTest {
         secondRecord);
     var mediaEvents = List.of(givenDigitalMediaEvent(),
         givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT, MEDIA_URL_ALT));
-    given(mediaRepository.getDigitalMediaUrisFromId(anyList())).willReturn(Map.of(
+    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of(
         new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
         new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL_ALT), MEDIA_PID_ALT));
 
@@ -135,13 +134,13 @@ class DigitalMediaServiceTest {
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, firstRecord, PHYSICAL_SPECIMEN_ID_ALT,
         secondRecord);
     var expected = Map.of(
-        HANDLE, new DigitalMediaProcessResult(List.of(),
+        HANDLE, new MediaRelationshipProcessResult(
             firstRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships(),
             List.of()),
-        SECOND_HANDLE, new DigitalMediaProcessResult(List.of(),
+        SECOND_HANDLE, new MediaRelationshipProcessResult(
             secondRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships(),
             List.of()));
-    given(mediaRepository.getDigitalMediaUrisFromId(anyList())).willReturn(Map.of(
+    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of(
         new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
         new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL_ALT), MEDIA_PID_ALT));
 
@@ -150,7 +149,7 @@ class DigitalMediaServiceTest {
 
     // Then
     assertThat(expected).isEqualTo(result);
-    then(mediaRepository).should().getDigitalMediaUrisFromId(mediaPidsCaptor.capture());
+    then(mediaRepository).should().getDigitalMediaUrisFromIdKey(mediaPidsCaptor.capture());
     assertThat(mediaPidsCaptor.getValue()).containsExactlyInAnyOrder(MEDIA_PID, MEDIA_PID_ALT);
   }
 
@@ -158,8 +157,8 @@ class DigitalMediaServiceTest {
   void testGetExistingMediaRelationshipsNoMedia() {
     // Given
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
-    var expected = Map.of(HANDLE, new DigitalMediaProcessResult(List.of(), List.of(), List.of()));
-    given(mediaRepository.getDigitalMediaUrisFromId(anyList())).willReturn(Map.of());
+    var expected = Map.of(HANDLE, new MediaRelationshipProcessResult(List.of(), List.of()));
+    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of());
 
     // When
     var result = mediaService.getExistingDigitalMedia(currentSpecimens, List.of());
@@ -185,7 +184,7 @@ class DigitalMediaServiceTest {
         currentDigitalSpecimenRecord,
         MAPPER.createObjectNode(),
         List.of(),
-        new DigitalMediaProcessResult(List.of(), tombstonedEr, List.of())
+        new MediaRelationshipProcessResult(tombstonedEr, List.of())
     );
 
     // When

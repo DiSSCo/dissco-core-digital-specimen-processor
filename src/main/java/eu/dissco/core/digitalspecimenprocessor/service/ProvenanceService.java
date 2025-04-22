@@ -20,7 +20,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.ProvEntity;
 import eu.dissco.core.digitalspecimenprocessor.schema.ProvValue;
 import eu.dissco.core.digitalspecimenprocessor.schema.ProvWasAssociatedWith;
 import eu.dissco.core.digitalspecimenprocessor.schema.ProvWasAssociatedWith.ProvHadRole;
-import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
+import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -38,7 +38,7 @@ public class ProvenanceService {
 
   public CreateUpdateTombstoneEvent generateCreateEvent(
       DigitalSpecimenRecord digitalSpecimenRecord) {
-    var digitalSpecimen = DigitalSpecimenUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
+    var digitalSpecimen = DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
     return generateCreateUpdateTombStoneEvent(digitalSpecimen, ProvActivity.Type.ODS_CREATE,
         null);
   }
@@ -101,9 +101,9 @@ public class ProvenanceService {
     });
   }
 
-  public CreateUpdateTombstoneEvent generateUpdateEvent(DigitalSpecimenRecord digitalSpecimenRecord,
+  public CreateUpdateTombstoneEvent generateUpdateEventSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
       JsonNode jsonPatch) {
-    var digitalSpecimen = DigitalSpecimenUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
+    var digitalSpecimen = DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
     return generateCreateUpdateTombStoneEvent(digitalSpecimen, ProvActivity.Type.ODS_UPDATE,
         jsonPatch);
   }

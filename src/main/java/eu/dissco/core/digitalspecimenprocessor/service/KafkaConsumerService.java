@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import java.util.List;
 import java.util.Objects;
@@ -35,6 +36,22 @@ public class KafkaConsumerService {
       }
     }).filter(Objects::nonNull).toList();
     processingService.handleMessages(events);
+  }
+
+  @KafkaListener(topics = "digital-media")
+  public void getMessagesMedia(@Payload List<String> messages) {
+    var events = messages.stream().map(message -> {
+      try {
+        return mapper.readValue(message, DigitalMediaEvent.class);
+      } catch (JsonProcessingException e) {
+        log.error("Moving message to DLQ, failed to parse event message", e);
+        publisherService.deadLetterRaw(message);
+        return null;
+      }
+    }).filter(Objects::nonNull).toList();
+    // todo - media-specific republishing
+    // todo - what happens if media fails?
+    //processingService.handleMessages(events);
   }
 
 }

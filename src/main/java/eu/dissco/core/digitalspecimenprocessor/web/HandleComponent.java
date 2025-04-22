@@ -1,15 +1,15 @@
 package eu.dissco.core.digitalspecimenprocessor.web;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.DIGITAL_MEDIA_KEY;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID;
+import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.PRIMARY_MEDIA_ID;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
+import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,22 +41,22 @@ public class HandleComponent {
   private static final String UNEXPECTED_MSG = "Unexpected response from handle API";
   private static final String UNEXPECTED_LOG = "Unexpected response from Handle API. Error: {}. Response: {}";
 
-  public Map<String, String> postHandle(List<JsonNode> request)
+  public Map<String, String> postHandle(List<JsonNode> request, boolean isSpecimen)
       throws PidException {
-    log.info("Posting Digital Specimens to Handle API");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.POST, requestBody, "batch");
     var responseJsonNode = getFutureResponse(response);
-    return getHandleName(responseJsonNode);
+    var localAttribute = isSpecimen ? NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID : PRIMARY_MEDIA_ID;
+    return getHandleName(responseJsonNode, localAttribute);
   }
 
-  public Map<DigitalMediaKey, String> postMediaHandle(List<JsonNode> request)
+  public Map<String, String> postMediaHandle(List<JsonNode> request)
       throws PidException {
     log.info("Posting Digital Media to Handle API");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.POST, requestBody, "batch");
     var responseJsonNode = getFutureResponse(response);
-    return getHandleNameMedia(responseJsonNode);
+    return getHandleName(responseJsonNode, PRIMARY_MEDIA_ID);
   }
 
   public void updateHandle(List<JsonNode> request)
@@ -67,7 +67,7 @@ public class HandleComponent {
     getFutureResponse(response);
   }
 
-  public void rollbackHandleCreation(List<String> handles)
+  public void rollbackHandleCreation(Collection<String> handles)
       throws PidException {
     log.info("Rolling back handle creation");
     var requestBody = BodyInserters.fromValue(handles);
@@ -131,7 +131,7 @@ public class HandleComponent {
     }
   }
 
-  private HashMap<String, String> getHandleName(JsonNode handleResponse)
+  private HashMap<String, String> getHandleName(JsonNode handleResponse, FdoProfileAttributes localAttribute)
       throws PidException {
     try {
       var dataNode = handleResponse.get("data");
@@ -141,43 +141,13 @@ public class HandleComponent {
         throw new PidException(UNEXPECTED_MSG);
       }
       for (var node : dataNode) {
-        var handle = node.get("id");
-        var localId = node.get("attributes")
-            .get(NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute());
-        if (handle == null || localId == null) {
-          log.error(UNEXPECTED_LOG, "Missing handle and/or localId", handleResponse);
-          throw new PidException(UNEXPECTED_MSG);
-        }
-        handleNames.put(localId.asText(), handle.asText());
+        var doi = node.get("id");
+        var localId = node.get("attributes").get(localAttribute.getAttribute());
+        handleNames.put(localId.asText(), doi.asText());
       }
       return handleNames;
     } catch (NullPointerException e) {
       log.error(UNEXPECTED_LOG, "Unexpected null", handleResponse);
-      throw new PidException(UNEXPECTED_MSG);
-    }
-  }
-
-  private HashMap<DigitalMediaKey, String> getHandleNameMedia(JsonNode handleResponse)
-      throws PidException {
-    try {
-      var dataNode = handleResponse.get("data");
-      HashMap<DigitalMediaKey, String> handleNames = new HashMap<>();
-      if (!dataNode.isArray()) {
-        log.error(UNEXPECTED_LOG, "Data is not an array", handleResponse);
-        throw new PidException(UNEXPECTED_MSG);
-      }
-      for (var node : dataNode) {
-        var handle = node.get("id");
-        var localId = node.get("attributes").get(DIGITAL_MEDIA_KEY.getAttribute());
-        if (handle == null || localId == null) {
-          log.error(UNEXPECTED_LOG, "Missing handle and/or localId", handleResponse);
-          throw new PidException(UNEXPECTED_MSG);
-        }
-        handleNames.put(mapper.treeToValue(localId, DigitalMediaKey.class), handle.asText());
-      }
-      return handleNames;
-    } catch (NullPointerException | JsonProcessingException e) {
-      log.error(UNEXPECTED_LOG, "Unexpected null", handleResponse, e);
       throw new PidException(UNEXPECTED_MSG);
     }
   }
