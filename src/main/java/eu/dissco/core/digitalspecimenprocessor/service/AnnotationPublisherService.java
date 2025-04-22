@@ -43,7 +43,7 @@ public class AnnotationPublisherService {
   private static final String TYPE = "@type";
   private final Pattern numericPattern = Pattern.compile("\\d+");
 
-  private final KafkaPublisherService kafkaPublisherService;
+  private final RabbitMqPublisherService publisherService;
   private final ApplicationProperties applicationProperties;
   private final ObjectMapper mapper;
 
@@ -57,7 +57,7 @@ public class AnnotationPublisherService {
     for (DigitalSpecimenRecord digitalSpecimenRecord : digitalSpecimenRecords) {
       try {
         var annotationProcessingRequest = mapNewSpecimenToAnnotation(digitalSpecimenRecord);
-        kafkaPublisherService.publishAcceptedAnnotation(
+        publisherService.publishAcceptedAnnotation(
             new AutoAcceptedAnnotation(
                 createMachineAgent(applicationProperties.getName(),
                     applicationProperties.getPid(), PROCESSING_SERVICE, DOI,
@@ -115,7 +115,7 @@ public class AnnotationPublisherService {
             updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
             updatedDigitalSpecimenRecord.jsonPatch());
         for (var annotationProcessingRequest : annotations) {
-          kafkaPublisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
+          publisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
               createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
                   PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
               annotationProcessingRequest));

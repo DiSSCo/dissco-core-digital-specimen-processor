@@ -1,7 +1,7 @@
 # dissco-core-digital-specimen-processor
-The digital specimen procesor can receive data from two different sources:
+The digital specimen processor can receive data from two different sources:
 - Through the API as a request to register a digital specimen
-- Through a Kafka queue to register a digital specimen
+- Through a RabbitMQ queue to register a digital specimen
 
 ## Preparation
 The digital specimen processor receives objects as a batch. 
@@ -42,7 +42,7 @@ If we need to update the FDO Profile, we will update the FDO Profile and increme
 Next we will recalculate the MidsLevel, as the changed information might have modified the level, and increment the version of the digital specimen.
 We will update the information in the database, overriding the previous information.
 After successful database insert, we bulk index the digital specimen, overwriting the old data.
-If everything is successful we will publish a CreateDeleteUpdate event to Kafka.
+If everything is successful we will publish a CreateDeleteUpdate event to a RabbitMQ Exchange.
 This event will hold both the new digital specimen and a JsonPatch with the changes.
 We will return the updated records which will be used as response object when the application is running the `web` profile.
 ### Exception handling
@@ -60,7 +60,7 @@ We will not return the equal objects as we did not change the data.
 To run the system locally, it can be run from an IDEA.
 Clone the code and fill in the application properties (see below).
 The application needs to store data in a Postgres database and an Elasticsearch instance.
-It needs a connection to an Kafka cluster as it publishes messages to one or more queues.
+It needs a connection to an RabbitMQ cluster as it publishes messages to one or more queues.
 
 ## Run as Container
 The application can also be run as container.
@@ -84,11 +84,11 @@ This listens to an API which has two endpoint:
   The result of the processing will be returned to the user.
   It can only be called with a single digital specimen and does not support batches.
 
-If an exception occurs during processing, the message will be published to the Kafka Dead Letter queue.
+If an exception occurs during processing, the message will be published to the RabbitMQ Dead Letter queue.
 We can than later evaluate why the exception was thrown and if needed, retry the object.
 
-### Kafka
-`spring.profiles.active=kafka`
+### RabbitMQ
+`spring.profiles.active=rabbitMQ`
 This will make the application listen to a specified queue and process the digital specimen events from the queue.
 We collect the objects in batches of between 300-500 (depending on the length of the queue).
 If any exception occurs we publish the event to a Dead Letter Queue where we can evaluate the failure and if needed retry the messages.
@@ -107,11 +107,10 @@ elasticsearch.hostname=# The hostname of the Elasticsearch cluster
 elasticsearch.port=# The port of the Elasticsearch cluster
 elasticsearch.index-name=# The name of the index for Elasticsearch
 
-# Kafka properties (only necessary when the kafka profile is active)
-kafka.publisher.host=# The host address of the kafka instance to which the application will publish the CreateUpdateDelete events 
-kafka.consumer.host=# The host address of the kafka instance from which the application will consume the Annotation events
-kafka.consumer.group=# The group name of the kafka group from which the application will consume the Annotation events
-kafka.consumer.topic=# The topic name of the kafka topic from which the application will consume the Annotation events
+# RabbitMQ properties (only necessary when the rabbitMQ profile is active)
+spring.rabbitmq.password=# The password to use for connecting with RabbitMQ
+spring.rabbitmq.username=# The username to use for connecting with RabbitMQ
+spring.rabbitmq.host=# The hostname of the RabbitMQ cluster
 
 # Oauth2 properties (only necessary when the web profile is active)
 spring.security.oauth2.resourceserver.jwt.issuer-uri=# The endpoint of the jwt issuer
