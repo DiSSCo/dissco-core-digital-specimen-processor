@@ -31,7 +31,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @ExtendWith(MockitoExtension.class)
-class RabbitMQPublisherServiceTest {
+class RabbitMqPublisherServiceTest {
 
   private static RabbitMQContainer container;
   private static RabbitTemplate rabbitTemplate;
