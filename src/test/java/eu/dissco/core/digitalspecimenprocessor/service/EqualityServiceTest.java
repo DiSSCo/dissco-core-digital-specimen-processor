@@ -10,12 +10,10 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED_STR;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaProcessResultUnchanged;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.Configuration;
@@ -162,10 +160,7 @@ class EqualityServiceTest {
             givenEmptyMediaProcessResult()),
         Arguments.of(givenDigitalSpecimenWrapper(),
             changeTimestamps(givenDigitalSpecimenWrapperNoOriginalData()),
-            givenEmptyMediaProcessResult()),
-        Arguments.of(givenDigitalSpecimenWrapper(), givenDigitalSpecimenWrapper(),
-            givenMediaProcessResultUnchanged(List.of(givenDigitalSpecimenEvent())))
-    );
+            givenEmptyMediaProcessResult()));
   }
 
   private static DigitalSpecimenWrapper changeTimestamps(

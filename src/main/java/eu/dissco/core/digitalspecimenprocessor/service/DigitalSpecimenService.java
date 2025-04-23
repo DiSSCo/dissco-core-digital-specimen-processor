@@ -50,7 +50,6 @@ public class DigitalSpecimenService {
   private final FdoRecordService fdoRecordService;
   private final RabbitMqPublisherService publisherService;
   private final HandleComponent handleComponent;
-  private final ApplicationProperties applicationProperties;
   private final AnnotationPublisherService annotationPublisherService;
   private final MidsService midsService;
   private final ObjectMapper mapper;

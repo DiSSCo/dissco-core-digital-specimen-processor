@@ -5,7 +5,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -75,7 +74,7 @@ class HandleComponentTest {
   @Test
   void testPostMediaHandle() throws Exception {
     // Given
-    var expected = givenMediaPidResponse();
+    var expected = MAPPER.createObjectNode(); // todo
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody("""
             {

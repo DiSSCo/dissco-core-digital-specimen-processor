@@ -21,6 +21,7 @@ import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class ProcessingService {
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
       var specimenProcessResult = processSpecimens(uniqueBatchSpecimens, existingSpecimens,
           existingMedia);
-      var pids = processPids(specimenProcessResult,existingMedia, events);
+      var pids = processPids(specimenProcessResult, existingMedia, events, uniqueBatchMedia);
       var mediaProcessResult = processMedia(uniqueBatchMedia, existingMedia, pids.getRight());
       log.info("Batch consists of: {} new, {} update, and {} equal specimen",
           specimenProcessResult.newSpecimens().size(),
@@ -95,7 +96,7 @@ public class ProcessingService {
     for (var mediaPid : mediaPidsFull.entrySet()) {
       var relatedDois = mediaPid.getValue().relatedDois().stream().filter(
           specimenDOIs::contains
-      ).toList();
+      ).collect(Collectors.toSet());
       mediaPidsFiltered.put(mediaPid.getKey(),
           new PidProcessResult(mediaPid.getValue().doi(), relatedDois));
     }
@@ -108,16 +109,19 @@ public class ProcessingService {
    * */
   private Pair<Map<String, PidProcessResult>, Map<String, PidProcessResult>> processPids(
       SpecimenProcessResult specimenProcessResult,
-      Map<String, DigitalMediaRecord> existingMedias, List<DigitalSpecimenEvent> digitalSpecimenEvents) {
+      Map<String, DigitalMediaRecord> existingMedias,
+      List<DigitalSpecimenEvent> digitalSpecimenEvents,
+      Set<DigitalMediaEvent> digitalMediaEvents) {
     var specimenPids = new HashMap<String, PidProcessResult>();
-    var mediaHashMap = new HashMap<String, ArrayList<String>>();
+    var mediaHashMap = new HashMap<String, HashSet<String>>(); // key = local id
     var allSpecimenPids = concatSpecimenPids(specimenProcessResult);
-    var allMediaPids = concatMediaPids(existingMedias);
+    var newMediaPids = createPidsForNewMediaObjects(existingMedias, digitalMediaEvents);
+    var allMediaPids = concatMediaPids(existingMedias, newMediaPids);
     for (var specimen : digitalSpecimenEvents) {
       var mediaDoisForThisSpecimen = specimen.digitalMediaEvents().stream()
           .map(event -> event.digitalMediaWrapper().attributes().getAcAccessURI())
           .map(allMediaPids::get)
-          .toList();
+          .collect(Collectors.toSet());
       var specimenPid = allSpecimenPids.get(specimen.digitalSpecimenWrapper().physicalSpecimenID());
       specimenPids.put(specimen.digitalSpecimenWrapper().physicalSpecimenID(),
           new PidProcessResult(specimenPid, mediaDoisForThisSpecimen));
@@ -134,18 +138,19 @@ public class ProcessingService {
     return Pair.of(specimenPids, mediaPids);
   }
 
-  private static void updateMediaHashMap(HashMap<String, ArrayList<String>> mediaHashMap,
-      List<String> mediaPidsForThisSpecimen, Map<String, String> allMediaPids, String specimenPid) {
-    for (var mediaPid : mediaPidsForThisSpecimen) {
-      var uri = allMediaPids.get(mediaPid);
-      if (!mediaHashMap.containsKey(uri)) {
-        var ls = new ArrayList<String>();
-        ls.add(specimenPid);
-        mediaHashMap.put(uri, ls);
-      } else {
-        mediaHashMap.get(uri).add(specimenPid);
-      }
+  // Given a specimen PID, links it to the relevant media object
+  private static void updateMediaHashMap(HashMap<String, HashSet<String>> mediaHashMap,
+      Set<String> mediaPidsForThisSpecimen, Map<String, String> allMediaPids, String specimenPid) {
+    if (mediaPidsForThisSpecimen.isEmpty()) {
+      return;
     }
+    allMediaPids.entrySet()
+        .stream()
+        .filter(e -> mediaPidsForThisSpecimen.contains(e.getValue())) // Only look at relevant pids
+        .forEach(e -> {
+          var uri = e.getKey();
+          mediaHashMap.computeIfAbsent(uri, k -> new HashSet<>()).add(specimenPid);
+        });
   }
 
   private static Map<String, String> concatSpecimenPids(
@@ -161,12 +166,14 @@ public class ProcessingService {
     return concatMaps(specimenProcessResult.newSpecimenPids(), existingSpecimenPids);
   }
 
-  private static Map<String, String> concatMediaPids(Map<String, DigitalMediaRecord> existingMedias) {
-    return existingMedias.entrySet()
+  private static Map<String, String> concatMediaPids(
+      Map<String, DigitalMediaRecord> existingMedias, Map<String, String> newMediaPids) {
+    var existingPidMap =  existingMedias.entrySet()
         .stream().collect(toMap(
             Entry::getKey,
             e -> e.getValue().id()
         ));
+    return concatMaps(existingPidMap, newMediaPids);
   }
 
   private static Map<String, String> concatMaps(Map<String, String> m1, Map<String, String> m2) {
@@ -206,11 +213,13 @@ public class ProcessingService {
     }
     if (!mediaProcessResult.newDigitalMedia().isEmpty()) {
       results.addAll(
-          digitalMediaService.persistNewDigitalMedia(mediaProcessResult.newDigitalMedia(), pidProcessResults));
+          digitalMediaService.persistNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
+              pidProcessResults));
     }
     if (!mediaProcessResult.changedDigitalMedia().isEmpty()) {
       results.addAll(
-          digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(), pidProcessResults));
+          digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
+              pidProcessResults));
     }
     return results;
   }
@@ -308,22 +317,35 @@ public class ProcessingService {
   }
 
   private Map<String, String> createNewSpecimenPids(List<DigitalSpecimenEvent> events) {
+    if (events.isEmpty()) {
+      return Map.of();
+    }
     var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
     var request = fdoRecordService.buildPostHandleRequest(specimenList);
-    return createNewPids(request);
+    return createNewPids(request, true);
+  }
+
+  private Map<String, String> createPidsForNewMediaObjects(
+      Map<String, DigitalMediaRecord> existingMedia,
+      Set<DigitalMediaEvent> digitalMediaEvents) {
+    var newEvents = digitalMediaEvents.stream()
+        .filter(e -> !existingMedia.containsKey(e.digitalMediaWrapper().accessUri())).toList();
+    return createNewMediaPids(newEvents);
   }
 
   private Map<String, String> createNewMediaPids(
       List<DigitalMediaEvent> digitalMediaEvents) {
+    if (digitalMediaEvents.isEmpty()) {
+      return Map.of();
+    }
     var request = fdoRecordService.buildPostRequestMedia(digitalMediaEvents);
-    return createNewPids(request);
+    return createNewPids(request, false);
   }
 
-  private Map<String, String> createNewPids(List<JsonNode> request) {
+  // todo improve error handling
+  private Map<String, String> createNewPids(List<JsonNode> request, boolean isSpecimen) {
     try {
-      if (!request.isEmpty()) {
-        return handleComponent.postHandle(request, true);
-      }
+      return handleComponent.postHandle(request, isSpecimen);
     } catch (PidException e) {
       log.error("Unable to create new PIDs", e);
     }
@@ -345,22 +367,25 @@ public class ProcessingService {
         newDigitalMedia.add(mediaEvent);
       } else {
         var currentDigitalMedia = currentDigitalMedias.get(accessUri);
-        var relatedSpecimenDois = entityRelationshipService.findNewSpecimenRelationshipsForMedia(currentDigitalMedia, pidMap.get(accessUri));
+        var relatedSpecimenDois = entityRelationshipService.findNewSpecimenRelationshipsForMedia(
+            currentDigitalMedia, pidMap.get(accessUri));
         if (equalityService.mediaAreEqual(currentDigitalMedia, digitalMedia, relatedSpecimenDois)) {
           log.debug("Received digital media is equal to digital media: {}",
               currentDigitalMedia.id());
           equalDigitalMedia.add(currentDigitalMedia);
         } else {
+          var eventWithUpdatedEr = equalityService.setEventDatesMedia(
+              currentDigitalMedia, mediaEvent);
           log.debug("Digital Media Object with id: {} has received an update",
               currentDigitalMedia.id());
           changedDigitalMedia.add(
-              new UpdatedDigitalMediaTuple(currentDigitalMedia, mediaEvent, relatedSpecimenDois));
+              new UpdatedDigitalMediaTuple(currentDigitalMedia, eventWithUpdatedEr,
+                  relatedSpecimenDois));
         }
       }
     }
-    var newMediaPids = createNewMediaPids(newDigitalMedia);
-    return new MediaProcessResult(equalDigitalMedia, changedDigitalMedia, newDigitalMedia,
-        newMediaPids);
+    return new MediaProcessResult(equalDigitalMedia, changedDigitalMedia, newDigitalMedia
+    );
   }
 
   private void republishSpecimenEvent(DigitalSpecimenEvent event) {
@@ -397,13 +422,13 @@ public class ProcessingService {
     return mediaRepository.getExistingDigitalMedia(mediaURIs)
         .stream().filter(Objects::nonNull)
         .collect(toMap(
-        DigitalMediaRecord::accessURI,
-        Function.identity(),
-        (uri1, uri2) -> {
-          log.warn("Duplicate URIs found for digital media");
-          return uri1;
-        }
-    ));
+            DigitalMediaRecord::accessURI,
+            Function.identity(),
+            (uri1, uri2) -> {
+              log.warn("Duplicate URIs found for digital media");
+              return uri1;
+            }
+        ));
   }
 
 }

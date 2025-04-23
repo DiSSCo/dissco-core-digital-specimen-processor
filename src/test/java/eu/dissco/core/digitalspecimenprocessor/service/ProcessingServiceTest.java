@@ -1,81 +1,61 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_ORGANISATION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDifferentUnequalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWithEntityRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResultMap;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleComponentResponse;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleResponseMedia;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleResponseSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaProcessResultMapNew;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaProcessResultUnchanged;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultMedia;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalMediaTuple;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenTuple;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.nimbusds.jose.util.Pair;
-import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
-import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
-import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
-import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,7 +68,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ProcessingServiceTest {
 
   @Mock
-  private DigitalSpecimenRepository repository;
+  private DigitalSpecimenRepository specimenRepository;
   @Mock
   private DigitalMediaRepository mediaRepository;
   @Mock
@@ -96,7 +76,7 @@ class ProcessingServiceTest {
   @Mock
   private ElasticSearchRepository elasticRepository;
   @Mock
-  private RabbitMqPublisherService rabbitMQService;
+  private RabbitMqPublisherService publisherService;
   @Mock
   private BulkResponse bulkResponse;
   @Mock
@@ -124,8 +104,9 @@ class ProcessingServiceTest {
 
   @BeforeEach
   void setup() {
-    service = new ProcessingService(repository, mediaRepository,
-        digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService, rabbitMQService, fdoRecordService, handleComponent);
+    service = new ProcessingService(specimenRepository, mediaRepository,
+        digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService,
+        publisherService, fdoRecordService, handleComponent);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -142,7 +123,294 @@ class ProcessingServiceTest {
     mockedClock.close();
   }
 
+  @Test
+  void testEqualSpecimenNoMedia() throws Exception {
+    // Given
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenDigitalSpecimenRecord()));
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
+        anyMap())).willReturn(givenEmptyMediaProcessResult());
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
+    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
 
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(List.of());
+    then(digitalSpecimenService).should()
+        .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testEqualSpecimenNoMediaDuplicate() throws Exception {
+    // Given
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenDigitalSpecimenRecord()));
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
+        anyMap())).willReturn(givenEmptyMediaProcessResult());
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
+    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
+
+    // When
+    var result = service.handleMessages(
+        List.of(givenDigitalSpecimenEvent(), givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(List.of());
+    then(digitalSpecimenService).should()
+        .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+    then(publisherService).should().republishSpecimenEvent(givenDigitalSpecimenEvent());
+  }
+
+  @Test
+  void testNewSpecimenNoMedia() throws Exception {
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of());
+    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
+    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+        TestUtils.givenHandleResponseSpecimen());
+    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
+    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(List.of());
+    then(digitalSpecimenService).should()
+        .createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent()), pidMap);
+    then(equalityService).shouldHaveNoInteractions();
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoMoreInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testNewSpecimenNoMediaPidFails() throws Exception {
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of());
+    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
+    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
+    given(handleComponent.postHandle(any(), eq(true))).willThrow(PidException.class);
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(List.of());
+    then(digitalSpecimenService).shouldHaveNoInteractions();
+    then(equalityService).shouldHaveNoInteractions();
+    then(handleComponent).shouldHaveNoMoreInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testChangedSpecimenNoMedia() throws Exception {
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenUnequalDigitalSpecimenRecord()));
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
+    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
+    given(equalityService.setEventDatesSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenEvent());
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
+        any())).willReturn(givenEmptyMediaProcessResult());
+    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(List.of());
+    then(digitalSpecimenService).should()
+        .updateExistingDigitalSpecimen(List.of(givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult())), pidMap);
+    then(equalityService).shouldHaveNoMoreInteractions();
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(fdoRecordService).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testHandleMessagesDbException() throws Exception {
+    // Given
+    given(specimenRepository.getDigitalSpecimens(any())).willThrow(DisscoRepositoryException.class);
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEmpty();
+    then(digitalMediaService).shouldHaveNoInteractions();
+    then(digitalSpecimenService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testEqualSpecimenWithEqualMedia() throws Exception {
+    // Given
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenDigitalSpecimenRecord(1, true)));
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
+        anyMap())).willReturn(givenEmptyMediaProcessResult());
+    given(entityRelationshipService.findNewSpecimenRelationshipsForMedia(any(), any())).willReturn(
+        Set.of());
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
+    given(equalityService.mediaAreEqual(any(), any(), any())).willReturn(true);
+
+    // When
+    service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
+
+    // Then
+    then(digitalSpecimenService).should()
+        .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord(1, true)));
+    then(digitalMediaService).should().processEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testEqualSpecimenWithEqualDuplicateMedia() throws Exception {
+    // Given
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenDigitalSpecimenRecord(1, true)));
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
+        anyMap())).willReturn(givenEmptyMediaProcessResult());
+    given(entityRelationshipService.findNewSpecimenRelationshipsForMedia(any(), any())).willReturn(
+        Set.of());
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
+    given(equalityService.mediaAreEqual(any(), any(), any())).willReturn(true);
+    var event = new DigitalSpecimenEvent(
+        List.of(MAS),
+        givenDigitalSpecimenWrapper(false, true),
+        List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent())
+    );
+
+    // When
+    service.handleMessages(List.of(event));
+
+    // Then
+    then(digitalSpecimenService).should()
+        .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord(1, true)));
+    then(digitalMediaService).should().processEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(publisherService).should().republishMediaEvent(givenDigitalMediaEvent());
+  }
+
+  @Test
+  void testChangedSpecimenUpdatedMedia() throws Exception {
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
+            true)));
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
+    given(mediaRepository.getExistingDigitalMedia(any())).willReturn(
+        List.of(givenUnequalDigitalMediaRecord()));
+    given(equalityService.setEventDatesSpecimen(any(), any())).willReturn(
+        givenDigitalSpecimenEvent(true));
+    given(equalityService.setEventDatesMedia(any(), any())).willReturn(givenDigitalMediaEvent());
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
+        any())).willReturn(givenEmptyMediaProcessResult());
+    var pidMapSpecimen = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
+    var pidMapMedia = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+
+    // When
+    service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
+
+    // Then
+    then(digitalSpecimenService).should()
+        .updateExistingDigitalSpecimen(List.of(givenUpdatedDigitalSpecimenTuple(true, givenEmptyMediaProcessResult())),
+            pidMapSpecimen);
+    then(digitalMediaService).should()
+        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), pidMapMedia);
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(fdoRecordService).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testChangedSpecimenUpdatedMediaSharedMedia() throws Exception {
+    var event1 = givenDigitalSpecimenEvent(true);
+    var event2 = givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT);
+    var record1 = givenDigitalSpecimenRecordWithMediaEr();
+    var record2 = givenDigitalSpecimenRecordWithMediaEr(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false);
+    given(specimenRepository.getDigitalSpecimens(any())).willReturn(
+        List.of(record1, record2));
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
+        List.of(givenUnequalDigitalMediaRecord()));
+    given(equalityService.setEventDatesSpecimen(any(), eq(event1))).willReturn(
+        event1);
+    given(equalityService.setEventDatesSpecimen(any(), eq(event2))).willReturn(
+        event2);
+    given(equalityService.setEventDatesMedia(any(), any())).willReturn(givenDigitalMediaEvent());
+
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
+        any())).willReturn(givenEmptyMediaProcessResult());
+    var pidMapSpecimen = Map.of(
+        PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true),
+        PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of(MEDIA_PID)));
+    var pidMapMedia = Map.of(MEDIA_URL, new PidProcessResult(MEDIA_PID, Set.of(HANDLE, SECOND_HANDLE)));
+
+    // When
+    service.handleMessages(List.of(event1, event2));
+
+    // Then
+    then(digitalSpecimenService).should()
+        .updateExistingDigitalSpecimen(any(), eq(pidMapSpecimen));
+    then(digitalMediaService).should()
+        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), pidMapMedia);
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(fdoRecordService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testNewSpecimenNewMedia() throws Exception {
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of());
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
+    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+        TestUtils.givenHandleResponseSpecimen());
+    given(handleComponent.postHandle(any(), eq(false))).willReturn(givenHandleResponseMedia());
+    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
+    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(givenHandleRequest()));
+    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
+    var pidMapMedia = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
+
+    // Then
+    assertThat(result).isEqualTo(List.of());
+    then(digitalSpecimenService).should()
+        .createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent(true)), pidMap);
+    then(digitalMediaService).should().persistNewDigitalMedia(List.of(givenDigitalMediaEvent()), pidMapMedia);
+    then(equalityService).shouldHaveNoInteractions();
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+  }
+
+
+
+
+
+
+
+  /*
   @Test
   void testEqualSpecimen() throws DisscoRepositoryException, JsonProcessingException {
     // Given
@@ -786,5 +1054,6 @@ class ProcessingServiceTest {
     }
 
   }
+   */
 
 }

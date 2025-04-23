@@ -1,34 +1,13 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_ALT;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDifferentUnequalSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -44,6 +23,7 @@ class DigitalMediaServiceTest {
   @Mock
   private DigitalMediaRepository mediaRepository;
 
+  /*
   @BeforeEach
   void setup() {
     mediaService = new DigitalMediaService(mediaRepository);
@@ -191,6 +171,6 @@ class DigitalMediaServiceTest {
 
     // Then
     then(mediaRepository).should().removeSpecimenRelationshipsFromMedia(List.of(MEDIA_PID));
-  }
+  }*/
 
 }

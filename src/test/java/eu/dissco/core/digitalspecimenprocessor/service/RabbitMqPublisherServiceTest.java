@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.RabbitMqProperties;

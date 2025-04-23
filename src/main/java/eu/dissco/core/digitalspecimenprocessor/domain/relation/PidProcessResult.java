@@ -1,10 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.relation;
 
-import java.util.List;
+import java.util.Set;
 
 public record PidProcessResult(
     String doi,
-    List<String> relatedDois
+    Set<String> relatedDois
 ){
 
 

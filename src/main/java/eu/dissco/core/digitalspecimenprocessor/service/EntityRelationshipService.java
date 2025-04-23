@@ -13,6 +13,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,12 +43,12 @@ public class EntityRelationshipService {
     return new MediaRelationshipProcessResult(tombstonedMedia, newMediaErs);
   }
 
-  public List<String> findNewSpecimenRelationshipsForMedia(
+  public Set<String> findNewSpecimenRelationshipsForMedia(
       DigitalMediaRecord digitalMediaRecord, PidProcessResult pidProcessResult) {
     var existingLinkedDois = digitalMediaRecord.attributes().getOdsHasEntityRelationships()
         .stream().map(EntityRelationship::getDwcRelatedResourceID).toList();
     return pidProcessResult.relatedDois().stream()
-        .filter(relatedDoi -> !existingLinkedDois.contains(relatedDoi)).toList();
+        .filter(relatedDoi -> !existingLinkedDois.contains(relatedDoi)).collect(Collectors.toSet());
   }
 
   /*

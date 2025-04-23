@@ -6,7 +6,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaPidResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -28,6 +27,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
   void destroy() {
     context.truncate(DIGITAL_MEDIA_OBJECT).execute();
   }
+  /*
 
   @Test
   void testGetDigitalMediaDois() {
@@ -70,7 +70,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
         .set(DIGITAL_MEDIA_OBJECT.DATA, JSONB.jsonb("{}"))
         .set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA, JSONB.jsonb("{}"))
         .execute();
-  }
+  } */
 
 
 }

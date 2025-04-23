@@ -24,12 +24,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationBody;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest;
 import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationProcessingRequest.OaMotivation;
@@ -50,9 +53,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class TestUtils {
@@ -185,17 +190,6 @@ public class TestUtils {
     return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false);
   }
 
-  public static DigitalSpecimenRecord givenDigitalSpecimenWithEntityRelationship() {
-    return new DigitalSpecimenRecord(
-        HANDLE,
-        MIDS_LEVEL,
-        VERSION,
-        CREATED,
-        givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANISATION_ID, true,
-            true)
-    );
-  }
-
   public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String organisation) {
     return givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, organisation, false);
   }
@@ -240,7 +234,7 @@ public class TestUtils {
         List.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
-        List.of(givenDigitalMediaEvent(physicalSpecimenId))
+        List.of(givenDigitalMediaEvent(MEDIA_URL))
     );
   }
 
@@ -249,11 +243,18 @@ public class TestUtils {
         Collections.emptyList(), Collections.emptyList());
   }
 
-  public static DigitalMediaRecord givenDigitalMediaRecord(){
+  public static DigitalMediaRecord givenDigitalMediaRecord() {
     return new DigitalMediaRecord(
-        MEDIA_PID, MEDIA_URL, List.of(), new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationID(ORGANISATION_ID)
+        MEDIA_PID, MEDIA_URL, List.of(),
+        new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationID(ORGANISATION_ID)
     );
+  }
 
+  public static DigitalMediaRecord givenUnequalDigitalMediaRecord() {
+    return new DigitalMediaRecord(
+        MEDIA_PID, MEDIA_URL, List.of(),
+        new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationName(ANOTHER_ORGANISATION)
+    );
   }
 
   public static Map<String, MediaRelationshipProcessResult> givenEmptyMediaProcessResultMap(
@@ -294,15 +295,6 @@ public class TestUtils {
         ));
   }
 
-  public static MediaRelationshipProcessResult givenMediaProcessResultUnchanged(
-      List<DigitalSpecimenEvent> events) {
-    return new MediaRelationshipProcessResult(
-        Collections.emptyList(),
-        Collections.emptyList()
-    );
-  }
-
-
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent() {
     return givenDigitalSpecimenEvent(false);
   }
@@ -334,7 +326,7 @@ public class TestUtils {
         ORIGINAL_DATA);
   }
 
-  public static EntityRelationship givenHasMediaER(String mediaId){
+  public static EntityRelationship givenHasMediaER(String mediaId) {
     return new EntityRelationship()
         .withType("ods:EntityRelationship")
         .withDwcRelationshipEstablishedDate(Date.from(CREATED))
@@ -349,25 +341,20 @@ public class TestUtils {
     return givenDigitalSpecimenEvent(hasMedia, false);
   }
 
-  public static DigitalMediaEvent givenDigitalMediaEvent(String specimenId,
-      String mediaUrl) {
+  public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
         List.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
-            specimenId,
+            mediaUrl,
             new DigitalMedia().withAcAccessURI(mediaUrl).withOdsOrganisationID(ORGANISATION_ID),
             MAPPER.createObjectNode()
         )
     );
   }
 
-  public static DigitalMediaEvent givenDigitalMediaEvent(String specimenId) {
-    return givenDigitalMediaEvent(specimenId, MEDIA_URL);
-  }
-
   public static DigitalMediaEvent givenDigitalMediaEvent() {
-    return givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID);
+    return givenDigitalMediaEvent(MEDIA_URL);
   }
 
   public static DigitalMediaEvent givenDigitalMediaEventWithRelationship() {
@@ -441,21 +428,25 @@ public class TestUtils {
     );
   }
 
-  public static Map<String, String> givenHandleComponentResponse() {
-    return givenHandleComponentResponse(List.of(PHYSICAL_SPECIMEN_ID), List.of(HANDLE));
+  public static Map<String, String> givenHandleResponseSpecimen() {
+    return givenHandleResponse(List.of(PHYSICAL_SPECIMEN_ID), List.of(HANDLE));
   }
 
-  public static Map<String, String> givenHandleComponentResponse(List<String> physIds,
+  public static Map<String, String> givenHandleResponseMedia() {
+    return givenHandleResponse(List.of(MEDIA_URL), List.of(MEDIA_PID));
+  }
+
+  public static Map<String, String> givenHandleResponse(List<String> localIds,
       List<String> handles) {
-    assert (physIds.size() == handles.size());
+    assert (localIds.size() == handles.size());
     Map<String, String> pidMap = new HashMap<>();
-    for (int i = 0; i < physIds.size(); i++) {
-      pidMap.put(physIds.get(i), handles.get(i));
+    for (int i = 0; i < localIds.size(); i++) {
+      pidMap.put(localIds.get(i), handles.get(i));
     }
     return pidMap;
   }
 
-  public static Map<String, String> givenHandleComponentResponse(
+  public static Map<String, String> givenHandleResponseSpecimen(
       List<DigitalSpecimenRecord> records) {
     Map<String, String> response = new HashMap<>();
     for (var specimenRecord : records) {
@@ -644,8 +635,31 @@ public class TestUtils {
         "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Biota\"}]");
   }
 
-  public static Map<DigitalMediaKey, String> givenMediaPidResponse() {
-    return Map.of(new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID);
+  public static PidProcessResult givenPidProcessResultSpecimen(boolean hasMedia) {
+    var relatedDois = hasMedia ? Set.of(MEDIA_PID) : new HashSet<String>();
+    return new PidProcessResult(HANDLE, relatedDois);
+  }
+
+  public static PidProcessResult givenPidProcessResultMedia(){
+    return new PidProcessResult(MEDIA_PID, Set.of(HANDLE));
+  }
+
+
+  public static UpdatedDigitalSpecimenTuple givenUpdatedDigitalSpecimenTuple(boolean hasMedia, MediaRelationshipProcessResult mediaRelations) {
+    return new UpdatedDigitalSpecimenTuple(
+        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, hasMedia),
+        givenDigitalSpecimenEvent(hasMedia),
+        mediaRelations
+    );
+  }
+
+  public static UpdatedDigitalMediaTuple givenUpdatedDigitalMediaTuple(boolean hasNewSpecimen) {
+    var specimenRelations = hasNewSpecimen ? Set.of(HANDLE) : new HashSet<String>();
+    return new UpdatedDigitalMediaTuple(
+        givenUnequalDigitalMediaRecord(),
+        givenDigitalMediaEvent(),
+        specimenRelations
+    );
   }
 
 }

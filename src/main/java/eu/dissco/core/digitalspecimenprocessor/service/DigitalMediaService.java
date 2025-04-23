@@ -44,7 +44,6 @@ public class DigitalMediaService {
   private final DigitalMediaRepository repository;
   private final FdoRecordService fdoRecordService;
   private final HandleComponent handleComponent;
-  private final RabbitMqPublisherService rabbitMqService;
   private final ObjectMapper mapper;
   private final RollbackService rollbackService;
   private final ElasticSearchRepository elasticRepository;
@@ -284,7 +283,7 @@ public class DigitalMediaService {
     setEntityRelationshipsForMedia(attributes, pidProcessResult.relatedDois());
   }
 
-  private void setEntityRelationshipsForMedia(DigitalMedia attributes, List<String> relatedDois) {
+  private void setEntityRelationshipsForMedia(DigitalMedia attributes, Set<String> relatedDois) {
     var specimenRelationships = relatedDois.stream().map(
         relatedDoi -> DigitalObjectUtils.buildEntityRelationship(HAS_SPECIMEN.getName(),
             relatedDoi));

@@ -11,14 +11,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.property.RabbitMqProperties.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +51,7 @@ public class EqualityService {
 
   public boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
       DigitalMediaWrapper digitalMedia,
-      List<String> newSpecimenRelationships) {
+      Set<String> newSpecimenRelationships) {
    return mediaAreEqual(currentDigitalMedia, digitalMedia)
        && newSpecimenRelationships.isEmpty();
   }
@@ -71,6 +74,25 @@ public class EqualityService {
             digitalSpecimen,
             digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
         digitalSpecimenEvent.digitalMediaEvents());
+  }
+
+  public DigitalMediaEvent setEventDatesMedia(
+      DigitalMediaRecord currentDigitalMediaRecord,
+      DigitalMediaEvent digitalMediaEvent) {
+    var digitalMedia = digitalMediaEvent.digitalMediaWrapper().attributes();
+    setEntityRelationshipDates(
+        currentDigitalMediaRecord.attributes().getOdsHasEntityRelationships(),
+        digitalMedia.getOdsHasEntityRelationships());
+    // Set dcterms:created to original date
+    digitalMedia.withDctermsCreated(
+        currentDigitalMediaRecord.attributes().getDctermsCreated());
+    // We create a new object because the events/wrappers are immutable, and we don't want the hash code to be out of sync
+    return new DigitalMediaEvent(digitalMediaEvent.enrichmentList(),
+        new DigitalMediaWrapper(
+            digitalMediaEvent.digitalMediaWrapper().type(),
+            digitalMediaEvent.digitalMediaWrapper().accessUri(),
+            digitalMedia,
+            digitalMediaEvent.digitalMediaWrapper().originalAttributes()));
   }
 
   private void setEntityRelationshipDates(List<EntityRelationship> currentEntityRelationships,
