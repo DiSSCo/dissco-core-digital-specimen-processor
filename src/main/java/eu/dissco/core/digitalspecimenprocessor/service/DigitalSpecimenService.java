@@ -16,7 +16,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWr
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
-import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
@@ -30,6 +29,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -64,7 +64,9 @@ public class DigitalSpecimenService {
   public Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events,
       Map<String, PidProcessResult> pidMap) {
     var digitalSpecimenRecords = events.stream()
-        .map(event -> mapToDigitalSpecimenRecord(event, pidMap)).collect(Collectors.toSet());
+        .map(event -> mapToDigitalSpecimenRecord(event, pidMap))
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
     if (digitalSpecimenRecords.isEmpty()) {
       return Collections.emptySet();
     }

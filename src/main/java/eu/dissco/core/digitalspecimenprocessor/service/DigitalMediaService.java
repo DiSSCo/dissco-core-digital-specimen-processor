@@ -57,7 +57,7 @@ public class DigitalMediaService {
         currentIds.size());
   }
 
-  public Set<DigitalMediaRecord> persistNewDigitalMedia(
+  public Set<DigitalMediaRecord> createNewDigitalMedia(
       List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
     var digitalMediaRecords = events.stream()
         .collect(toMap(event -> mapToDigitalMediaRecord(event, pidMap),

@@ -213,7 +213,7 @@ public class ProcessingService {
     }
     if (!mediaProcessResult.newDigitalMedia().isEmpty()) {
       results.addAll(
-          digitalMediaService.persistNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
+          digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
               pidProcessResults));
     }
     if (!mediaProcessResult.changedDigitalMedia().isEmpty()) {
