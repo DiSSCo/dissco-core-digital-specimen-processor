@@ -27,8 +27,7 @@ public class RabbitMqPublisherService {
   private final RabbitTemplate rabbitTemplate;
   private final RabbitMqProperties rabbitMqProperties;
 
-  public void publishCreateEventSpecimen(DigitalSpecimenRecord digitalSpecimenRecord)
-      throws JsonProcessingException {
+  public void publishCreateEventSpecimen(DigitalSpecimenRecord digitalSpecimenRecord) throws JsonProcessingException {
     var event = provenanceService.generateCreateEventSpecimen(digitalSpecimenRecord);
     rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
         rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName(),

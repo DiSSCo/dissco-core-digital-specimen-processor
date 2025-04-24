@@ -54,11 +54,11 @@ public class DigitalSpecimenService {
   private final MidsService midsService;
   private final ObjectMapper mapper;
 
-  public void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalSpecimen) {
-    var currentIds = currentDigitalSpecimen.stream().map(DigitalSpecimenRecord::id).toList();
+  public void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalMedia) {
+    var currentIds = currentDigitalMedia.stream().map(DigitalSpecimenRecord::id).toList();
     repository.updateLastChecked(currentIds);
     log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
-        currentDigitalSpecimen.size());
+        currentDigitalMedia.size());
   }
 
   public Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events,
@@ -119,7 +119,7 @@ public class DigitalSpecimenService {
     try {
       repository.createDigitalSpecimenRecord(
           digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
-              .toList());
+              .collect(Collectors.toSet()));
     } catch (DataAccessException e) {
       log.error("Unable to update records into database. Rolling back updates", e);
       rollbackService.rollbackUpdatedSpecimens(digitalSpecimenRecords, false, false);
@@ -129,7 +129,7 @@ public class DigitalSpecimenService {
     try {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(
           digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
-              .toList());
+              .collect(Collectors.toSet()));
       if (!bulkResponse.errors()) {
         handleSuccessfulElasticUpdate(digitalSpecimenRecords);
       } else {
@@ -159,11 +159,11 @@ public class DigitalSpecimenService {
     for (var digitalSpecimenRecord : digitalSpecimenRecords) {
       var successfullyPublished = publishCreateSpecimenEvents(digitalSpecimenRecord);
       if (!successfullyPublished) {
-        digitalSpecimenRecords.remove(digitalSpecimenRecord);
         rollbackRecords.add(digitalSpecimenRecord);
       }
     }
     if (!rollbackRecords.isEmpty()) {
+      rollbackRecords.forEach(digitalSpecimenRecords::remove);
       return Optional.of(rollbackRecords);
     }
     return Optional.empty();
@@ -181,8 +181,8 @@ public class DigitalSpecimenService {
     }
     if (!failedRecords.isEmpty()) {
       rollbackService.rollbackUpdatedSpecimens(failedRecords, true, true);
+      failedRecords.forEach(digitalSpecimenRecords::remove);
     }
-    digitalSpecimenRecords.removeAll(failedRecords);
   }
 
   /* Queue Publishing */

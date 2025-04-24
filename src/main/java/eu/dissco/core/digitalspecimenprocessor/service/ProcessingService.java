@@ -209,7 +209,7 @@ public class ProcessingService {
       Map<String, PidProcessResult> pidProcessResults) {
     var results = new ArrayList<DigitalMediaRecord>();
     if (!mediaProcessResult.equalDigitalMedia().isEmpty()) {
-      digitalMediaService.processEqualDigitalMedia(mediaProcessResult.equalDigitalMedia());
+      digitalMediaService.updateEqualDigitalMedia(mediaProcessResult.equalDigitalMedia());
     }
     if (!mediaProcessResult.newDigitalMedia().isEmpty()) {
       results.addAll(

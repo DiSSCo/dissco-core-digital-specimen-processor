@@ -49,7 +49,7 @@ public class RollbackService {
   // Rollback updated specimen
 
   public void rollbackUpdatedSpecimens(
-      Collection<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords,
+      Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords,
       boolean elasticRollback, boolean databseRollback) {
     // Rollback in database and/or in elastic
     updatedDigitalSpecimenRecords.forEach(
@@ -86,7 +86,7 @@ public class RollbackService {
   private void rollBackToEarlierDatabaseVersionSpecimen(
       DigitalSpecimenRecord currentDigitalSpecimen) {
     try {
-      specimenRepository.createDigitalSpecimenRecord(List.of(currentDigitalSpecimen));
+      specimenRepository.createDigitalSpecimenRecord(Set.of(currentDigitalSpecimen));
     } catch (DataAccessException e) {
       log.error("Unable to rollback to previous version");
     }

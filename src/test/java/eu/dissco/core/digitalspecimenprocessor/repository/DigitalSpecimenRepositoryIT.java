@@ -14,6 +14,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import org.jooq.Record1;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +51,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testGetDigitalSpecimens() throws DisscoRepositoryException {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
             givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
@@ -66,14 +67,14 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testUpdateVersionSpecimens() {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
             givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
 
     // When
     var result = repository.createDigitalSpecimenRecord(
-        List.of(givenDigitalSpecimenRecord(2, false)));
+        Set.of(givenDigitalSpecimenRecord(2, false)));
 
     // Then
     assertThat(result).isEqualTo(new int[]{1});
@@ -83,7 +84,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testUpdateLastChecked() {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
@@ -102,7 +103,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   @Test
   void testUpsertSpecimens() {
     // Given
-    var records = List.of(
+    var records = Set.of(
         givenDigitalSpecimenRecord(),
         givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
         givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2"));
@@ -121,7 +122,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testUpsertSpecimensOriginalDataOnly() throws JsonProcessingException{
     // Given
     var firstRecord = givenDigitalSpecimenRecordNoOriginalData();
-    var records = List.of(
+    var records = Set.of(
         firstRecord,
         givenDigitalSpecimenRecord());
 
@@ -144,7 +145,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     ds.digitalSpecimenWrapper().attributes().setDwcCollectionCode("\u0000");
 
     // When
-    repository.createDigitalSpecimenRecord(List.of(ds));
+    repository.createDigitalSpecimenRecord(Set.of(ds));
 
     // Then
     var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
@@ -157,7 +158,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testRollbackSpecimen() throws DisscoRepositoryException {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));

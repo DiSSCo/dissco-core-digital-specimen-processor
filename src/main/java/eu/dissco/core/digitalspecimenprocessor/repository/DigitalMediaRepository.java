@@ -63,8 +63,8 @@ public class DigitalMediaRepository {
   }
 
   public int[] createDigitalMediaRecord(
-      Collection<DigitalMediaRecord> digitalSpecimenRecords) {
-    var queries = digitalSpecimenRecords.stream().map(this::digitalMediaToQuery).toList();
+      Collection<DigitalMediaRecord> digitalMediaRecords) {
+    var queries = digitalMediaRecords.stream().map(this::digitalMediaToQuery).toList();
     return context.batch(queries).execute();
   }
 

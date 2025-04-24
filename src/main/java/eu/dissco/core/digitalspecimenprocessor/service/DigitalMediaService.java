@@ -50,7 +50,7 @@ public class DigitalMediaService {
   private final AnnotationPublisherService annotationPublisherService;
   private final RabbitMqPublisherService publisherService;
 
-  public void processEqualDigitalMedia(List<DigitalMediaRecord> currentDigitalMedia) {
+  public void updateEqualDigitalMedia(List<DigitalMediaRecord> currentDigitalMedia) {
     var currentIds = currentDigitalMedia.stream().map(DigitalMediaRecord::id).toList();
     repository.updateLastChecked(currentIds);
     log.info("Successfully updated lastChecked for {} existing digital media",
@@ -59,8 +59,10 @@ public class DigitalMediaService {
 
   public Set<DigitalMediaRecord> createNewDigitalMedia(
       List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
+    // todo
     var digitalMediaRecords = events.stream()
-        .collect(toMap(event -> mapToDigitalMediaRecord(event, pidMap),
+        .collect(toMap(
+            event -> mapToDigitalMediaRecord(event, pidMap),
             DigitalMediaEvent::enrichmentList));
     digitalMediaRecords.remove(null);
     if (digitalMediaRecords.isEmpty()) {
@@ -105,11 +107,9 @@ public class DigitalMediaService {
 
   private DigitalMediaRecord mapToDigitalMediaRecord(DigitalMediaEvent event,
       Map<String, PidProcessResult> pidMap) {
-    var accessUri = event.digitalMediaWrapper().attributes().getAcAccessURI();
+    var accessUri = event.digitalMediaWrapper().accessUri();
     var doi = pidMap.get(accessUri).doi();
     var attributes = event.digitalMediaWrapper().attributes();
-    attributes.setId(doi);
-    attributes.setDctermsIdentifier(doi);
     setEntityRelationshipsForNewMedia(attributes, pidMap.get(accessUri));
     return new DigitalMediaRecord(
         doi,

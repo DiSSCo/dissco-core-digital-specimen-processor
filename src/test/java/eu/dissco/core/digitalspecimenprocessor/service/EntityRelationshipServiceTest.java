@@ -8,9 +8,10 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHasMediaER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +69,7 @@ class EntityRelationshipServiceTest {
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecordWithMediaEr());
     var digitalSpecimen = givenDigitalSpecimenEvent();
     var expected = new MediaRelationshipProcessResult(
-        List.of(givenHasMediaER(MEDIA_PID)), List.of());
+        List.of(givenEntityRelationship(MEDIA_PID, EntityRelationshipType.HAS_MEDIA)), List.of());
 
     // When
     var result = entityRelationshipService.processMediaRelationshipsForSpecimen(

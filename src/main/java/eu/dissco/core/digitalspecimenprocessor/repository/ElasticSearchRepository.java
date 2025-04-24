@@ -12,6 +12,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.property.ElasticSearchProperties;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -22,7 +23,7 @@ public class ElasticSearchRepository {
   private final ElasticsearchClient client;
   private final ElasticSearchProperties properties;
 
-  public BulkResponse indexDigitalSpecimen(Collection<DigitalSpecimenRecord> digitalSpecimenRecords)
+  public BulkResponse indexDigitalSpecimen(Set<DigitalSpecimenRecord> digitalSpecimenRecords)
       throws IOException {
     var bulkRequest = new BulkRequest.Builder();
     for (var digitalSpecimenrecord : digitalSpecimenRecords) {
