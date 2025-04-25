@@ -3,7 +3,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
@@ -12,12 +11,10 @@ import eu.dissco.core.digitalspecimenprocessor.property.RabbitMqProperties;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-@Profile(Profiles.RABBIT_MQ)
 @AllArgsConstructor
 public class RabbitMqPublisherService {
 
