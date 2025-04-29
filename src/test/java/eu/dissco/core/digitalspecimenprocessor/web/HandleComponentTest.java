@@ -16,6 +16,7 @@ import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
@@ -74,7 +75,7 @@ class HandleComponentTest {
   @Test
   void testPostMediaHandle() throws Exception {
     // Given
-    var expected = MAPPER.createObjectNode(); // todo
+    var expected = MAPPER.createObjectNode();
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody("""
             {
@@ -221,7 +222,7 @@ class HandleComponentTest {
   @Test
   void testRollbackHandleCreation() {
     // Given
-    var requestBody = List.of(HANDLE, SECOND_HANDLE);
+    var requestBody = Set.of(HANDLE, SECOND_HANDLE);
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .addHeader("Content-Type", "application/json"));
 

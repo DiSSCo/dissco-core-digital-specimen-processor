@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jooq.exception.DataAccessException;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,6 +68,8 @@ class DigitalSpecimenServiceTest {
   private MidsService midsService;
   @Mock
   private BulkResponse bulkResponse;
+  private static MockedStatic<Instant> mockedInstant;
+  private static MockedStatic<Clock> mockedClock;
 
   private DigitalSpecimenService digitalSpecimenService;
 
@@ -81,12 +84,18 @@ class DigitalSpecimenServiceTest {
   static void init() {
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
-    MockedStatic<Instant> mockedInstant = mockStatic(Instant.class);
+    mockedInstant = mockStatic(Instant.class);
     mockedInstant.when(Instant::now).thenReturn(instant);
     mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
     mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
-    MockedStatic<Clock> mockedClock = mockStatic(Clock.class);
+    mockedClock = mockStatic(Clock.class);
     mockedClock.when(Clock::systemUTC).thenReturn(clock);
+  }
+
+  @AfterAll
+  static void teardown(){
+    mockedInstant.close();
+    mockedClock.close();
   }
 
   @Test
@@ -227,7 +236,8 @@ class DigitalSpecimenServiceTest {
     // Then
     assertThat(results).isEqualTo(Set.of(expectedRecord));
     then(rollbackService).should()
-        .rollbackNewSpecimensSubset(List.of(failedRecord), events, pidMap, true, true);
+        .rollbackNewSpecimens(List.of(givenDigitalSpecimenEvent()), pidMap, true, true);
+    then(publisherService).should().publishCreateEventSpecimen(expectedRecord);
   }
 
   @Test

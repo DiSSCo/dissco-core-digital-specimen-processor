@@ -33,14 +33,9 @@ public class DigitalMediaRepository {
         .fetch(this::mapDigitalMedia);
   }
 
-
-  public void removeSpecimenRelationshipsFromMedia(List<String> mediaPids) {
-    context.update(DIGITAL_MEDIA_OBJECT)
-        .set(DIGITAL_MEDIA_OBJECT.DIGITAL_SPECIMEN_ID, "UNKNOWN")
-        .where(DIGITAL_MEDIA_OBJECT.ID.in(mediaPids))
-        .execute();
+  public void rollBackDigitalMedia(String id) {
+    context.delete(DIGITAL_MEDIA_OBJECT).where(DIGITAL_MEDIA_OBJECT.ID.eq(id)).execute();
   }
-
 
   private DigitalMediaRecord mapDigitalMedia(Record dbRecord) {
     try {

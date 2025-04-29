@@ -171,27 +171,30 @@ public class DigitalMediaService {
       Map<String, PidProcessResult> pidMap) {
     log.debug("Successfully indexed {} digital media", digitalMediaRecords);
     var recordsToRollback = new HashSet<DigitalMediaRecord>();
-    for (var entry : digitalMediaRecords.entrySet()) {
-      var successfullyPublished = publishEvents(entry.getKey(), entry.getValue());
-      if (!successfullyPublished) {
-        recordsToRollback.add(entry.getKey());
-        digitalMediaRecords.remove(entry.getKey());
+    digitalMediaRecords.forEach((digitalMediaRecord, enrichments) -> {
+      if (!publishEvents(digitalMediaRecord, enrichments)) {
+        recordsToRollback.add(digitalMediaRecord);
       }
-    }
+    });
     if (!recordsToRollback.isEmpty()) {
-      rollbackService.rollbackNewMediaSubset(recordsToRollback, events,
-          pidMap);
+      recordsToRollback.forEach(digitalMediaRecords::remove);
+      var rollbackAccessUris = recordsToRollback.stream().map(
+          DigitalMediaRecord::accessURI).toList();
+      var rollbackEvents = events.stream().filter(
+          event -> rollbackAccessUris.contains(event.digitalMediaWrapper().accessUri())
+      ).toList();
+      rollbackService.rollbackNewMedias(rollbackEvents, pidMap, true, true);
     }
   }
 
-  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, List<String> value) {
+  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, List<String> enrichments) {
     try {
       publisherService.publishCreateEventMedia(digitalMediaRecord);
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish Create event", e);
       return false;
     }
-    value.forEach(mas -> {
+    enrichments.forEach(mas -> {
       try {
         publisherService.publishAnnotationRequestEventMedia(mas, digitalMediaRecord);
       } catch (JsonProcessingException e) {

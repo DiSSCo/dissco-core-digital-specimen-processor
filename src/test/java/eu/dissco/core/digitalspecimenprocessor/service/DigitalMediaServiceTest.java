@@ -10,6 +10,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithSpecimenEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultMedia;
@@ -23,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
@@ -43,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jooq.exception.DataAccessException;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,6 +75,9 @@ class DigitalMediaServiceTest {
   private RabbitMqPublisherService publisherService;
   @Mock
   private BulkResponse bulkResponse;
+  private static MockedStatic<Instant> mockedInstant;
+  private static MockedStatic<Clock> mockedClock;
+
   private DigitalMediaService mediaService;
 
   @BeforeEach
@@ -84,12 +90,18 @@ class DigitalMediaServiceTest {
   static void init() {
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
-    MockedStatic<Instant> mockedInstant = mockStatic(Instant.class);
+    mockedInstant = mockStatic(Instant.class);
     mockedInstant.when(Instant::now).thenReturn(instant);
     mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
     mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
-    MockedStatic<Clock> mockedClock = mockStatic(Clock.class);
+    mockedClock = mockStatic(Clock.class);
     mockedClock.when(Clock::systemUTC).thenReturn(clock);
+  }
+
+  @AfterAll
+  static void teardown(){
+    mockedInstant.close();
+    mockedClock.close();
   }
 
   @Test
@@ -221,21 +233,20 @@ class DigitalMediaServiceTest {
   @Test
   void testCreateNewMediaPublishingFails() throws Exception {
     // Given
-    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
-    var events = List.of(givenDigitalMediaEvent());
-    var records = Set.of(givenDigitalMediaRecord());
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT, new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
+    var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent());
+    var records = Set.of(givenDigitalMediaRecord(), givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
-    doThrow(JsonProcessingException.class).when(publisherService)
+    lenient().doThrow(JsonProcessingException.class).when(publisherService)
         .publishCreateEventMedia(givenDigitalMediaRecord());
 
     // When
     var result = mediaService.createNewDigitalMedia(events, pidMap);
 
     // Then
-    assertThat(result).isEmpty();
-    then(rollbackService).should().rollbackNewMediaSubset(records, events, pidMap);
-    then(publisherService).shouldHaveNoMoreInteractions();
+    assertThat(result).isEqualTo(Set.of(givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION)));
+    then(rollbackService).should().rollbackNewMedias(List.of(givenDigitalMediaEventWithSpecimenEr()), pidMap, true, true);
   }
 
   @Test
@@ -333,7 +344,8 @@ class DigitalMediaServiceTest {
 
     // Then
     assertThat(result).isEmpty();
-    then(rollbackService).should().rollbackUpdatedMedias(eq(updatedRecord), eq(false), eq(true), any(), eq(pidMap));
+    then(rollbackService).should().rollbackUpdatedMedias(updatedRecord, false, true, List.of(
+        givenDigitalMediaEventWithSpecimenEr()), pidMap);
     then(annotationPublisherService).shouldHaveNoInteractions();
   }
 
@@ -390,7 +402,8 @@ class DigitalMediaServiceTest {
 
     // Then
     assertThat(result).isEmpty();
-    then(rollbackService).should().rollbackUpdatedMedias(any(),eq(true), eq(true), any(), eq(pidMap));
+    then(rollbackService).should().rollbackUpdatedMedias(any(), eq(true), eq(true), eq(List.of(
+        givenDigitalMediaEventWithSpecimenEr())), eq(pidMap));
   }
 
   @Test

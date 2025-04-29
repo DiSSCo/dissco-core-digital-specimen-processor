@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +68,7 @@ public class HandleComponent {
     getFutureResponse(response);
   }
 
-  public void rollbackHandleCreation(Collection<String> handles)
+  public void rollbackHandleCreation(Set<String> handles)
       throws PidException {
     log.info("Rolling back handle creation");
     var requestBody = BodyInserters.fromValue(handles);

@@ -85,13 +85,11 @@ public class DigitalSpecimenService {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(
           digitalSpecimenRecords);
       if (!bulkResponse.errors()) {
-        var rollbackRecordsOptional = handleSuccessfulElasticInsert(digitalSpecimenRecords);
-        rollbackRecordsOptional.ifPresent(
-            specimenRecords -> rollbackService.rollbackNewSpecimensSubset(specimenRecords, events,
-                pidMap, true, true));
+        handleSuccessfulElasticInsert(digitalSpecimenRecords, events, pidMap);
       } else {
         digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticInsertSpecimen(
             digitalSpecimenRecords, bulkResponse, events);
+        handleSuccessfulElasticInsert(digitalSpecimenRecords, events, pidMap);
       }
       log.info("Successfully created {} new digitalSpecimenRecord",
           digitalSpecimenRecords.size());
@@ -152,21 +150,27 @@ public class DigitalSpecimenService {
 
   /* Elastic */
 
-  private Optional<List<DigitalSpecimenRecord>> handleSuccessfulElasticInsert(
-      Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
+  private void handleSuccessfulElasticInsert(
+      Set<DigitalSpecimenRecord> digitalSpecimenRecords, List<DigitalSpecimenEvent> events,
+      Map<String, PidProcessResult> pidMap) {
     log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
     List<DigitalSpecimenRecord> rollbackRecords = new ArrayList<>();
-    for (var digitalSpecimenRecord : digitalSpecimenRecords) {
-      var successfullyPublished = publishCreateSpecimenEvents(digitalSpecimenRecord);
-      if (!successfullyPublished) {
+    digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
+      if (!publishCreateSpecimenEvents(digitalSpecimenRecord)) {
         rollbackRecords.add(digitalSpecimenRecord);
       }
-    }
+    });
     if (!rollbackRecords.isEmpty()) {
+      var rollbackRecordPhysId = rollbackRecords.stream().map(
+          digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimenWrapper()
+              .physicalSpecimenID()).toList();
+      var rollbackEvents = events.stream().filter(
+          event -> rollbackRecordPhysId.contains(
+              event.digitalSpecimenWrapper().physicalSpecimenID())
+      ).toList();
       rollbackRecords.forEach(digitalSpecimenRecords::remove);
-      return Optional.of(rollbackRecords);
+      rollbackService.rollbackNewSpecimens(rollbackEvents, pidMap, true, true);
     }
-    return Optional.empty();
   }
 
   private void handleSuccessfulElasticUpdate(
@@ -198,7 +202,8 @@ public class DigitalSpecimenService {
 
   private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
     try {
-      publisherService.publishUpdateEventSpecimen(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
+      publisherService.publishUpdateEventSpecimen(
+          updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
           updatedDigitalSpecimenRecord.jsonPatch());
       return true;
     } catch (JsonProcessingException e) {

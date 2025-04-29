@@ -137,7 +137,6 @@ public class RollbackService {
     }
   }
 
-
   // Rollback New Specimen
   public void rollbackNewSpecimens(List<DigitalSpecimenEvent> events,
       Map<String, PidProcessResult> pidMap,
@@ -148,28 +147,6 @@ public class RollbackService {
         (key, value) -> rollbackNewSpecimen(key, value, elasticRollback, databaseRollback));
     // Rollback handle creation for specimen
     rollbackHandleCreation(rollbackMap.keySet());
-  }
-
-  public void rollbackNewSpecimensSubset(List<DigitalSpecimenRecord> digitalSpecimenRecords,
-      List<DigitalSpecimenEvent> events, Map<String, PidProcessResult> pidMap,
-      boolean elasticRollback, boolean databaseRollback) {
-    var rollbackRecordPhysId = digitalSpecimenRecords.stream().map(
-        digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimenWrapper()
-            .physicalSpecimenID()).toList();
-    var rollbackEvents = events.stream().filter(
-        event -> rollbackRecordPhysId.contains(event.digitalSpecimenWrapper().physicalSpecimenID())
-    ).toList();
-    rollbackNewSpecimens(rollbackEvents, pidMap, elasticRollback, databaseRollback);
-  }
-
-  public void rollbackNewMediaSubset(Set<DigitalMediaRecord> digitalMediaRecords,
-      List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
-    var rollbackAccessUris = digitalMediaRecords.stream().map(
-        DigitalMediaRecord::accessURI).toList();
-    var rollbackEvents = events.stream().filter(
-        event -> rollbackAccessUris.contains(event.digitalMediaWrapper().accessUri())
-    ).toList();
-    rollbackNewMedias(rollbackEvents, pidMap, true, true);
   }
 
   private static Map<String, DigitalSpecimenEvent> createRollbackMapSpecimen(
@@ -222,13 +199,13 @@ public class RollbackService {
       boolean elasticRollback, boolean databaseRollback) {
     if (elasticRollback) {
       try {
-        elasticRepository.rollbackObject(id, true);
+        elasticRepository.rollbackObject(id, false);
       } catch (IOException | ElasticsearchException e) {
         log.error("Fatal exception, unable to roll back: {}", id, e);
       }
     }
     if (databaseRollback) {
-      specimenRepository.rollbackSpecimen(id);
+      mediaRepository.rollBackDigitalMedia(id);
     }
     try {
       publisherService.deadLetterEventMedia(event);
@@ -248,7 +225,7 @@ public class RollbackService {
             digitalSpecimenRecord -> Pair.of(digitalSpecimenRecord, getDigitalSpecimenEvent(events,
                 digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenID())
             )));
-    var rollbackDigitalRecordIds = new ArrayList<String>();
+    var rollbackDigitalRecordIds = new HashSet<String>();
     bulkResponse.items().forEach(
         item -> {
           var digitalSpecimenRecord = digitalSpecimenMap.get(item.id()).getLeft();
@@ -281,7 +258,7 @@ public class RollbackService {
             e -> Pair.of(e.getKey(), getDigitalMediaEvent(events,
                 e.getKey().accessURI())
             )));
-    var rollbackDigitalRecordIds = new ArrayList<String>();
+    var rollbackDigitalRecordIds = new HashSet<String>();
     bulkResponse.items().forEach(
         item -> {
           var digitalMediaRecord = digitalMediaEventMap.get(item.id()).getLeft();
@@ -370,7 +347,7 @@ public class RollbackService {
         .collect(Collectors.toMap(
             updatedDigitalMediaRecord -> updatedDigitalMediaRecord.digitalMediaRecord()
                 .id(), Function.identity()));
-    var digtialMediaRecordsMutable = new HashSet<>(digitalMediaRecords);
+    var digitalMediaRecordsMutable = new HashSet<>(digitalMediaRecords);
     List<UpdatedDigitalMediaRecord> handlesToRollback = new ArrayList<>();
     bulkResponse.items().forEach(
         item -> {
@@ -381,18 +358,18 @@ public class RollbackService {
                 digitalMediaRecord.digitalMediaRecord().id(), item.error().reason());
             rollbackUpdatedMedia(digitalMediaRecord, false, true, originalEvent);
             handlesToRollback.add(digitalMediaRecord);
-            digtialMediaRecordsMutable.remove(digitalMediaRecord);
+            digitalMediaRecordsMutable.remove(digitalMediaRecord);
           } else {
             var successfullyPublished = publishUpdateEventMedia(digitalMediaRecord, originalEvent);
             if (!successfullyPublished) {
               handlesToRollback.add(digitalMediaRecord);
-              digtialMediaRecordsMutable.remove(digitalMediaRecord);
+              digitalMediaRecordsMutable.remove(digitalMediaRecord);
             }
           }
         }
     );
     filterUpdatesAndRollbackHandlesMedia(handlesToRollback);
-    return digtialMediaRecordsMutable;
+    return digitalMediaRecordsMutable;
   }
 
 
@@ -450,31 +427,7 @@ public class RollbackService {
 
 
   // Rollback Handle
-  public void pidCreationFailed(List<DigitalSpecimenEvent> events) {
-    try {
-      handleComponent.rollbackFromPhysId(events.stream()
-          .map(DigitalSpecimenEvent::digitalSpecimenWrapper)
-          .map(DigitalSpecimenWrapper::physicalSpecimenID).toList());
-    } catch (PidException e) {
-      log.error("Unable to roll back PIDs", e);
-    }
-    List<DigitalSpecimenEvent> failedDlq = new ArrayList<>();
-    for (var event : events) {
-      try {
-        publisherService.deadLetterEventSpecimen(event);
-      } catch (JsonProcessingException e2) {
-        failedDlq.add(event);
-      }
-      if (!failedDlq.isEmpty()) {
-        log.error("Critical error: Failed to DLQ the following events: {}", failedDlq);
-      }
-    }
-  }
-
-  private void rollbackHandleCreation(Collection<String> ids) {
-    if (ids.isEmpty()) {
-      return;
-    }
+  private void rollbackHandleCreation(Set<String> ids) {
     try {
       handleComponent.rollbackHandleCreation(ids);
     } catch (PidException e) {
@@ -523,6 +476,5 @@ public class RollbackService {
           ids);
     }
   }
-
 
 }

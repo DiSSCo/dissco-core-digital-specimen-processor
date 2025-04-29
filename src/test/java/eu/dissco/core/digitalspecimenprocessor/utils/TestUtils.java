@@ -2,7 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.utils;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.SOURCE_SYSTEM;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_PID;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST_NAME;
@@ -25,6 +24,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
@@ -280,7 +280,7 @@ public class TestUtils {
     return givenUnequalDigitalMediaRecord(MEDIA_PID, MEDIA_URL, VERSION);
   }
 
-  public static DigitalMediaRecord givenUnequalDigitalMediaRecord(int version){
+  public static DigitalMediaRecord givenUnequalDigitalMediaRecord(int version) {
     return givenUnequalDigitalMediaRecord(MEDIA_PID, MEDIA_URL, version);
   }
 
@@ -385,6 +385,13 @@ public class TestUtils {
 
   public static DigitalMediaEvent givenDigitalMediaEvent() {
     return givenDigitalMediaEvent(MEDIA_URL);
+  }
+
+  public static DigitalMediaEvent givenDigitalMediaEventWithSpecimenEr() {
+    var event = givenDigitalMediaEvent(MEDIA_URL);
+    event.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(
+        List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN)));
+    return event;
   }
 
   public static DigitalMediaEvent givenDigitalMediaEventWithRelationship() {
@@ -511,7 +518,6 @@ public class TestUtils {
         .put(REFERENT_NAME.getAttribute(), MEDIA_URL)
         .put(MEDIA_HOST.getAttribute(), ORGANISATION_ID)
         .put(MEDIA_HOST_NAME.getAttribute(), (String) null)
-        .put(LINKED_DO_PID.getAttribute(), HANDLE)
         .put(LINKED_DO_TYPE.getAttribute(), TYPE)
         .put(PRIMARY_MEDIA_ID.getAttribute(), MEDIA_URL)
         .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
@@ -667,16 +673,16 @@ public class TestUtils {
   }
 
   public static JsonNode givenJsonPatchMedia() throws JsonProcessingException {
-        return MAPPER.readTree("""
-            [ {
-              "op" : "remove",
-              "path" : "/ods:organisationName"
-            }, {
-              "op" : "add",
-              "path" : "/ods:organisationID",
-              "value" : "https://ror.org/0443cwa12"
-            } ]
-            """);
+    return MAPPER.readTree("""
+        [ {
+          "op" : "remove",
+          "path" : "/ods:organisationName"
+        }, {
+          "op" : "add",
+          "path" : "/ods:organisationID",
+          "value" : "https://ror.org/0443cwa12"
+        } ]
+        """);
   }
 
   public static PidProcessResult givenPidProcessResultSpecimen(boolean hasMedia) {
@@ -704,6 +710,15 @@ public class TestUtils {
         givenUnequalDigitalMediaRecord(),
         givenDigitalMediaEvent(),
         specimenRelations
+    );
+  }
+
+  public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord() throws Exception {
+    return new UpdatedDigitalMediaRecord(
+      givenDigitalMediaRecord(),
+      List.of(MEDIA_ENRICHMENT),
+      givenDigitalMediaRecord(),
+      givenJsonPatchMedia()
     );
   }
 
