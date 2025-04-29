@@ -1,20 +1,38 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultMedia;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalMediaTuple;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
 
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
@@ -24,6 +42,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,7 +93,7 @@ class DigitalMediaServiceTest {
   }
 
   @Test
-  void testUpdateEqualMedia(){
+  void testUpdateEqualMedia() {
     // Given
 
     // When
@@ -99,158 +118,294 @@ class DigitalMediaServiceTest {
     // Then
     assertThat(result).isEqualTo(records);
     then(repository).should().createDigitalMediaRecord(records);
-  }
-  
-  
-  
-  /*
-  @BeforeEach
-  void setup() {
-    mediaService = new DigitalMediaService(mediaRepository);
+    then(annotationPublisherService).should().publishAnnotationNewMedia(records);
+    then(publisherService).should()
+        .publishAnnotationRequestEventMedia(MEDIA_ENRICHMENT, givenDigitalMediaRecord());
   }
 
   @Test
-  void testGetExistingDigitalMediaNew() {
-    //
-    var firstRecord = givenDigitalSpecimenRecord();
-    var secondRecord = givenDifferentUnequalSpecimen(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT);
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, firstRecord, PHYSICAL_SPECIMEN_ID_ALT,
-        secondRecord);
-    var firstMediaEventA = givenDigitalMediaEvent();
-    var firstMediaEventB = givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID, MEDIA_URL_ALT);
-    var secondMediaEvent = givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT);
-    var expected = Map.of(
-        HANDLE, new MediaRelationshipProcessResult(List.of(),
-            List.of(firstMediaEventA, firstMediaEventB)),
-        SECOND_HANDLE,
-        new MediaRelationshipProcessResult(List.of(), List.of(secondMediaEvent))
+  void testCreateNewMediaMasFailed() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var events = List.of(givenDigitalMediaEvent());
+    var records = Set.of(givenDigitalMediaRecord());
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+    doThrow(JsonProcessingException.class).when(publisherService).publishAnnotationRequestEventMedia(any(), any());
+
+    // When
+    var result = mediaService.createNewDigitalMedia(events, pidMap);
+
+    // Then
+    assertThat(result).isEqualTo(records);
+    then(repository).should().createDigitalMediaRecord(records);
+    then(annotationPublisherService).should().publishAnnotationNewMedia(records);
+    then(publisherService).should()
+        .publishAnnotationRequestEventMedia(MEDIA_ENRICHMENT, givenDigitalMediaRecord());
+  }
+
+  @Test
+  void testCreateNewMediaNoPids() {
+    // Given
+    var pidMap = Map.of(MEDIA_URL_ALT, givenPidProcessResultMedia());
+    var events = List.of(givenDigitalMediaEvent());
+
+    // When
+    var result = mediaService.createNewDigitalMedia(events, pidMap);
+
+    // Then
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void testCreateNewMediaDatabaseException() {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var events = List.of(givenDigitalMediaEvent());
+    var records = Set.of(givenDigitalMediaRecord());
+    doThrow(DataAccessException.class).when(repository).createDigitalMediaRecord(records);
+
+    // When
+    var result = mediaService.createNewDigitalMedia(events, pidMap);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(rollbackService).should().rollbackNewMedias(events, pidMap, false, false);
+  }
+
+  @Test
+  void testCreateNewMediaElasticFailure() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var events = List.of(givenDigitalMediaEvent());
+    var records = Set.of(givenDigitalMediaRecord());
+    doThrow(ElasticsearchException.class).when(elasticRepository).indexDigitalMedia(records);
+
+    // When
+    var result = mediaService.createNewDigitalMedia(events, pidMap);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(repository).should().createDigitalMediaRecord(records);
+    then(rollbackService).should().rollbackNewMedias(events, pidMap, false, true);
+  }
+
+
+  @Test
+  void testCreateNewMediaElasticPartialFailure() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT,
+        new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
+    var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent());
+    var successfulRecord = givenDigitalMediaRecord();
+    var records = Set.of(successfulRecord,
+        givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
+    var successfulRecordMap = Map.of(successfulRecord, List.of(MEDIA_ENRICHMENT));
+    given(bulkResponse.errors()).willReturn(true);
+    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+    given(rollbackService.handlePartiallyFailedElasticInsertMedia(anyMap(), any(), any()))
+        .willReturn(successfulRecordMap);
+
+    // When
+    var result = mediaService.createNewDigitalMedia(events, pidMap);
+
+    // Then
+    assertThat(result).isEqualTo(Set.of(successfulRecord));
+    then(repository).should().createDigitalMediaRecord(records);
+    then(publisherService).should().publishCreateEventMedia(givenDigitalMediaRecord());
+    then(publisherService).should()
+        .publishAnnotationRequestEventMedia(MEDIA_ENRICHMENT, successfulRecord);
+    then(publisherService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testCreateNewMediaPublishingFails() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var events = List.of(givenDigitalMediaEvent());
+    var records = Set.of(givenDigitalMediaRecord());
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+    doThrow(JsonProcessingException.class).when(publisherService)
+        .publishCreateEventMedia(givenDigitalMediaRecord());
+
+    // When
+    var result = mediaService.createNewDigitalMedia(events, pidMap);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(rollbackService).should().rollbackNewMediaSubset(records, events, pidMap);
+    then(publisherService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testUpdateExistingMedia() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+
+    // When
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+
+    // Then
+    assertThat(result).isEqualTo(records);
+    then(handleComponent).shouldHaveNoInteractions();
+    then(annotationPublisherService).should().publishAnnotationUpdatedMedia(any());
+    then(publisherService).should()
+        .publishUpdateEventMedia(eq(givenDigitalMediaRecord(VERSION + 1)), any());
+  }
+
+  @Test
+  void testUpdateExistingMediaUpdateHandle() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+
+    // When
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+
+    // Then
+    assertThat(result).isEqualTo(records);
+    then(handleComponent).should().updateHandle(any());
+    then(annotationPublisherService).should().publishAnnotationUpdatedMedia(any());
+    then(publisherService).should()
+        .publishUpdateEventMedia(eq(givenDigitalMediaRecord(VERSION + 1)), any());
+  }
+
+  @Test
+  void testUpdateExistingMediaUpdateHandleFailed() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
+    doThrow(PidException.class).when(handleComponent).updateHandle(any());
+
+    // When
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(handleComponent).should().updateHandle(any());
+    then(publisherService).should().deadLetterEventMedia(any());
+    then(annotationPublisherService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testUpdateExistingMediaUpdateHandleFailedDlqFailed() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
+    doThrow(PidException.class).when(handleComponent).updateHandle(any());
+    doThrow(JsonProcessingException.class).when(publisherService).deadLetterEventMedia(any());
+
+    // When
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(handleComponent).should().updateHandle(any());
+  }
+
+  @Test
+  void testUpdateExistingMediaElasticFailed() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+    var updatedRecord = Set.of(new UpdatedDigitalMediaRecord(
+        givenDigitalMediaRecord(VERSION + 1),
+        List.of(MEDIA_ENRICHMENT),
+        givenUnequalDigitalMediaRecord(),
+        givenJsonPatchMedia()
+    ));
+    doThrow(ElasticsearchException.class).when(elasticRepository).indexDigitalMedia(records);
+
+    // When
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(rollbackService).should().rollbackUpdatedMedias(eq(updatedRecord), eq(false), eq(true), any(), eq(pidMap));
+    then(annotationPublisherService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testUpdateExistingMediaElasticPartiallyFailed() throws Exception {
+    // Given
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT,
+        new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
+    var successfulRecord = givenDigitalMediaRecord(2);
+    var records = Set.of(
+        successfulRecord,
+        givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION+1));
+    given(bulkResponse.errors()).willReturn(true);
+    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+    var tuples = List.of(
+        givenUpdatedDigitalMediaTuple(false),
+        new UpdatedDigitalMediaTuple(
+            givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, 1),
+            givenUnequalDigitalMediaEvent(),
+            Set.of()
+        )
     );
-    given(mediaRepository.getDigitalMediaUrisFromIdKey(List.of())).willReturn(Map.of());
+    given(rollbackService.handlePartiallyFailedElasticUpdateMedia(any(), eq(bulkResponse), any(), eq(pidMap)))
+        .willReturn(Set.of(
+            new UpdatedDigitalMediaRecord(
+                successfulRecord,
+                List.of(MEDIA_ENRICHMENT),
+                givenUnequalDigitalMediaRecord(),
+                givenJsonPatchMedia()
+            )
+        ));
 
     // When
-    var result = mediaService.getExistingDigitalMedia(currentSpecimens,
-        List.of(firstMediaEventA, firstMediaEventB, secondMediaEvent));
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
 
     // Then
-    assertThat(expected).isEqualTo(result);
+    assertThat(result).isEqualTo(Set.of(successfulRecord));
+    then(handleComponent).shouldHaveNoInteractions();
+    then(publisherService).should().publishUpdateEventMedia(givenDigitalMediaRecord(VERSION+1), givenJsonPatchMedia());
   }
 
   @Test
-  void testGetExistingMediaRelationshipsUnchanged() {
+  void testUpdateExistingMediaPublishingFailed() throws Exception {
     // Given
-    var firstRecord = givenDigitalSpecimenRecordWithMediaEr();
-    var secondRecord = givenDigitalSpecimenRecordWithMediaEr(SECOND_HANDLE,
-        PHYSICAL_SPECIMEN_ID_ALT, true, 1, MEDIA_PID_ALT);
-    var secondRecordMediaER = secondRecord.digitalSpecimenWrapper().attributes()
-        .getOdsHasEntityRelationships().stream()
-        .filter(er -> er.getDwcRelationshipOfResource().equals(HAS_MEDIA.getName()))
-        .toList();
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, firstRecord, PHYSICAL_SPECIMEN_ID_ALT,
-        secondRecord);
-    var mediaEvents = List.of(givenDigitalMediaEvent(),
-        givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT, MEDIA_URL_ALT));
-    var expected = Map.of(
-        HANDLE, new MediaRelationshipProcessResult(List.of(), List.of()),
-        SECOND_HANDLE, new MediaRelationshipProcessResult(List.of(), List.of()));
-    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of(
-        new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
-        new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL_ALT), MEDIA_PID_ALT));
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+    doThrow(JsonProcessingException.class).when(publisherService).publishUpdateEventMedia(any(), any());
 
     // When
-    var result = mediaService.getExistingDigitalMedia(currentSpecimens, mediaEvents);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
 
     // Then
-    assertThat(expected).isEqualTo(result);
-    then(mediaRepository).should().getDigitalMediaUrisFromIdKey(mediaPidsCaptor.capture());
-    assertThat(mediaPidsCaptor.getValue()).containsExactlyInAnyOrder(MEDIA_PID, MEDIA_PID_ALT);
+    assertThat(result).isEmpty();
+    then(rollbackService).should().rollbackUpdatedMedias(any(),eq(true), eq(true), any(), eq(pidMap));
   }
 
   @Test
-  void testGetExistingMediaRelationshipsException() {
+  void testUpdateExistingMediaDatabaseFailed() {
     // Given
-    var firstRecord = givenDigitalSpecimenRecord();
-    var secondRecord = givenDifferentUnequalSpecimen(SECOND_HANDLE,
-        PHYSICAL_SPECIMEN_ID_ALT);
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, firstRecord, PHYSICAL_SPECIMEN_ID_ALT,
-        secondRecord);
-    var mediaEvents = List.of(givenDigitalMediaEvent(),
-        givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID_ALT, MEDIA_URL_ALT));
-    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of(
-        new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
-        new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL_ALT), MEDIA_PID_ALT));
-
-    // When / Then
-    assertThrows(IllegalStateException.class,
-        () -> mediaService.getExistingDigitalMedia(currentSpecimens, mediaEvents));
-  }
-
-  @Test
-  void testGetExistingMediaRelationshipsTombstone() {
-    // Given
-    var firstRecord = givenDigitalSpecimenRecordWithMediaEr();
-    var secondRecord = givenDigitalSpecimenRecordWithMediaEr(SECOND_HANDLE,
-        PHYSICAL_SPECIMEN_ID_ALT, false, 1, MEDIA_PID_ALT);
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, firstRecord, PHYSICAL_SPECIMEN_ID_ALT,
-        secondRecord);
-    var expected = Map.of(
-        HANDLE, new MediaRelationshipProcessResult(
-            firstRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships(),
-            List.of()),
-        SECOND_HANDLE, new MediaRelationshipProcessResult(
-            secondRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships(),
-            List.of()));
-    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of(
-        new DigitalMediaKey(HANDLE, MEDIA_URL), MEDIA_PID,
-        new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL_ALT), MEDIA_PID_ALT));
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+    doThrow(DataAccessException.class).when(repository).createDigitalMediaRecord(records);
 
     // When
-    var result = mediaService.getExistingDigitalMedia(currentSpecimens, Collections.emptyList());
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
 
     // Then
-    assertThat(expected).isEqualTo(result);
-    then(mediaRepository).should().getDigitalMediaUrisFromIdKey(mediaPidsCaptor.capture());
-    assertThat(mediaPidsCaptor.getValue()).containsExactlyInAnyOrder(MEDIA_PID, MEDIA_PID_ALT);
+    assertThat(result).isEmpty();
   }
-
-  @Test
-  void testGetExistingMediaRelationshipsNoMedia() {
-    // Given
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
-    var expected = Map.of(HANDLE, new MediaRelationshipProcessResult(List.of(), List.of()));
-    given(mediaRepository.getDigitalMediaUrisFromIdKey(anyList())).willReturn(Map.of());
-
-    // When
-    var result = mediaService.getExistingDigitalMedia(currentSpecimens, List.of());
-
-    // Then
-    assertThat(expected).isEqualTo(result);
-  }
-
-  @Test
-  void testRemoveSpecimenRelationshipsFromMedia() {
-    // Given
-    var currentDigitalSpecimenRecord = givenDigitalSpecimenRecordWithMediaEr(HANDLE,
-        PHYSICAL_SPECIMEN_ID, true);
-    var tombstonedEr = currentDigitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsHasEntityRelationships().stream().filter(
-            entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
-                .equals(HAS_MEDIA.getName()))
-        .toList();
-
-    var updatedSpecimenRecord = new UpdatedDigitalSpecimenRecord(
-        givenDigitalSpecimenRecord(),
-        List.of(),
-        currentDigitalSpecimenRecord,
-        MAPPER.createObjectNode(),
-        List.of(),
-        new MediaRelationshipProcessResult(tombstonedEr, List.of())
-    );
-
-    // When
-    mediaService.removeSpecimenRelationshipsFromMedia(Set.of(updatedSpecimenRecord));
-
-    // Then
-    then(mediaRepository).should().removeSpecimenRelationshipsFromMedia(List.of(MEDIA_PID));
-  }*/
 
 }

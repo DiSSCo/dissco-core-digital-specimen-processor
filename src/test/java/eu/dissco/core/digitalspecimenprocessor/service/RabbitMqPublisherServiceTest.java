@@ -6,7 +6,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoA
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenNewAcceptedAnnotation;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -107,7 +107,7 @@ class RabbitMqPublisherServiceTest {
 
     // When
     rabbitMqPublisherService.publishUpdateEventSpecimen(givenDigitalSpecimenRecord(2, false),
-        givenJsonPatch());
+        givenJsonPatchSpecimen());
 
     // Then
     var dlqMessage = rabbitTemplate.receive("create-update-tombstone-queue");

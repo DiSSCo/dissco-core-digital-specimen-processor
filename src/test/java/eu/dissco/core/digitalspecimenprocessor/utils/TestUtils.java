@@ -94,6 +94,7 @@ public class TestUtils {
   public static final String MEDIA_URL_ALT = MEDIA_URL + "/2";
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
   public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
+  public static final String MEDIA_ENRICHMENT = "image-metadata";
 
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
@@ -235,7 +236,8 @@ public class TestUtils {
     return givenDigitalSpecimenEvent(physicalSpecimenId, true);
   }
 
-  public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId, boolean hasMedia) {
+  public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId,
+      boolean hasMedia) {
     return new DigitalSpecimenEvent(
         List.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
@@ -250,37 +252,53 @@ public class TestUtils {
   }
 
   public static DigitalMediaRecord givenDigitalMediaRecord() {
+    return givenDigitalMediaRecord(VERSION);
+  }
+
+  public static DigitalMediaRecord givenDigitalMediaRecord(int version) {
     return new DigitalMediaRecord(
-        MEDIA_PID, MEDIA_URL, List.of(),
+        MEDIA_PID, MEDIA_URL, version, CREATED
+        , List.of(MEDIA_ENRICHMENT),
         new DigitalMedia()
-            .withId(MEDIA_PID)
             .withAcAccessURI(MEDIA_URL)
             .withOdsOrganisationID(ORGANISATION_ID)
             .withOdsHasEntityRelationships(
-                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN)))
+                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))));
+  }
+
+  public static DigitalMediaEvent givenUnequalDigitalMediaEvent() {
+    return new DigitalMediaEvent(List.of(MEDIA_ENRICHMENT),
+        new DigitalMediaWrapper(
+            "StillImage",
+            MEDIA_URL_ALT,
+            givenUnequalDigitalMedia(MEDIA_URL_ALT),
+            MAPPER.createObjectNode())
     );
   }
 
   public static DigitalMediaRecord givenUnequalDigitalMediaRecord() {
+    return givenUnequalDigitalMediaRecord(MEDIA_PID, MEDIA_URL, VERSION);
+  }
+
+  public static DigitalMediaRecord givenUnequalDigitalMediaRecord(int version){
+    return givenUnequalDigitalMediaRecord(MEDIA_PID, MEDIA_URL, version);
+  }
+
+  public static DigitalMediaRecord givenUnequalDigitalMediaRecord(String pid, String url,
+      int version) {
     return new DigitalMediaRecord(
-        MEDIA_PID, MEDIA_URL, List.of(),
-        new DigitalMedia().withAcAccessURI(MEDIA_URL).withOdsOrganisationName(ANOTHER_ORGANISATION)
-    );
+        pid, url, version, CREATED, List.of(MEDIA_ENRICHMENT),
+        givenUnequalDigitalMedia(url)
+            .withOdsHasEntityRelationships(
+                List.of(
+                    givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))));
   }
 
-  public static Map<String, MediaRelationshipProcessResult> givenEmptyMediaProcessResultMap(
-      List<String> handles) {
-    var processMap = new HashMap<String, MediaRelationshipProcessResult>();
-    for (var handle : handles) {
-      processMap.put(handle, givenEmptyMediaProcessResult());
-    }
-    return processMap;
+  public static DigitalMedia givenUnequalDigitalMedia(String url) {
+    return new DigitalMedia()
+        .withAcAccessURI(url)
+        .withOdsOrganisationName(ANOTHER_ORGANISATION);
   }
-
-  public static Map<String, MediaRelationshipProcessResult> givenEmptyMediaProcessResultMap() {
-    return Map.of(HANDLE, givenEmptyMediaProcessResult());
-  }
-
 
   public static MediaRelationshipProcessResult givenMediaProcessResultNew() {
     return new MediaRelationshipProcessResult(
@@ -355,7 +373,7 @@ public class TestUtils {
 
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
-        List.of("image-metadata"),
+        List.of(MEDIA_ENRICHMENT),
         new DigitalMediaWrapper(
             "StillImage",
             mediaUrl,
@@ -388,7 +406,7 @@ public class TestUtils {
                 .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
                     PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))));
     return new DigitalMediaEvent(
-        List.of("image-metadata"),
+        List.of(MEDIA_ENRICHMENT),
         new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
@@ -549,7 +567,8 @@ public class TestUtils {
         """);
   }
 
-  public static UpdatedDigitalSpecimenRecord givenUpdatedDigitalSpecimenRecord(boolean hasMedia) throws JsonProcessingException{
+  public static UpdatedDigitalSpecimenRecord givenUpdatedDigitalSpecimenRecord(boolean hasMedia)
+      throws JsonProcessingException {
     return givenUpdatedDigitalSpecimenRecord(givenUnequalDigitalSpecimenRecord(), hasMedia);
   }
 
@@ -560,7 +579,7 @@ public class TestUtils {
           givenDigitalSpecimenRecord(2, true),
           List.of(MAS),
           currentRecord,
-          givenJsonPatch(),
+          givenJsonPatchSpecimen(),
           List.of(givenDigitalMediaEvent()),
           givenMediaProcessResultNew());
     }
@@ -568,7 +587,7 @@ public class TestUtils {
         givenDigitalSpecimenRecord(2, false),
         List.of(MAS),
         currentRecord,
-        givenJsonPatch(),
+        givenJsonPatchSpecimen(),
         List.of(),
         givenEmptyMediaProcessResult());
   }
@@ -642,9 +661,22 @@ public class TestUtils {
 
   }
 
-  public static JsonNode givenJsonPatch() throws JsonProcessingException {
+  public static JsonNode givenJsonPatchSpecimen() throws JsonProcessingException {
     return MAPPER.readTree(
         "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Biota\"}]");
+  }
+
+  public static JsonNode givenJsonPatchMedia() throws JsonProcessingException {
+        return MAPPER.readTree("""
+            [ {
+              "op" : "remove",
+              "path" : "/ods:organisationName"
+            }, {
+              "op" : "add",
+              "path" : "/ods:organisationID",
+              "value" : "https://ror.org/0443cwa12"
+            } ]
+            """);
   }
 
   public static PidProcessResult givenPidProcessResultSpecimen(boolean hasMedia) {
@@ -652,15 +684,15 @@ public class TestUtils {
     return new PidProcessResult(HANDLE, relatedDois);
   }
 
-  public static PidProcessResult givenPidProcessResultMedia(){
+  public static PidProcessResult givenPidProcessResultMedia() {
     return new PidProcessResult(MEDIA_PID, Set.of(HANDLE));
   }
 
 
-  public static UpdatedDigitalSpecimenTuple givenUpdatedDigitalSpecimenTuple(boolean hasMedia, MediaRelationshipProcessResult mediaRelations) {
+  public static UpdatedDigitalSpecimenTuple givenUpdatedDigitalSpecimenTuple(boolean hasMedia,
+      MediaRelationshipProcessResult mediaRelations) {
     return new UpdatedDigitalSpecimenTuple(
-        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, hasMedia
-        ),
+        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, hasMedia),
         givenDigitalSpecimenEvent(hasMedia),
         mediaRelations
     );

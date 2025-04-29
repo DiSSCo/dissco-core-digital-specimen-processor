@@ -13,7 +13,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYS
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -81,7 +81,7 @@ class ProvenanceServiceTest {
     var anotherDigitalSpecimen = givenUnequalDigitalSpecimenRecord();
 
     // When
-    var event = service.generateUpdateEventSpecimen(anotherDigitalSpecimen, givenJsonPatch());
+    var event = service.generateUpdateEventSpecimen(anotherDigitalSpecimen, givenJsonPatchSpecimen());
 
     // Then
     assertThat(event.getDctermsIdentifier()).isEqualTo(

@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +47,10 @@ public class DigitalMediaRepository {
       return new DigitalMediaRecord(
           dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),
           dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL),
-          List.of(), mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class));
+          dbRecord.get(DIGITAL_MEDIA_OBJECT.VERSION),
+          dbRecord.get(DIGITAL_MEDIA_OBJECT.CREATED),
+          List.of(),
+          mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class));
     } catch (JsonProcessingException e) {
       log.error("Unable to map record data to json: {}", dbRecord);
       return null;
@@ -63,7 +65,7 @@ public class DigitalMediaRepository {
   }
 
   public int[] createDigitalMediaRecord(
-      Collection<DigitalMediaRecord> digitalMediaRecords) {
+      Set<DigitalMediaRecord> digitalMediaRecords) {
     var queries = digitalMediaRecords.stream().map(this::digitalMediaToQuery).toList();
     return context.batch(queries).execute();
   }
@@ -72,22 +74,21 @@ public class DigitalMediaRepository {
     return context.insertInto(DIGITAL_MEDIA_OBJECT)
         .set(DIGITAL_MEDIA_OBJECT.ID, digitalMediaRecord.id())
         .set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
-        .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.attributes().getOdsVersion())
+        .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
         .set(DIGITAL_MEDIA_OBJECT.MEDIA_URL,
             digitalMediaRecord.attributes().getAcAccessURI())
-        .set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.attributes().getDctermsCreated().toInstant())
+        .set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.created())
         .set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
         .set(DIGITAL_MEDIA_OBJECT.DATA,
             JSONB.jsonb(
                 mapper.valueToTree(digitalMediaRecord.attributes())
                     .toString()))
-        // todo - do we keep original data?
         .onConflict(DIGITAL_MEDIA_OBJECT.ID).doUpdate()
         .set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
-        .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.attributes().getOdsVersion())
+        .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
         .set(DIGITAL_MEDIA_OBJECT.MEDIA_URL,
             digitalMediaRecord.attributes().getAcAccessURI())
-        .set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.attributes().getDctermsCreated().toInstant())
+        .set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.created())
         .set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
         .set(DIGITAL_MEDIA_OBJECT.DATA,
             JSONB.jsonb(

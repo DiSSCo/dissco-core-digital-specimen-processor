@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -94,7 +95,7 @@ public class RollbackService {
 
   private void rollBackToEarlierDatabaseVersionMedia(DigitalMediaRecord currentDigitalMedia) {
     try {
-      mediaRepository.createDigitalMediaRecord(List.of(currentDigitalMedia));
+      mediaRepository.createDigitalMediaRecord(Set.of(currentDigitalMedia));
     } catch (DataAccessException e) {
       log.error("Unable to rollback to previous version");
     }
@@ -103,7 +104,7 @@ public class RollbackService {
   // Rollback Updated Media
 
   public void rollbackUpdatedMedias(
-      Collection<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords,
+      Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords,
       boolean elasticRollback, boolean databseRollback, List<DigitalMediaEvent> events,
       Map<String, PidProcessResult> pidMap) {
     // Get associated events for dlq purposes
@@ -161,15 +162,14 @@ public class RollbackService {
     rollbackNewSpecimens(rollbackEvents, pidMap, elasticRollback, databaseRollback);
   }
 
-  public void rollbackNewMediaSubset(List<DigitalMediaRecord> digitalMediaRecords,
-      List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap,
-      boolean elasticRollback, boolean databaseRollback) {
+  public void rollbackNewMediaSubset(Set<DigitalMediaRecord> digitalMediaRecords,
+      List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
     var rollbackAccessUris = digitalMediaRecords.stream().map(
         DigitalMediaRecord::accessURI).toList();
     var rollbackEvents = events.stream().filter(
         event -> rollbackAccessUris.contains(event.digitalMediaWrapper().accessUri())
     ).toList();
-    rollbackNewMedias(rollbackEvents, pidMap, elasticRollback, databaseRollback);
+    rollbackNewMedias(rollbackEvents, pidMap, true, true);
   }
 
   private static Map<String, DigitalSpecimenEvent> createRollbackMapSpecimen(
@@ -191,7 +191,7 @@ public class RollbackService {
       boolean elasticRollback, boolean databaseRollback) {
     if (elasticRollback) {
       try {
-        elasticRepository.rollbackSpecimen(id);
+        elasticRepository.rollbackObject(id, true);
       } catch (IOException | ElasticsearchException e) {
         log.error("Fatal exception, unable to roll back: {}", id, e);
       }
@@ -222,7 +222,7 @@ public class RollbackService {
       boolean elasticRollback, boolean databaseRollback) {
     if (elasticRollback) {
       try {
-        elasticRepository.rollbackSpecimen(id);
+        elasticRepository.rollbackObject(id, true);
       } catch (IOException | ElasticsearchException e) {
         log.error("Fatal exception, unable to roll back: {}", id, e);
       }
@@ -272,20 +272,20 @@ public class RollbackService {
             Collectors.toSet());
   }
 
-  public Set<DigitalMediaRecord> handlePartiallyFailedElasticInsertMedia(
-      Set<DigitalMediaRecord> digitalMediaRecords,
+  public Map<DigitalMediaRecord, List<String>> handlePartiallyFailedElasticInsertMedia(
+      Map<DigitalMediaRecord, List<String>> digitalMediaRecords,
       BulkResponse bulkResponse, List<DigitalMediaEvent> events) {
-    var digitalMediaMap = digitalMediaRecords.stream()
+    var digitalMediaEventMap = digitalMediaRecords.entrySet().stream()
         .collect(Collectors.toMap(
-            DigitalMediaRecord::id,
-            digitalMediaRecord -> Pair.of(digitalMediaRecord, getDigitalMediaEvent(events,
-                digitalMediaRecord.accessURI())
+            e -> e.getKey().id(),
+            e -> Pair.of(e.getKey(), getDigitalMediaEvent(events,
+                e.getKey().accessURI())
             )));
     var rollbackDigitalRecordIds = new ArrayList<String>();
     bulkResponse.items().forEach(
         item -> {
-          var digitalMediaRecord = digitalMediaMap.get(item.id()).getLeft();
-          var event = digitalMediaMap.get(item.id()).getRight();
+          var digitalMediaRecord = digitalMediaEventMap.get(item.id()).getLeft();
+          var event = digitalMediaEventMap.get(item.id()).getRight();
           if (item.error() != null) {
             log.error("Failed to insert item into elastic search: {} with errors {}",
                 item.id(), item.error().reason());
@@ -300,10 +300,12 @@ public class RollbackService {
         }
     );
     rollbackHandleCreation(rollbackDigitalRecordIds);
-    return new HashSet<>(digitalMediaRecords).stream()
-        .filter(r -> rollbackDigitalRecordIds.contains(r.id())).collect(
-            Collectors.toSet());
-
+    return digitalMediaRecords.entrySet().stream()
+        .filter(e -> !rollbackDigitalRecordIds.contains(e.getKey().id()))
+        .collect(Collectors.toMap(
+            Entry::getKey,
+            Entry::getValue
+        ));
   }
 
   private static DigitalSpecimenEvent getDigitalSpecimenEvent(
@@ -359,7 +361,7 @@ public class RollbackService {
     return mutableDigitalSpecimenRecords;
   }
 
-  public void handlePartiallyFailedElasticUpdateMedia(
+  public Set<UpdatedDigitalMediaRecord> handlePartiallyFailedElasticUpdateMedia(
       Set<UpdatedDigitalMediaRecord> digitalMediaRecords,
       BulkResponse bulkResponse, List<DigitalMediaEvent> digitalMediaEvents,
       Map<String, PidProcessResult> pidMap) {
@@ -368,6 +370,7 @@ public class RollbackService {
         .collect(Collectors.toMap(
             updatedDigitalMediaRecord -> updatedDigitalMediaRecord.digitalMediaRecord()
                 .id(), Function.identity()));
+    var digtialMediaRecordsMutable = new HashSet<>(digitalMediaRecords);
     List<UpdatedDigitalMediaRecord> handlesToRollback = new ArrayList<>();
     bulkResponse.items().forEach(
         item -> {
@@ -378,17 +381,18 @@ public class RollbackService {
                 digitalMediaRecord.digitalMediaRecord().id(), item.error().reason());
             rollbackUpdatedMedia(digitalMediaRecord, false, true, originalEvent);
             handlesToRollback.add(digitalMediaRecord);
-            digitalMediaRecords.remove(digitalMediaRecord);
+            digtialMediaRecordsMutable.remove(digitalMediaRecord);
           } else {
             var successfullyPublished = publishUpdateEventMedia(digitalMediaRecord, originalEvent);
             if (!successfullyPublished) {
               handlesToRollback.add(digitalMediaRecord);
-              digitalMediaRecords.remove(digitalMediaRecord);
+              digtialMediaRecordsMutable.remove(digitalMediaRecord);
             }
           }
         }
     );
     filterUpdatesAndRollbackHandlesMedia(handlesToRollback);
+    return digtialMediaRecordsMutable;
   }
 
 

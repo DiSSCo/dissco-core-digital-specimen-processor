@@ -10,7 +10,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenTuple;
@@ -346,7 +346,7 @@ class DigitalSpecimenServiceTest {
     given(midsService.calculateMids(any())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
-    doThrow(JsonProcessingException.class).when(publisherService).publishUpdateEventSpecimen(expectedRecord, givenJsonPatch());
+    doThrow(JsonProcessingException.class).when(publisherService).publishUpdateEventSpecimen(expectedRecord, givenJsonPatchSpecimen());
 
     // When
     var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);

@@ -11,7 +11,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ElasticSearchProperties;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -30,7 +29,7 @@ public class ElasticSearchRepository {
       var digitalSpecimen = flattenToDigitalSpecimen(digitalSpecimenrecord);
       bulkRequest.operations(op ->
           op.index(idx -> idx
-              .index(properties.getIndexName())
+              .index(properties.getSpecimenIndexName())
               .id(digitalSpecimen.getId())
               .document(digitalSpecimen))
       );
@@ -38,26 +37,27 @@ public class ElasticSearchRepository {
     return client.bulk(bulkRequest.build());
   }
 
-  public DeleteResponse rollbackSpecimen(String id)
+  public DeleteResponse rollbackObject(String id, boolean isSpecimen)
       throws IOException {
+    var index = isSpecimen ? properties.getSpecimenIndexName() : properties.getMediaIndexName();
     return client.delete(
-        d -> d.index(properties.getIndexName()).id(DOI_PREFIX + id));
+        d -> d.index(index).id(DOI_PREFIX + id));
   }
 
   public void rollbackVersion(DigitalSpecimenRecord currentDigitalSpecimen) throws IOException {
     var digitalSpecimen = flattenToDigitalSpecimen(currentDigitalSpecimen);
-    client.index(i -> i.index(properties.getIndexName()).id(digitalSpecimen.getId())
+    client.index(i -> i.index(properties.getSpecimenIndexName()).id(digitalSpecimen.getId())
         .document(digitalSpecimen));
   }
 
   public BulkResponse indexDigitalMedia(
-      Collection<DigitalMediaRecord> digitalMediaRecords) throws IOException {
+      Set<DigitalMediaRecord> digitalMediaRecords) throws IOException {
     var bulkRequest = new BulkRequest.Builder();
     for (var digitalMediaRecord : digitalMediaRecords) {
       var digitalMedia = digitalMediaRecord.attributes();
       bulkRequest.operations(op ->
           op.index(idx ->
-              idx.index(properties.getIndexName())
+              idx.index(properties.getSpecimenIndexName())
                   .id(digitalMedia.getId())
                   .document(digitalMedia))
       );
@@ -68,13 +68,13 @@ public class ElasticSearchRepository {
   public DeleteResponse rollbackDigitalMedia(DigitalMediaRecord digitalMediaRecord)
       throws IOException {
     return client.delete(
-        d -> d.index(properties.getIndexName()).id(DOI_PREFIX + digitalMediaRecord.id()));
+        d -> d.index(properties.getSpecimenIndexName()).id(DOI_PREFIX + digitalMediaRecord.id()));
   }
 
   public void rollbackVersion(DigitalMediaRecord currentDigitalMediaRecord)
       throws IOException {
     var digitalMedia = currentDigitalMediaRecord.attributes();
-    client.index(i -> i.index(properties.getIndexName()).id(digitalMedia.getId())
+    client.index(i -> i.index(properties.getSpecimenIndexName()).id(digitalMedia.getId())
         .document(digitalMedia));
   }
 
