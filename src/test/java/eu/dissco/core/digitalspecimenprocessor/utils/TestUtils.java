@@ -257,7 +257,19 @@ public class TestUtils {
             .withAcAccessURI(uri)
             .withOdsOrganisationID(ORGANISATION_ID)
             .withOdsHasEntityRelationships(
-                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))));
+                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))),
+        MAPPER.createObjectNode());
+  }
+
+  public static DigitalMediaRecord givenDigitalMediaRecordNoEnrichment() {
+    return new DigitalMediaRecord(
+        MEDIA_PID, MEDIA_URL, VERSION, CREATED, List.of(),
+        new DigitalMedia()
+            .withAcAccessURI(MEDIA_URL)
+            .withOdsOrganisationID(ORGANISATION_ID)
+            .withOdsHasEntityRelationships(
+                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))),
+        MAPPER.createObjectNode());
   }
 
 
@@ -287,7 +299,7 @@ public class TestUtils {
         givenUnequalDigitalMedia(url)
             .withOdsHasEntityRelationships(
                 List.of(
-                    givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))));
+                    givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))), MAPPER.createObjectNode());
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url) {

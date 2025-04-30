@@ -104,7 +104,8 @@ public class DigitalMediaService {
     return new DigitalMediaRecord(
         doi,
         accessUri, 1, Instant.now(), event.enrichmentList(),
-        event.digitalMediaWrapper().attributes());
+        event.digitalMediaWrapper().attributes(),
+        event.digitalMediaWrapper().originalAttributes());
   }
 
   private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
@@ -227,13 +228,15 @@ public class DigitalMediaService {
     }
     log.info("Persisting to elastic");
     try {
-      var recordSet = digitalMediaRecords.stream().map(UpdatedDigitalMediaRecord::digitalMediaRecord)
+      var recordSet = digitalMediaRecords.stream()
+          .map(UpdatedDigitalMediaRecord::digitalMediaRecord)
           .collect(toSet());
       var bulkResponse = elasticRepository.indexDigitalMedia(recordSet);
       if (!bulkResponse.errors()) {
         handleSuccessfulElasticUpdate(digitalMediaRecords, events, pidMap);
       } else {
-        digitalMediaRecords = rollbackService.handlePartiallyFailedElasticUpdateMedia(digitalMediaRecords, bulkResponse,
+        digitalMediaRecords = rollbackService.handlePartiallyFailedElasticUpdateMedia(
+            digitalMediaRecords, bulkResponse,
             events, pidMap);
         handleSuccessfulElasticUpdate(digitalMediaRecords, events, pidMap);
       }
@@ -264,7 +267,8 @@ public class DigitalMediaService {
                   tuple.currentDigitalMediaRecord().accessURI(),
                   tuple.currentDigitalMediaRecord().version() + 1,
                   tuple.currentDigitalMediaRecord().created(),
-                  tuple.digitalMediaEvent().enrichmentList(), attributes),
+                  tuple.digitalMediaEvent().enrichmentList(), attributes,
+                  tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes()),
               tuple.digitalMediaEvent().enrichmentList(),
               tuple.currentDigitalMediaRecord(),
               createJsonPatch(tuple.currentDigitalMediaRecord().attributes(),

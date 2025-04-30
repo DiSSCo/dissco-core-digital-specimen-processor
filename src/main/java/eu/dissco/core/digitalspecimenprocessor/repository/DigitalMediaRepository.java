@@ -38,6 +38,7 @@ public class DigitalMediaRepository {
   }
 
   private DigitalMediaRecord mapDigitalMedia(Record dbRecord) {
+    log.info("here");
     try {
       return new DigitalMediaRecord(
           dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),
@@ -45,7 +46,8 @@ public class DigitalMediaRepository {
           dbRecord.get(DIGITAL_MEDIA_OBJECT.VERSION),
           dbRecord.get(DIGITAL_MEDIA_OBJECT.CREATED),
           List.of(),
-          mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class));
+          mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class),
+          mapper.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data()));
     } catch (JsonProcessingException e) {
       log.error("Unable to map record data to json: {}", dbRecord);
       return null;
@@ -78,6 +80,10 @@ public class DigitalMediaRepository {
             JSONB.jsonb(
                 mapper.valueToTree(digitalMediaRecord.attributes())
                     .toString()))
+        .set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA,
+            JSONB.jsonb(
+                digitalMediaRecord.originalAttributes().toString()))
+        .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now())
         .onConflict(DIGITAL_MEDIA_OBJECT.ID).doUpdate()
         .set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
         .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
@@ -88,7 +94,11 @@ public class DigitalMediaRepository {
         .set(DIGITAL_MEDIA_OBJECT.DATA,
             JSONB.jsonb(
                 mapper.valueToTree(digitalMediaRecord.attributes())
-                    .toString()));
+                    .toString()))
+        .set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA,
+            JSONB.jsonb(
+                digitalMediaRecord.originalAttributes().toString()))
+        .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now());
   }
 
 }

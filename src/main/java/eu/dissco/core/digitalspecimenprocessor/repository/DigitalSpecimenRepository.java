@@ -11,7 +11,6 @@ import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingExcep
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -111,7 +110,10 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.MODIFIED, Instant.now())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,
-            mapToJsonB(digitalSpecimenRecord));
+            mapToJsonB(digitalSpecimenRecord))
+        .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
+            JSONB.valueOf(
+                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
   }
 
   private JSONB mapToJsonB(DigitalSpecimenRecord digitalSpecimenRecord) {
