@@ -125,8 +125,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     var firstRecord = givenDigitalSpecimenRecordNoOriginalData();
 
     // When
-    repository.createDigitalSpecimenRecord(Set.of(firstRecord));
     repository.createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
+    repository.createDigitalSpecimenRecord(Set.of(firstRecord));
 
     // Then
     var result = MAPPER.readTree(context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
