@@ -123,12 +123,10 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testUpsertSpecimensOriginalDataOnly() throws JsonProcessingException{
     // Given
     var firstRecord = givenDigitalSpecimenRecordNoOriginalData();
-    var records = Set.of(
-        firstRecord,
-        givenDigitalSpecimenRecord());
 
     // When
-    repository.createDigitalSpecimenRecord(records);
+    repository.createDigitalSpecimenRecord(Set.of(firstRecord));
+    repository.createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
 
     // Then
     var result = MAPPER.readTree(context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
