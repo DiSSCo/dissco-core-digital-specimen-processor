@@ -142,12 +142,11 @@ public class FdoRecordService {
 
   public List<JsonNode> buildRollbackUpdateRequest(
       List<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequest).toList();
+    return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequestSpecimen).toList();
   }
 
   public List<JsonNode> buildRollbackUpdateRequestMedia(List<DigitalMediaRecord> digitalMediaRecords){
-    // todo
-    return List.of();
+    return digitalMediaRecords.stream().map(this::buildSingleRollbackUpdateRequestMedia).toList();
   }
 
 
@@ -182,12 +181,21 @@ public class FdoRecordService {
     return request;
   }
 
-  private JsonNode buildSingleRollbackUpdateRequest(DigitalSpecimenRecord specimen) {
+  private JsonNode buildSingleRollbackUpdateRequestSpecimen(DigitalSpecimenRecord specimen) {
     return mapper.createObjectNode()
         .set(DATA, mapper.createObjectNode()
             .put(ID, specimen.id().replace(DOI_PREFIX, ""))
             .put(TYPE, fdoProperties.getSpecimenFdoType())
             .set(ATTRIBUTES, genRequestAttributes(specimen.digitalSpecimenWrapper())));
+
+  }
+
+  private JsonNode buildSingleRollbackUpdateRequestMedia(DigitalMediaRecord media) {
+    return mapper.createObjectNode()
+        .set("data", mapper.createObjectNode()
+            .put("type", fdoProperties.getMediaFdoType())
+            .put("id", media.id().replace(DOI_PREFIX, ""))
+            .set("attributes", generateMediaAttributes(media.attributes())));
 
   }
 
@@ -291,9 +299,19 @@ public class FdoRecordService {
         && !currentAttributes.getOdsIsMarkedAsType().equals(attributes.getOdsIsMarkedAsType()));
   }
 
-  public boolean handleNeedsUpdateMedia(DigitalMedia currentDigitalMedia,
-      DigitalMedia digitalMedia) {
-    return false;  // todo
+  public boolean handleNeedsUpdateMedia(DigitalMedia currentMediaObject,
+      DigitalMedia mediaObject) {
+    return (!currentMediaObject.getAcAccessURI()
+        .equals(mediaObject.getAcAccessURI())
+        || (currentMediaObject.getDctermsRights() != null
+        && !currentMediaObject.getDctermsRights()
+        .equals(mediaObject.getDctermsRights()))
+        || (currentMediaObject.getDctermsType() != null
+        && !currentMediaObject.getDctermsType()
+        .equals(mediaObject.getDctermsType()))
+        || (currentMediaObject.getOdsOrganisationID() != null
+        && !currentMediaObject.getOdsOrganisationID()
+        .equals(mediaObject.getOdsOrganisationID())));
   }
 
   private record OtherSpecimenId(
