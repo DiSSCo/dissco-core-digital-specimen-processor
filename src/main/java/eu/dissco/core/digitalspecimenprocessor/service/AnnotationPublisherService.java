@@ -11,6 +11,7 @@ import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DO
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
@@ -188,8 +189,9 @@ public class AnnotationPublisherService {
         .getOdsSourceSystemID();
     var sourceSystemName = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
         .getOdsSourceSystemName();
-    var recordNode = mapper.convertValue(
+    var recordNode = (ObjectNode) mapper.convertValue(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes(), JsonNode.class);
+    recordNode.put("id", digitalSpecimenRecord.id());
     for (JsonNode action : jsonNode) {
       var annotationProcessingRequest = new AnnotationProcessingRequest()
           .withOaHasTarget(buildTarget(digitalSpecimenRecord.id(), FdoType.SPECIMEN,

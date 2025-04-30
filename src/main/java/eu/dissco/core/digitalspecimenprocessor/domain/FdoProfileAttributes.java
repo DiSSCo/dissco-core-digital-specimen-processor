@@ -21,8 +21,6 @@ public enum FdoProfileAttributes {
   // Digital Media
   MEDIA_HOST("mediaHost"),
   MEDIA_HOST_NAME("mediaHostName"),
-  LINKED_DO_PID("linkedDigitalObjectPid"),
-  LINKED_DO_TYPE("linkedDigitalObjectType"),
   PRIMARY_MEDIA_ID("primaryMediaId"),
   PRIMARY_MEDIA_ID_TYPE("primaryMediaIdType"),
   PRIMARY_MEDIA_ID_NAME("primaryMediaIdName"),
@@ -31,8 +29,7 @@ public enum FdoProfileAttributes {
   LICENSE_NAME("licenseName"),
   LICENSE_URL("licenseUrl"),
   RIGHTS_HOLDER_PID("rightsHolderPid"),
-  RIGHTS_HOLDER("rightsHolder"),
-  DIGITAL_MEDIA_KEY("digitalMediaKey");
+  RIGHTS_HOLDER("rightsHolder");
 
   private final String attribute;
 

@@ -1,41 +1,54 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithSpecimenEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenRecord;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
+import co.elastic.clients.elasticsearch._types.ErrorCause;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.nimbusds.jose.util.Pair;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -446,604 +459,214 @@ class RollbackServiceTest {
     then(handleComponent).should().rollbackHandleUpdate(any());
   }
 
-
-
-  /*
-
   @Test
-  void testRollbackNewSpecimensHasMediaCase1() throws Exception {
+  void testHandlePartiallyFailedInsertSpecimen() throws Exception {
     // Given
-    var specimenRecords = Map.of(givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR);
+    var successfulRecord = givenDigitalSpecimenRecord();
+    var failedRecord = givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT);
+    var successfulEvent = givenDigitalSpecimenEvent();
+    var failedEvent = givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT);
+    givenBulkResponse(HANDLE, SECOND_HANDLE);
 
     // When
-    rollbackService.rollbackNewSpecimens(specimenRecords, false, false);
+    var result = rollbackService.handlePartiallyFailedElasticInsertSpecimen(Set.of(successfulRecord, failedRecord),
+        bulkResponse, List.of(successfulEvent, failedEvent));
 
     // Then
-    then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).shouldHaveNoInteractions();
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-  }
-
-  @Test
-  void testRollbackNewSpecimensHasMediaCase() throws Exception {
-    // Given
-    var specimenRecords = Map.of(givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR);
-
-    // When
-    rollbackService.rollbackNewSpecimens(specimenRecords, false, true);
-
-    // Then
-    then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).should().rollbackSpecimen(HANDLE);
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-  }
-
-  @Test
-  void testRollbackNewSpecimensHasMediaCase3() throws Exception {
-    // Given
-    var specimenRecords = Map.of(givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR);
-
-    // When
-    rollbackService.rollbackNewSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
-    then(specimenRepository).should().rollbackSpecimen(HANDLE);
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-  }
-
-  @Test
-  void testRollbackNewSpecimensHasMediaCase3ElasticFailed() throws Exception {
-    // Given
-    var specimenRecords = Map.of(givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR);
-    doThrow(IOException.class).when(elasticSearchRepository)
-        .rollbackSpecimen(givenDigitalSpecimenRecord());
-
-    // When
-    rollbackService.rollbackNewSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
-    then(specimenRepository).should().rollbackSpecimen(HANDLE);
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-  }
-
-  @Test
-  void testRollbackNewSpecimensHasMediaCase3KafkaFailed() throws Exception {
-    // Given
-    var specimenRecords = Map.of(givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR);
-    doThrow(JsonProcessingException.class).when(rabbitMqService).deadLetterEventSpecimen(any());
-
-    // When
-    rollbackService.rollbackNewSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
-    then(specimenRepository).should().rollbackSpecimen(HANDLE);
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-  }
-
-  @Test
-  void testRollbackNewSpecimensHasMediaCase3PidFailed() throws Exception {
-    // Given
-    var specimenRecords = Map.of(givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR);
-    doThrow(PidException.class).when(handleComponent).rollbackHandleCreation(anyList());
-
-    // When
-    rollbackService.rollbackNewSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackSpecimen(givenDigitalSpecimenRecord());
-    then(specimenRepository).should().rollbackSpecimen(HANDLE);
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(HANDLE));
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-  }
-
-  // Rollback Updated Specimen
-  @Test
-  void rollbackUpdatedSpecimenNoMediaNoUpdateHandleCase1() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(false);
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, false);
-
-    // Then
-    then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).shouldHaveNoInteractions();
-    then(handleComponent).shouldHaveNoInteractions();
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenNoMediaCase1() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, false);
-
-    // Then
-    then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).shouldHaveNoInteractions();
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenNoMediaCase2() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, true);
-
-    // Then
-    then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord()));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenNoMediaCase3() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    var originalSpecimen = givenDigitalSpecimenRecord();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackVersion(originalSpecimen);
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-
-  @Test
-  void rollbackUpdatedSpecimenHasMediaCase1() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, false,
-        false);
-
-    // Then
-    then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).shouldHaveNoInteractions();
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenHasMediaCase2() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, true);
-
-    // Then
-    then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(givenDigitalSpecimenRecord()));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenHasMediaCase3() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    var originalSpecimen = givenDigitalSpecimenRecord();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackVersion(originalSpecimen);
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenHasMediaCase3ElasticFailed() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    var originalSpecimen = givenDigitalSpecimenRecord();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(IOException.class).when(elasticSearchRepository)
-        .rollbackVersion(givenDigitalSpecimenRecord());
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackVersion(originalSpecimen);
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenHasMediaCase3KafkaFailed() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    var originalSpecimen = givenDigitalSpecimenRecord();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(JsonProcessingException.class).when(rabbitMqService).deadLetterEventSpecimen(any());
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackVersion(originalSpecimen);
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenHasMediaCase3PidFailed() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    var originalSpecimen = givenDigitalSpecimenRecord();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(PidException.class).when(handleComponent).rollbackHandleUpdate(any());
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackVersion(originalSpecimen);
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  @Test
-  void rollbackUpdatedSpecimenHasMediaCase3DatabaseFailed() throws Exception {
-    // Given
-    var specimenRecords = List.of(givenUpdatedDigitalSpecimenRecord(false));
-    var originalSpecimen = givenDigitalSpecimenRecord();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(DataAccessException.class).when(specimenRepository).createDigitalSpecimenRecord(any());
-
-    // When
-    rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
-
-    // Then
-    then(elasticSearchRepository).should().rollbackVersion(originalSpecimen);
-    then(specimenRepository).should().createDigitalSpecimenRecord(List.of(originalSpecimen));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should(times(1)).rollbackHandleCreation(List.of(MEDIA_PID));
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-  }
-
-  // Elastic Insert Failures
-
-  @Test
-  void testHandlePartiallyFailedInsertNoMedia() throws Exception {
-    // Given
-    var specimenRecords = Map.of(
-        givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR_EMPTY,
-        givenDigitalSpecimenRecord(SECOND_HANDLE), MEDIA_EVENT_PAIR_EMPTY,
-        givenDigitalSpecimenRecord(THIRD_HANDLE), MEDIA_EVENT_PAIR_EMPTY
-    );
-    givenBulkResponse();
-
-    // When
-    var result = rollbackService.handlePartiallyFailedElasticInsertSpecimen(specimenRecords, Map.of(),
-        bulkResponse);
-
-    // Then
-    then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE));
-    then(rabbitMqService).should(times(2)).publishCreateEventSpecimen(any());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
+    then(handleComponent).should().rollbackHandleCreation(Set.of(SECOND_HANDLE));
+    then(rabbitMqService).should().publishCreateEventSpecimen(successfulRecord);
+    then(rabbitMqService).should().deadLetterEventSpecimen(failedEvent);
     then(specimenRepository).should().rollbackSpecimen(SECOND_HANDLE);
     then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    assertThat(result).hasSize(2);
+    assertThat(result).isEqualTo(Set.of(successfulRecord));
   }
 
   @Test
-  void testHandlePartiallyFailedInsertNoMediaPublishingFailed() throws Exception {
+  void testHandlePartiallyFailedInsertSpecimenPubFails() throws Exception {
     // Given
-    var firstRecord = givenDigitalSpecimenRecord();
-    var specimenRecords = Map.of(
-        firstRecord, MEDIA_EVENT_PAIR_EMPTY,
-        givenDigitalSpecimenRecord(SECOND_HANDLE), MEDIA_EVENT_PAIR_EMPTY,
-        givenDigitalSpecimenRecord(THIRD_HANDLE), MEDIA_EVENT_PAIR_EMPTY
-    );
-
-    givenBulkResponse();
-    doThrow(JsonProcessingException.class).when(rabbitMqService).publishCreateEventSpecimen(firstRecord);
+    var successfulRecord = givenDigitalSpecimenRecord();
+    var failedRecord = givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT);
+    var successfulEvent = givenDigitalSpecimenEvent();
+    var failedEvent = givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT);
+    givenBulkResponse(HANDLE, SECOND_HANDLE);
+    doThrow(JsonProcessingException.class).when(rabbitMqService).publishCreateEventSpecimen(any());
 
     // When
-    var result = rollbackService.handlePartiallyFailedElasticInsertSpecimen(specimenRecords, Map.of(),
-        bulkResponse);
+    var result = rollbackService.handlePartiallyFailedElasticInsertSpecimen(Set.of(successfulRecord, failedRecord),
+        bulkResponse, List.of(successfulEvent, failedEvent));
 
     // Then
-    then(handleComponent).should().rollbackHandleCreation(List.of(HANDLE, SECOND_HANDLE));
-    then(rabbitMqService).should(times(2)).publishCreateEventSpecimen(any());
+    assertThat(result).isEmpty();
+    then(handleComponent).should().rollbackHandleCreation(Set.of(HANDLE, SECOND_HANDLE));
     then(rabbitMqService).should(times(2)).deadLetterEventSpecimen(any());
-    then(specimenRepository).should().rollbackSpecimen(SECOND_HANDLE);
-    then(specimenRepository).should().rollbackSpecimen(HANDLE);
-    then(specimenRepository).shouldHaveNoMoreInteractions();
-    then(elasticSearchRepository).should().rollbackSpecimen(firstRecord);
-    then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    assertThat(result).hasSize(1);
+    then(specimenRepository).should(times(2)).rollbackSpecimen(any());
+    then(elasticSearchRepository).should().rollbackObject(HANDLE, true);
   }
 
   @Test
-  void testHandlePartiallyFailedInsertFailureHasMedia() throws Exception {
+  void testHandlePartiallyFailedInsertMedia() throws Exception {
     // Given
-    var specimenRecords = Map.of(
-        givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR_EMPTY,
-        givenDigitalSpecimenRecord(SECOND_HANDLE), MEDIA_EVENT_PAIR,
-        givenDigitalSpecimenRecord(THIRD_HANDLE), MEDIA_EVENT_PAIR_EMPTY
-    );
-    givenBulkResponse();
+    var successfulRecord = givenDigitalMediaRecord();
+    var failedRecord = givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION);
+    var records = Map.of(successfulRecord, List.of(MEDIA_ENRICHMENT), failedRecord, List.of(MEDIA_ENRICHMENT));
+
+    var successfulEvent = givenDigitalMediaEvent();
+    var failedEvent = givenUnequalDigitalMediaEvent();
+    givenBulkResponse(MEDIA_PID, MEDIA_PID_ALT);
 
     // When
-    var result = rollbackService.handlePartiallyFailedElasticInsertSpecimen(specimenRecords,
-        Map.of(new DigitalMediaKey(SECOND_HANDLE, MEDIA_URL), MEDIA_PID), bulkResponse);
+    var result = rollbackService.handlePartiallyFailedElasticInsertMedia(records,
+        bulkResponse, List.of(successfulEvent, failedEvent));
 
     // Then
-    then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE, MEDIA_PID));
-    then(rabbitMqService).should(times(2)).publishCreateEventSpecimen(any());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(specimenRepository).should().rollbackSpecimen(SECOND_HANDLE);
-    then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    assertThat(result).hasSize(2);
+    then(handleComponent).should().rollbackHandleCreation(Set.of(MEDIA_PID_ALT));
+    then(rabbitMqService).should().deadLetterEventMedia(failedEvent);
+    then(rabbitMqService).should().publishCreateEventMedia(successfulRecord);
+    then(mediaRepository).should().rollBackDigitalMedia(MEDIA_PID_ALT);
+    then(elasticSearchRepository).shouldHaveNoInteractions();
+    assertThat(result).isEqualTo(Map.of(successfulRecord, List.of(MEDIA_ENRICHMENT)));
   }
 
   @Test
-  void testHandlePartiallyFailedInsertSuccessHasMedia() throws Exception {
+  void testHandlePartiallyFailedInsertMediaPubFails() throws Exception {
     // Given
-    var specimenRecords = Map.of(
-        givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR,
-        givenDigitalSpecimenRecord(SECOND_HANDLE), MEDIA_EVENT_PAIR_EMPTY,
-        givenDigitalSpecimenRecord(THIRD_HANDLE), MEDIA_EVENT_PAIR_EMPTY
-    );
-    givenBulkResponse();
+    var successfulRecord = givenDigitalMediaRecord();
+    var failedRecord = givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION);
+    var records = Map.of(successfulRecord, List.of(MEDIA_ENRICHMENT), failedRecord, List.of(MEDIA_ENRICHMENT));
+    var successfulEvent = givenDigitalMediaEvent();
+    var failedEvent = givenUnequalDigitalMediaEvent();
+    givenBulkResponse(MEDIA_PID, MEDIA_PID_ALT);
+    doThrow(JsonProcessingException.class).when(rabbitMqService).publishCreateEventMedia(any());
 
     // When
-    var result = rollbackService.handlePartiallyFailedElasticInsertSpecimen(specimenRecords,
-        givenMediaPidResponse(), bulkResponse);
+    var result = rollbackService.handlePartiallyFailedElasticInsertMedia(records,
+        bulkResponse, List.of(successfulEvent, failedEvent));
 
     // Then
-    then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE));
-    then(rabbitMqService).should(times(2)).publishCreateEventSpecimen(any());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(rabbitMqService).should(times(1)).publishAnnotationRequestEventSpecimen(any(), any());
-    then(specimenRepository).should().rollbackSpecimen(SECOND_HANDLE);
-    then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    assertThat(result).hasSize(2);
-  }
-
-  @Test
-  void testHandlePartiallyFailedInsertSuccessHasMediaAnnotationKafkaFails() throws Exception {
-    // Given
-    var specimenRecords = Map.of(
-        givenDigitalSpecimenRecord(), MEDIA_EVENT_PAIR,
-        givenDigitalSpecimenRecord(SECOND_HANDLE), MEDIA_EVENT_PAIR_EMPTY,
-        givenDigitalSpecimenRecord(THIRD_HANDLE), MEDIA_EVENT_PAIR_EMPTY
-    );
-    givenBulkResponse();
-    doThrow(JsonProcessingException.class).when(rabbitMqService)
-        .publishAnnotationRequestEventSpecimen(any(), eq(givenDigitalSpecimenRecord()));
-
-    // When
-    var result = rollbackService.handlePartiallyFailedElasticInsertSpecimen(specimenRecords,
-        givenMediaPidResponse(), bulkResponse);
-
-    // Then
-    then(handleComponent).should().rollbackHandleCreation(List.of(SECOND_HANDLE));
-    then(rabbitMqService).should(times(2)).publishCreateEventSpecimen(any());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(rabbitMqService).should(times(1)).publishAnnotationRequestEventSpecimen(any(), any());
-    then(specimenRepository).should().rollbackSpecimen(SECOND_HANDLE);
-    then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    assertThat(result).hasSize(2);
+    then(handleComponent).should().rollbackHandleCreation(Set.of(MEDIA_PID, MEDIA_PID_ALT));
+    then(rabbitMqService).should(times(2)).deadLetterEventMedia(any());
+    then(mediaRepository).should(times(2)).rollBackDigitalMedia(any());
+    then(elasticSearchRepository).should().rollbackObject(MEDIA_PID, false);
+    assertThat(result).isEmpty();
   }
 
 
-  private void givenBulkResponse() {
+  private void givenBulkResponse(String successfulPid, String failedPid) {
     var positiveResponse = mock(BulkResponseItem.class);
     given(positiveResponse.error()).willReturn(null);
-    given(positiveResponse.id()).willReturn(HANDLE).willReturn(THIRD_HANDLE);
+    given(positiveResponse.id()).willReturn(successfulPid);
     var negativeResponse = mock(BulkResponseItem.class);
     given(negativeResponse.error()).willReturn(new ErrorCause.Builder().reason("Crashed").build());
-    given(negativeResponse.id()).willReturn(SECOND_HANDLE);
+    given(negativeResponse.id()).willReturn(failedPid);
     given(bulkResponse.items()).willReturn(
-        List.of(positiveResponse, negativeResponse, positiveResponse));
+        List.of(positiveResponse, negativeResponse));
   }
 
-  // Elastic Update Failure
   @Test
-  void testHandlePartiallyFailedElasticUpdateSpecimenNoMedia() throws Exception {
+  void testHandlePartiallyFailedElasticUpdateSpecimen() throws Exception {
     // Given
-    var secondSpecimen = givenDifferentUnequalSpecimen(SECOND_HANDLE, "second");
-    var secondSpecimenUpdated = givenUpdatedDigitalSpecimenRecord(secondSpecimen, false);
-    var thirdSpecimen = givenDifferentUnequalSpecimen(THIRD_HANDLE, "third");
-    var specimenRecords = Set.of(
-        givenUpdatedDigitalSpecimenRecord(false),
-        secondSpecimenUpdated,
-        givenUpdatedDigitalSpecimenRecord(thirdSpecimen, false)
-    );
-    givenBulkResponse();
+    var successfulRecord = givenUpdatedDigitalSpecimenRecord(false);
+    var failedRecord = new UpdatedDigitalSpecimenRecord(
+        givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT),
+        List.of(MAS),
+        givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT),
+        givenJsonPatchSpecimen(),
+        List.of(),
+        givenEmptyMediaProcessResult());
+    givenBulkResponse(HANDLE, SECOND_HANDLE);
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
 
     // When
-    var result = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(specimenRecords,
+    var result = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(Set.of(successfulRecord, failedRecord),
         bulkResponse);
 
     // Then
-    assertThat(result).hasSize(2);
-    then(rabbitMqService).should(times(2)).publishUpdateEventSpecimen(any(), any());
+    assertThat(result).isEqualTo(Set.of(successfulRecord));
+    then(rabbitMqService).should(times(1)).publishUpdateEventSpecimen(any(), any());
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
     then(rabbitMqService).shouldHaveNoMoreInteractions();
-    then(specimenRepository).should()
-        .createDigitalSpecimenRecord(List.of(secondSpecimenUpdated.currentDigitalSpecimen()));
-    then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).shouldHaveNoMoreInteractions();
+    then(elasticSearchRepository).shouldHaveNoInteractions();
+    then(specimenRepository).should().createDigitalSpecimenRecord(Set.of(failedRecord.currentDigitalSpecimen()));
+    then(handleComponent).should().rollbackHandleUpdate(any());
   }
 
   @Test
-  void testHandlePartiallyFailedElasticUpdateSpecimenFailureHasMedia() throws Exception {
+  void testHandlePartiallyFailedElasticUpdateSpecimenPublishingFails() throws Exception {
     // Given
-    var secondSpecimen = givenDifferentUnequalSpecimen(SECOND_HANDLE, "second");
-    var secondSpecimenUpdated = givenUpdatedDigitalSpecimenRecord(secondSpecimen, true);
-    var thirdSpecimen = givenDifferentUnequalSpecimen(THIRD_HANDLE, "third");
-    var specimenRecords = Set.of(
-        givenUpdatedDigitalSpecimenRecord(false),
-        secondSpecimenUpdated,
-        givenUpdatedDigitalSpecimenRecord(thirdSpecimen, false)
-    );
-    givenBulkResponse();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
+    var successfulRecord = givenUpdatedDigitalSpecimenRecord(false);
+    var failedRecord = new UpdatedDigitalSpecimenRecord(
+        givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT),
+        List.of(MAS),
+        givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT),
+        givenJsonPatchSpecimen(),
+        List.of(),
+        givenEmptyMediaProcessResult());
+    givenBulkResponse(HANDLE, SECOND_HANDLE);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(false);
+    doThrow(JsonProcessingException.class).when(rabbitMqService).publishUpdateEventSpecimen(any(), any());
 
     // When
-    var result = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(specimenRecords,
+    var result = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(Set.of(successfulRecord, failedRecord),
         bulkResponse);
 
     // Then
-    assertThat(result).hasSize(2);
-    then(rabbitMqService).should(times(2)).publishUpdateEventSpecimen(any(), any());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(rabbitMqService).shouldHaveNoMoreInteractions();
-    then(specimenRepository).should()
-        .createDigitalSpecimenRecord(List.of(secondSpecimenUpdated.currentDigitalSpecimen()));
-    then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).should().rollbackHandleCreation(List.of(MEDIA_PID));
-  }
-
-  @Test
-  void testHandlePartiallyFailedElasticUpdateSpecimenSuccessHasMedia() throws Exception {
-    // Given
-    var secondSpecimen = givenDifferentUnequalSpecimen(SECOND_HANDLE, "second");
-    var secondSpecimenUpdated = givenUpdatedDigitalSpecimenRecord(secondSpecimen, false);
-    var thirdSpecimen = givenDifferentUnequalSpecimen(THIRD_HANDLE, "third");
-    var specimenRecords = Set.of(
-        givenUpdatedDigitalSpecimenRecord(true),
-        secondSpecimenUpdated,
-        givenUpdatedDigitalSpecimenRecord(thirdSpecimen, false)
-    );
-    givenBulkResponse();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-
-    // When
-    var result = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(specimenRecords,
-        bulkResponse);
-
-    // Then
-    assertThat(result).hasSize(2);
-    then(rabbitMqService).should(times(2)).publishUpdateEventSpecimen(any(), any());
-    then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
-    then(rabbitMqService).shouldHaveNoMoreInteractions();
-    then(specimenRepository).should()
-        .createDigitalSpecimenRecord(List.of(secondSpecimenUpdated.currentDigitalSpecimen()));
-    then(elasticSearchRepository).shouldHaveNoMoreInteractions();
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
-    then(handleComponent).shouldHaveNoMoreInteractions();
-  }
-
-  @Test
-  void testHandlePartiallyFailedElasticUpdateSuccessHasMediaKafkaPublishingFailedSpecimen()
-      throws Exception {
-    // Given
-    var firstSpecimenOriginal = givenDigitalSpecimenRecord();
-    var secondSpecimen = givenDifferentUnequalSpecimen(SECOND_HANDLE, "second");
-    var secondSpecimenUpdated = givenUpdatedDigitalSpecimenRecord(secondSpecimen, false);
-    var thirdSpecimen = givenDifferentUnequalSpecimen(THIRD_HANDLE, "third");
-    var specimenRecords = Set.of(
-        givenUpdatedDigitalSpecimenRecord(true),
-        secondSpecimenUpdated,
-        givenUpdatedDigitalSpecimenRecord(thirdSpecimen, false)
-    );
-    givenBulkResponse();
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(JsonProcessingException.class).when(rabbitMqService)
-        .publishUpdateEventSpecimen(eq(givenUnequalDigitalSpecimenRecord()), any());
-
-    // When
-    var result = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(specimenRecords,
-        bulkResponse);
-
-    // Then
-    assertThat(result).hasSize(1);
-    then(rabbitMqService).should(times(2)).publishUpdateEventSpecimen(any(), any());
+    assertThat(result).isEmpty();
     then(rabbitMqService).should(times(2)).deadLetterEventSpecimen(any());
     then(rabbitMqService).shouldHaveNoMoreInteractions();
-    then(specimenRepository).should(times(2)).createDigitalSpecimenRecord(anyList());
-    then(elasticSearchRepository).should().rollbackVersion(firstSpecimenOriginal);
-    then(handleComponent).should().rollbackHandleCreation(List.of(MEDIA_PID));
-    then(handleComponent).should().rollbackHandleUpdate(anyList());
+    then(specimenRepository).should(times(2)).createDigitalSpecimenRecord(any());
+    then(elasticSearchRepository).should().rollbackVersion(successfulRecord.currentDigitalSpecimen());
+    then(handleComponent).shouldHaveNoInteractions();
   }
 
   @Test
-  void testPidCreationFailed() throws Exception {
-    // When
-    rollbackService.pidCreationFailed(List.of(givenDigitalSpecimenEvent()));
-
-    // Then
-    then(handleComponent).should().rollbackFromPhysId(List.of(PHYSICAL_SPECIMEN_ID));
-  }
-
-  @Test
-  void testPidCreationFailedRollbackFailed() throws Exception {
+  void testHandlePartiallyFailedElasticUpdateMedia() throws Exception {
     // Given
-    doThrow(PidException.class).when(handleComponent)
-        .rollbackFromPhysId(List.of(PHYSICAL_SPECIMEN_ID));
+    var successfulRecord = givenUpdatedDigitalMediaRecord();
+    var failedRecord = givenUpdatedDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT);
+    var events = List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent(MEDIA_URL_ALT));
+    var pidMap = Map.of(
+        MEDIA_URL, givenPidProcessResultMedia(),
+        MEDIA_URL_ALT, new PidProcessResult(MEDIA_PID_ALT, Set.of()));
+    givenBulkResponse(MEDIA_PID, MEDIA_PID_ALT);
+    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
 
     // When
-    rollbackService.pidCreationFailed(List.of(givenDigitalSpecimenEvent()));
+    var result = rollbackService.handlePartiallyFailedElasticUpdateMedia(Set.of(successfulRecord, failedRecord),
+        bulkResponse, events, pidMap);
 
     // Then
-    then(rabbitMqService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    assertThat(result).isEqualTo(Set.of(successfulRecord));
+    then(rabbitMqService).should(times(1)).publishUpdateEventMedia(any(), any());
+    then(rabbitMqService).should(times(1)).deadLetterEventMedia(any());
+    then(rabbitMqService).shouldHaveNoMoreInteractions();
+    then(elasticSearchRepository).shouldHaveNoInteractions();
+    then(mediaRepository).should().createDigitalMediaRecord(Set.of(failedRecord.currentDigitalMediaRecord()));
+    then(handleComponent).should().rollbackHandleUpdate(any());
   }
 
   @Test
-  void testPidCreationFailedRollbackFailedDlqFailed() throws Exception {
+  void testHandlePartiallyFailedElasticUpdateMediaPubFails() throws Exception {
     // Given
-    doThrow(PidException.class).when(handleComponent)
-        .rollbackFromPhysId(List.of(PHYSICAL_SPECIMEN_ID));
-    doThrow(JsonProcessingException.class).when(rabbitMqService)
-        .deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    var successfulRecord = givenUpdatedDigitalMediaRecord();
+    var failedRecord = givenUpdatedDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT);
+    var events = List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent(MEDIA_URL_ALT));
+    var pidMap = Map.of(
+        MEDIA_URL, givenPidProcessResultMedia(),
+        MEDIA_URL_ALT, new PidProcessResult(MEDIA_PID_ALT, Set.of()));
+    givenBulkResponse(MEDIA_PID, MEDIA_PID_ALT);
+    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
+    doThrow(JsonProcessingException.class).when(rabbitMqService).publishUpdateEventMedia(any(), any());
 
-    // When / Then
-    assertDoesNotThrow(
-        () -> rollbackService.pidCreationFailed(List.of(givenDigitalSpecimenEvent())));
-  } */
+    // When
+    var result = rollbackService.handlePartiallyFailedElasticUpdateMedia(Set.of(successfulRecord, failedRecord),
+        bulkResponse, events, pidMap);
 
+    // Then
+    assertThat(result).isEmpty();
+    then(rabbitMqService).should(times(2)).deadLetterEventMedia(any());
+    then(elasticSearchRepository).should().rollbackVersion(successfulRecord.currentDigitalMediaRecord());
+    then(mediaRepository).should(times(2)).createDigitalMediaRecord(any());
+    then(handleComponent).should().rollbackHandleUpdate(any());
+  }
 
 }

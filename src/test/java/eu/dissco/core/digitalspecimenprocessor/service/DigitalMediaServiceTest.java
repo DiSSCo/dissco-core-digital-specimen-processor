@@ -224,9 +224,6 @@ class DigitalMediaServiceTest {
     // Then
     assertThat(result).isEqualTo(Set.of(successfulRecord));
     then(repository).should().createDigitalMediaRecord(records);
-    then(publisherService).should().publishCreateEventMedia(givenDigitalMediaRecord());
-    then(publisherService).should()
-        .publishAnnotationRequestEventMedia(MEDIA_ENRICHMENT, successfulRecord);
     then(publisherService).shouldHaveNoMoreInteractions();
   }
 

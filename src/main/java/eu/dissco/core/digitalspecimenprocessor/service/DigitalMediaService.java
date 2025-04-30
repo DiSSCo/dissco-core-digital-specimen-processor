@@ -84,7 +84,6 @@ public class DigitalMediaService {
         digitalMediaRecords = rollbackService.handlePartiallyFailedElasticInsertMedia(
             digitalMediaRecords,
             bulkResponse, events);
-        handleSuccessfulElasticInsert(digitalMediaRecords, events, pidMap);
       }
       log.info("Successfully created {} new digital media", digitalMediaRecords.size());
       annotationPublisherService.publishAnnotationNewMedia(digitalMediaRecords.keySet());

@@ -11,7 +11,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaR
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
@@ -245,7 +244,7 @@ public class RollbackService {
     );
     rollbackHandleCreation(rollbackDigitalRecordIds);
     return new HashSet<>(digitalSpecimenRecords).stream()
-        .filter(r -> rollbackDigitalRecordIds.contains(r.id())).collect(
+        .filter(r -> !rollbackDigitalRecordIds.contains(r.id())).collect(
             Collectors.toSet());
   }
 

@@ -53,14 +53,14 @@ class EntityRelationshipServiceTest {
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
     var digitalSpecimen = givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID);
     var expected = new MediaRelationshipProcessResult(
-        List.of(), List.of(givenDigitalMediaEvent(PHYSICAL_SPECIMEN_ID)));
+        List.of(), List.of(givenDigitalMediaEvent(MEDIA_URL)));
 
     // When
     var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
         currentSpecimens, digitalSpecimen, Map.of(MEDIA_URL, givenDigitalMediaRecord()));
 
     // Then
-    assertThat(expected).isEqualTo(result);
+    assertThat(result).isEqualTo(expected);
   }
 
   @Test

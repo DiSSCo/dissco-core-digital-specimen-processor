@@ -4,7 +4,6 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.RIGHT
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.CATALOG_NUMBER;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LICENSE_URL;
-import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LINKED_DO_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.LIVING_OR_PRESERVED;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MARKED_AS_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST;
@@ -118,7 +117,6 @@ public class FdoRecordService {
         .put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
         .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
         .put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
-        .put(LINKED_DO_TYPE.getAttribute(), fdoProperties.getSpecimenFdoType())
         .put(PRIMARY_MEDIA_ID.getAttribute(), media.getAcAccessURI())
         .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
         .put(PRIMARY_MEDIA_ID_NAME.getAttribute(), "ac:accessURI")

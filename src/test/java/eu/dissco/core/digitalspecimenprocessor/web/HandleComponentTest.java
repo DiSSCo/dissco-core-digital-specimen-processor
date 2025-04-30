@@ -2,6 +2,8 @@ package eu.dissco.core.digitalspecimenprocessor.web;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
@@ -75,17 +77,14 @@ class HandleComponentTest {
   @Test
   void testPostMediaHandle() throws Exception {
     // Given
-    var expected = MAPPER.createObjectNode();
+    var expected = Map.of(MEDIA_URL, MEDIA_PID);
     mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
         .setBody("""
             {
               "data": [{
                 "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
                 "attributes": {
-                  "digitalMediaKey": {
-                    "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
-                    "mediaUrl":"https://an-image.org"
-                  }
+                    "primaryMediaId":"https://an-image.org"
                 }
               }]
             }
