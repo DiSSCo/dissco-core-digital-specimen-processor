@@ -55,6 +55,15 @@ public class RabbitMqProperties {
 
     @NotNull
     private String routingKeyName = "digital-media";
+
+    @NotBlank
+    private String queueName = "digital-media-queue";
+
+    @NotBlank
+    private String dlqExchangeName = "digital-media-exchange-dlq";
+
+    @NotBlank
+    private String dlqRoutingKeyName = "digital-media-dlq";
   }
 
   @Data

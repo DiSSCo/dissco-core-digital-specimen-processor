@@ -4,10 +4,12 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEv
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import java.util.List;
+import java.util.Map;
 
-public record ProcessResult(
+public record SpecimenProcessResult(
     List<DigitalSpecimenRecord> equalSpecimens,
     List<UpdatedDigitalSpecimenTuple> changedSpecimens,
-    List<DigitalSpecimenEvent> newSpecimens) {
+    List<DigitalSpecimenEvent> newSpecimens,
+    Map<String,String> newSpecimenPids) {
 
 }

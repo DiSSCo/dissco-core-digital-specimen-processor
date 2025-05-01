@@ -34,8 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
@@ -145,7 +145,7 @@ class FdoRecordServiceTest {
     var expected = List.of(givenHandleMediaRequest());
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(givenDigitalMediaEvent()));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(givenDigitalMediaEvent()));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -155,9 +155,9 @@ class FdoRecordServiceTest {
   @MethodSource("genLicense")
   void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
     // Given
-    var media = new DigitalMediaEventWithoutDOI(
+    var media = new DigitalMediaEvent(
         List.of("image-metadata"),
-        new DigitalMediaWithoutDOI(
+        new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
             new DigitalMedia()
@@ -174,7 +174,7 @@ class FdoRecordServiceTest {
                 .put(licenseField, fieldValue))));
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -185,9 +185,9 @@ class FdoRecordServiceTest {
   void testGenRequestLicenseAndRightsHolder(List<Agent> rightHolders, String expectedName,
       String expectedId) {
     // Given
-    var media = new DigitalMediaEventWithoutDOI(
+    var media = new DigitalMediaEvent(
         List.of("image-metadata"),
-        new DigitalMediaWithoutDOI(
+        new DigitalMediaWrapper(
             "StillImage",
             HANDLE,
             new DigitalMedia()
@@ -210,7 +210,7 @@ class FdoRecordServiceTest {
             .set("attributes", attributes)));
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -385,13 +385,13 @@ class FdoRecordServiceTest {
 
   @ParameterizedTest
   @MethodSource("digitalSpecimensNeedToBeChanged")
-  void testHandleNeedsUpdate(DigitalSpecimen currentAttributes) {
+  void testHandleNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
     var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         currentAttributes,
         ORIGINAL_DATA);
     // Then
     assertThat(
-        fdoRecordService.handleNeedsUpdate(currentDigitalSpecimen,
+        fdoRecordService.handleNeedsUpdateSpecimen(currentDigitalSpecimen,
             givenDigitalSpecimenWrapper())).isTrue();
   }
 
@@ -402,7 +402,7 @@ class FdoRecordServiceTest {
         null, false, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
 
     // Then
-    assertThat(fdoRecordService.handleNeedsUpdate(
+    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(
         new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
             generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
   }
@@ -414,7 +414,7 @@ class FdoRecordServiceTest {
         ORGANISATION_ID, false, false);
 
     // When/then
-    assertThat(fdoRecordService.handleNeedsUpdate(currentSpecimen,
+    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(currentSpecimen,
         givenDigitalSpecimenWrapper())).isTrue();
   }
 }

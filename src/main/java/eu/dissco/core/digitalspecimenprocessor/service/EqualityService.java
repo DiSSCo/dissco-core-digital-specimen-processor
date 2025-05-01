@@ -4,6 +4,7 @@ import static com.jayway.jsonpath.Criteria.where;
 import static com.jayway.jsonpath.Filter.filter;
 import static com.jayway.jsonpath.JsonPath.using;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -11,12 +12,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -36,15 +41,22 @@ public class EqualityService {
       "dwc:relationshipEstablishedDate"
   );
 
-  public boolean isEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+  public boolean specimensAreEqual(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper,
-      DigitalMediaProcessResult digitalMediaProcessResult) {
+      MediaRelationshipProcessResult mediaRelationshipProcessResult) {
     return specimensAreEqual(currentDigitalSpecimenWrapper, digitalSpecimenWrapper)
-        && digitalMediaProcessResult.newMedia().isEmpty()
-        && digitalMediaProcessResult.tombstoneMedia().isEmpty();
+        && mediaRelationshipProcessResult.newLinkedObjects().isEmpty()
+        && mediaRelationshipProcessResult.tombstonedRelationships().isEmpty();
   }
 
-  public DigitalSpecimenEvent setEventDates(
+  public boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
+      DigitalMediaWrapper digitalMedia,
+      Set<String> newSpecimenRelationships) {
+   return mediaAreEqual(currentDigitalMedia, digitalMedia)
+       && newSpecimenRelationships.isEmpty();
+  }
+
+  public DigitalSpecimenEvent setEventDatesSpecimen(
       DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenEvent digitalSpecimenEvent) {
     var digitalSpecimen = digitalSpecimenEvent.digitalSpecimenWrapper().attributes();
@@ -62,6 +74,25 @@ public class EqualityService {
             digitalSpecimen,
             digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
         digitalSpecimenEvent.digitalMediaEvents());
+  }
+
+  public DigitalMediaEvent setEventDatesMedia(
+      DigitalMediaRecord currentDigitalMediaRecord,
+      DigitalMediaEvent digitalMediaEvent) {
+    var digitalMedia = digitalMediaEvent.digitalMediaWrapper().attributes();
+    setEntityRelationshipDates(
+        currentDigitalMediaRecord.attributes().getOdsHasEntityRelationships(),
+        digitalMedia.getOdsHasEntityRelationships());
+    // Set dcterms:created to original date
+    digitalMedia.withDctermsCreated(
+        currentDigitalMediaRecord.attributes().getDctermsCreated());
+    // We create a new object because the events/wrappers are immutable, and we don't want the hash code to be out of sync
+    return new DigitalMediaEvent(digitalMediaEvent.enrichmentList(),
+        new DigitalMediaWrapper(
+            digitalMediaEvent.digitalMediaWrapper().type(),
+            digitalMediaEvent.digitalMediaWrapper().accessUri(),
+            digitalMedia,
+            digitalMediaEvent.digitalMediaWrapper().originalAttributes()));
   }
 
   private void setEntityRelationshipDates(List<EntityRelationship> currentEntityRelationships,
@@ -92,17 +123,38 @@ public class EqualityService {
           mapper.valueToTree(currentDigitalSpecimenWrapper.attributes()), true);
       var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper.attributes()),
           true);
-      var isEqual = jsonCurrentSpecimen.equals(jsonSpecimen);
-      if (!isEqual) {
-        log.debug("Specimen {} has changed. JsonDiff: {}",
-            currentDigitalSpecimenWrapper.attributes().getDctermsIdentifier(),
-            JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen));
-      }
-      return isEqual;
+      return isEqual(jsonCurrentSpecimen, jsonSpecimen, digitalSpecimenWrapper.attributes().getId());
     } catch (JsonProcessingException e) {
       log.error("Unable to re-serialize JSON. Can not determine equality.", e);
       return false;
     }
+  }
+
+  private boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
+      DigitalMediaWrapper digitalMedia) {
+    if (currentDigitalMedia == null
+        || currentDigitalMedia.attributes() == null) {
+      return false;
+    }
+    try {
+      var jsonCurrentMedia = normaliseJsonNode(
+          mapper.valueToTree(currentDigitalMedia.attributes()), false);
+      var jsonMedia = normaliseJsonNode(
+          mapper.valueToTree(digitalMedia.attributes()), false);
+     return isEqual(jsonCurrentMedia, jsonMedia, currentDigitalMedia.id());
+    } catch (JsonProcessingException e) {
+      log.error("Unable to re-serialize JSON. Can not determine equality.", e);
+      return false;
+    }
+  }
+
+  private static boolean isEqual(JsonNode currentJson, JsonNode json, String id){
+    var isEqual = currentJson.equals(json);
+    if (!isEqual) {
+      log.debug("Media {} has changed. JsonDiff: {}", id,
+          JsonDiff.asJson(currentJson, json));
+    }
+    return isEqual;
   }
 
   private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
@@ -122,9 +174,7 @@ public class EqualityService {
       throws JsonProcessingException {
     var context = using(jsonPathConfig).parse(mapper.writeValueAsString(node));
     removeGeneratedTimestamps(context);
-    if (isSpecimen) {
-      removeMediaEntityRelationships(context);
-    }
+    removeEntityRelationships(context, isSpecimen);
     return mapper.valueToTree(context.jsonString());
   }
 
@@ -140,11 +190,18 @@ public class EqualityService {
     });
   }
 
-  private static void removeMediaEntityRelationships(DocumentContext context) {
-    var filter = filter(where("dwc:relationshipOfResource").eq(HAS_MEDIA.getName()));
+  private static void removeEntityRelationships(DocumentContext context, boolean isSpecimen) {
+    var filteredRelationship = isSpecimen ? HAS_MEDIA.getName() : HAS_SPECIMEN.getName();
+    var filter = filter(where("dwc:relationshipOfResource").eq(filteredRelationship));
     new HashSet<String>(
         context.read("$['ods:hasEntityRelationships'][?]", filter))
         .forEach(context::delete);
+    // If there are no ERs, remove empty ER array node
+   if (new HashSet<String>(
+       context.read("$['ods:hasEntityRelationships'][*]")).isEmpty()) {
+     context.delete("$['ods:hasEntityRelationships']");
+   }
+
   }
 
 }
