@@ -180,7 +180,7 @@ public class ElasticSearchRepositoryIT {
     var expected = flattenToDigitalMedia(givenDigitalMediaRecord());
 
     // When
-    repository.rollbackVersion(givenUnequalDigitalMediaRecord());
+    repository.rollbackVersion(givenDigitalMediaRecord());
     var document =  client.get(g -> g.index(INDEX).id(DOI_PREFIX + MEDIA_PID),
         DigitalMedia.class);
 
