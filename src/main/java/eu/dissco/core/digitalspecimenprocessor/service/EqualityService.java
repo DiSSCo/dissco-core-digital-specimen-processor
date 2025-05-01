@@ -4,6 +4,7 @@ import static com.jayway.jsonpath.Criteria.where;
 import static com.jayway.jsonpath.Filter.filter;
 import static com.jayway.jsonpath.JsonPath.using;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -173,9 +174,7 @@ public class EqualityService {
       throws JsonProcessingException {
     var context = using(jsonPathConfig).parse(mapper.writeValueAsString(node));
     removeGeneratedTimestamps(context);
-    if (isSpecimen) {
-      removeMediaEntityRelationships(context);
-    }
+    removeEntityRelationships(context, isSpecimen);
     return mapper.valueToTree(context.jsonString());
   }
 
@@ -191,11 +190,18 @@ public class EqualityService {
     });
   }
 
-  private static void removeMediaEntityRelationships(DocumentContext context) {
-    var filter = filter(where("dwc:relationshipOfResource").eq(HAS_MEDIA.getName()));
+  private static void removeEntityRelationships(DocumentContext context, boolean isSpecimen) {
+    var filteredRelationship = isSpecimen ? HAS_MEDIA.getName() : HAS_SPECIMEN.getName();
+    var filter = filter(where("dwc:relationshipOfResource").eq(filteredRelationship));
     new HashSet<String>(
         context.read("$['ods:hasEntityRelationships'][?]", filter))
         .forEach(context::delete);
+    // If there are no ERs, remove empty ER array node
+   if (new HashSet<String>(
+       context.read("$['ods:hasEntityRelationships'][*]")).isEmpty()) {
+     context.delete("$['ods:hasEntityRelationships']");
+   }
+
   }
 
 }

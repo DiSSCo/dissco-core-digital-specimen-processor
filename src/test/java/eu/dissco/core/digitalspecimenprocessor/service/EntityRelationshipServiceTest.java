@@ -46,7 +46,6 @@ class EntityRelationshipServiceTest {
     assertThat(expected).isEqualTo(result);
   }
 
-
   @Test
   void testGetMediaErNewEr() {
     //Given
@@ -69,7 +68,7 @@ class EntityRelationshipServiceTest {
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecordWithMediaEr());
     var digitalSpecimen = givenDigitalSpecimenEvent();
     var expected = new MediaRelationshipProcessResult(
-        List.of(givenEntityRelationship(MEDIA_PID, EntityRelationshipType.HAS_MEDIA)), List.of());
+        List.of(givenEntityRelationship(MEDIA_PID, EntityRelationshipType.HAS_MEDIA.getName())), List.of());
 
     // When
     var result = entityRelationshipService.processMediaRelationshipsForSpecimen(

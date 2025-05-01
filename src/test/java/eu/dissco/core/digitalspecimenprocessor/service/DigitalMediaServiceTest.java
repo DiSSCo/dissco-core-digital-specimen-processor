@@ -231,7 +231,7 @@ class DigitalMediaServiceTest {
   void testCreateNewMediaPublishingFails() throws Exception {
     // Given
     var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT, new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
-    var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent());
+    var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent(MEDIA_URL_ALT));
     var records = Set.of(givenDigitalMediaRecord(), givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);

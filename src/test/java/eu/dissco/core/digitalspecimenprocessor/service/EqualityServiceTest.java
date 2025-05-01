@@ -2,23 +2,36 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED_STR;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Option;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
@@ -26,6 +39,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +72,20 @@ class EqualityServiceTest {
     // When
     var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
         mediaProcessResult);
+
+    // Then
+    assertThat(result).isTrue();
+  }
+
+  @ParameterizedTest
+  @MethodSource("provideEqualMedia")
+  void testEqualMedia(DigitalMediaRecord currentDigitalMedia,
+      DigitalMediaWrapper digitalMediaWrapper) {
+    // Given
+
+    // When
+    var result = equalityService.mediaAreEqual(currentDigitalMedia, digitalMediaWrapper,
+        Set.of());
 
     // Then
     assertThat(result).isTrue();
@@ -142,7 +170,41 @@ class EqualityServiceTest {
     );
 
     // When
-    var result = equalityService.setEventDatesSpecimen(currentDigitalSpecimen, digitalSpecimenEvent);
+    var result = equalityService.setEventDatesSpecimen(currentDigitalSpecimen,
+        digitalSpecimenEvent);
+
+    // Then
+    assertThat(result).isEqualTo(expected);
+  }
+
+  @Test
+  void testSetEntityRelationshipDateMedia() {
+    // Given
+    var entityRelationship = givenEntityRelationship(ORGANISATION_ID, "hasRor");
+    var expectedWrapper = new DigitalMediaWrapper(
+        TYPE_MEDIA,
+        MEDIA_URL,
+        givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
+        MAPPER.createObjectNode()
+    );
+    var expected = new DigitalMediaEvent(
+            List.of(MEDIA_ENRICHMENT),
+            expectedWrapper);
+    var event = new DigitalMediaEvent(
+        List.of(MEDIA_ENRICHMENT),
+        changeTimestamps(expectedWrapper));
+    var currentRecord = new DigitalMediaRecord(
+        MEDIA_PID,
+        MEDIA_URL,
+        VERSION,
+        CREATED,
+        List.of(MEDIA_ENRICHMENT),
+        givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
+        MAPPER.createObjectNode()
+    );
+
+    // When
+    var result = equalityService.setEventDatesMedia(currentRecord, event);
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -163,6 +225,13 @@ class EqualityServiceTest {
             givenEmptyMediaProcessResult()));
   }
 
+  private static Stream<Arguments> provideEqualMedia() {
+    return Stream.of(
+        Arguments.of(givenDigitalMediaRecord(), givenDigitalMediaWrapper()),
+        Arguments.of(givenDigitalMediaRecord(), changeTimestamps(givenDigitalMediaWrapper()))
+    );
+  }
+
   private static DigitalSpecimenWrapper changeTimestamps(
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
     var attributes = digitalSpecimenWrapper.attributes();
@@ -175,6 +244,20 @@ class EqualityServiceTest {
     }
     return new DigitalSpecimenWrapper(digitalSpecimenWrapper.physicalSpecimenID(),
         digitalSpecimenWrapper.type(), attributes, digitalSpecimenWrapper.originalAttributes());
+
+  }
+
+  private static DigitalMediaWrapper changeTimestamps(
+      DigitalMediaWrapper digitalMediaWrapper) {
+    var attributes = digitalMediaWrapper.attributes();
+    attributes
+        .withDctermsCreated(UPDATED);
+    if (attributes.getOdsHasEntityRelationships() != null) {
+      attributes.getOdsHasEntityRelationships()
+          .forEach(er -> er.setDwcRelationshipEstablishedDate(UPDATED));
+    }
+    return new DigitalMediaWrapper(digitalMediaWrapper.type(),
+        digitalMediaWrapper.accessUri(), attributes, digitalMediaWrapper.originalAttributes());
 
   }
 
