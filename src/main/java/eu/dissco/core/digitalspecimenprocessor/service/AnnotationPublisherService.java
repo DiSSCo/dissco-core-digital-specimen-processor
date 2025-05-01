@@ -136,8 +136,8 @@ public class AnnotationPublisherService {
     return new AnnotationTarget()
         .withId(targetId)
         .withDctermsIdentifier(targetId)
-        .withType(type.getFdoType())
-        .withOdsFdoType(type.getFdoType())
+        .withType(type.getPid())
+        .withOdsFdoType(type.getPid())
         .withOaHasSelector(selector);
   }
 

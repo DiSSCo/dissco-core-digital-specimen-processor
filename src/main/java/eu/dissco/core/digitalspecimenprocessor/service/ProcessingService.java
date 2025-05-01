@@ -342,7 +342,6 @@ public class ProcessingService {
     return createNewPids(request, false);
   }
 
-  // todo improve error handling
   private Map<String, String> createNewPids(List<JsonNode> request, boolean isSpecimen) {
     try {
       return handleComponent.postHandle(request, isSpecimen);

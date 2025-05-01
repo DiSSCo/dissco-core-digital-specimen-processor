@@ -39,19 +39,4 @@ public class RabbitMqConsumerService {
     processingService.handleMessages(events);
   }
 
-  public void getMessagesMedia(@Payload List<String> messages) {
-    var events = messages.stream().map(message -> {
-      try {
-        return mapper.readValue(message, DigitalMediaEvent.class);
-      } catch (JsonProcessingException e) {
-        log.error("Moving message to DLQ, failed to parse event message", e);
-        publisherService.deadLetterRaw(message);
-        return null;
-      }
-    }).filter(Objects::nonNull).toList();
-    // todo - media-specific republishing
-    // todo - what happens if media fails?
-    //processingService.handleMessages(events);
-  }
-
 }

@@ -7,9 +7,9 @@ public enum FdoType {
   MEDIA("https://doi.org/21.T11148/bbad8c4e101e8af01115");
 
   @Getter
-  String fdoType;
+  final String pid;
 
-  FdoType(String fdoType) {
-    this.fdoType = fdoType;
+  FdoType(String pid) {
+    this.pid = pid;
   }
 }

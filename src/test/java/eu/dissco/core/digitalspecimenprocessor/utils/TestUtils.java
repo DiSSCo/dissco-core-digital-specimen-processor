@@ -253,12 +253,16 @@ public class TestUtils {
   public static DigitalMediaRecord givenDigitalMediaRecord(String pid, String uri, int version) {
     return new DigitalMediaRecord(
         pid, uri, version, CREATED, List.of(MEDIA_ENRICHMENT),
-        new DigitalMedia()
-            .withAcAccessURI(uri)
-            .withOdsOrganisationID(ORGANISATION_ID)
-            .withOdsHasEntityRelationships(
-                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN))),
+        givenDigitalMedia(uri),
         MAPPER.createObjectNode());
+  }
+
+  public static DigitalMedia givenDigitalMedia(String uri){
+    return new DigitalMedia()
+        .withAcAccessURI(uri)
+        .withOdsOrganisationID(ORGANISATION_ID)
+        .withOdsHasEntityRelationships(
+            List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN)));
   }
 
   public static DigitalMediaRecord givenDigitalMediaRecordNoEnrichment() {

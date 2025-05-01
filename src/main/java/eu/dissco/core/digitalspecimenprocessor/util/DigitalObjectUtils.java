@@ -39,9 +39,8 @@ public class DigitalObjectUtils {
     var digitalMedia = digitalMediaRecord.attributes();
     digitalMedia.setId(DOI_PREFIX + digitalMediaRecord.id());
     digitalMedia.setDctermsIdentifier(DOI_PREFIX + digitalMediaRecord.id());
-    // Todo - verify these are correct
-    //digitalMedia.setOdsVersion(digitalMediaRecord.version());
-    //digitalMedia.setDctermsCreated(Date.from(digitalMediaRecord.created()));
+    digitalMedia.setOdsVersion(digitalMediaRecord.version());
+    digitalMedia.setDctermsCreated(Date.from(digitalMediaRecord.created()));
     return digitalMedia;
   }
 

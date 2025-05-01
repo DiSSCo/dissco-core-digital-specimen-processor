@@ -195,7 +195,7 @@ public class FdoRecordService {
         .set("data", mapper.createObjectNode()
             .put("type", fdoProperties.getMediaFdoType())
             .put("id", media.id().replace(DOI_PREFIX, ""))
-            .set("attributes", generateMediaAttributes(media.attributes())));
+            .set(ATTRIBUTES, generateMediaAttributes(media.attributes())));
 
   }
 

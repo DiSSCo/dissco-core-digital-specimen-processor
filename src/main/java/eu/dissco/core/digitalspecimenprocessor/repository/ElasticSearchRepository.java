@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.flattenToDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.flattenToDigitalSpecimen;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -50,32 +51,25 @@ public class ElasticSearchRepository {
         .document(digitalSpecimen));
   }
 
+  public void rollbackVersion(DigitalMediaRecord currentDigitalMediaRecord)
+      throws IOException {
+    var digitalMedia = flattenToDigitalMedia(currentDigitalMediaRecord);
+    client.index(i -> i.index(properties.getSpecimenIndexName()).id(digitalMedia.getId())
+        .document(digitalMedia));
+  }
+
   public BulkResponse indexDigitalMedia(
       Set<DigitalMediaRecord> digitalMediaRecords) throws IOException {
     var bulkRequest = new BulkRequest.Builder();
     for (var digitalMediaRecord : digitalMediaRecords) {
-      var digitalMedia = digitalMediaRecord.attributes();
+      var digitalMedia = flattenToDigitalMedia(digitalMediaRecord);
       bulkRequest.operations(op ->
           op.index(idx ->
-              idx.index(properties.getSpecimenIndexName())
+              idx.index(properties.getMediaIndexName())
                   .id(digitalMedia.getId())
                   .document(digitalMedia))
       );
     }
     return client.bulk(bulkRequest.build());
   }
-
-  public DeleteResponse rollbackDigitalMedia(DigitalMediaRecord digitalMediaRecord)
-      throws IOException {
-    return client.delete(
-        d -> d.index(properties.getSpecimenIndexName()).id(DOI_PREFIX + digitalMediaRecord.id()));
-  }
-
-  public void rollbackVersion(DigitalMediaRecord currentDigitalMediaRecord)
-      throws IOException {
-    var digitalMedia = currentDigitalMediaRecord.attributes();
-    client.index(i -> i.index(properties.getSpecimenIndexName()).id(digitalMedia.getId())
-        .document(digitalMedia));
-  }
-
 }

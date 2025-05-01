@@ -36,7 +36,7 @@ public class RabbitMqPublisherService {
 
   public void publishCreateEventMedia(DigitalMediaRecord digitalMediaRecord)
       throws JsonProcessingException {
-    var event = provenanceService.generateCreateEventMedia(digitalMediaRecord); // Todo
+    var event = provenanceService.generateCreateEventMedia(digitalMediaRecord);
     rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
         rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName(),
         mapper.writeValueAsString(event));
@@ -74,7 +74,6 @@ public class RabbitMqPublisherService {
         rabbitMqProperties.getSpecimen().getRoutingKeyName(), mapper.writeValueAsString(event));
   }
 
-  // TOdo create pathway for just media
   public void republishMediaEvent(DigitalMediaEvent event) throws JsonProcessingException {
     rabbitTemplate.convertAndSend(rabbitMqProperties.getDigitalMedia().getExchangeName(),
         rabbitMqProperties.getDigitalMedia().getRoutingKeyName(), mapper.writeValueAsString(event));
