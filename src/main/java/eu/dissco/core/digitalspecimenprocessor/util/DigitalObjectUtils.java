@@ -52,7 +52,7 @@ public class DigitalObjectUtils {
         .withDwcRelationshipOfResource(relationshipType)
         .withOdsHasAgents(List.of(AgentUtils.createMachineAgent(applicationProperties.getName(),
             applicationProperties.getPid(), PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))
-        .withDwcRelatedResourceID(DOI_PREFIX + relatedResourceId)
+        .withDwcRelatedResourceID(relatedResourceId)
         .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedResourceId));
   }
 

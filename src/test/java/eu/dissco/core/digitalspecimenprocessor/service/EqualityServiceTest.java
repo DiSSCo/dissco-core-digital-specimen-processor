@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
@@ -25,6 +26,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMedia;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.Configuration;
@@ -101,6 +103,35 @@ class EqualityServiceTest {
     // When
     var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
         givenEmptyMediaProcessResult());
+
+    // Then
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  void testUnequalMedia() {
+    // Given
+    var wrapper = new DigitalMediaWrapper(
+        TYPE_MEDIA,
+        MEDIA_URL,
+        givenUnequalDigitalMedia(MEDIA_URL),
+        MAPPER.createObjectNode()
+    );
+
+    // When
+    var result = equalityService.mediaAreEqual(givenDigitalMediaRecord(), wrapper, Set.of());
+
+    // Then
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  void testUnequalMediaNewSpecimen() {
+    // Given
+
+    // When
+    var result = equalityService.mediaAreEqual(givenDigitalMediaRecord(),
+        givenDigitalMediaWrapper(), Set.of(HANDLE));
 
     // Then
     assertThat(result).isFalse();
@@ -188,8 +219,8 @@ class EqualityServiceTest {
         MAPPER.createObjectNode()
     );
     var expected = new DigitalMediaEvent(
-            List.of(MEDIA_ENRICHMENT),
-            expectedWrapper);
+        List.of(MEDIA_ENRICHMENT),
+        expectedWrapper);
     var event = new DigitalMediaEvent(
         List.of(MEDIA_ENRICHMENT),
         changeTimestamps(expectedWrapper));

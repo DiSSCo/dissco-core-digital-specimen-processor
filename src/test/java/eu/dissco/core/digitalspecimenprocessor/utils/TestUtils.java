@@ -377,7 +377,7 @@ public class TestUtils {
         .withDwcRelationshipOfResource(relationshipType)
         .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE,
             DOI, SCHEMA_SOFTWARE_APPLICATION)))
-        .withDwcRelatedResourceID(DOI_PREFIX + relatedId)
+        .withDwcRelatedResourceID(relatedId)
         .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedId));
   }
 
