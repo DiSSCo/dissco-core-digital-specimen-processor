@@ -8,8 +8,6 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 public record DigitalMediaWrapper(
     @JsonProperty("ods:type")
     String type,
-    @JsonProperty("ac:accessURI")
-    String accessUri,
     @JsonProperty("ods:attributes")
     DigitalMedia attributes,
     @JsonProperty("ods:originalAttributes")

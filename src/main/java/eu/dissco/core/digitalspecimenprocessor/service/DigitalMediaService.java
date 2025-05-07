@@ -59,7 +59,7 @@ public class DigitalMediaService {
   public Set<DigitalMediaRecord> createNewDigitalMedia(
       List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
     var digitalMediaRecords = events.stream()
-        .filter(event -> pidMap.containsKey(event.digitalMediaWrapper().accessUri()))
+        .filter(event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
         .collect(toMap(
             event -> mapToNewDigitalMediaRecord(event, pidMap),
             DigitalMediaEvent::enrichmentList));
@@ -97,7 +97,7 @@ public class DigitalMediaService {
 
   private DigitalMediaRecord mapToNewDigitalMediaRecord(DigitalMediaEvent event,
       Map<String, PidProcessResult> pidMap) {
-    var accessUri = event.digitalMediaWrapper().accessUri();
+    var accessUri = event.digitalMediaWrapper().attributes().getAcAccessURI();
     var doi = pidMap.get(accessUri).doi();
     var attributes = event.digitalMediaWrapper().attributes();
     setEntityRelationshipsForNewMedia(attributes, pidMap.get(accessUri));
@@ -181,7 +181,7 @@ public class DigitalMediaService {
       var rollbackAccessUris = recordsToRollback.stream().map(
           DigitalMediaRecord::accessURI).toList();
       var rollbackEvents = events.stream().filter(
-          event -> rollbackAccessUris.contains(event.digitalMediaWrapper().accessUri())
+          event -> rollbackAccessUris.contains(event.digitalMediaWrapper().attributes().getAcAccessURI())
       ).toList();
       rollbackService.rollbackNewMedias(rollbackEvents, pidMap, true, true);
     }

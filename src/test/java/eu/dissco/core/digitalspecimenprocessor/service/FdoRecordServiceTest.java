@@ -159,7 +159,6 @@ class FdoRecordServiceTest {
         List.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
-            HANDLE,
             new DigitalMedia()
                 .withAcAccessURI(MEDIA_URL)
                 .withOdsOrganisationID(ORGANISATION_ID)
@@ -189,7 +188,6 @@ class FdoRecordServiceTest {
         List.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
-            HANDLE,
             new DigitalMedia()
                 .withAcAccessURI(MEDIA_URL)
                 .withOdsOrganisationID(ORGANISATION_ID)

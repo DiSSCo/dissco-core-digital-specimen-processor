@@ -113,7 +113,6 @@ class EqualityServiceTest {
     // Given
     var wrapper = new DigitalMediaWrapper(
         TYPE_MEDIA,
-        MEDIA_URL,
         givenUnequalDigitalMedia(MEDIA_URL),
         MAPPER.createObjectNode()
     );
@@ -214,7 +213,6 @@ class EqualityServiceTest {
     var entityRelationship = givenEntityRelationship(ORGANISATION_ID, "hasRor");
     var expectedWrapper = new DigitalMediaWrapper(
         TYPE_MEDIA,
-        MEDIA_URL,
         givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
         MAPPER.createObjectNode()
     );
@@ -288,7 +286,7 @@ class EqualityServiceTest {
           .forEach(er -> er.setDwcRelationshipEstablishedDate(UPDATED));
     }
     return new DigitalMediaWrapper(digitalMediaWrapper.type(),
-        digitalMediaWrapper.accessUri(), attributes, digitalMediaWrapper.originalAttributes());
+        attributes, digitalMediaWrapper.originalAttributes());
 
   }
 

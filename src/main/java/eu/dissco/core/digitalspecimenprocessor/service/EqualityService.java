@@ -90,7 +90,6 @@ public class EqualityService {
     return new DigitalMediaEvent(digitalMediaEvent.enrichmentList(),
         new DigitalMediaWrapper(
             digitalMediaEvent.digitalMediaWrapper().type(),
-            digitalMediaEvent.digitalMediaWrapper().accessUri(),
             digitalMedia,
             digitalMediaEvent.digitalMediaWrapper().originalAttributes()));
   }

@@ -268,7 +268,6 @@ public class TestUtils {
   public static DigitalMediaWrapper givenDigitalMediaWrapper(String url) {
     return new DigitalMediaWrapper(
         FdoType.MEDIA.getPid(),
-        url,
         givenDigitalMedia(url),
         MAPPER.createObjectNode()
     );
@@ -300,7 +299,6 @@ public class TestUtils {
     return new DigitalMediaEvent(List.of(MEDIA_ENRICHMENT),
         new DigitalMediaWrapper(
             "StillImage",
-            url,
             givenUnequalDigitalMedia(url),
             MAPPER.createObjectNode())
     );
@@ -424,7 +422,6 @@ public class TestUtils {
         List.of(MEDIA_ENRICHMENT),
         new DigitalMediaWrapper(
             "StillImage",
-            HANDLE,
             digitalMedia,
             MAPPER.createObjectNode()
         ));

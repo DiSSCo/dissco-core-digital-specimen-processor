@@ -329,7 +329,7 @@ public class ProcessingService {
       Map<String, DigitalMediaRecord> existingMedia,
       Set<DigitalMediaEvent> digitalMediaEvents) {
     var newEvents = digitalMediaEvents.stream()
-        .filter(e -> !existingMedia.containsKey(e.digitalMediaWrapper().accessUri())).toList();
+        .filter(e -> !existingMedia.containsKey(e.digitalMediaWrapper().attributes().getAcAccessURI())).toList();
     return createNewMediaPids(newEvents);
   }
 
