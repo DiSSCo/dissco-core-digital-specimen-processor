@@ -50,15 +50,6 @@ public class HandleComponent {
     return getHandleName(responseJsonNode, localAttribute);
   }
 
-  public Map<String, String> postMediaHandle(List<JsonNode> request)
-      throws PidException {
-    log.info("Posting Digital Media to Handle API");
-    var requestBody = BodyInserters.fromValue(request);
-    var response = sendRequest(HttpMethod.POST, requestBody, "batch");
-    var responseJsonNode = getFutureResponse(response);
-    return getHandleName(responseJsonNode, PRIMARY_MEDIA_ID);
-  }
-
   public void updateHandle(List<JsonNode> request)
       throws PidException {
     log.info("Patching Digital Specimens to Handle API");
@@ -82,7 +73,6 @@ public class HandleComponent {
       var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
       response.toFuture().get();
     } catch (ExecutionException e){
-
       log.error("Unable to rollback handles based on physical identifier: {}", physIds);
     } catch (InterruptedException e){
       Thread.currentThread().interrupt();

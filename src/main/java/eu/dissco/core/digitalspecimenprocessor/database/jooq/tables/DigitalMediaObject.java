@@ -8,12 +8,10 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.Indexes;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Keys;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.DigitalMediaObjectRecord;
-
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.Index;

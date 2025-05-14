@@ -26,7 +26,6 @@ import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -252,13 +251,6 @@ public class EqualityService {
         isSpecimen ? HAS_MEDIA.getRelationshipName() : HAS_SPECIMEN.getRelationshipName();
     var filter = filter(where("dwc:relationshipOfResource").eq(filteredRelationship));
     context.delete("$['ods:hasEntityRelationships'][?]", filter);
-    // If there are no ERs, remove empty ER array node
-    /*
-    if (new HashSet<String>(
-        context.read("$['ods:hasEntityRelationships'][*]")).isEmpty()) {
-      context.delete("$['ods:hasEntityRelationships']");
-    } */
-
   }
 
 }

@@ -18,7 +18,6 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,7 +31,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
@@ -380,14 +378,6 @@ public class ProcessingService {
   private void republishSpecimenEvent(DigitalSpecimenEvent event) {
     try {
       publisherService.republishSpecimenEvent(event);
-    } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to republish message due to invalid json", e);
-    }
-  }
-
-  private void republishMediaEvent(DigitalMediaEvent event) {
-    try {
-      publisherService.republishMediaEvent(event);
     } catch (JsonProcessingException e) {
       log.error("Fatal exception, unable to republish message due to invalid json", e);
     }

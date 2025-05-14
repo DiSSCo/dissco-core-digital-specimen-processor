@@ -92,7 +92,7 @@ class HandleComponentTest {
         .addHeader("Content-Type", "application/json"));
 
     // When
-    var response = handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode()));
+    var response = handleComponent.postHandle(List.of(MAPPER.createObjectNode()), false);
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -119,7 +119,7 @@ class HandleComponentTest {
 
     // When / Then
     assertThrows(PidException.class,
-        () -> handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode())));
+        () -> handleComponent.postHandle(List.of(MAPPER.createObjectNode()), false));
   }
 
   @Test
@@ -142,7 +142,7 @@ class HandleComponentTest {
 
     // When / Then
     assertThrows(PidException.class,
-        () -> handleComponent.postMediaHandle(List.of(MAPPER.createObjectNode())));
+        () -> handleComponent.postHandle(List.of(MAPPER.createObjectNode()), false));
   }
 
 

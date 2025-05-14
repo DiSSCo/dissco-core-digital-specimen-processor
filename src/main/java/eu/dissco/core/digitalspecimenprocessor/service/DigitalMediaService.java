@@ -20,7 +20,6 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
-import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;

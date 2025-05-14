@@ -50,7 +50,6 @@ import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
