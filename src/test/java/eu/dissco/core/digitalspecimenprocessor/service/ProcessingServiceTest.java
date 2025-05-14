@@ -122,7 +122,6 @@ class ProcessingServiceTest {
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
         anyMap())).willReturn(givenEmptyMediaProcessResult());
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
-    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -144,7 +143,6 @@ class ProcessingServiceTest {
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
         anyMap())).willReturn(givenEmptyMediaProcessResult());
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
-    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
 
     // When
     var result = service.handleMessages(
@@ -164,7 +162,6 @@ class ProcessingServiceTest {
   void testNewSpecimenNoMedia() throws Exception {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
-    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
     given(handleComponent.postHandle(any(), eq(true))).willReturn(
         TestUtils.givenHandleResponseSpecimen());
     given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
@@ -187,7 +184,6 @@ class ProcessingServiceTest {
   void testNewSpecimenNoMediaPidFails() throws Exception {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
-    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
     given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
     given(handleComponent.postHandle(any(), eq(true))).willThrow(PidException.class);
 
@@ -207,8 +203,7 @@ class ProcessingServiceTest {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord()));
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
-    given(mediaRepository.getExistingDigitalMedia(Set.of())).willReturn(List.of());
-    given(equalityService.setEventDatesSpecimen(any(), any())).willReturn(
+    given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
         givenDigitalSpecimenEvent());
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
         any())).willReturn(givenEmptyMediaProcessResult());
@@ -297,7 +292,6 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
-    then(publisherService).should().republishMediaEvent(givenDigitalMediaEvent());
   }
 
   @Test
@@ -308,9 +302,9 @@ class ProcessingServiceTest {
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     given(mediaRepository.getExistingDigitalMedia(any())).willReturn(
         List.of(givenUnequalDigitalMediaRecord()));
-    given(equalityService.setEventDatesSpecimen(any(), any())).willReturn(
+    given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
         givenDigitalSpecimenEvent(true));
-    given(equalityService.setEventDatesMedia(any(), any())).willReturn(givenDigitalMediaEvent());
+    given(equalityService.setExistingEventDatesMedia(any(), any())).willReturn(givenDigitalMediaEvent());
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
         any())).willReturn(givenEmptyMediaProcessResult());
     var pidMapSpecimen = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
@@ -342,11 +336,11 @@ class ProcessingServiceTest {
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
         List.of(givenUnequalDigitalMediaRecord()));
-    given(equalityService.setEventDatesSpecimen(any(), eq(event1))).willReturn(
+    given(equalityService.setExistingEventDatesSpecimen(any(), eq(event1), any())).willReturn(
         event1);
-    given(equalityService.setEventDatesSpecimen(any(), eq(event2))).willReturn(
+    given(equalityService.setExistingEventDatesSpecimen(any(), eq(event2), any())).willReturn(
         event2);
-    given(equalityService.setEventDatesMedia(any(), any())).willReturn(givenDigitalMediaEvent());
+    given(equalityService.setExistingEventDatesMedia(any(), any())).willReturn(givenDigitalMediaEvent());
 
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
         any())).willReturn(givenEmptyMediaProcessResult());

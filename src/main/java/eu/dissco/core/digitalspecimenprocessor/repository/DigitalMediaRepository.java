@@ -38,7 +38,6 @@ public class DigitalMediaRepository {
   }
 
   private DigitalMediaRecord mapDigitalMedia(Record dbRecord) {
-    log.info("here");
     try {
       return new DigitalMediaRecord(
           dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),

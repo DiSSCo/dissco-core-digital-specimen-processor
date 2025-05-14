@@ -8,10 +8,12 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.Indexes;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Keys;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records.DigitalMediaObjectRecord;
+
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.Index;
@@ -71,7 +73,7 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
     /**
      * The column <code>public.digital_media_object.digital_specimen_id</code>.
      */
-    public final TableField<DigitalMediaObjectRecord, String> DIGITAL_SPECIMEN_ID = createField(DSL.name("digital_specimen_id"), SQLDataType.CLOB.nullable(false), this, "");
+    public final TableField<DigitalMediaObjectRecord, String> DIGITAL_SPECIMEN_ID = createField(DSL.name("digital_specimen_id"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>public.digital_media_object.media_url</code>.

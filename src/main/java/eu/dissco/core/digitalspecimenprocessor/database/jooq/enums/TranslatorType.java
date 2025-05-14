@@ -5,6 +5,7 @@ package eu.dissco.core.digitalspecimenprocessor.database.jooq.enums;
 
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.Public;
+
 import org.jooq.Catalog;
 import org.jooq.EnumType;
 import org.jooq.Schema;

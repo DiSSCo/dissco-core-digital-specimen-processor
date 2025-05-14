@@ -20,10 +20,12 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -100,7 +102,7 @@ public class DigitalMediaService {
     var accessUri = event.digitalMediaWrapper().attributes().getAcAccessURI();
     var doi = pidMap.get(accessUri).doi();
     var attributes = event.digitalMediaWrapper().attributes();
-    setEntityRelationshipsForNewMedia(attributes, pidMap.get(accessUri));
+    setNewEntityRelationshipsForMedia(attributes, pidMap.get(accessUri).relatedDois());
     return new DigitalMediaRecord(
         doi,
         accessUri, 1, Instant.now(), event.enrichmentList(),
@@ -278,24 +280,21 @@ public class DigitalMediaService {
         }).collect(toSet());
   }
 
-  private void setEntityRelationshipsForNewMedia(DigitalMedia attributes,
-      PidProcessResult pidProcessResult) {
-    setNewEntityRelationshipsForMedia(attributes, pidProcessResult.relatedDois());
-  }
-
   private void setEntityRelationshipsForExistingMedia(DigitalMedia attributes,
       DigitalMedia currentAttributes, Set<String> relatedDois) {
     var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
         .stream().filter(
-            er -> er.getDwcRelationshipOfResource().equalsIgnoreCase(HAS_SPECIMEN.getName())
+            er -> er.getDwcRelationshipOfResource().equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
         ).toList();
-    attributes.getOdsHasEntityRelationships().addAll(existingSpecimenErs);
+    var er = new ArrayList<>(attributes.getOdsHasEntityRelationships());
+    er.addAll(existingSpecimenErs);
+    attributes.setOdsHasEntityRelationships(er);
     setNewEntityRelationshipsForMedia(attributes, relatedDois);
   }
 
   private void setNewEntityRelationshipsForMedia(DigitalMedia attributes, Set<String> relatedDois) {
     var specimenRelationships = relatedDois.stream().map(
-        relatedDoi -> DigitalObjectUtils.buildEntityRelationship(HAS_SPECIMEN.getName(),
+        relatedDoi -> DigitalObjectUtils.buildEntityRelationship(HAS_SPECIMEN.getRelationshipName(),
             relatedDoi));
     attributes.setOdsHasEntityRelationships(
         Stream.concat(attributes.getOdsHasEntityRelationships().stream(),

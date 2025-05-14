@@ -241,7 +241,7 @@ public class TestUtils {
 
   public static MediaRelationshipProcessResult givenEmptyMediaProcessResult() {
     return new MediaRelationshipProcessResult(
-        Collections.emptyList(), Collections.emptyList());
+        List.of(), List.of(), List.of());
   }
 
   public static DigitalMediaRecord givenDigitalMediaRecord() {
@@ -253,11 +253,13 @@ public class TestUtils {
   }
 
   public static DigitalMediaRecord givenDigitalMediaRecord(String pid, String uri, int version) {
+    var media = givenDigitalMedia(uri);
+    var er = new ArrayList<>(media.getOdsHasEntityRelationships());
+    er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
+    media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
         pid, uri, version, CREATED, List.of(MEDIA_ENRICHMENT),
-        givenDigitalMedia(uri)
-            .withOdsHasEntityRelationships(
-                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getName()))),
+        media,
         MAPPER.createObjectNode());
   }
 
@@ -276,7 +278,10 @@ public class TestUtils {
   public static DigitalMedia givenDigitalMedia(String uri) {
     return new DigitalMedia()
         .withAcAccessURI(uri)
-        .withOdsOrganisationID(ORGANISATION_ID);
+        .withOdsOrganisationID(ORGANISATION_ID)
+        .withOdsHasEntityRelationships(List.of(
+            givenEntityRelationship()
+        ));
   }
 
   public static DigitalMediaRecord givenDigitalMediaRecordNoEnrichment() {
@@ -286,7 +291,7 @@ public class TestUtils {
             .withAcAccessURI(MEDIA_URL)
             .withOdsOrganisationID(ORGANISATION_ID)
             .withOdsHasEntityRelationships(
-                List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getName()))),
+                List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
         MAPPER.createObjectNode());
   }
 
@@ -314,27 +319,20 @@ public class TestUtils {
 
   public static DigitalMediaRecord givenUnequalDigitalMediaRecord(String pid, String url,
       int version) {
+    var media = givenUnequalDigitalMedia(url);
+    var er = new ArrayList<>(media.getOdsHasEntityRelationships());
+    er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
+    media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, List.of(MEDIA_ENRICHMENT),
-        givenUnequalDigitalMedia(url)
-            .withOdsHasEntityRelationships(
-                List.of(
-                    givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getName()))), MAPPER.createObjectNode());
+        pid, url, version, CREATED, List.of(MEDIA_ENRICHMENT), media, MAPPER.createObjectNode());
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url) {
     return new DigitalMedia()
         .withAcAccessURI(url)
-        .withOdsOrganisationName(ANOTHER_ORGANISATION);
+        .withOdsOrganisationName(ANOTHER_ORGANISATION)
+        .withOdsHasEntityRelationships(List.of(givenEntityRelationship()));
   }
-
-  public static MediaRelationshipProcessResult givenMediaProcessResultNew() {
-    return new MediaRelationshipProcessResult(
-        Collections.emptyList(),
-        List.of(givenDigitalMediaEvent())
-    );
-  }
-
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent() {
     return givenDigitalSpecimenEvent(false);
@@ -360,7 +358,7 @@ public class TestUtils {
     var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true,
         addOtherEntityRelationship, true);
     var entityRelationships = new ArrayList<>(attributes.getOdsHasEntityRelationships());
-    entityRelationships.add(givenEntityRelationship(mediaId, EntityRelationshipType.HAS_MEDIA.getName())
+    entityRelationships.add(givenEntityRelationship(mediaId, EntityRelationshipType.HAS_MEDIA.getRelationshipName())
     );
     attributes.setOdsHasEntityRelationships(entityRelationships);
     return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
@@ -377,6 +375,10 @@ public class TestUtils {
             DOI, SCHEMA_SOFTWARE_APPLICATION)))
         .withDwcRelatedResourceID(relatedId)
         .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedId));
+  }
+
+  public static EntityRelationship givenEntityRelationship() {
+    return givenEntityRelationship(HANDLE, "hasSomeRelationship");
   }
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(boolean hasMedia) {
@@ -396,7 +398,7 @@ public class TestUtils {
   public static DigitalMediaEvent givenDigitalMediaEventWithSpecimenEr() {
     var event = givenDigitalMediaEvent(MEDIA_URL);
     event.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(
-        List.of(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getName())));
+        List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName())));
     return event;
   }
 
@@ -591,7 +593,11 @@ public class TestUtils {
           currentRecord,
           givenJsonPatchSpecimen(),
           List.of(givenDigitalMediaEvent()),
-          givenMediaProcessResultNew());
+          new MediaRelationshipProcessResult(
+              List.of(),
+              List.of(givenDigitalMediaEvent()),
+              List.of()
+          ));
     }
     return new UpdatedDigitalSpecimenRecord(
         givenDigitalSpecimenRecord(2, false),
@@ -624,10 +630,7 @@ public class TestUtils {
         .withDctermsModified("2022-11-01T09:59:24.000Z");
     if (addEntityRelationShip) {
       ds.withOdsHasEntityRelationships(
-          List.of(new EntityRelationship()
-              .withDwcRelationshipOfResource("hasDigitalSpecimen")
-              .withDwcRelatedResourceID(SPECIMEN_BASE_URL + HANDLE)
-              .withDwcRelationshipEstablishedDate(new Date())));
+          List.of(givenEntityRelationship()));
     }
     return ds;
   }

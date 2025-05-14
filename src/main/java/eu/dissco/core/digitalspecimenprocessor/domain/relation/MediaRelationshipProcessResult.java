@@ -6,7 +6,8 @@ import java.util.List;
 
 public record MediaRelationshipProcessResult(
     List<EntityRelationship> tombstonedRelationships,
-    List<DigitalMediaEvent> newLinkedObjects
+    List<DigitalMediaEvent> newLinkedObjects,
+    List<EntityRelationship> unchangedRelationships
 ) {
 
 }

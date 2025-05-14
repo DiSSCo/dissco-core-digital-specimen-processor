@@ -6,8 +6,10 @@ package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalMediaObject;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
+
 import java.util.Arrays;
 import java.util.List;
+
 import org.jooq.Catalog;
 import org.jooq.Table;
 import org.jooq.impl.SchemaImpl;

@@ -41,7 +41,7 @@ class EntityRelationshipServiceTest {
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
     var digitalSpecimen = givenDigitalSpecimenEvent();
     var expected = new MediaRelationshipProcessResult(
-        List.of(), List.of());
+        List.of(), List.of(), List.of());
 
     // When
     var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
@@ -57,7 +57,7 @@ class EntityRelationshipServiceTest {
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
     var digitalSpecimen = givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID);
     var expected = new MediaRelationshipProcessResult(
-        List.of(), List.of(givenDigitalMediaEvent(MEDIA_URL)));
+        List.of(), List.of(givenDigitalMediaEvent(MEDIA_URL)), List.of());
 
     // When
     var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
@@ -73,14 +73,14 @@ class EntityRelationshipServiceTest {
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecordWithMediaEr());
     var digitalSpecimen = givenDigitalSpecimenEvent();
     var expected = new MediaRelationshipProcessResult(
-        List.of(givenEntityRelationship(MEDIA_PID, EntityRelationshipType.HAS_MEDIA.getName())), List.of());
+        List.of(givenEntityRelationship(MEDIA_PID, EntityRelationshipType.HAS_MEDIA.getRelationshipName())), List.of(), List.of());
 
     // When
     var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
         currentSpecimens, digitalSpecimen, Map.of(MEDIA_URL, givenDigitalMediaRecord()));
 
     // Then
-    assertThat(expected).isEqualTo(result);
+    assertThat(result).isEqualTo(expected);
   }
 
   @Test

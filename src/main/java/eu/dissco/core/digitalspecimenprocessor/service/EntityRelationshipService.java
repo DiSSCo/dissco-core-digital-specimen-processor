@@ -10,9 +10,11 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -24,74 +26,102 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class EntityRelationshipService {
 
-  // Returns map of Specimen DOI to its media process rsult
+  // Returns map of Specimen DOI to its media process result
   public MediaRelationshipProcessResult processMediaRelationshipsForSpecimen(
       Map<String, DigitalSpecimenRecord> currentSpecimens,
       DigitalSpecimenEvent digitalSpecimenEvent,
       Map<String, DigitalMediaRecord> currentMedia
   ) {
-    if (currentMedia.isEmpty()) {
-      return new MediaRelationshipProcessResult(List.of(), List.of());
+    if (currentMedia.isEmpty() && digitalSpecimenEvent.digitalMediaEvents().isEmpty()) {
+      return new MediaRelationshipProcessResult(List.of(), List.of(), List.of());
     }
     // Media Uri -> DOI
-    var mediaIdMap = getExistingMediaIDMap(currentMedia);
+    var mediaIdMap = getExistingMediaIdMap(currentMedia);
     var currentSpecimen = currentSpecimens.get(
         digitalSpecimenEvent.digitalSpecimenWrapper().physicalSpecimenID());
-    var newMediaErs = getNewLinkedMedia(digitalSpecimenEvent, mediaIdMap);
-    var tombstonedMedia = getTombstonedMediaRelationships(digitalSpecimenEvent, currentSpecimen,
+    var currentMediaErs = getMediaEntityRelationshipsForSpecimen(currentSpecimen);
+    var newMediaErs = getNewLinkedMedia(digitalSpecimenEvent, mediaIdMap, currentMediaErs);
+    var tombstonedMediaErs = getTombstonedMediaRelationships(digitalSpecimenEvent, currentMediaErs,
         mediaIdMap);
-    return new MediaRelationshipProcessResult(tombstonedMedia, newMediaErs);
+    var unchangedMediaErs = getUnchangedMediaEntityRelationships(tombstonedMediaErs,
+        currentMediaErs);
+    return new MediaRelationshipProcessResult(tombstonedMediaErs, newMediaErs, unchangedMediaErs);
   }
 
   public Set<String> findNewSpecimenRelationshipsForMedia(
       DigitalMediaRecord digitalMediaRecord, PidProcessResult pidProcessResult) {
-    var existingLinkedDois = digitalMediaRecord.attributes().getOdsHasEntityRelationships()
-        .stream().map(EntityRelationship::getDwcRelatedResourceID).toList();
+    var existingLinkedPids = digitalMediaRecord.attributes().getOdsHasEntityRelationships()
+        .stream()
+        .map(EntityRelationship::getDwcRelatedResourceID)
+        .map(id -> id.replace(DOI_PREFIX, ""))
+        .collect(Collectors.toSet());
     return pidProcessResult.relatedDois().stream()
-        .filter(relatedDoi -> !existingLinkedDois.contains(relatedDoi)).collect(Collectors.toSet());
+        .filter(relatedDoi -> !existingLinkedPids.contains(relatedDoi)).collect(Collectors.toSet());
   }
 
   /*
  In our (incoming) mediaEvents, we are missing mediaID but we have the url
  In the existing entity relationships in the specimen, we are missing the media url but we have the id
- Returns Map<URI, Media DOI>
+ Returns Map<Media DOI, URI>
  */
-  private Map<String, String> getExistingMediaIDMap(Map<String, DigitalMediaRecord> currentMedia) {
+  private Map<String, String> getExistingMediaIdMap(Map<String, DigitalMediaRecord> currentMedia) {
     return currentMedia.entrySet().stream()
         .collect(Collectors.toMap(
-            Entry::getKey,
-            entry -> entry.getValue().id()
+            entry -> entry.getValue().id(),
+            Entry::getKey
         ));
   }
 
   private List<DigitalMediaEvent> getNewLinkedMedia(
-      DigitalSpecimenEvent digitalSpecimenEvent, Map<String, String> mediaIdMap) {
-    return digitalSpecimenEvent.digitalMediaEvents().stream()
-        .filter(mediaEvent -> mediaIdMap.containsKey(
-            mediaEvent.digitalMediaWrapper().attributes().getAcAccessURI()))
+      DigitalSpecimenEvent digitalSpecimenEvent, Map<String, String> mediaIdMap,
+      List<EntityRelationship> currentMediaErs) {
+    var currentMediaUris = currentMediaErs
+        .stream()
+        .map(er -> {
+          if (er.getDwcRelatedResourceID() == null){
+            return null; // We will tombstone this ER if the id is null
+          }
+          return mediaIdMap.get(er.getDwcRelatedResourceID().replace(DOI_PREFIX, ""));
+        })
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+    return digitalSpecimenEvent.digitalMediaEvents()
+        .stream()
+        .filter(event -> !currentMediaUris.contains(
+            event.digitalMediaWrapper().attributes().getAcAccessURI()))
         .toList();
   }
 
   // Identify which media ERs in the previous version are no longer relevant
   private List<EntityRelationship> getTombstonedMediaRelationships(
-      DigitalSpecimenEvent digitalSpecimenEvent, DigitalSpecimenRecord currentSpecimen,
-      Map<String, String> mediaIDMap) {
-    // Invert media map so that its key is the DOI and the value is the URI
-    var inverseMediaIDMap = mediaIDMap.entrySet().stream()
-        .collect(Collectors.toMap(Entry::getValue, Entry::getKey));
+      DigitalSpecimenEvent digitalSpecimenEvent, List<EntityRelationship> currentMediaErs,
+      Map<String, String> mediaIdMap) {
     // Get media URIs from this batch
     var incomingMediaUris = digitalSpecimenEvent.digitalMediaEvents().stream()
         .map(event -> event.digitalMediaWrapper().attributes().getAcAccessURI()).toList();
-    var currentErs = getMediaEntityRelationshipsForSpecimen(currentSpecimen);
     // If a media ER is NOT associated with a URI that is in this current batch, that means the relationship no longer exists
-    return currentErs.stream().filter(
+    return currentMediaErs.stream().filter(
             er -> {
-              var mediaUri = inverseMediaIDMap.get(
+              // Error recovery; if there's a null id we want it in our tombstoned list
+              // So that it marks the specimen as needing to be updated
+              if (er.getDwcRelatedResourceID() == null) {
+                return true;
+              }
+              var mediaUri = mediaIdMap.get(
                   er.getDwcRelatedResourceID().replace(DOI_PREFIX, ""));
               return !incomingMediaUris.contains(mediaUri);
             }
         )
         .toList();
+  }
+
+  private List<EntityRelationship> getUnchangedMediaEntityRelationships(
+      List<EntityRelationship> tombstonedMediaRelationships,
+      List<EntityRelationship> currentMediaErs) {
+    var tombstonedSet = new HashSet<>(tombstonedMediaRelationships);
+    return currentMediaErs.stream().filter(
+        er -> !tombstonedSet.contains(er)
+    ).toList();
   }
 
   private static List<EntityRelationship> getMediaEntityRelationshipsForSpecimen(
@@ -100,7 +130,7 @@ public class EntityRelationshipService {
         .getOdsHasEntityRelationships()
         .stream()
         .filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
-            .equals(HAS_MEDIA.getName()))
+            .equals(HAS_MEDIA.getRelationshipName()))
         .toList();
   }
 }

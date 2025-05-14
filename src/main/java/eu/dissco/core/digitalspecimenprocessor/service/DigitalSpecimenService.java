@@ -211,37 +211,21 @@ public class DigitalSpecimenService {
   }
 
   /* Entity Relationship */
-  private DigitalSpecimenWrapper addMediaEntityRelationshipToWrapper(
-      DigitalSpecimenWrapper digitalSpecimenWrapper, Map<String, PidProcessResult> pidMap) {
+  private DigitalSpecimenWrapper addNewMediaEntityRelationshipToWrapper(
+      DigitalSpecimenWrapper digitalSpecimenWrapper, Map<String, PidProcessResult> pidMap,
+      List<EntityRelationship> existingMediaRelationships) {
     var mediaPids = pidMap.get(digitalSpecimenWrapper.physicalSpecimenID()).relatedDois();
-
-    // Previous media ER that are still relevant (i.e. in the pidMap)
-    var nonTombstonedExistingMediaErs = digitalSpecimenWrapper.attributes()
-        .getOdsHasEntityRelationships()
+    if (mediaPids.isEmpty()) {
+      return digitalSpecimenWrapper;
+    }
+    var existingMediaRelationshipPids = existingMediaRelationships.stream()
+        .map(EntityRelationship::getDwcRelatedResourceID).toList();
+    var newEntityRelationships = mediaPids
         .stream()
-        .filter(er -> er.getDwcRelationshipOfResource().equalsIgnoreCase(HAS_MEDIA.getName()))
-        .filter(er -> mediaPids.contains(er.getDwcRelatedResourceID()))
-        .toList();
-
-    // Get the DOIS from the above ERs
-    var nonTombstonedMediaPids = nonTombstonedExistingMediaErs.stream().map(
-        EntityRelationship::getDwcRelatedResourceID).toList();
-
-    // The remaining DOIs in mediaPids are new relationships to this specimen
-    var newEntityRelationshipStream = mediaPids
-        .stream()
-        .filter(pid -> !nonTombstonedMediaPids.contains(pid))
-        .map(doi -> DigitalObjectUtils.buildEntityRelationship(HAS_MEDIA.getName(), doi));
-
-    var nonMediaErs = digitalSpecimenWrapper.attributes()
-        .getOdsHasEntityRelationships().stream().filter(
-            er -> !er.getDwcRelationshipOfResource().equalsIgnoreCase(HAS_MEDIA.getName()));
-    var totalErs = Stream.concat(
-            nonMediaErs,
-            Stream.concat(nonTombstonedExistingMediaErs.stream(), newEntityRelationshipStream))
-        .toList();
+        .filter(pid -> !existingMediaRelationshipPids.contains(pid))
+        .map(doi -> DigitalObjectUtils.buildEntityRelationship(HAS_MEDIA.getRelationshipName(), doi));
     var attributes = digitalSpecimenWrapper.attributes();
-    attributes.setOdsHasEntityRelationships(totalErs);
+    attributes.setOdsHasEntityRelationships(Stream.concat(newEntityRelationships, attributes.getOdsHasEntityRelationships().stream()).toList());
     return new DigitalSpecimenWrapper(
         digitalSpecimenWrapper.physicalSpecimenID(),
         digitalSpecimenWrapper.type(),
@@ -270,7 +254,7 @@ public class DigitalSpecimenService {
         midsService.calculateMids(event.digitalSpecimenWrapper()),
         1,
         Instant.now(),
-        addMediaEntityRelationshipToWrapper(event.digitalSpecimenWrapper(), pidMap)
+        addNewMediaEntityRelationshipToWrapper(event.digitalSpecimenWrapper(), pidMap, List.of())
     );
   }
 
@@ -293,8 +277,9 @@ public class DigitalSpecimenService {
               midsService.calculateMids(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
               updateTuple.currentSpecimen().version() + 1,
               Instant.now(),
-              addMediaEntityRelationshipToWrapper(
-                  updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap));
+              addNewMediaEntityRelationshipToWrapper(
+                  updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
+                  updateTuple.mediaRelationshipProcessResult().unchangedRelationships()));
           return new UpdatedDigitalSpecimenRecord(
               digitalSpecimenRecord,
               updateTuple.digitalSpecimenEvent().enrichmentList(),

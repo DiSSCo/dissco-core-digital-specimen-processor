@@ -5,7 +5,9 @@ package eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.records;
 
 
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
+
 import java.time.Instant;
+
 import org.jooq.JSONB;
 import org.jooq.Record1;
 import org.jooq.impl.UpdatableRecordImpl;
