@@ -136,7 +136,7 @@ class ElasticSearchRepositoryIT {
     repository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()));
 
     // When
-    repository.rollbackObject(HANDLE, false);
+    repository.rollbackObject(HANDLE, true);
     var document =  client.get(g -> g.index(INDEX).id(DOI_PREFIX + HANDLE),
         DigitalSpecimen.class);
 

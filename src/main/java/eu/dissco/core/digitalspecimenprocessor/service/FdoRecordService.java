@@ -112,7 +112,7 @@ public class FdoRecordService {
     return requests;
   }
 
-  private JsonNode generateMediaAttributes(DigitalMedia media){
+  private JsonNode generateMediaAttributes(DigitalMedia media) {
     var attributes = mapper.createObjectNode()
         .put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
         .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
@@ -132,20 +132,24 @@ public class FdoRecordService {
     return digitalSpecimens.stream().map(this::buildSingleUpdateHandleRequest).toList();
   }
 
-  public List<JsonNode> buildUpdateHandleRequestMedia(List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
+  public List<JsonNode> buildUpdateHandleRequestMedia(
+      List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
     List<JsonNode> requestBody = new ArrayList<>();
     for (var media : digitalMediaTuples) {
-      requestBody.add(buildSingleUpdateRequestMedia(media.digitalMediaEvent(), media.currentDigitalMediaRecord().id()));
+      requestBody.add(buildSingleUpdateRequestMedia(media.digitalMediaEvent(),
+          media.currentDigitalMediaRecord().id()));
     }
     return requestBody;
   }
 
   public List<JsonNode> buildRollbackUpdateRequest(
       List<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequestSpecimen).toList();
+    return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequestSpecimen)
+        .toList();
   }
 
-  public List<JsonNode> buildRollbackUpdateRequestMedia(List<DigitalMediaRecord> digitalMediaRecords){
+  public List<JsonNode> buildRollbackUpdateRequestMedia(
+      List<DigitalMediaRecord> digitalMediaRecords) {
     return digitalMediaRecords.stream().map(this::buildSingleRollbackUpdateRequestMedia).toList();
   }
 
@@ -166,7 +170,8 @@ public class FdoRecordService {
         .set("data", mapper.createObjectNode()
             .put("type", fdoProperties.getMediaFdoType())
             .put("id", id.replace(DOI_PREFIX, ""))
-            .set(ATTRIBUTES, generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
+            .set(ATTRIBUTES,
+                generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
   }
 
   private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
@@ -301,17 +306,16 @@ public class FdoRecordService {
 
   public boolean handleNeedsUpdateMedia(DigitalMedia currentMediaObject,
       DigitalMedia mediaObject) {
-    return (!currentMediaObject.getAcAccessURI()
-        .equals(mediaObject.getAcAccessURI())
-        || (currentMediaObject.getDctermsRights() != null
-        && !currentMediaObject.getDctermsRights()
-        .equals(mediaObject.getDctermsRights()))
-        || (currentMediaObject.getDctermsType() != null
-        && !currentMediaObject.getDctermsType()
-        .equals(mediaObject.getDctermsType()))
-        || (currentMediaObject.getOdsOrganisationID() != null
-        && !currentMediaObject.getOdsOrganisationID()
-        .equals(mediaObject.getOdsOrganisationID())));
+    return (
+        (currentMediaObject.getDctermsRights() != null
+            && !currentMediaObject.getDctermsRights()
+            .equals(mediaObject.getDctermsRights()))
+            || (currentMediaObject.getDctermsType() != null
+            && !currentMediaObject.getDctermsType()
+            .equals(mediaObject.getDctermsType()))
+            || (currentMediaObject.getOdsOrganisationID() != null
+            && !currentMediaObject.getOdsOrganisationID()
+            .equals(mediaObject.getOdsOrganisationID())));
   }
 
   private record OtherSpecimenId(
