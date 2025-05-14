@@ -11,8 +11,8 @@ import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingExcep
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
@@ -60,7 +60,7 @@ public class DigitalSpecimenRepository {
   }
 
   public int[] createDigitalSpecimenRecord(
-      Collection<DigitalSpecimenRecord> digitalSpecimenRecords) {
+      Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
     var queries = digitalSpecimenRecords.stream().map(this::specimenToQuery).toList();
     return context.batch(queries).execute();
   }
@@ -110,7 +110,10 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.MODIFIED, Instant.now())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,
-            mapToJsonB(digitalSpecimenRecord));
+            mapToJsonB(digitalSpecimenRecord))
+        .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
+            JSONB.valueOf(
+                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
   }
 
   private JSONB mapToJsonB(DigitalSpecimenRecord digitalSpecimenRecord) {

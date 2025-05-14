@@ -3,10 +3,10 @@ package eu.dissco.core.digitalspecimenprocessor.utils;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils;
+import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import org.junit.jupiter.api.Test;
 
-class DigitalSpecimenUtilsTest {
+class DigitalObjectUtilsTest {
 
   @Test
   void testFlattenToDigitalSpecimen() {
@@ -14,7 +14,7 @@ class DigitalSpecimenUtilsTest {
     var digitalSpecimenRecord = TestUtils.givenDigitalSpecimenRecord();
 
     // When
-    var digitalSpecimen = DigitalSpecimenUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
+    var digitalSpecimen = DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
 
     // Then
     assertThat(digitalSpecimen.getId()).isEqualTo(DOI_PREFIX + digitalSpecimenRecord.id());

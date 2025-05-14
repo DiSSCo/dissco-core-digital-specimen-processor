@@ -2,32 +2,50 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED_STR;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaWrapper;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperNoOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapperWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMediaProcessResultUnchanged;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMedia;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Option;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsTopicDiscipline;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,17 +67,42 @@ class EqualityServiceTest {
 
   @BeforeEach
   void setup() {
-    equalityService = new EqualityService(jsonPathConfiguration, MAPPER);
+    equalityService = new EqualityService(jsonPathConfiguration, new JsonFactory(), MAPPER);
   }
 
   @ParameterizedTest
   @MethodSource("provideEqualSpecimens")
-  void testEqualSpecimens(DigitalSpecimenWrapper currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen, DigitalMediaProcessResult mediaProcessResult) {
+  void testEqualSpecimens(DigitalSpecimenRecord currentDigitalSpecimen,
+      DigitalSpecimenWrapper digitalSpecimen, MediaRelationshipProcessResult mediaProcessResult) {
 
     // When
-    var result = equalityService.isEqual(currentDigitalSpecimen, digitalSpecimen,
+    var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
         mediaProcessResult);
+
+    // Then
+    assertThat(result).isTrue();
+  }
+
+  @ParameterizedTest
+  @MethodSource("provideEqualSpecimens")
+  void testParser(DigitalSpecimenRecord currentDigitalSpecimen,
+      DigitalSpecimenWrapper digitalSpecimen, MediaRelationshipProcessResult mediaProcessResult) throws Exception {
+
+    // When
+    var result = equalityService.removeGeneratedTimestamps(MAPPER.valueToTree(digitalSpecimen.attributes()));
+
+   log.info("result: {}", result);
+  }
+
+  @ParameterizedTest
+  @MethodSource("provideEqualMedia")
+  void testEqualMedia(DigitalMediaRecord currentDigitalMedia,
+      DigitalMediaWrapper digitalMediaWrapper) {
+    // Given
+
+    // When
+    var result = equalityService.mediaAreEqual(currentDigitalMedia, digitalMediaWrapper,
+        Set.of());
 
     // Then
     assertThat(result).isTrue();
@@ -68,13 +111,41 @@ class EqualityServiceTest {
   @Test
   void testUnequalSpecimens() {
     // Given
-    var currentDigitalSpecimen = givenDigitalSpecimenWrapper();
+    var currentDigitalSpecimen = givenDigitalSpecimenRecord();
     var digitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, ANOTHER_SPECIMEN_NAME,
         new DigitalSpecimen().withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY), null);
 
     // When
-    var result = equalityService.isEqual(currentDigitalSpecimen, digitalSpecimen,
+    var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
         givenEmptyMediaProcessResult());
+
+    // Then
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  void testUnequalMedia() {
+    // Given
+    var wrapper = new DigitalMediaWrapper(
+        TYPE_MEDIA,
+        givenUnequalDigitalMedia(MEDIA_URL),
+        MAPPER.createObjectNode()
+    );
+
+    // When
+    var result = equalityService.mediaAreEqual(givenDigitalMediaRecord(), wrapper, Set.of());
+
+    // Then
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  void testUnequalMediaNewSpecimen() {
+    // Given
+
+    // When
+    var result = equalityService.mediaAreEqual(givenDigitalMediaRecord(),
+        givenDigitalMediaWrapper(), Set.of(HANDLE));
 
     // Then
     assertThat(result).isFalse();
@@ -83,13 +154,13 @@ class EqualityServiceTest {
   @Test
   void testNewMediaRelationship() {
     // Given
-    var currentDigitalSpecimen = givenDigitalSpecimenWrapper();
+    var currentDigitalSpecimen = givenDigitalSpecimenRecord();
     var digitalSpecimen = givenDigitalSpecimenWrapper();
-    var mediaProcessResult = new DigitalMediaProcessResult(List.of(), List.of(),
-        List.of(new DigitalMediaEventWithoutDOI(null, null)));
+    var mediaProcessResult = new MediaRelationshipProcessResult(List.of(),
+        List.of(new DigitalMediaEvent(null, null)), List.of());
 
     // When
-    var result = equalityService.isEqual(currentDigitalSpecimen, digitalSpecimen,
+    var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
         mediaProcessResult);
 
     // Then
@@ -99,13 +170,13 @@ class EqualityServiceTest {
   @Test
   void testTombstonedMediaRelationship() {
     // Given
-    var currentDigitalSpecimen = givenDigitalSpecimenWrapper();
+    var currentDigitalSpecimen = givenDigitalSpecimenRecord();
     var digitalSpecimen = givenDigitalSpecimenWrapper();
-    var mediaProcessResult = new DigitalMediaProcessResult(List.of(),
-        List.of(new EntityRelationship()), List.of());
+    var mediaProcessResult = new MediaRelationshipProcessResult(
+        List.of(new EntityRelationship()), List.of(), List.of());
 
     // When
-    var result = equalityService.isEqual(currentDigitalSpecimen, digitalSpecimen,
+    var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
         mediaProcessResult);
 
     // Then
@@ -122,10 +193,7 @@ class EqualityServiceTest {
         digitalSpecimenWrapper,
         List.of(givenDigitalMediaEvent())
     );
-    var targetEr = currentDigitalSpecimen.attributes().getOdsHasEntityRelationships().stream()
-        .filter(entityRelationship -> !entityRelationship.getDwcRelationshipOfResource()
-            .equals(HAS_MEDIA.getName()))
-        .toList();
+    var mediaEr = givenEntityRelationship(MEDIA_PID, HAS_MEDIA.getRelationshipName());
 
     var attributes = givenDigitalSpecimenWrapper(true)
         .attributes()
@@ -133,7 +201,7 @@ class EqualityServiceTest {
         .withOdsIsKnownToContainMedia(true)
         .withDctermsModified(UPDATED_STR)
         .withOdsHasEntityRelationships(
-            targetEr
+            currentDigitalSpecimen.attributes().getOdsHasEntityRelationships()
         );
     var expected = new DigitalSpecimenEvent(
         List.of(MAS),
@@ -144,7 +212,40 @@ class EqualityServiceTest {
     );
 
     // When
-    var result = equalityService.setEventDates(currentDigitalSpecimen, digitalSpecimenEvent);
+    var result = equalityService.setExistingEventDatesSpecimen(currentDigitalSpecimen,
+        digitalSpecimenEvent, new MediaRelationshipProcessResult(List.of(), List.of(), List.of(mediaEr)));
+
+    // Then
+    assertThat(result).isEqualTo(expected);
+  }
+
+  @Test
+  void testSetEntityRelationshipDateMedia() {
+    // Given
+    var entityRelationship = givenEntityRelationship(ORGANISATION_ID, "hasRor");
+    var expectedWrapper = new DigitalMediaWrapper(
+        TYPE_MEDIA,
+        givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
+        MAPPER.createObjectNode()
+    );
+    var expected = new DigitalMediaEvent(
+        List.of(MEDIA_ENRICHMENT),
+        expectedWrapper);
+    var event = new DigitalMediaEvent(
+        List.of(MEDIA_ENRICHMENT),
+        changeTimestamps(expectedWrapper));
+    var currentRecord = new DigitalMediaRecord(
+        MEDIA_PID,
+        MEDIA_URL,
+        VERSION,
+        CREATED,
+        List.of(MEDIA_ENRICHMENT),
+        givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
+        MAPPER.createObjectNode()
+    );
+
+    // When
+    var result = equalityService.setExistingEventDatesMedia(currentRecord, event);
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -152,19 +253,20 @@ class EqualityServiceTest {
 
   private static Stream<Arguments> provideEqualSpecimens() {
     return Stream.of(
-        Arguments.of(givenDigitalSpecimenWrapper(),
+        Arguments.of(givenDigitalSpecimenRecord(),
             changeTimestamps(givenDigitalSpecimenWrapper()), givenEmptyMediaProcessResult()),
-        Arguments.of(givenDigitalSpecimenWrapper(true, true),
+        Arguments.of(givenDigitalSpecimenRecordWithMediaEr(HANDLE, PHYSICAL_SPECIMEN_ID, true),
             changeTimestamps(givenDigitalSpecimenWrapper(true, true)),
             givenEmptyMediaProcessResult()),
-        Arguments.of(givenDigitalSpecimenWrapperWithMediaEr(PHYSICAL_SPECIMEN_ID, true),
-            changeTimestamps(givenDigitalSpecimenWrapper(true, true)),
-            givenEmptyMediaProcessResult()),
-        Arguments.of(givenDigitalSpecimenWrapper(),
+        Arguments.of(givenDigitalSpecimenRecord(),
             changeTimestamps(givenDigitalSpecimenWrapperNoOriginalData()),
-            givenEmptyMediaProcessResult()),
-        Arguments.of(givenDigitalSpecimenWrapper(), givenDigitalSpecimenWrapper(),
-            givenMediaProcessResultUnchanged(List.of(givenDigitalSpecimenEvent())))
+            givenEmptyMediaProcessResult()));
+  }
+
+  private static Stream<Arguments> provideEqualMedia() {
+    return Stream.of(
+        Arguments.of(givenDigitalMediaRecord(), givenDigitalMediaWrapper()),
+        Arguments.of(givenDigitalMediaRecord(), changeTimestamps(givenDigitalMediaWrapper()))
     );
   }
 
@@ -180,6 +282,20 @@ class EqualityServiceTest {
     }
     return new DigitalSpecimenWrapper(digitalSpecimenWrapper.physicalSpecimenID(),
         digitalSpecimenWrapper.type(), attributes, digitalSpecimenWrapper.originalAttributes());
+
+  }
+
+  private static DigitalMediaWrapper changeTimestamps(
+      DigitalMediaWrapper digitalMediaWrapper) {
+    var attributes = digitalMediaWrapper.attributes();
+    attributes
+        .withDctermsCreated(UPDATED);
+    if (attributes.getOdsHasEntityRelationships() != null) {
+      attributes.getOdsHasEntityRelationships()
+          .forEach(er -> er.setDwcRelationshipEstablishedDate(UPDATED));
+    }
+    return new DigitalMediaWrapper(digitalMediaWrapper.type(),
+        attributes, digitalMediaWrapper.originalAttributes());
 
   }
 
