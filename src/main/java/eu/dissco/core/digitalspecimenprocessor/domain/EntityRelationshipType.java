@@ -7,9 +7,9 @@ public enum EntityRelationshipType {
   HAS_SPECIMEN("hasDigitalSpecimen");
 
   @Getter
-  String relationshipName;
+  final String relationshipName;
 
-  EntityRelationshipType(String s) {
-    this.relationshipName = s;
+  EntityRelationshipType(String relationshipName) {
+    this.relationshipName = relationshipName;
   }
 }

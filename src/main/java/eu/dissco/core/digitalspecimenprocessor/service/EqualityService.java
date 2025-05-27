@@ -146,9 +146,10 @@ public class EqualityService {
     }
     try {
       var jsonCurrentSpecimen = normaliseJsonNode(
-          mapper.valueToTree(currentDigitalSpecimen.digitalSpecimenWrapper().attributes()), true);
-      var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper.attributes()),
+          mapper.valueToTree(currentDigitalSpecimen.digitalSpecimenWrapper().attributes()), true,
           true);
+      var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper.attributes()),
+          true, true);
       return isEqual(jsonCurrentSpecimen, jsonSpecimen, currentDigitalSpecimen.id());
     } catch (IOException e) {
       log.error("Unable to re-serialize JSON. Can not determine equality.", e);
@@ -164,9 +165,9 @@ public class EqualityService {
     }
     try {
       var jsonCurrentMedia = normaliseJsonNode(
-          mapper.valueToTree(currentDigitalMedia.attributes()), false);
+          mapper.valueToTree(currentDigitalMedia.attributes()), false, true);
       var jsonMedia = normaliseJsonNode(
-          mapper.valueToTree(digitalMedia.attributes()), false);
+          mapper.valueToTree(digitalMedia.attributes()), false, true);
       return isEqual(jsonCurrentMedia, jsonMedia, currentDigitalMedia.id());
     } catch (IOException e) {
       log.error("Unable to re-serialize JSON. Can not determine equality.", e);
@@ -183,15 +184,17 @@ public class EqualityService {
     return isEqual;
   }
 
-  private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
+  public boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
       EntityRelationship entityRelationship) {
     if (currentEntityRelationship == null || entityRelationship == null) {
       log.warn("Null ER!");
+      return currentEntityRelationship == null && entityRelationship == null;
     }
     try {
       var jsonCurrentEntityRelationship = normaliseJsonNode(
-          mapper.valueToTree(currentEntityRelationship), false);
-      var jsonEntityRelationship = normaliseJsonNode(mapper.valueToTree(entityRelationship), false);
+          mapper.valueToTree(currentEntityRelationship), false, true);
+      var jsonEntityRelationship = normaliseJsonNode(mapper.valueToTree(entityRelationship), false,
+          false);
       return jsonCurrentEntityRelationship.equals(jsonEntityRelationship);
     } catch (IOException e) {
       log.error("Unable to serialize entity relationships", e);
@@ -199,11 +202,13 @@ public class EqualityService {
     }
   }
 
-  private JsonNode normaliseJsonNode(JsonNode node, boolean isSpecimen)
+  private JsonNode normaliseJsonNode(JsonNode node, boolean isSpecimen, boolean removeEr)
       throws IOException {
     node = removeGeneratedTimestamps(node);
     var context = using(jsonPathConfig).parse(mapper.writeValueAsString(node));
-    removeEntityRelationships(context, isSpecimen);
+    if (removeEr) {
+      removeEntityRelationships(context, isSpecimen);
+    }
     return mapper.valueToTree(context.jsonString());
   }
 

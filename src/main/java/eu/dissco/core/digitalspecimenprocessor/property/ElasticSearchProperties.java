@@ -18,10 +18,10 @@ public class ElasticSearchProperties {
   private int port;
 
   @NotBlank
-  private String specimenIndexName;
+  private String specimenIndexName="digital-specimen";
 
   @NotBlank
-  private String mediaIndexName;
+  private String mediaIndexName="digital-media";
 
   @NotBlank
   private String username;

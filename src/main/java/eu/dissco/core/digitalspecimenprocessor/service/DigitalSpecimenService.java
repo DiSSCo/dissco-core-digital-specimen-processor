@@ -214,7 +214,7 @@ public class DigitalSpecimenService {
   private DigitalSpecimenWrapper addNewMediaEntityRelationshipToWrapper(
       DigitalSpecimenWrapper digitalSpecimenWrapper, Map<String, PidProcessResult> pidMap,
       List<EntityRelationship> existingMediaRelationships) {
-    var mediaPids = pidMap.get(digitalSpecimenWrapper.physicalSpecimenID()).relatedDois();
+    var mediaPids = pidMap.get(digitalSpecimenWrapper.physicalSpecimenID()).doisOfRelatedObjects();
     if (mediaPids.isEmpty()) {
       return digitalSpecimenWrapper;
     }
@@ -250,7 +250,7 @@ public class DigitalSpecimenService {
       return null;
     }
     return new DigitalSpecimenRecord(
-        pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()).doi(),
+        pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()).doiOfTarget(),
         midsService.calculateMids(event.digitalSpecimenWrapper()),
         1,
         Instant.now(),

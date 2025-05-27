@@ -94,11 +94,11 @@ public class ProcessingService {
     var specimenDOIs = specimenResults.stream().map(DigitalSpecimenRecord::id).toList();
     var mediaPidsFiltered = new HashMap<String, PidProcessResult>();
     for (var mediaPid : mediaPidsFull.entrySet()) {
-      var relatedDois = mediaPid.getValue().relatedDois().stream().filter(
+      var relatedDois = mediaPid.getValue().doisOfRelatedObjects().stream().filter(
           specimenDOIs::contains
       ).collect(Collectors.toSet());
       mediaPidsFiltered.put(mediaPid.getKey(),
-          new PidProcessResult(mediaPid.getValue().doi(), relatedDois));
+          new PidProcessResult(mediaPid.getValue().doiOfTarget(), relatedDois));
     }
     return mediaPidsFiltered;
   }
@@ -115,7 +115,8 @@ public class ProcessingService {
     var specimenPids = new HashMap<String, PidProcessResult>();
     var mediaHashMap = new HashMap<String, HashSet<String>>(); // key = local id
     var allSpecimenPids = concatSpecimenPids(specimenProcessResult);
-    var newMediaPids = createPidsForNewMediaObjects(existingMedias, digitalMediaEvents); // key = local id
+    var newMediaPids = createPidsForNewMediaObjects(existingMedias,
+        digitalMediaEvents); // key = local id
     var allMediaPids = concatMediaPids(existingMedias, newMediaPids); // key = local id
     for (var specimen : digitalSpecimenEvents) {
       var mediaDoisForThisSpecimen = specimen.digitalMediaEvents().stream()
@@ -135,9 +136,10 @@ public class ProcessingService {
             Entry::getKey,
             e -> new PidProcessResult(allMediaPids.get(e.getKey()), e.getValue()))
         );
-    for (var mediaPid : mediaPids.entrySet()){
-      if (mediaPid.getValue().relatedDois().size() > 1){
-        log.info("Media {} has {} related specimens", mediaPid.getValue().doi(), mediaPid.getValue().relatedDois().size());
+    for (var mediaPid : mediaPids.entrySet()) {
+      if (mediaPid.getValue().doisOfRelatedObjects().size() > 1) {
+        log.info("Media {} has {} related specimens", mediaPid.getValue().doiOfTarget(),
+            mediaPid.getValue().doisOfRelatedObjects().size());
       }
     }
     return Pair.of(specimenPids, mediaPids);
@@ -197,11 +199,17 @@ public class ProcessingService {
     if (!specimenProcessResult.equalSpecimens().isEmpty()) {
       digitalSpecimenService.updateEqualSpecimen(specimenProcessResult.equalSpecimens());
     }
-    if (!specimenProcessResult.newSpecimens().isEmpty() && !specimenProcessResult.newSpecimenPids()
-        .isEmpty()) {
-      results.addAll(
-          digitalSpecimenService.createNewDigitalSpecimen(specimenProcessResult.newSpecimens(),
-              pidProcessResults));
+    if (!specimenProcessResult.newSpecimens().isEmpty()) {
+      if (!specimenProcessResult.newSpecimenPids()
+          .isEmpty()) {
+        results.addAll(
+            digitalSpecimenService.createNewDigitalSpecimen(specimenProcessResult.newSpecimens(),
+                pidProcessResults));
+      } else {
+        log.warn("Unable to create new specimen pids for {} speicmens. Ignoring new specimens",
+            specimenProcessResult.newSpecimens().size());
+      }
+
     }
     if (!specimenProcessResult.changedSpecimens().isEmpty()) {
       results.addAll(digitalSpecimenService.updateExistingDigitalSpecimen(
@@ -332,8 +340,8 @@ public class ProcessingService {
   private Map<String, String> createNewPids(List<JsonNode> request, boolean isSpecimen) {
     try {
       var pidMap = handleComponent.postHandle(request, isSpecimen);
-      log.info("Successfully minted {} {} PIDs", pidMap.size(), isSpecimen ? "specimen": "media");
-      return pidMap; // map localId : doi
+      log.info("Successfully minted {} {} PIDs", pidMap.size(), isSpecimen ? "specimen" : "media");
+      return pidMap; // map localId : doiOfTarget
     } catch (PidException e) {
       log.error("Unable to create new PIDs", e);
     }

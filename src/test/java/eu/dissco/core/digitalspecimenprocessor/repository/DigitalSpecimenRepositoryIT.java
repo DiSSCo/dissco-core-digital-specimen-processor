@@ -120,24 +120,6 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpsertSpecimensOriginalDataOnly() throws JsonProcessingException{
-    // Given
-    var firstRecord = givenDigitalSpecimenRecordNoOriginalData();
-
-    // When
-    repository.createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord()));
-    repository.createDigitalSpecimenRecord(Set.of(firstRecord));
-
-    // Then
-    var result = MAPPER.readTree(context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
-        .from(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
-        .fetchOne(Record1::value1).data());
-
-    assertThat(result).isEqualTo(MAPPER.createObjectNode());
-  }
-
-
-  @Test
   void testCreateWithInvalidUnicode() {
     // Given
     var ds = givenDigitalSpecimenRecord();

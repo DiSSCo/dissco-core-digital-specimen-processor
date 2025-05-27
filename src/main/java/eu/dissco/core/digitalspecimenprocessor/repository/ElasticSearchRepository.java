@@ -54,7 +54,7 @@ public class ElasticSearchRepository {
   public void rollbackVersion(DigitalMediaRecord currentDigitalMediaRecord)
       throws IOException {
     var digitalMedia = flattenToDigitalMedia(currentDigitalMediaRecord);
-    client.index(i -> i.index(properties.getSpecimenIndexName()).id(digitalMedia.getId())
+    client.index(i -> i.index(properties.getMediaIndexName()).id(digitalMedia.getId())
         .document(digitalMedia));
   }
 

@@ -55,7 +55,7 @@ public class EntityRelationshipService {
         .map(EntityRelationship::getDwcRelatedResourceID)
         .map(id -> id.replace(DOI_PREFIX, ""))
         .collect(Collectors.toSet());
-    return pidProcessResult.relatedDois().stream()
+    return pidProcessResult.doisOfRelatedObjects().stream()
         .filter(relatedDoi -> !existingLinkedPids.contains(relatedDoi)).collect(Collectors.toSet());
   }
 

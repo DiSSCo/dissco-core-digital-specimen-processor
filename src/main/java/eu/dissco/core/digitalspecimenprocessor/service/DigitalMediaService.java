@@ -99,9 +99,9 @@ public class DigitalMediaService {
   private DigitalMediaRecord mapToNewDigitalMediaRecord(DigitalMediaEvent event,
       Map<String, PidProcessResult> pidMap) {
     var accessUri = event.digitalMediaWrapper().attributes().getAcAccessURI();
-    var doi = pidMap.get(accessUri).doi();
+    var doi = pidMap.get(accessUri).doiOfTarget();
     var attributes = event.digitalMediaWrapper().attributes();
-    setNewEntityRelationshipsForMedia(attributes, pidMap.get(accessUri).relatedDois());
+    setNewEntityRelationshipsForMedia(attributes, pidMap.get(accessUri).doisOfRelatedObjects());
     return new DigitalMediaRecord(
         doi,
         accessUri, 1, Instant.now(), event.enrichmentList(),

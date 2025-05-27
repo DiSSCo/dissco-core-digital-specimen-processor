@@ -94,9 +94,6 @@ public class DigitalMediaRepository {
             JSONB.jsonb(
                 mapper.valueToTree(digitalMediaRecord.attributes())
                     .toString()))
-        .set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA,
-            JSONB.jsonb(
-                digitalMediaRecord.originalAttributes().toString()))
         .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now());
   }
 

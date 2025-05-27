@@ -151,7 +151,7 @@ public class RollbackService {
   private static Map<String, DigitalSpecimenEvent> createRollbackMapSpecimen(
       List<DigitalSpecimenEvent> events, Map<String, PidProcessResult> pidMap) {
     return events.stream().collect(Collectors.toMap(
-        event -> pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()).doi(),
+        event -> pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()).doiOfTarget(),
         event -> event));
   }
 
@@ -159,7 +159,7 @@ public class RollbackService {
       List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
     return events.stream().collect(Collectors.toMap(
         event -> pidMap.get(event.digitalMediaWrapper().attributes().getAcAccessURI())
-            .doi(),
+            .doiOfTarget(),
         event -> event));
   }
 
