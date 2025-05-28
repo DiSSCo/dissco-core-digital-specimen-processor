@@ -13,7 +13,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYS
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -55,7 +55,7 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void testGenerateCreateEvent() {
+  void testGenerateCreateEventSpecimen() {
     // Given
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
@@ -63,7 +63,7 @@ class ProvenanceServiceTest {
         givenDigitalSpecimenWrapper(true, false));
 
     // When
-    var event = service.generateCreateEvent(digitalSpecimen);
+    var event = service.generateCreateEventSpecimen(digitalSpecimen);
 
     // Then
     assertThat(event.getDctermsIdentifier()).isEqualTo(
@@ -74,14 +74,14 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void testGenerateUpdateEvent() throws JsonProcessingException {
+  void testGenerateUpdateEventSpecimen() throws JsonProcessingException {
     // Given
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
     var anotherDigitalSpecimen = givenUnequalDigitalSpecimenRecord();
 
     // When
-    var event = service.generateUpdateEvent(anotherDigitalSpecimen, givenJsonPatch());
+    var event = service.generateUpdateEventSpecimen(anotherDigitalSpecimen, givenJsonPatchSpecimen());
 
     // Then
     assertThat(event.getDctermsIdentifier()).isEqualTo(

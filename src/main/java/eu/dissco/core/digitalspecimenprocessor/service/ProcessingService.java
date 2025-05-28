@@ -1,58 +1,39 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
-import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
-import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
-import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalSpecimenUtils.DOI_PREFIX;
+import static java.util.stream.Collectors.toMap;
 
-import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.fge.jsonpatch.diff.JsonDiff;
-import com.nimbusds.jose.util.Pair;
-import eu.dissco.core.digitalspecimenprocessor.domain.ProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaKey;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
-import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
+import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
-import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
-import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
-import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
-import eu.dissco.core.digitalspecimenprocessor.util.AgentUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
-import java.io.IOException;
-import java.net.URI;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.exception.DataAccessException;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -60,54 +41,214 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ProcessingService {
 
-  private static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: {}";
   private final DigitalSpecimenRepository repository;
-  private final FdoRecordService fdoRecordService;
-  private final ElasticSearchRepository elasticRepository;
-  private final RabbitMqPublisherService publisherService;
-  private final MidsService midsService;
-  private final HandleComponent handleComponent;
-  private final ApplicationProperties applicationProperties;
-  private final AnnotationPublisherService annotationPublisherService;
-  private final ObjectMapper mapper;
+  private final DigitalMediaRepository mediaRepository;
+  private final DigitalSpecimenService digitalSpecimenService;
   private final DigitalMediaService digitalMediaService;
+  private final EntityRelationshipService entityRelationshipService;
   private final EqualityService equalityService;
-  private final RollbackService rollbackService;
+  private final RabbitMqPublisherService publisherService;
+  private final FdoRecordService fdoRecordService;
+  private final HandleComponent handleComponent;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
-    var uniqueBatch = removeDuplicatesInBatch(events);
-    var processResult = processSpecimens(uniqueBatch);
-    log.info("Batch consists of: {} new, {} update and {} equal specimen",
-        processResult.newSpecimens().size(),
-        processResult.changedSpecimens().size(),
-        processResult.equalSpecimens().size());
+    try {
+      var uniqueBatchSpecimens = removeDuplicateSpecimensInBatch(events);
+      var uniqueBatchMedia = removeDuplicateMediaInBatch(events);
+      var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
+      var existingMedia = getCurrentMedia(uniqueBatchMedia);
+      var specimenProcessResult = processSpecimens(uniqueBatchSpecimens, existingSpecimens,
+          existingMedia);
+      var pids = processPids(specimenProcessResult, existingMedia, events, uniqueBatchMedia);
+      var mediaProcessResult = processMedia(uniqueBatchMedia, existingMedia, pids.getRight());
+      log.info("Batch consists of: {} new, {} update, and {} equal specimens",
+          specimenProcessResult.newSpecimens().size(),
+          specimenProcessResult.changedSpecimens().size(),
+          specimenProcessResult.equalSpecimens().size());
+      log.info("Batch consists of {} new, {} update, and {} equal media",
+          mediaProcessResult.newDigitalMedia().size(),
+          mediaProcessResult.changedDigitalMedia().size(),
+          mediaProcessResult.equalDigitalMedia().size());
+      var specimenResults = processSpecimenResults(specimenProcessResult, pids.getLeft());
+      var mediaPids = updateMediaPidsWithResults(specimenResults, specimenProcessResult,
+          pids.getRight());
+      processMediaResults(mediaProcessResult, mediaPids);
+      log.info("Processed specimen and media");
+      return specimenResults;
+    } catch (DisscoRepositoryException e) {
+      log.error("Unable to access database", e);
+      return List.of();
+    }
+  }
+
+  private static Map<String, PidProcessResult> updateMediaPidsWithResults(
+      List<DigitalSpecimenRecord> specimenResults, SpecimenProcessResult specimenProcessResult,
+      Map<String, PidProcessResult> mediaPidsFull) {
+    if (specimenResults.size() < (specimenProcessResult.changedSpecimens().size()
+        + specimenProcessResult.newSpecimens().size())) {
+      return mediaPidsFull;
+    }
+    // If we had a partial success, and not all specimens were created, we don't want to create meaningless ERS on our media
+    // So we filter out the specimen PIDs that were not in our results
+    var specimenDOIs = specimenResults.stream().map(DigitalSpecimenRecord::id).toList();
+    var mediaPidsFiltered = new HashMap<String, PidProcessResult>();
+    for (var mediaPid : mediaPidsFull.entrySet()) {
+      var relatedDois = mediaPid.getValue().doisOfRelatedObjects().stream().filter(
+          specimenDOIs::contains
+      ).collect(Collectors.toSet());
+      mediaPidsFiltered.put(mediaPid.getKey(),
+          new PidProcessResult(mediaPid.getValue().doiOfTarget(), relatedDois));
+    }
+    return mediaPidsFiltered;
+  }
+
+  /*
+   * We need a way to map the specimen PIDs to the media and vice versa
+   * Each has a many-to-many relationship
+   * */
+  private Pair<Map<String, PidProcessResult>, Map<String, PidProcessResult>> processPids(
+      SpecimenProcessResult specimenProcessResult,
+      Map<String, DigitalMediaRecord> existingMedias,
+      List<DigitalSpecimenEvent> digitalSpecimenEvents,
+      Set<DigitalMediaEvent> digitalMediaEvents) {
+    var specimenPids = new HashMap<String, PidProcessResult>();
+    var mediaHashMap = new HashMap<String, HashSet<String>>(); // key = local id
+    var allSpecimenPids = concatSpecimenPids(specimenProcessResult);
+    var newMediaPids = createPidsForNewMediaObjects(existingMedias,
+        digitalMediaEvents); // key = local id
+    var allMediaPids = concatMediaPids(existingMedias, newMediaPids); // key = local id
+    for (var specimen : digitalSpecimenEvents) {
+      var mediaDoisForThisSpecimen = specimen.digitalMediaEvents().stream()
+          .map(event -> event.digitalMediaWrapper().attributes().getAcAccessURI())
+          .map(allMediaPids::get)
+          .collect(Collectors.toSet());
+      var specimenPid = allSpecimenPids.get(specimen.digitalSpecimenWrapper().physicalSpecimenID());
+      specimenPids.put(specimen.digitalSpecimenWrapper().physicalSpecimenID(),
+          new PidProcessResult(specimenPid, mediaDoisForThisSpecimen));
+      // We record the specimen -> media relationship in an intermediate map
+      // Multiple specimens may refer to the same media object
+      // But the media event doesn't have a direct link to the specimens it refers to
+      updateMediaHashMap(mediaHashMap, mediaDoisForThisSpecimen, allMediaPids, specimenPid);
+    }
+    var mediaPids = mediaHashMap.entrySet().stream()
+        .collect(toMap(
+            Entry::getKey,
+            e -> new PidProcessResult(allMediaPids.get(e.getKey()), e.getValue()))
+        );
+    for (var mediaPid : mediaPids.entrySet()) {
+      if (mediaPid.getValue().doisOfRelatedObjects().size() > 1) {
+        log.info("Media {} has {} related specimens", mediaPid.getValue().doiOfTarget(),
+            mediaPid.getValue().doisOfRelatedObjects().size());
+      }
+    }
+    return Pair.of(specimenPids, mediaPids);
+  }
+
+  // Given a specimen PID, links it to the relevant media object
+  private static void updateMediaHashMap(HashMap<String, HashSet<String>> mediaHashMap,
+      Set<String> mediaPidsForThisSpecimen, Map<String, String> allMediaPids, String specimenPid) {
+    if (mediaPidsForThisSpecimen.isEmpty()) {
+      return;
+    }
+    allMediaPids.entrySet()
+        .stream()
+        .filter(e -> mediaPidsForThisSpecimen.contains(e.getValue())) // Only look at relevant pids
+        .forEach(e -> {
+          var uri = e.getKey();
+          mediaHashMap.computeIfAbsent(uri, k -> new HashSet<>()).add(specimenPid);
+        });
+  }
+
+  private static Map<String, String> concatSpecimenPids(
+      SpecimenProcessResult specimenProcessResult) {
+    var existingSpecimenPids = Stream.concat(
+        specimenProcessResult.equalSpecimens().stream(),
+        specimenProcessResult.changedSpecimens().stream()
+            .map(UpdatedDigitalSpecimenTuple::currentSpecimen)
+    ).collect(toMap(
+        specimen -> specimen.digitalSpecimenWrapper().physicalSpecimenID(),
+        DigitalSpecimenRecord::id
+    ));
+    return concatMaps(specimenProcessResult.newSpecimenPids(), existingSpecimenPids);
+  }
+
+  private static Map<String, String> concatMediaPids(
+      Map<String, DigitalMediaRecord> existingMedias, Map<String, String> newMediaPids) {
+    var existingPidMap = existingMedias.entrySet()
+        .stream().collect(toMap(
+            Entry::getKey,
+            e -> e.getValue().id()
+        ));
+    return concatMaps(existingPidMap, newMediaPids);
+  }
+
+  private static Map<String, String> concatMaps(Map<String, String> m1, Map<String, String> m2) {
+    return Stream.concat(
+        m1.entrySet().stream(), m2.entrySet().stream()
+    ).collect(toMap(
+        Entry::getKey,
+        Entry::getValue
+    ));
+  }
+
+  private List<DigitalSpecimenRecord> processSpecimenResults(
+      SpecimenProcessResult specimenProcessResult,
+      Map<String, PidProcessResult> pidProcessResults) {
     var results = new ArrayList<DigitalSpecimenRecord>();
-    if (!processResult.equalSpecimens().isEmpty()) {
-      updateEqualSpecimen(processResult.equalSpecimens(), events);
+    if (!specimenProcessResult.equalSpecimens().isEmpty()) {
+      digitalSpecimenService.updateEqualSpecimen(specimenProcessResult.equalSpecimens());
     }
-    if (!processResult.newSpecimens().isEmpty()) {
-      results.addAll(createNewDigitalSpecimen(processResult.newSpecimens()));
+    if (!specimenProcessResult.newSpecimens().isEmpty()) {
+      if (!specimenProcessResult.newSpecimenPids()
+          .isEmpty()) {
+        results.addAll(
+            digitalSpecimenService.createNewDigitalSpecimen(specimenProcessResult.newSpecimens(),
+                pidProcessResults));
+      } else {
+        log.warn("Unable to create new specimen pids for {} speicmens. Ignoring new specimens",
+            specimenProcessResult.newSpecimens().size());
+      }
+
     }
-    if (!processResult.changedSpecimens().isEmpty()) {
-      results.addAll(updateExistingDigitalSpecimen(processResult.changedSpecimens()));
+    if (!specimenProcessResult.changedSpecimens().isEmpty()) {
+      results.addAll(digitalSpecimenService.updateExistingDigitalSpecimen(
+          specimenProcessResult.changedSpecimens(), pidProcessResults));
     }
     return results;
   }
 
-  private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(List<DigitalSpecimenEvent> events) {
+  private void processMediaResults(MediaProcessResult mediaProcessResult,
+      Map<String, PidProcessResult> pidProcessResults) {
+    if (!mediaProcessResult.equalDigitalMedia().isEmpty()) {
+      digitalMediaService.updateEqualDigitalMedia(mediaProcessResult.equalDigitalMedia());
+    }
+    if (!mediaProcessResult.newDigitalMedia().isEmpty()) {
+      digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
+          pidProcessResults);
+    }
+    if (!mediaProcessResult.changedDigitalMedia().isEmpty()) {
+      digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
+          pidProcessResults);
+    }
+  }
+
+
+  private Set<DigitalSpecimenEvent> removeDuplicateSpecimensInBatch(
+      List<DigitalSpecimenEvent> events) {
     var uniqueSet = new LinkedHashSet<DigitalSpecimenEvent>();
     var map = events.stream()
         .collect(
             Collectors.groupingBy(event -> event.digitalSpecimenWrapper().physicalSpecimenID()));
     for (Entry<String, List<DigitalSpecimenEvent>> entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
-        log.warn("Found {} duplicates in batch for id {}", entry.getValue().size(), entry.getKey());
+        log.warn("Found {} duplicate specimen in batch for id {}", entry.getValue().size(),
+            entry.getKey());
         for (int i = 0; i < entry.getValue().size(); i++) {
           if (i == 0) {
             uniqueSet.add(entry.getValue().get(i));
           } else {
-            republishEvent(entry.getValue().get(i));
+            republishSpecimenEvent(entry.getValue().get(i));
           }
         }
       } else {
@@ -117,55 +258,130 @@ public class ProcessingService {
     return uniqueSet;
   }
 
-  private ProcessResult processSpecimens(Set<DigitalSpecimenEvent> events) {
-    try {
-      var currentSpecimens = getCurrentSpecimen(events);
-      var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
-      var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
-      var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
-      var mediaEvents = events.stream().map(DigitalSpecimenEvent::digitalMediaEvents)
-          .flatMap(List::stream).toList();
-      var existingMediaProcessResult = currentSpecimens.isEmpty() ?
-          new HashMap<String, DigitalMediaProcessResult>() :
-          digitalMediaService.getExistingDigitalMedia(currentSpecimens, mediaEvents);
-      for (DigitalSpecimenEvent event : events) {
-        var digitalSpecimenWrapper = event.digitalSpecimenWrapper();
-        log.debug("ds: {}", digitalSpecimenWrapper);
-        if (!currentSpecimens.containsKey(digitalSpecimenWrapper.physicalSpecimenID())) {
-          log.debug("Specimen with id: {} is completely new",
-              digitalSpecimenWrapper.physicalSpecimenID());
-          newSpecimens.add(event);
-        } else {
-          var currentDigitalSpecimen = currentSpecimens.get(
-              digitalSpecimenWrapper.physicalSpecimenID());
-          var digitalMediaProcessResult = existingMediaProcessResult.get(
-              currentDigitalSpecimen.id());
-          if (equalityService.isEqual(currentDigitalSpecimen.digitalSpecimenWrapper(),
-              digitalSpecimenWrapper, digitalMediaProcessResult)) {
-            log.debug("Received digital specimen is equal to digital specimen: {}",
-                currentDigitalSpecimen.id());
-            equalSpecimens.add(currentDigitalSpecimen);
-          } else {
-            log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
-            var eventWithUpdatedEr = equalityService.setEventDates(
-                currentDigitalSpecimen.digitalSpecimenWrapper(), event);
-            changedSpecimens.add(
-                new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, eventWithUpdatedEr,
-                    digitalMediaProcessResult));
-          }
-        }
-      }
-      return new ProcessResult(equalSpecimens, changedSpecimens, newSpecimens);
-    } catch (DisscoRepositoryException ex) {
-      log.error("Republishing messages, Unable to retrieve current specimen from repository", ex);
-      events.forEach(this::republishEvent);
-      return new ProcessResult(List.of(), List.of(), List.of());
-    }
+  private Set<DigitalMediaEvent> removeDuplicateMediaInBatch(
+      List<DigitalSpecimenEvent> specimenEvents) {
+    var mediaList = specimenEvents.stream()
+        .map(DigitalSpecimenEvent::digitalMediaEvents)
+        .flatMap(Collection::stream)
+        .toList();
+    return new HashSet<>(mediaList);
   }
 
-  private void republishEvent(DigitalSpecimenEvent event) {
+  private SpecimenProcessResult processSpecimens(Set<DigitalSpecimenEvent> events,
+      Map<String, DigitalSpecimenRecord> currentSpecimens,
+      Map<String, DigitalMediaRecord> currentMedia) {
+    var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
+    var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
+    var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
+    for (DigitalSpecimenEvent event : events) {
+      var digitalSpecimenWrapper = event.digitalSpecimenWrapper();
+      log.debug("ds: {}", digitalSpecimenWrapper);
+      if (!currentSpecimens.containsKey(digitalSpecimenWrapper.physicalSpecimenID())) {
+        log.debug("Specimen with id: {} is completely new",
+            digitalSpecimenWrapper.physicalSpecimenID());
+        newSpecimens.add(event);
+      } else {
+        var currentDigitalSpecimen = currentSpecimens.get(
+            digitalSpecimenWrapper.physicalSpecimenID());
+        var processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
+            currentSpecimens, event, currentMedia);
+        if (equalityService.specimensAreEqual(currentDigitalSpecimen,
+            digitalSpecimenWrapper, processedMediaRelationships)) {
+          log.debug("Received digital specimen is equal to digital specimen: {}",
+              currentDigitalSpecimen.id());
+          equalSpecimens.add(currentDigitalSpecimen);
+        } else {
+          log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
+          var eventWithUpdatedEr = equalityService.setExistingEventDatesSpecimen(
+              currentDigitalSpecimen.digitalSpecimenWrapper(), event, processedMediaRelationships);
+          changedSpecimens.add(
+              new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, eventWithUpdatedEr,
+                  processedMediaRelationships));
+        }
+      }
+    }
+    var newSpecimenPids = createNewSpecimenPids(newSpecimens);
+    return new SpecimenProcessResult(equalSpecimens, changedSpecimens, newSpecimens,
+        newSpecimenPids);
+  }
+
+  private Map<String, String> createNewSpecimenPids(List<DigitalSpecimenEvent> events) {
+    if (events.isEmpty()) {
+      return Map.of();
+    }
+    var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
+    var request = fdoRecordService.buildPostHandleRequest(specimenList);
+    return createNewPids(request, true);
+  }
+
+  private Map<String, String> createPidsForNewMediaObjects(
+      Map<String, DigitalMediaRecord> existingMedia,
+      Set<DigitalMediaEvent> digitalMediaEvents) {
+    var newEvents = digitalMediaEvents.stream()
+        .filter(
+            e -> !existingMedia.containsKey(e.digitalMediaWrapper().attributes().getAcAccessURI()))
+        .toList();
+    return createNewMediaPids(newEvents);
+  }
+
+  private Map<String, String> createNewMediaPids(
+      List<DigitalMediaEvent> digitalMediaEvents) {
+    if (digitalMediaEvents.isEmpty()) {
+      return Map.of();
+    }
+    var request = fdoRecordService.buildPostRequestMedia(digitalMediaEvents);
+    return createNewPids(request, false);
+  }
+
+  private Map<String, String> createNewPids(List<JsonNode> request, boolean isSpecimen) {
     try {
-      publisherService.republishEvent(event);
+      var pidMap = handleComponent.postHandle(request, isSpecimen);
+      log.info("Successfully minted {} {} PIDs", pidMap.size(), isSpecimen ? "specimen" : "media");
+      return pidMap; // map localId : doiOfTarget
+    } catch (PidException e) {
+      log.error("Unable to create new PIDs", e);
+    }
+    return Map.of();
+  }
+
+
+  private MediaProcessResult processMedia(Set<DigitalMediaEvent> events,
+      Map<String, DigitalMediaRecord> currentDigitalMedias, Map<String, PidProcessResult> pidMap) {
+    var equalDigitalMedia = new ArrayList<DigitalMediaRecord>();
+    var changedDigitalMedia = new ArrayList<UpdatedDigitalMediaTuple>();
+    var newDigitalMedia = new ArrayList<DigitalMediaEvent>();
+    for (var mediaEvent : events) {
+      var digitalMedia = mediaEvent.digitalMediaWrapper();
+      var accessUri = digitalMedia.attributes().getAcAccessURI();
+      log.debug("Processing digitalMediaWrapper: {}", digitalMedia);
+      if (!currentDigitalMedias.containsKey(accessUri)) {
+        log.debug("DigitalMedia with uri: {} is completely new", accessUri);
+        newDigitalMedia.add(mediaEvent);
+      } else {
+        var currentDigitalMedia = currentDigitalMedias.get(accessUri);
+        var relatedSpecimenDois = entityRelationshipService.findNewSpecimenRelationshipsForMedia(
+            currentDigitalMedia, pidMap.get(accessUri));
+        if (equalityService.mediaAreEqual(currentDigitalMedia, digitalMedia, relatedSpecimenDois)) {
+          log.debug("Received digital media is equal to digital media: {}",
+              currentDigitalMedia.id());
+          equalDigitalMedia.add(currentDigitalMedia);
+        } else {
+          var eventWithUpdatedEr = equalityService.setExistingEventDatesMedia(
+              currentDigitalMedia, mediaEvent);
+          log.debug("Digital Media Object with id: {} has received an update",
+              currentDigitalMedia.id());
+          changedDigitalMedia.add(
+              new UpdatedDigitalMediaTuple(currentDigitalMedia, eventWithUpdatedEr,
+                  relatedSpecimenDois));
+        }
+      }
+    }
+    return new MediaProcessResult(equalDigitalMedia, changedDigitalMedia, newDigitalMedia);
+  }
+
+  private void republishSpecimenEvent(DigitalSpecimenEvent event) {
+    try {
+      publisherService.republishSpecimenEvent(event);
     } catch (JsonProcessingException e) {
       log.error("Fatal exception, unable to republish message due to invalid json", e);
     }
@@ -176,457 +392,30 @@ public class ProcessingService {
     return repository.getDigitalSpecimens(
             events.stream().map(event -> event.digitalSpecimenWrapper().physicalSpecimenID()).toList())
         .stream().collect(
-            Collectors.toMap(
+            toMap(
                 specimenRecord -> specimenRecord.digitalSpecimenWrapper().physicalSpecimenID(),
                 Function.identity()));
   }
 
-  private void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalSpecimen,
-      List<DigitalSpecimenEvent> events) {
-    var currentIds = currentDigitalSpecimen.stream().map(DigitalSpecimenRecord::id).toList();
-    repository.updateLastChecked(currentIds);
-    log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
-        currentDigitalSpecimen.size());
-    gatherDigitalMediaObjectForEqualRecords(currentDigitalSpecimen, events);
+  private Map<String, DigitalMediaRecord> getCurrentMedia(
+      Set<DigitalMediaEvent> mediaEvents) {
+    var mediaURIs = mediaEvents.stream()
+        .map(mediaEvent -> mediaEvent.digitalMediaWrapper().attributes().getAcAccessURI())
+        .collect(Collectors.toSet());
+    if (!mediaURIs.isEmpty()) {
+      return mediaRepository.getExistingDigitalMedia(mediaURIs)
+          .stream().filter(Objects::nonNull)
+          .collect(toMap(
+              DigitalMediaRecord::accessURI,
+              Function.identity(),
+              (uri1, uri2) -> {
+                log.warn("Duplicate URIs found for digital media");
+                return uri1;
+              }
+          ));
+    }
+    return Map.of();
   }
 
-  private void gatherDigitalMediaObjectForEqualRecords(
-      List<DigitalSpecimenRecord> currentDigitalSpecimen, List<DigitalSpecimenEvent> events) {
-    var pidMap = currentDigitalSpecimen.stream().collect(Collectors.toMap(
-        digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimenWrapper()
-            .physicalSpecimenID(),
-        DigitalSpecimenRecord::id
-    ));
-    // Events contain the incoming media information, the record contains the id. We need to link both
-    // to publish media events
-    for (var event : events) {
-      if (pidMap.containsKey(event.digitalSpecimenWrapper().physicalSpecimenID())) {
-        var digitalSpecimenPid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
-        var digitalMedia = event.digitalMediaEvents();
-        publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, null);
-      }
-    }
-  }
-
-  private Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    log.info("Persisting to DOI Server");
-    var successfullyUpdatedHandles = updateHandles(updatedDigitalSpecimenTuples);
-    if (!successfullyUpdatedHandles) {
-      return Set.of();
-    }
-    var mediaPidMap = createMediaPidsForUpdatedRecords(
-        updatedDigitalSpecimenTuples);
-    var digitalSpecimenRecords = getSpecimenRecordMap(updatedDigitalSpecimenTuples, mediaPidMap);
-    log.info("Persisting {} updated record to the database", digitalSpecimenRecords.size());
-    try {
-      repository.createDigitalSpecimenRecord(
-          digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
-              .toList());
-    } catch (DataAccessException e) {
-      log.error("Unable to update records into database. Rolling back updates", e);
-      rollbackService.rollbackUpdatedSpecimens(digitalSpecimenRecords, mediaPidMap, false, false);
-      return Collections.emptySet();
-    }
-    digitalMediaService.removeSpecimenRelationshipsFromMedia(digitalSpecimenRecords);
-    log.info("Persisting {} updated records to elastic", digitalSpecimenRecords.size());
-    try {
-      var bulkResponse = elasticRepository.indexDigitalSpecimen(
-          digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
-              .toList());
-      if (!bulkResponse.errors()) {
-        handleSuccessfulElasticUpdate(digitalSpecimenRecords, mediaPidMap);
-      } else {
-        digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticUpdate(
-            digitalSpecimenRecords, mediaPidMap, bulkResponse);
-      }
-      var successfullyProcessedRecords = digitalSpecimenRecords.stream()
-          .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
-              Collectors.toSet());
-      log.info("Successfully updated {} digitalSpecimen records",
-          successfullyProcessedRecords.size());
-      annotationPublisherService.publishAnnotationUpdatedSpecimen(digitalSpecimenRecords);
-      gatherDigitalMediaObjectForUpdatedRecords(digitalSpecimenRecords);
-      return successfullyProcessedRecords;
-    } catch (IOException | ElasticsearchException e) {
-      log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackUpdatedSpecimens(digitalSpecimenRecords, mediaPidMap, false, true);
-      return Set.of();
-    }
-  }
-
-  private void handleSuccessfulElasticUpdate(
-      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords,
-      Map<DigitalMediaKey, String> mediaPidMap) {
-    log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
-    var failedRecords = new HashSet<UpdatedDigitalSpecimenRecord>();
-    for (var digitalSpecimenRecord : digitalSpecimenRecords) {
-      var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
-      if (!successfullyPublished) {
-        failedRecords.add(digitalSpecimenRecord);
-      }
-    }
-    if (!failedRecords.isEmpty()) {
-      rollbackService.rollbackUpdatedSpecimens(failedRecords, mediaPidMap, true, true);
-    }
-    digitalSpecimenRecords.removeAll(failedRecords);
-  }
-
-  private Set<UpdatedDigitalSpecimenRecord> getSpecimenRecordMap(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples,
-      Map<DigitalMediaKey, String> mediaPidMap) {
-    return updatedDigitalSpecimenTuples.stream().map(tuple -> {
-          var recordNoMediaEr = new DigitalSpecimenRecord(
-              tuple.currentSpecimen().id(),
-              midsService.calculateMids(tuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
-              tuple.currentSpecimen().version() + 1,
-              Instant.now(),
-              tuple.digitalSpecimenEvent().digitalSpecimenWrapper());
-          var digitalSpecimenRecord = setMediaEntityRelationship(tuple.digitalMediaProcessResult(),
-              recordNoMediaEr, mediaPidMap);
-          return new UpdatedDigitalSpecimenRecord(
-              digitalSpecimenRecord,
-              tuple.digitalSpecimenEvent().enrichmentList(),
-              tuple.currentSpecimen(),
-              createJsonPatch(
-                  tuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
-                  tuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
-              tuple.digitalSpecimenEvent().digitalMediaEvents(),
-              tuple.digitalMediaProcessResult());
-        }
-    ).collect(Collectors.toSet());
-  }
-
-  private boolean updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream()
-        .filter(tuple -> fdoRecordService.handleNeedsUpdate(
-            tuple.currentSpecimen().digitalSpecimenWrapper(),
-            tuple.digitalSpecimenEvent().digitalSpecimenWrapper()))
-        .toList();
-
-    if (!digitalSpecimensToUpdate.isEmpty()) {
-      try {
-        log.info("Updating {} doi records", digitalSpecimensToUpdate.size());
-        var requests = fdoRecordService.buildUpdateHandleRequest(digitalSpecimensToUpdate);
-        handleComponent.updateHandle(requests);
-      } catch (PidException e) {
-        log.error("Unable to update DOI record. Not proceeding with update. ", e);
-        try {
-          for (var tuple : updatedDigitalSpecimenTuples) {
-            publisherService.deadLetterEvent(tuple.digitalSpecimenEvent());
-          }
-        } catch (JsonProcessingException jsonEx) {
-          log.error(DLQ_FAILED, updatedDigitalSpecimenTuples, jsonEx);
-        }
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
-    try {
-      publisherService.publishUpdateEvent(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
-          updatedDigitalSpecimenRecord.jsonPatch());
-      return true;
-    } catch (JsonProcessingException e) {
-      log.error("Failed to publish update event", e);
-      return false;
-    }
-  }
-
-  private Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events) {
-    Map<String, String> pidMap;
-    Map<DigitalMediaKey, String> mediaPidMap;
-    try {
-      pidMap = createNewPidRecords(events);
-    } catch (PidException e) {
-      log.error("Unable to create PID. {}", e.getMessage());
-      rollbackService.pidCreationFailed(events);
-      return Collections.emptySet();
-    }
-    var digitalSpecimenRecords = events.stream().collect(Collectors.toMap(
-            event -> mapToDigitalSpecimenRecord(event, pidMap),
-            event -> Pair.of(event.enrichmentList(), event.digitalMediaEvents()),
-            (event1, event2) -> event1)).entrySet()
-        .stream().filter(e -> e.getKey() != null)
-        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-    if (digitalSpecimenRecords.isEmpty()) {
-      return Collections.emptySet();
-    }
-    mediaPidMap = createMediaPidsForNewRecords(digitalSpecimenRecords);
-    digitalSpecimenRecords.remove(null);
-    digitalSpecimenRecords = digitalSpecimenRecords.entrySet().stream()
-        .collect(Collectors.toMap(
-            e -> setMediaEntityRelationship(
-                new DigitalMediaProcessResult(Collections.emptyList(), Collections.emptyList(),
-                    e.getValue().getRight()), e.getKey(), mediaPidMap),
-            Entry::getValue));
-
-    log.info("Inserting {} new specimen into the database",
-        digitalSpecimenRecords.size());
-    try {
-      repository.createDigitalSpecimenRecord(digitalSpecimenRecords.keySet());
-    } catch (DataAccessException e) {
-      log.error("Unable to insert new specimens into the database. Rolling back dois", e);
-      rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, mediaPidMap, false,
-          false);
-      return Collections.emptySet();
-    }
-    try {
-      log.info("Inserting {} new specimen into the elastic search",
-          digitalSpecimenRecords.size());
-      var bulkResponse = elasticRepository.indexDigitalSpecimen(
-          digitalSpecimenRecords.keySet());
-      if (!bulkResponse.errors()) {
-        handleSuccessfulElasticInsert(digitalSpecimenRecords, mediaPidMap);
-      } else {
-        digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticInsert(
-            digitalSpecimenRecords, mediaPidMap, bulkResponse);
-      }
-      log.info("Successfully created {} new digitalSpecimenRecord",
-          digitalSpecimenRecords.size());
-      annotationPublisherService.publishAnnotationNewSpecimen(
-          digitalSpecimenRecords.keySet());
-      if (!mediaPidMap.isEmpty()) {
-        gatherDigitalMediaObjectForNewRecords(digitalSpecimenRecords, mediaPidMap);
-      }
-      return digitalSpecimenRecords.keySet();
-    } catch (IOException | ElasticsearchException e) {
-      log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, mediaPidMap, false, true);
-      return Collections.emptySet();
-    }
-  }
-
-  private DigitalSpecimenRecord setMediaEntityRelationship(
-      DigitalMediaProcessResult mediaProcessResult,
-      DigitalSpecimenRecord digitalSpecimenRecord, Map<DigitalMediaKey, String> mediaPidMap) {
-    var newEntityRelationshipStream = mediaProcessResult.newMedia().stream()
-        .map(mediaEvent -> {
-          var digitalMediaKey = new DigitalMediaKey(digitalSpecimenRecord.id(),
-              mediaEvent.digitalMediaObjectWithoutDoi().attributes().getAcAccessURI());
-          return buildEntityRelationship(HAS_MEDIA.getName(), mediaPidMap.get(
-              digitalMediaKey));
-        });
-    var totalErs = Stream.concat(
-        digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsHasEntityRelationships()
-            .stream()
-            // Filters out tombstoned media relations so we don't include then in the new version
-            .filter(entityRelationship -> !mediaProcessResult.tombstoneMedia()
-                .contains(entityRelationship)),
-        newEntityRelationshipStream).toList();
-    var existingAttributes = digitalSpecimenRecord.digitalSpecimenWrapper().attributes();
-    existingAttributes.setOdsHasEntityRelationships(totalErs);
-    return new DigitalSpecimenRecord(
-        digitalSpecimenRecord.id(),
-        digitalSpecimenRecord.midsLevel(),
-        digitalSpecimenRecord.version(),
-        digitalSpecimenRecord.created(),
-        new DigitalSpecimenWrapper(
-            digitalSpecimenRecord.digitalSpecimenWrapper().physicalSpecimenID(),
-            digitalSpecimenRecord.digitalSpecimenWrapper().type(),
-            existingAttributes,
-            digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes()
-        )
-    );
-  }
-
-  private void gatherDigitalMediaObjectForNewRecords(
-      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords,
-      Map<DigitalMediaKey, String> mediaPids) {
-    log.info("Publishing digital media object events for processing");
-    digitalSpecimenRecords.forEach((key, value) -> {
-      var digitalSpecimenPid = key.id();
-      var digitalMedia = value.getRight();
-      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, mediaPids);
-    });
-  }
-
-  private void publishDigitalMediaRecord(List<DigitalMediaEventWithoutDOI> digitalMedia,
-      String digitalSpecimenPid, Map<DigitalMediaKey, String> mediaPidMap) {
-    for (var digitalMediaObjectEventWithoutDoi : digitalMedia) {
-      var attributes = digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi()
-          .attributes();
-      var digitalMediaKey = new DigitalMediaKey(digitalSpecimenPid, attributes.getAcAccessURI());
-      String mediaPid = mediaPidMap == null ? null :
-          mediaPidMap.get(digitalMediaKey);
-      attributes.getOdsHasEntityRelationships().add(
-          buildEntityRelationship(HAS_SPECIMEN.getName(), digitalSpecimenPid));
-      var digitalMediaObjectEvent = new DigitalMediaEvent(
-          digitalMediaObjectEventWithoutDoi.enrichmentList(),
-          new DigitalMediaWrapper(
-              digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().type(),
-              digitalSpecimenPid,
-              attributes
-                  .withId(mediaPid)
-                  .withDctermsIdentifier(mediaPid),
-              digitalMediaObjectEventWithoutDoi.digitalMediaObjectWithoutDoi().originalAttributes())
-      );
-      try {
-        publisherService.publishDigitalMediaObject(digitalMediaObjectEvent);
-      } catch (JsonProcessingException e) {
-        log.warn("Failed to publish digitalMediaEvent: {} for specimen {}",
-            digitalMediaObjectEvent.digitalMediaWrapper().attributes().getAcAccessURI(),
-            digitalSpecimenPid);
-      }
-    }
-  }
-
-  private EntityRelationship buildEntityRelationship(String relationshipType,
-      String relatedResourceId) {
-    return new EntityRelationship()
-        .withType("ods:EntityRelationship")
-        .withDwcRelationshipEstablishedDate(Date.from(Instant.now()))
-        .withDwcRelationshipOfResource(relationshipType)
-        .withOdsHasAgents(List.of(AgentUtils.createMachineAgent(applicationProperties.getName(),
-            applicationProperties.getPid(), PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))
-        .withDwcRelatedResourceID(DOI_PREFIX + relatedResourceId)
-        .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedResourceId));
-  }
-
-  private void gatherDigitalMediaObjectForUpdatedRecords(
-      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
-    digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
-      var digitalSpecimenPid = digitalSpecimenRecord.digitalSpecimenRecord().id();
-      var digitalMedia = digitalSpecimenRecord.digitalMediaObjectEvents();
-      publishDigitalMediaRecord(digitalMedia, digitalSpecimenPid, null);
-    });
-  }
-
-  private Map<String, String> createNewPidRecords(List<DigitalSpecimenEvent> events)
-      throws PidException {
-    var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
-    var request = fdoRecordService.buildPostHandleRequest(specimenList);
-    if (!request.isEmpty()) {
-      return handleComponent.postHandle(request);
-    } else {
-      return Map.of();
-    }
-
-  }
-
-  private Map<DigitalMediaKey, String> createMediaPidsForNewRecords(
-      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords) {
-    var specimenMediaPairs = digitalSpecimenRecords.entrySet().stream()
-        .filter(specimenRecord -> specimenRecord.getKey().digitalSpecimenWrapper().attributes()
-            .getOdsIsKnownToContainMedia())
-        .map(e -> Pair.of(e.getKey().id(),
-            e.getValue().getRight())) // specimen id -> digitalMediaRecords
-        .toList();
-    if (specimenMediaPairs.isEmpty()) {
-      return Collections.emptyMap();
-    }
-    var requests = specimenMediaPairs.stream()
-        .map(
-            specimenMediaPair -> fdoRecordService.buildPostRequestMedia(specimenMediaPair.getLeft(),
-                specimenMediaPair.getRight()))
-        .flatMap(List::stream)
-        .toList();
-    if (requests.isEmpty()) {
-      return Collections.emptyMap();
-    }
-    return postMediaHandles(requests);
-  }
-
-  private Map<DigitalMediaKey, String> createMediaPidsForUpdatedRecords(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    if (updatedDigitalSpecimenTuples.stream()
-        .map(updateTuple -> updateTuple.digitalMediaProcessResult().newMedia())
-        .flatMap(List::stream).toList()
-        .isEmpty()) {
-      return Collections.emptyMap();
-    }
-    var requests = updatedDigitalSpecimenTuples.stream()
-        .map(updateTuples -> fdoRecordService.buildPostRequestMedia(
-            updateTuples.currentSpecimen().id(),
-            updateTuples.digitalMediaProcessResult().newMedia()))
-        .flatMap(List::stream)
-        .toList();
-    return postMediaHandles(requests);
-  }
-
-  private Map<DigitalMediaKey, String> postMediaHandles(List<JsonNode> requests) {
-    try {
-      log.info("Minting PIDs for media");
-      return handleComponent.postMediaHandle(requests);
-    } catch (PidException e) {
-      log.error(
-          "PID creation for Media objects failed. Media objects for this batch will not be published",
-          e);
-      return Collections.emptyMap();
-    }
-  }
-
-  private void handleSuccessfulElasticInsert(
-      Map<DigitalSpecimenRecord, Pair<List<String>, List<DigitalMediaEventWithoutDOI>>> digitalSpecimenRecords,
-      Map<DigitalMediaKey, String> mediaPidMap) {
-    log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
-    List<DigitalSpecimenRecord> rollbackRecords = new ArrayList<>();
-    for (var entry : digitalSpecimenRecords.entrySet()) {
-      var successfullyPublished = publishEvents(entry.getKey(), entry.getValue());
-      if (!successfullyPublished) {
-        digitalSpecimenRecords.remove(entry.getKey());
-        rollbackRecords.add(entry.getKey());
-      }
-    }
-    if (!rollbackRecords.isEmpty()) {
-      rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, mediaPidMap, true, true);
-    }
-  }
-
-
-  private boolean publishEvents(DigitalSpecimenRecord key,
-      Pair<List<String>, List<DigitalMediaEventWithoutDOI>> additionalInfo) {
-    try {
-      publisherService.publishCreateEvent(key);
-    } catch (JsonProcessingException e) {
-      log.error("Rolling back, failed to publish Create event", e);
-      return false;
-    }
-    additionalInfo.getLeft().forEach(aas -> {
-      try {
-        publisherService.publishAnnotationRequestEvent(aas, key);
-      } catch (JsonProcessingException e) {
-        log.error(
-            "No action taken, failed to publish annotation request event for aas: {} digital specimen: {}",
-            aas, key.id(), e);
-      }
-    });
-    return true;
-  }
-
-  private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event,
-      Map<String, String> pidMap) {
-    var handle = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
-    if (handle == null) {
-      try {
-        log.error("DOI not created for Digital Specimen {}",
-            event.digitalSpecimenWrapper().physicalSpecimenID());
-        publisherService.deadLetterEvent(event);
-      } catch (JsonProcessingException e) {
-        log.error("DLQ failed for specimen {}, no recovery possible",
-            event.digitalSpecimenWrapper().physicalSpecimenID());
-      }
-      return null;
-    }
-    return new DigitalSpecimenRecord(
-        pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()),
-        midsService.calculateMids(event.digitalSpecimenWrapper()),
-        1,
-        Instant.now(),
-        event.digitalSpecimenWrapper()
-    );
-  }
-
-  // We remove the dcterms:modified from the comparison as it is generated and will always differ
-  private JsonNode createJsonPatch(DigitalSpecimen currentDigitalSpecimen,
-      DigitalSpecimen digitalSpecimen) {
-    var jsonCurrentSpecimen = (ObjectNode) mapper.valueToTree(currentDigitalSpecimen);
-    var jsonSpecimen = (ObjectNode) mapper.valueToTree(digitalSpecimen);
-    jsonCurrentSpecimen.set("dcterms:modified", null);
-    jsonSpecimen.set("dcterms:modified", null);
-    return JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen);
-  }
 }
 

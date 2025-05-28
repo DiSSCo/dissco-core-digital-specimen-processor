@@ -164,7 +164,7 @@ class AnnotationPublisherServiceTest {
         .withOaMotivation(motivation)
         .withOaHasBody(body)
         .withOaHasTarget(new AnnotationTarget()
-            .withOdsFdoType("ods:DigitalSpecimen")
+            .withOdsFdoType(TYPE)
             .withType(TYPE)
             .withId(DOI_PREFIX + HANDLE)
             .withDctermsIdentifier(DOI_PREFIX + HANDLE)

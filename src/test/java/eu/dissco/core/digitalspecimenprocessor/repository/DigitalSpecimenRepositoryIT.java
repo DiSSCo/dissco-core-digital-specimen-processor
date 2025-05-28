@@ -7,13 +7,12 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_S
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordNoOriginalData;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import org.jooq.Record1;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +49,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testGetDigitalSpecimens() throws DisscoRepositoryException {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
             givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
@@ -66,14 +65,14 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testUpdateVersionSpecimens() {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
             givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
 
     // When
     var result = repository.createDigitalSpecimenRecord(
-        List.of(givenDigitalSpecimenRecord(2, false)));
+        Set.of(givenDigitalSpecimenRecord(2, false)));
 
     // Then
     assertThat(result).isEqualTo(new int[]{1});
@@ -83,7 +82,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testUpdateLastChecked() {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
@@ -102,13 +101,14 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   @Test
   void testUpsertSpecimens() {
     // Given
-    var records = List.of(
+    var records = Set.of(
         givenDigitalSpecimenRecord(),
-        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
-        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2"));
+        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"));
+    var upsertRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2"));
 
     // When
     repository.createDigitalSpecimenRecord(records);
+    repository.createDigitalSpecimenRecord(upsertRecord);
 
     // Then
     var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
@@ -118,33 +118,13 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpsertSpecimensOriginalDataOnly() throws JsonProcessingException{
-    // Given
-    var firstRecord = givenDigitalSpecimenRecordNoOriginalData();
-    var records = List.of(
-        firstRecord,
-        givenDigitalSpecimenRecord());
-
-    // When
-    repository.createDigitalSpecimenRecord(records);
-
-    // Then
-    var result = MAPPER.readTree(context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
-        .from(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
-        .fetchOne(Record1::value1).data());
-
-    assertThat(result).isEqualTo(MAPPER.createObjectNode());
-  }
-
-
-  @Test
   void testCreateWithInvalidUnicode() {
     // Given
     var ds = givenDigitalSpecimenRecord();
     ds.digitalSpecimenWrapper().attributes().setDwcCollectionCode("\u0000");
 
     // When
-    repository.createDigitalSpecimenRecord(List.of(ds));
+    repository.createDigitalSpecimenRecord(Set.of(ds));
 
     // Then
     var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
@@ -157,7 +137,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   void testRollbackSpecimen() throws DisscoRepositoryException {
     // Given
     repository.createDigitalSpecimenRecord(
-        List.of(
+        Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));

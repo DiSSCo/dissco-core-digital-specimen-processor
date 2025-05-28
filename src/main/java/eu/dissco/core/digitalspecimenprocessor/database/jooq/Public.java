@@ -26,10 +26,10 @@ public class Public extends SchemaImpl {
      */
     public static final Public PUBLIC = new Public();
 
-  /**
-   * The table <code>public.digital_media_object</code>.
-   */
-  public final DigitalMediaObject DIGITAL_MEDIA_OBJECT = DigitalMediaObject.DIGITAL_MEDIA_OBJECT;
+    /**
+     * The table <code>public.digital_media_object</code>.
+     */
+    public final DigitalMediaObject DIGITAL_MEDIA_OBJECT = DigitalMediaObject.DIGITAL_MEDIA_OBJECT;
 
     /**
      * The table <code>public.digital_specimen</code>.

@@ -126,8 +126,7 @@ public class DigitalSpecimen extends TableImpl<DigitalSpecimenRecord> {
     /**
      * The column <code>public.digital_specimen.modified</code>.
      */
-    public final TableField<DigitalSpecimenRecord, Instant> MODIFIED = createField(
-        DSL.name("modified"), SQLDataType.INSTANT, this, "");
+    public final TableField<DigitalSpecimenRecord, Instant> MODIFIED = createField(DSL.name("modified"), SQLDataType.INSTANT, this, "");
 
     private DigitalSpecimen(Name alias, Table<DigitalSpecimenRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

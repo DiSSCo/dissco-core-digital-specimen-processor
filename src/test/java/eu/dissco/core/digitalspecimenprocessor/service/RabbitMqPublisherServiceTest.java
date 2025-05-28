@@ -6,7 +6,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoA
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatch;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenNewAcceptedAnnotation;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -96,7 +96,7 @@ class RabbitMqPublisherServiceTest {
     // Given
 
     // When
-    rabbitMqPublisherService.publishCreateEvent(givenDigitalSpecimenRecord());
+    rabbitMqPublisherService.publishCreateEventSpecimen(givenDigitalSpecimenRecord());
 
     // Then
     var dlqMessage = rabbitTemplate.receive("create-update-tombstone-queue");
@@ -108,8 +108,8 @@ class RabbitMqPublisherServiceTest {
     // Given
 
     // When
-    rabbitMqPublisherService.publishUpdateEvent(givenDigitalSpecimenRecord(2, false),
-        givenJsonPatch());
+    rabbitMqPublisherService.publishUpdateEventSpecimen(givenDigitalSpecimenRecord(2, false),
+        givenJsonPatchSpecimen());
 
     // Then
     var dlqMessage = rabbitTemplate.receive("create-update-tombstone-queue");
@@ -122,7 +122,7 @@ class RabbitMqPublisherServiceTest {
     var message = givenDigitalSpecimenRecord();
 
     // When
-    rabbitMqPublisherService.publishAnnotationRequestEvent(MAS, message);
+    rabbitMqPublisherService.publishAnnotationRequestEventSpecimen(MAS, message);
 
     // Then
     var result = rabbitTemplate.receive("mas-ocr-queue");
@@ -137,7 +137,7 @@ class RabbitMqPublisherServiceTest {
     var message = givenDigitalSpecimenEvent();
 
     // When
-    rabbitMqPublisherService.republishEvent(message);
+    rabbitMqPublisherService.republishSpecimenEvent(message);
 
     // Then
     var result = rabbitTemplate.receive("digital-specimen-queue");
@@ -152,7 +152,7 @@ class RabbitMqPublisherServiceTest {
     var message = givenDigitalSpecimenEvent();
 
     // When
-    rabbitMqPublisherService.deadLetterEvent(message);
+    rabbitMqPublisherService.deadLetterEventSpecimen(message);
 
     // Then
     var result = rabbitTemplate.receive("digital-specimen-queue-dlq");

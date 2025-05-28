@@ -10,6 +10,7 @@ import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMach
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
@@ -20,7 +21,9 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_MEDIA
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributesPlusIdentifier;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
@@ -30,18 +33,20 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandl
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleMediaRequestAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdateHandleRequest;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalMediaTuple;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEventWithoutDOI;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWithoutDOI;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.property.FdoProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia.DctermsType;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsLivingOrPreserved;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
@@ -92,6 +97,16 @@ class FdoRecordServiceTest {
         Arguments.of(attributes.withOdsLivingOrPreserved(OdsLivingOrPreserved.LIVING)),
         Arguments.of(attributes.withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)),
         Arguments.of(attributes.withOdsIsMarkedAsType(false)));
+  }
+
+  private static Stream<Arguments> digitalMediaNeedsToBeChanged() {
+    var currentMedia = givenDigitalMedia(MEDIA_URL);
+    return Stream.of(
+        Arguments.of(currentMedia.withDctermsRights("Rights")),
+        Arguments.of(currentMedia.withDctermsType(DctermsType.COLLECTION)),
+        Arguments.of(currentMedia.withOdsOrganisationID("OtherOrgId"))
+    );
+
   }
 
   static Stream<Arguments> genLicense() {
@@ -145,7 +160,7 @@ class FdoRecordServiceTest {
     var expected = List.of(givenHandleMediaRequest());
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(givenDigitalMediaEvent()));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(givenDigitalMediaEvent()));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -155,11 +170,10 @@ class FdoRecordServiceTest {
   @MethodSource("genLicense")
   void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
     // Given
-    var media = new DigitalMediaEventWithoutDOI(
+    var media = new DigitalMediaEvent(
         List.of("image-metadata"),
-        new DigitalMediaWithoutDOI(
+        new DigitalMediaWrapper(
             "StillImage",
-            HANDLE,
             new DigitalMedia()
                 .withAcAccessURI(MEDIA_URL)
                 .withOdsOrganisationID(ORGANISATION_ID)
@@ -174,7 +188,7 @@ class FdoRecordServiceTest {
                 .put(licenseField, fieldValue))));
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -185,11 +199,10 @@ class FdoRecordServiceTest {
   void testGenRequestLicenseAndRightsHolder(List<Agent> rightHolders, String expectedName,
       String expectedId) {
     // Given
-    var media = new DigitalMediaEventWithoutDOI(
+    var media = new DigitalMediaEvent(
         List.of("image-metadata"),
-        new DigitalMediaWithoutDOI(
+        new DigitalMediaWrapper(
             "StillImage",
-            HANDLE,
             new DigitalMedia()
                 .withAcAccessURI(MEDIA_URL)
                 .withOdsOrganisationID(ORGANISATION_ID)
@@ -210,7 +223,7 @@ class FdoRecordServiceTest {
             .set("attributes", attributes)));
 
     // When
-    var result = fdoRecordService.buildPostRequestMedia(HANDLE, List.of(media));
+    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
     // Then
     assertThat(result).isEqualTo(expected);
@@ -269,6 +282,41 @@ class FdoRecordServiceTest {
 
     // When
     var result = fdoRecordService.buildRollbackUpdateRequest(List.of(specimenRecord));
+
+    // Then
+    assertThat(result).isEqualTo(List.of(expected));
+  }
+
+  @Test
+  void testRollbackUpdateMedia() {
+    // Given
+    var expected = MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("id", MEDIA_PID)
+            .put("type", TYPE_MEDIA)
+            .set("attributes", givenHandleMediaRequestAttributes()));
+
+    // When
+    var result = fdoRecordService.buildRollbackUpdateRequestMedia(
+        List.of(givenDigitalMediaRecord()));
+
+    // Then
+    assertThat(result).isEqualTo(List.of(expected));
+  }
+
+  @Test
+  void testUpdateRequestMedia() {
+    // Given
+    var expected = MAPPER.createObjectNode()
+        .set("data", MAPPER.createObjectNode()
+            .put("id", MEDIA_PID)
+            .put("type", TYPE_MEDIA)
+            .set("attributes", givenHandleMediaRequestAttributes()));
+
+    // When
+    var result = fdoRecordService.buildUpdateHandleRequestMedia(
+        List.of(givenUpdatedDigitalMediaTuple(false))
+    );
 
     // Then
     assertThat(result).isEqualTo(List.of(expected));
@@ -385,14 +433,23 @@ class FdoRecordServiceTest {
 
   @ParameterizedTest
   @MethodSource("digitalSpecimensNeedToBeChanged")
-  void testHandleNeedsUpdate(DigitalSpecimen currentAttributes) {
+  void testHandleNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
     var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
         currentAttributes,
         ORIGINAL_DATA);
     // Then
     assertThat(
-        fdoRecordService.handleNeedsUpdate(currentDigitalSpecimen,
+        fdoRecordService.handleNeedsUpdateSpecimen(currentDigitalSpecimen,
             givenDigitalSpecimenWrapper())).isTrue();
+  }
+
+  @ParameterizedTest
+  @MethodSource("digitalMediaNeedsToBeChanged")
+  void testHandleNeedsUpdateMedia(DigitalMedia currentMedia) {
+    // Then
+    assertThat(
+        fdoRecordService.handleNeedsUpdateMedia(currentMedia,
+            givenDigitalMedia(MEDIA_URL))).isTrue();
   }
 
   @Test
@@ -402,9 +459,16 @@ class FdoRecordServiceTest {
         null, false, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
 
     // Then
-    assertThat(fdoRecordService.handleNeedsUpdate(
+    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(
         new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
             generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
+  }
+
+  @Test
+  void testHandleDoesNotNeedUpdateMedia() {
+    // Then
+    assertThat(fdoRecordService.handleNeedsUpdateMedia(givenDigitalMedia(MEDIA_URL),
+        givenDigitalMedia(MEDIA_URL))).isFalse();
   }
 
   @Test
@@ -414,7 +478,7 @@ class FdoRecordServiceTest {
         ORGANISATION_ID, false, false);
 
     // When/then
-    assertThat(fdoRecordService.handleNeedsUpdate(currentSpecimen,
+    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(currentSpecimen,
         givenDigitalSpecimenWrapper())).isTrue();
   }
 }
