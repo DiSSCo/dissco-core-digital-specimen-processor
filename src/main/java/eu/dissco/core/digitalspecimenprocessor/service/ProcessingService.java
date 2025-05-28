@@ -218,23 +218,19 @@ public class ProcessingService {
     return results;
   }
 
-  private List<DigitalMediaRecord> processMediaResults(MediaProcessResult mediaProcessResult,
+  private void processMediaResults(MediaProcessResult mediaProcessResult,
       Map<String, PidProcessResult> pidProcessResults) {
-    var results = new ArrayList<DigitalMediaRecord>();
     if (!mediaProcessResult.equalDigitalMedia().isEmpty()) {
       digitalMediaService.updateEqualDigitalMedia(mediaProcessResult.equalDigitalMedia());
     }
     if (!mediaProcessResult.newDigitalMedia().isEmpty()) {
-      results.addAll(
-          digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
-              pidProcessResults));
+      digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
+          pidProcessResults);
     }
     if (!mediaProcessResult.changedDigitalMedia().isEmpty()) {
-      results.addAll(
-          digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
-              pidProcessResults));
+      digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
+          pidProcessResults);
     }
-    return results;
   }
 
 
