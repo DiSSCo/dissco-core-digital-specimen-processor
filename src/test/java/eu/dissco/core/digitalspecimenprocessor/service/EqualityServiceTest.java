@@ -31,9 +31,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMedia;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.Option;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -61,13 +58,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class EqualityServiceTest {
 
   EqualityService equalityService;
-  Configuration jsonPathConfiguration = Configuration.builder()
-      .options(Option.AS_PATH_LIST, Option.SUPPRESS_EXCEPTIONS, Option.ALWAYS_RETURN_LIST)
-      .build();
 
   @BeforeEach
   void setup() {
-    equalityService = new EqualityService(jsonPathConfiguration, new JsonFactory(), MAPPER);
+    equalityService = new EqualityService(MAPPER);
   }
 
   @ParameterizedTest

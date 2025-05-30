@@ -1,20 +1,14 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static com.jayway.jsonpath.Criteria.where;
-import static com.jayway.jsonpath.Filter.filter;
-import static com.jayway.jsonpath.JsonPath.using;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.fge.jsonpatch.diff.JsonDiff;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.DocumentContext;
+import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -22,10 +16,9 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationship
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -40,15 +33,12 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class EqualityService {
 
-  private final Configuration jsonPathConfig;
-  private final JsonFactory factory;
   private final ObjectMapper mapper;
-  private static final List<String> IGNORED_FIELDS = List.of(
+  private static final Set<String> IGNORED_FIELDS = Set.of(
       "dcterms:created",
       "dcterms:modified",
       "dwc:relationshipEstablishedDate"
   );
-  private static final String ENTITY_RELATIONSHIPS = "ENTITY_RELATIONSHIPS";
 
   public boolean specimensAreEqual(DigitalSpecimenRecord currentDigitalSpecimen,
       DigitalSpecimenWrapper digitalSpecimenWrapper,
@@ -73,8 +63,9 @@ public class EqualityService {
     setEntityRelationshipDates( // Set dates of ERs to previous version
         currentDigitalSpecimenWrapper.attributes().getOdsHasEntityRelationships(),
         digitalSpecimen.getOdsHasEntityRelationships());
-    digitalSpecimen.setOdsHasEntityRelationships(addExistingMediaRelationships(mediaRelationships, // add existing media ers
-        digitalSpecimen.getOdsHasEntityRelationships()));
+    digitalSpecimen.setOdsHasEntityRelationships(
+        addExistingMediaRelationships(mediaRelationships, // add existing media ers
+            digitalSpecimen.getOdsHasEntityRelationships()));
     // Set dcterms:created to original date
     digitalSpecimen.withDctermsCreated(
         currentDigitalSpecimenWrapper.attributes().getDctermsCreated());
@@ -144,17 +135,10 @@ public class EqualityService {
         || currentDigitalSpecimen.digitalSpecimenWrapper().attributes() == null) {
       return false;
     }
-    try {
-      var jsonCurrentSpecimen = normaliseJsonNode(
-          mapper.valueToTree(currentDigitalSpecimen.digitalSpecimenWrapper().attributes()), true,
-          true);
-      var jsonSpecimen = normaliseJsonNode(mapper.valueToTree(digitalSpecimenWrapper.attributes()),
-          true, true);
-      return isEqual(jsonCurrentSpecimen, jsonSpecimen, currentDigitalSpecimen.id());
-    } catch (IOException e) {
-      log.error("Unable to re-serialize JSON. Can not determine equality.", e);
-      return false;
-    }
+    var jsonCurrentSpecimen = normaliseJsonNodeSpecimen(
+        currentDigitalSpecimen.digitalSpecimenWrapper().attributes());
+    var jsonSpecimen = normaliseJsonNodeSpecimen(digitalSpecimenWrapper.attributes());
+    return isEqual(jsonCurrentSpecimen, jsonSpecimen, currentDigitalSpecimen.id());
   }
 
   private boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
@@ -163,16 +147,10 @@ public class EqualityService {
         || currentDigitalMedia.attributes() == null) {
       return false;
     }
-    try {
-      var jsonCurrentMedia = normaliseJsonNode(
-          mapper.valueToTree(currentDigitalMedia.attributes()), false, true);
-      var jsonMedia = normaliseJsonNode(
-          mapper.valueToTree(digitalMedia.attributes()), false, true);
-      return isEqual(jsonCurrentMedia, jsonMedia, currentDigitalMedia.id());
-    } catch (IOException e) {
-      log.error("Unable to re-serialize JSON. Can not determine equality.", e);
-      return false;
-    }
+    var jsonCurrentMedia = normaliseJsonNodeMedia(currentDigitalMedia.attributes());
+    var jsonMedia = normaliseJsonNodeMedia(digitalMedia.attributes());
+    return isEqual(jsonCurrentMedia, jsonMedia, currentDigitalMedia.id());
+
   }
 
   private static boolean isEqual(JsonNode currentJson, JsonNode json, String id) {
@@ -184,78 +162,63 @@ public class EqualityService {
     return isEqual;
   }
 
-  public boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
+  private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
       EntityRelationship entityRelationship) {
     if (currentEntityRelationship == null || entityRelationship == null) {
       log.warn("Null ER!");
       return currentEntityRelationship == null && entityRelationship == null;
     }
-    try {
-      var jsonCurrentEntityRelationship = normaliseJsonNode(
-          mapper.valueToTree(currentEntityRelationship), false, true);
-      var jsonEntityRelationship = normaliseJsonNode(mapper.valueToTree(entityRelationship), false,
-          false);
-      return jsonCurrentEntityRelationship.equals(jsonEntityRelationship);
-    } catch (IOException e) {
-      log.error("Unable to serialize entity relationships", e);
-      return false;
+    var jsonCurrentEntityRelationship = removeGeneratedTimestamps(
+        mapper.valueToTree(currentEntityRelationship));
+    var jsonEntityRelationship = removeGeneratedTimestamps(mapper.valueToTree(entityRelationship));
+    return jsonCurrentEntityRelationship.equals(jsonEntityRelationship);
+
+  }
+
+  private JsonNode normaliseJsonNodeSpecimen(DigitalSpecimen digitalSpecimen) {
+    var node = mapper.valueToTree(digitalSpecimen);
+    removeEntityRelationships((ObjectNode) node, HAS_MEDIA);
+    return removeGeneratedTimestamps(node);
+  }
+
+  private JsonNode normaliseJsonNodeMedia(DigitalMedia digitalMedia) {
+    var node = mapper.valueToTree(digitalMedia);
+    removeEntityRelationships((ObjectNode) node, HAS_SPECIMEN);
+    return removeGeneratedTimestamps(node);
+  }
+
+  public JsonNode removeGeneratedTimestamps(JsonNode node) {
+    if (node.isObject()) {
+      ObjectNode result = mapper.createObjectNode();
+      node.fields().forEachRemaining(entry -> {
+        if (!IGNORED_FIELDS.contains(entry.getKey())) {
+          result.set(entry.getKey(), removeGeneratedTimestamps(entry.getValue()));
+        }
+      });
+      return result;
+    } else if (node.isArray()) {
+      ArrayNode result = mapper.createArrayNode();
+      node.forEach(element -> result.add(removeGeneratedTimestamps(element)));
+      return result;
+    } else {
+      return node;
     }
   }
 
-  private JsonNode normaliseJsonNode(JsonNode node, boolean isSpecimen, boolean removeEr)
-      throws IOException {
-    node = removeGeneratedTimestamps(node);
-    var context = using(jsonPathConfig).parse(mapper.writeValueAsString(node));
-    if (removeEr) {
-      removeEntityRelationships(context, isSpecimen);
+  private void removeEntityRelationships(ObjectNode node,
+      EntityRelationshipType targetRelationship) {
+    var entityRelationshipArray = (ArrayNode) node.get("ods:hasEntityRelationships");
+    if (entityRelationshipArray == null) {
+      return;
     }
-    return mapper.valueToTree(context.jsonString());
-  }
-
-  // Uses Json parser to remove generated timestamps
-  // Only needs to scan JsonNode once
-  public JsonNode removeGeneratedTimestamps(JsonNode node)
-      throws IOException {
-    StringWriter output = new StringWriter();
-    var str = mapper.writeValueAsString(node);
-    try (JsonParser parser = factory.createParser(new StringReader(str));
-        JsonGenerator generator = factory.createGenerator(output)) {
-      var skipNextField = false;
-      while (!parser.isClosed()) {
-        JsonToken token = parser.nextToken();
-        if (token == null) {
-          break;
-        }
-        switch (token) {
-          case FIELD_NAME -> {
-            String fieldName = parser.currentName();
-            if (IGNORED_FIELDS.contains(fieldName)) {
-              skipNextField = true;
-            } else {
-              generator.writeFieldName(fieldName);
-              skipNextField = false;
-            }
-          }
-          case START_OBJECT -> generator.writeStartObject();
-          case END_OBJECT -> generator.writeEndObject();
-          case START_ARRAY -> generator.writeStartArray();
-          case END_ARRAY -> generator.writeEndArray();
-          default -> {
-            if (!skipNextField) {
-              generator.copyCurrentEvent(parser);
-            }
-          }
-        }
+    var filteredEntityRelationships = mapper.createArrayNode();
+    for (var er : entityRelationshipArray) {
+      if (!targetRelationship.getRelationshipName()
+          .equals(er.get("dwc:relationshipOfResource").asText())) {
+        filteredEntityRelationships.add(er);
       }
     }
-    return mapper.readTree(output.toString());
-  }
-
-  private static void removeEntityRelationships(DocumentContext context, boolean isSpecimen) {
-    var filteredRelationship =
-        isSpecimen ? HAS_MEDIA.getRelationshipName() : HAS_SPECIMEN.getRelationshipName();
-    var filter = filter(where("dwc:relationshipOfResource").eq(filteredRelationship));
-    context.delete("$['ods:hasEntityRelationships'][?]", filter);
+    node.set("ods:hasEntityRelationships", filteredEntityRelationships);
   }
 
 }
