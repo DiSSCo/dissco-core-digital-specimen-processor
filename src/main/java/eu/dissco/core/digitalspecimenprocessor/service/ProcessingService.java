@@ -18,9 +18,6 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -276,8 +273,6 @@ public class ProcessingService {
     var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
     var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
     var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
-    var start = Instant.now();
-    Duration equalityDuration = Duration.of(0, ChronoUnit.MILLIS);
     for (DigitalSpecimenEvent event : events) {
       var digitalSpecimenWrapper = event.digitalSpecimenWrapper();
       log.debug("ds: {}", digitalSpecimenWrapper);
@@ -290,11 +285,8 @@ public class ProcessingService {
             digitalSpecimenWrapper.physicalSpecimenID());
         var processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
             currentSpecimens, event, currentMedia);
-        var eqStart = Instant.now();
-        var isEqual = equalityService.specimensAreEqual(currentDigitalSpecimen,
-            digitalSpecimenWrapper, processedMediaRelationships);
-        equalityDuration = equalityDuration.plus(Duration.between(eqStart, Instant.now()));
-        if (isEqual) {
+        if (equalityService.specimensAreEqual(currentDigitalSpecimen,
+            digitalSpecimenWrapper, processedMediaRelationships)) {
           log.debug("Received digital specimen is equal to digital specimen: {}",
               currentDigitalSpecimen.id());
           equalSpecimens.add(currentDigitalSpecimen);
@@ -308,12 +300,6 @@ public class ProcessingService {
         }
       }
     }
-    var processingDurationMillis = Duration.between(start, Instant.now()).toMillis();
-    var equalityDurationMillis = equalityDuration.toMillis();
-    log.info("Processing time specimen {}", processingDurationMillis);
-    log.info("Equality time specimen {}", equalityDurationMillis);
-    log.info("% spent on equality = {}",
-        (float) equalityDurationMillis / (float) processingDurationMillis * 100);
     var newSpecimenPids = createNewSpecimenPids(newSpecimens);
     return new SpecimenProcessResult(equalSpecimens, changedSpecimens, newSpecimens,
         newSpecimenPids);
@@ -364,8 +350,6 @@ public class ProcessingService {
     var equalDigitalMedia = new ArrayList<DigitalMediaRecord>();
     var changedDigitalMedia = new ArrayList<UpdatedDigitalMediaTuple>();
     var newDigitalMedia = new ArrayList<DigitalMediaEvent>();
-    var start = Instant.now();
-    Duration equalityDuration = Duration.of(0, ChronoUnit.MILLIS);
     for (var mediaEvent : events) {
       var digitalMedia = mediaEvent.digitalMediaWrapper();
       var accessUri = digitalMedia.attributes().getAcAccessURI();
@@ -377,11 +361,7 @@ public class ProcessingService {
         var currentDigitalMedia = currentDigitalMedias.get(accessUri);
         var relatedSpecimenDois = entityRelationshipService.findNewSpecimenRelationshipsForMedia(
             currentDigitalMedia, pidMap.get(accessUri));
-        var eqStart = Instant.now();
-        var isEqual = equalityService.mediaAreEqual(currentDigitalMedia, digitalMedia,
-            relatedSpecimenDois);
-        equalityDuration = equalityDuration.plus(Duration.between(eqStart, Instant.now()));
-        if (isEqual) {
+        if (equalityService.mediaAreEqual(currentDigitalMedia, digitalMedia, relatedSpecimenDois)) {
           log.debug("Received digital media is equal to digital media: {}",
               currentDigitalMedia.id());
           equalDigitalMedia.add(currentDigitalMedia);
@@ -396,12 +376,6 @@ public class ProcessingService {
         }
       }
     }
-    var processingDurationMillis = Duration.between(start, Instant.now()).toMillis();
-    var equalityDurationMillis = equalityDuration.toMillis();
-    log.info("Processing time media {}", processingDurationMillis);
-    log.info("Equality time media {}", equalityDurationMillis);
-    log.info("% spent on equality media = {}",
-        (float) equalityDurationMillis / (float) processingDurationMillis * 100);
     return new MediaProcessResult(equalDigitalMedia, changedDigitalMedia, newDigitalMedia);
   }
 
