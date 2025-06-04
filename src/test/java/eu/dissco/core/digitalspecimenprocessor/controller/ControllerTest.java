@@ -2,6 +2,8 @@ package eu.dissco.core.digitalspecimenprocessor.controller;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -20,16 +22,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 @ExtendWith(MockitoExtension.class)
-class DigitalSpecimenControllerTest {
+class ControllerTest {
 
   @Mock
   private ProcessingService processingService;
 
-  private DigitalSpecimenController controller;
+  private Controller controller;
 
   @BeforeEach
   void setup() {
-    controller = new DigitalSpecimenController(processingService);
+    controller = new Controller(processingService);
   }
 
   @Test
@@ -48,6 +50,20 @@ class DigitalSpecimenControllerTest {
   }
 
   @Test
+  void testDigitalMediaCreation() throws NoChangesFoundException {
+    // Given
+    var digitalmediaEvent = TestUtils.givenDigitalMediaEvent();
+    given(processingService.handleMessagesMedia(
+        List.of(digitalmediaEvent))).willReturn(List.of(givenDigitalMediaRecord()));
+
+    // When
+    var result = controller.upsertDigitalMedia(digitalmediaEvent);
+
+    // Then
+    assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+  }
+
+  @Test
   void testNoChanges() {
     // Given
     var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
@@ -57,6 +73,17 @@ class DigitalSpecimenControllerTest {
     // When / Then
     assertThrows(NoChangesFoundException.class,
         () -> controller.upsertDigitalSpecimen(digitalSpecimenEvent));
+  }
+
+  @Test
+  void testNoChangesMedia() {
+    // Given
+    given(processingService.handleMessagesMedia(
+        List.of(givenDigitalMediaEvent()))).willReturn(List.of());
+
+    // When / Then
+    assertThrows(NoChangesFoundException.class,
+        () -> controller.upsertDigitalMedia(givenDigitalMediaEvent()));
   }
 
 }
