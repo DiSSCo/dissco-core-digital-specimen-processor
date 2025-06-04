@@ -82,6 +82,14 @@ public class ProcessingService {
     }
   }
 
+  public Set<DigitalMediaRecord> handleMessagesMedia(List<DigitalMediaEvent> events) {
+    var uniqueBatchMedia = removeDuplicateMediaInBatchRepublish(events);
+    var existingMedia = getCurrentMedia(uniqueBatchMedia);
+    var mediaPids = processMediaPids(existingMedia, uniqueBatchMedia);
+    var mediaProcessResult = processMedia(uniqueBatchMedia, existingMedia, mediaPids);
+    return processMediaResults(mediaProcessResult, mediaPids);
+  }
+
   private static Map<String, PidProcessResult> updateMediaPidsWithResults(
       List<DigitalSpecimenRecord> specimenResults, SpecimenProcessResult specimenProcessResult,
       Map<String, PidProcessResult> mediaPidsFull) {
@@ -143,6 +151,22 @@ public class ProcessingService {
       }
     }
     return Pair.of(specimenPids, mediaPids);
+  }
+
+  private Map<String, PidProcessResult> processMediaPids(
+      Map<String, DigitalMediaRecord> existingMedias, Set<DigitalMediaEvent> digitalMediaEvents) {
+    var mediaPidMap = createPidsForNewMediaObjects(existingMedias, digitalMediaEvents).entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            Entry::getKey,
+            e -> new PidProcessResult(e.getValue(), Set.of())
+        ));
+    mediaPidMap.putAll(
+        existingMedias.entrySet().stream().collect(Collectors.toMap(
+            Entry::getKey,
+            e -> new PidProcessResult(e.getValue().id(), Set.of())
+        )));
+    return mediaPidMap;
   }
 
   // Given a specimen PID, links it to the relevant media object
@@ -218,19 +242,22 @@ public class ProcessingService {
     return results;
   }
 
-  private void processMediaResults(MediaProcessResult mediaProcessResult,
+  private Set<DigitalMediaRecord> processMediaResults(MediaProcessResult mediaProcessResult,
       Map<String, PidProcessResult> pidProcessResults) {
+    var results = new HashSet<DigitalMediaRecord>();
     if (!mediaProcessResult.equalDigitalMedia().isEmpty()) {
       digitalMediaService.updateEqualDigitalMedia(mediaProcessResult.equalDigitalMedia());
     }
     if (!mediaProcessResult.newDigitalMedia().isEmpty()) {
-      digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
-          pidProcessResults);
+      results.addAll(digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
+          pidProcessResults));
     }
     if (!mediaProcessResult.changedDigitalMedia().isEmpty()) {
-      digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
-          pidProcessResults);
+      results.addAll(
+          digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
+              pidProcessResults));
     }
+    return results;
   }
 
 
@@ -240,19 +267,15 @@ public class ProcessingService {
     var map = events.stream()
         .collect(
             Collectors.groupingBy(event -> event.digitalSpecimenWrapper().physicalSpecimenID()));
-    for (Entry<String, List<DigitalSpecimenEvent>> entry : map.entrySet()) {
+    for (var entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicate specimen in batch for id {}", entry.getValue().size(),
             entry.getKey());
-        for (int i = 0; i < entry.getValue().size(); i++) {
-          if (i == 0) {
-            uniqueSet.add(entry.getValue().get(i));
-          } else {
-            republishSpecimenEvent(entry.getValue().get(i));
-          }
+      }
+      for (var event : entry.getValue()) {
+        if (!uniqueSet.add(event)) {
+          republishSpecimenEvent(event);
         }
-      } else {
-        uniqueSet.add(entry.getValue().get(0));
       }
     }
     return uniqueSet;
@@ -265,6 +288,28 @@ public class ProcessingService {
         .flatMap(Collection::stream)
         .toList();
     return new HashSet<>(mediaList);
+  }
+
+  private Set<DigitalMediaEvent> removeDuplicateMediaInBatchRepublish(
+      List<DigitalMediaEvent> mediaEvents) {
+    var uniqueSet = new LinkedHashSet<DigitalMediaEvent>();
+    var map = mediaEvents.stream()
+        .collect(
+            Collectors.groupingBy(
+                event -> event.digitalMediaWrapper().attributes().getAcAccessURI()));
+    for (var entry : map.entrySet()) {
+      if (entry.getValue().size() > 1) {
+        log.warn("Found {} duplicate media in batch for id {}", entry.getValue().size(),
+            entry.getKey());
+      }
+      for (var event : entry.getValue()) {
+        if (!uniqueSet.add(event)) {
+          republishMediaEvent(event);
+        }
+      }
+    }
+    return uniqueSet;
+
   }
 
   private SpecimenProcessResult processSpecimens(Set<DigitalSpecimenEvent> events,
@@ -383,8 +428,17 @@ public class ProcessingService {
     try {
       publisherService.republishSpecimenEvent(event);
     } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to republish message due to invalid json", e);
+      log.error("Fatal exception, unable to republish specimen message due to invalid json", e);
     }
+  }
+
+  private void republishMediaEvent(DigitalMediaEvent event) {
+    try {
+      publisherService.republishMediaEvent(event);
+    } catch (JsonProcessingException e) {
+      log.error("Fatal exception, unable to republish media message due to invalid json", e);
+    }
+
   }
 
   private Map<String, DigitalSpecimenRecord> getCurrentSpecimen(Set<DigitalSpecimenEvent> events)

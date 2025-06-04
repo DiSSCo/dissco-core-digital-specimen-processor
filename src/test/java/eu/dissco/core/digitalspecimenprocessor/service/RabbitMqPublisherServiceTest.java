@@ -167,7 +167,7 @@ class RabbitMqPublisherServiceTest {
     var message = givenDigitalMediaEventWithRelationship();
 
     // When
-    rabbitMqPublisherService.publishDigitalMediaObject(message);
+    rabbitMqPublisherService.republishMediaEvent(message);
 
     // Then
     var result = rabbitTemplate.receive("digital-media-queue");

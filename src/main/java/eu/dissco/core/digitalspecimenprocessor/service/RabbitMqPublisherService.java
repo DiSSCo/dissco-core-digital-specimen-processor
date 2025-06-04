@@ -92,13 +92,6 @@ public class RabbitMqPublisherService {
         rabbitMqProperties.getSpecimen().getDlqRoutingKeyName(), event);
   }
 
-  public void publishDigitalMediaObject(DigitalMediaEvent digitalMediaObjectEvent)
-      throws JsonProcessingException {
-    rabbitTemplate.convertAndSend(rabbitMqProperties.getDigitalMedia().getExchangeName(),
-        rabbitMqProperties.getDigitalMedia().getRoutingKeyName(),
-        mapper.writeValueAsString(digitalMediaObjectEvent));
-  }
-
   public void publishAcceptedAnnotation(AutoAcceptedAnnotation annotation)
       throws JsonProcessingException {
     rabbitTemplate.convertAndSend(rabbitMqProperties.getAutoAcceptedAnnotation().getExchangeName(),

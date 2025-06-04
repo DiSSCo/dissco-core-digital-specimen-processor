@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import java.util.List;
 import java.util.Objects;
@@ -36,6 +37,21 @@ public class RabbitMqConsumerService {
       }
     }).filter(Objects::nonNull).toList();
     processingService.handleMessages(events);
+  }
+
+  @RabbitListener(queues = {
+      "${rabbitmq.queue-name:digital-media-queue}"}, containerFactory = "consumerBatchContainerFactory")
+  public void getMessagesMedia(@Payload List<String> messages) {
+    var events = messages.stream().map(message -> {
+      try {
+        return mapper.readValue(message, DigitalMediaEvent.class);
+      } catch (JsonProcessingException e) {
+        log.error("Moving message to DLQ, failed to parse event message", e);
+        publisherService.deadLetterRaw(message);
+        return null;
+      }
+    }).filter(Objects::nonNull).toList();
+    processingService.handleMessagesMedia(events);
   }
 
 }
