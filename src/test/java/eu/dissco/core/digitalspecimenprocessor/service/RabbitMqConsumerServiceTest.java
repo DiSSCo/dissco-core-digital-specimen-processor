@@ -1,9 +1,11 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static org.mockito.BDDMockito.then;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,18 @@ class RabbitMqConsumerServiceTest {
   }
 
   @Test
+  void testGetMessagesMedia() throws JsonProcessingException {
+    // Given
+    var message = MAPPER.writeValueAsString(givenDigitalMediaEvent());
+
+    // When
+    rabbitMqConsumerServiceTest.getMessagesMedia(List.of(message));
+
+    // Then
+    then(processingService).should().handleMessagesMedia(List.of(givenDigitalMediaEvent()));
+  }
+
+  @Test
   void testGetInvalidMessages() {
     // Given
     var message = givenInvalidMessage();
@@ -51,6 +65,19 @@ class RabbitMqConsumerServiceTest {
     // Then
     then(rabbitMqPublisherService).should().deadLetterRaw(message);
     then(processingService).should().handleMessages(List.of());
+  }
+
+  @Test
+  void testGetInvalidMessagesMedia() {
+    // Given
+    var message = givenInvalidMessage();
+
+    // When
+    rabbitMqConsumerServiceTest.getMessagesMedia(List.of(message));
+
+    // Then
+    then(rabbitMqPublisherService).should().deadLetterRawMedia(message);
+    then(processingService).should().handleMessagesMedia(List.of());
   }
 
   private String givenInvalidMessage() {
@@ -136,4 +163,5 @@ class RabbitMqConsumerServiceTest {
           "digitalMediaEvents": []
         }""";
   }
+
 }

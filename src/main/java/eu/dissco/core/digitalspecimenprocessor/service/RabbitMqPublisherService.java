@@ -86,10 +86,14 @@ public class RabbitMqPublisherService {
         rabbitMqProperties.getDigitalMedia().getDlqRoutingKeyName(), mapper.writeValueAsString(event));
   }
 
-
   public void deadLetterRaw(String event) {
     rabbitTemplate.convertAndSend(rabbitMqProperties.getSpecimen().getDlqExchangeName(),
         rabbitMqProperties.getSpecimen().getDlqRoutingKeyName(), event);
+  }
+
+  public void deadLetterRawMedia(String event) {
+    rabbitTemplate.convertAndSend(rabbitMqProperties.getDigitalMedia().getDlqExchangeName(),
+        rabbitMqProperties.getDigitalMedia().getDlqRoutingKeyName(), event);
   }
 
   public void publishAcceptedAnnotation(AutoAcceptedAnnotation annotation)

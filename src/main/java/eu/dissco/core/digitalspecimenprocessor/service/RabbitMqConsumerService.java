@@ -47,7 +47,7 @@ public class RabbitMqConsumerService {
         return mapper.readValue(message, DigitalMediaEvent.class);
       } catch (JsonProcessingException e) {
         log.error("Moving message to DLQ, failed to parse event message", e);
-        publisherService.deadLetterRaw(message);
+        publisherService.deadLetterRawMedia(message);
         return null;
       }
     }).filter(Objects::nonNull).toList();

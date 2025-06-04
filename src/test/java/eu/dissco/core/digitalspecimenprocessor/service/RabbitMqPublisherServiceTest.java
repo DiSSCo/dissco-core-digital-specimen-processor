@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoAcceptedAnnotation;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
@@ -143,6 +144,21 @@ class RabbitMqPublisherServiceTest {
     var result = rabbitTemplate.receive("digital-specimen-queue");
     assertThat(
         MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(
+        message);
+  }
+
+  @Test
+  void testRepublishEventMedia() throws JsonProcessingException {
+    // Given
+    var message = givenDigitalMediaEvent();
+
+    // When
+    rabbitMqPublisherService.republishMediaEvent(message);
+
+    // Then
+    var result = rabbitTemplate.receive("digital-media-queue");
+    assertThat(
+        MAPPER.readValue(new String(result.getBody()), DigitalMediaEvent.class)).isEqualTo(
         message);
   }
 
