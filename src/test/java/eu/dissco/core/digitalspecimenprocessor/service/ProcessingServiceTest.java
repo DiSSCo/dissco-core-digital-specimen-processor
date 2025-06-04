@@ -411,7 +411,7 @@ class ProcessingServiceTest {
     var result = service.handleMessagesMedia(events);
 
     // Then
-    assertThat(result).isEqualTo(Set.of(givenDigitalMediaRecord()));
+    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
     then(handleComponent).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
   }
@@ -453,7 +453,7 @@ class ProcessingServiceTest {
     var result = service.handleMessagesMedia(events);
 
     // Then
-    assertThat(result).isEqualTo(Set.of(givenDigitalMediaRecord()));
+    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
   }

@@ -82,7 +82,7 @@ public class ProcessingService {
     }
   }
 
-  public Set<DigitalMediaRecord> handleMessagesMedia(List<DigitalMediaEvent> events) {
+  public List<DigitalMediaRecord> handleMessagesMedia(List<DigitalMediaEvent> events) {
     var uniqueBatchMedia = removeDuplicateMediaInBatchRepublish(events);
     var existingMedia = getCurrentMedia(uniqueBatchMedia);
     var mediaPids = processMediaPids(existingMedia, uniqueBatchMedia);
@@ -242,9 +242,9 @@ public class ProcessingService {
     return results;
   }
 
-  private Set<DigitalMediaRecord> processMediaResults(MediaProcessResult mediaProcessResult,
+  private List<DigitalMediaRecord> processMediaResults(MediaProcessResult mediaProcessResult,
       Map<String, PidProcessResult> pidProcessResults) {
-    var results = new HashSet<DigitalMediaRecord>();
+    var results = new ArrayList<DigitalMediaRecord>();
     if (!mediaProcessResult.equalDigitalMedia().isEmpty()) {
       digitalMediaService.updateEqualDigitalMedia(mediaProcessResult.equalDigitalMedia());
     }
