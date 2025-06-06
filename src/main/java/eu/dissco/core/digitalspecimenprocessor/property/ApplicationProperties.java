@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.property;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -21,5 +22,8 @@ public class ApplicationProperties {
 
   @NotBlank
   private String createUpdateTombstoneEventType = "https://doi.org/21.T11148/d7570227982f70256af3";
+
+  @Positive
+  private Integer maxHandles = 1000;
 
 }

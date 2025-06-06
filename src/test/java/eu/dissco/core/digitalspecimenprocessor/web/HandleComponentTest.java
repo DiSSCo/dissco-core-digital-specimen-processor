@@ -54,7 +54,7 @@ class HandleComponentTest {
   void setup() {
     WebClient webClient = WebClient.create(
         String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
-    handleComponent = new HandleComponent(webClient, tokenAuthenticator, MAPPER);
+    handleComponent = new HandleComponent(webClient, tokenAuthenticator);
   }
 
   @Test
