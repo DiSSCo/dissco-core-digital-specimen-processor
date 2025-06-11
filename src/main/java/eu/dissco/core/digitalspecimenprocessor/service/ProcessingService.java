@@ -21,7 +21,6 @@ import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -58,7 +57,8 @@ public class ProcessingService {
     log.info("Processing {} digital specimen", events.size());
     try {
       var uniqueBatchSpecimens = removeDuplicateSpecimensInBatch(events);
-      var uniqueBatchMedia = removeDuplicateMediaInBatch(events);
+      var uniqueBatchMedia = removeDuplicateMediaInBatch(events.stream().map(
+          DigitalSpecimenEvent::digitalMediaEvents).flatMap(List::stream).toList());
       var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
       var specimenProcessResult = processSpecimens(uniqueBatchSpecimens, existingSpecimens,
@@ -83,6 +83,14 @@ public class ProcessingService {
       log.error("Unable to access database", e);
       return List.of();
     }
+  }
+
+  public List<DigitalMediaRecord> handleMessagesMedia(List<DigitalMediaEvent> events) {
+    var uniqueBatchMedia = removeDuplicateMediaInBatch(events);
+    var existingMedia = getCurrentMedia(uniqueBatchMedia);
+    var mediaPids = processMediaPids(existingMedia, uniqueBatchMedia);
+    var mediaProcessResult = processMedia(uniqueBatchMedia, existingMedia, mediaPids);
+    return processMediaResults(mediaProcessResult, mediaPids);
   }
 
   private static Map<String, PidProcessResult> updateMediaPidsWithResults(
@@ -146,6 +154,22 @@ public class ProcessingService {
       }
     }
     return Pair.of(specimenPids, mediaPids);
+  }
+
+  private Map<String, PidProcessResult> processMediaPids(
+      Map<String, DigitalMediaRecord> existingMedias, Set<DigitalMediaEvent> digitalMediaEvents) {
+    var mediaPidMap = createPidsForNewMediaObjects(existingMedias, digitalMediaEvents).entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            Entry::getKey,
+            e -> new PidProcessResult(e.getValue(), Set.of())
+        ));
+    mediaPidMap.putAll(
+        existingMedias.entrySet().stream().collect(Collectors.toMap(
+            Entry::getKey,
+            e -> new PidProcessResult(e.getValue().id(), Set.of())
+        )));
+    return mediaPidMap;
   }
 
   // Given a specimen PID, links it to the relevant media object
@@ -221,19 +245,22 @@ public class ProcessingService {
     return results;
   }
 
-  private void processMediaResults(MediaProcessResult mediaProcessResult,
+  private List<DigitalMediaRecord> processMediaResults(MediaProcessResult mediaProcessResult,
       Map<String, PidProcessResult> pidProcessResults) {
+    var results = new ArrayList<DigitalMediaRecord>();
     if (!mediaProcessResult.equalDigitalMedia().isEmpty()) {
       digitalMediaService.updateEqualDigitalMedia(mediaProcessResult.equalDigitalMedia());
     }
     if (!mediaProcessResult.newDigitalMedia().isEmpty()) {
-      digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
-          pidProcessResults);
+      results.addAll(digitalMediaService.createNewDigitalMedia(mediaProcessResult.newDigitalMedia(),
+          pidProcessResults));
     }
     if (!mediaProcessResult.changedDigitalMedia().isEmpty()) {
-      digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
-          pidProcessResults);
+      results.addAll(
+          digitalMediaService.updateExistingDigitalMedia(mediaProcessResult.changedDigitalMedia(),
+              pidProcessResults));
     }
+    return results;
   }
 
 
@@ -262,18 +289,35 @@ public class ProcessingService {
   }
 
   private Set<DigitalMediaEvent> removeDuplicateMediaInBatch(
-      List<DigitalSpecimenEvent> specimenEvents) {
-    var mediaList = specimenEvents.stream()
-        .map(DigitalSpecimenEvent::digitalMediaEvents)
-        .flatMap(Collection::stream)
-        .toList();
-    if (mediaList.size() > 10000) {
+      List<DigitalMediaEvent> mediaEvents) {
+    var uniqueSet = new LinkedHashSet<DigitalMediaEvent>();
+    var map = mediaEvents.stream()
+        .collect(
+            Collectors.groupingBy(
+                event -> event.digitalMediaWrapper().attributes().getAcAccessURI()));
+    for (var entry : map.entrySet()) {
+      if (entry.getValue().size() > 1) {
+        log.warn("Found {} duplicate media in batch for id {}", entry.getValue().size(),
+            entry.getKey());
+        for (int i = 0; i < entry.getValue().size(); i++) {
+          if (i == 0) {
+            uniqueSet.add(entry.getValue().get(i));
+          } else {
+            republishMediaEvent(entry.getValue().get(i));
+          }
+        }
+      } else {
+        uniqueSet.add(entry.getValue().get(0));
+      }
+    }
+    if (uniqueSet.size() > applicationProperties.getMaxMedia()) {
       log.error("Too many media in batch. Attempting to publish {} media at once",
-          mediaList.size());
+          uniqueSet.size());
       throw new TooManyObjectsException(
           "Attempting to publish too many media objects. Max is 10000");
     }
-    return new HashSet<>(mediaList);
+    return uniqueSet;
+
   }
 
   private SpecimenProcessResult processSpecimens(Set<DigitalSpecimenEvent> events,
@@ -404,8 +448,17 @@ public class ProcessingService {
     try {
       publisherService.republishSpecimenEvent(event);
     } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to republish message due to invalid json", e);
+      log.error("Fatal exception, unable to republish specimen message due to invalid json", e);
     }
+  }
+
+  private void republishMediaEvent(DigitalMediaEvent event) {
+    try {
+      publisherService.republishMediaEvent(event);
+    } catch (JsonProcessingException e) {
+      log.error("Fatal exception, unable to republish media message due to invalid json", e);
+    }
+
   }
 
   private Map<String, DigitalSpecimenRecord> getCurrentSpecimen(Set<DigitalSpecimenEvent> events)

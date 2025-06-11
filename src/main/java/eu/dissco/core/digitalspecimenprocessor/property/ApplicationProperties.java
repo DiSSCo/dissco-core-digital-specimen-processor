@@ -26,4 +26,7 @@ public class ApplicationProperties {
   @Positive
   private Integer maxHandles = 1000;
 
+  @Positive
+  private Integer maxMedia = 10000;
+
 }

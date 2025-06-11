@@ -391,10 +391,94 @@ class ProcessingServiceTest {
         .createNewDigitalMedia(List.of(givenDigitalMediaEvent()), pidMapMedia);
     then(digitalSpecimenService).should()
         .createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent(true)), pidMap);
+    then(digitalMediaService).should()
+        .createNewDigitalMedia(List.of(givenDigitalMediaEvent()), pidMapMedia);
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
   }
+
+  @Test
+  void testHandleMessagesMediaNew() throws Exception {
+    // Given
+    given(handleComponent.postHandle(any(), eq(false))).willReturn(Map.of(MEDIA_URL, MEDIA_PID));
+    var events = List.of(givenDigitalMediaEvent());
+    given(digitalMediaService.createNewDigitalMedia(events,
+        Map.of(MEDIA_URL, new PidProcessResult(MEDIA_PID, Set.of()))))
+        .willReturn(Set.of(givenDigitalMediaRecord()));
+
+    // When
+    var result = service.handleMessagesMedia(events);
+
+    // Then
+    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
+    then(handleComponent).shouldHaveNoMoreInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testHandleMessagesMediaEqual() {
+    // Given
+    var events = List.of(givenDigitalMediaEvent());
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+    given(equalityService.mediaAreEqual(givenDigitalMediaRecord(),
+        givenDigitalMediaEvent().digitalMediaWrapper(), Set.of()))
+        .willReturn(true);
+
+    // When
+    var result = service.handleMessagesMedia(events);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testHandleMessagesMediaUpdate() {
+    // Given
+    var events = List.of(givenDigitalMediaEvent());
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+    given(equalityService.mediaAreEqual(givenDigitalMediaRecord(),
+        givenDigitalMediaEvent().digitalMediaWrapper(), Set.of()))
+        .willReturn(false);
+    given(digitalMediaService.updateExistingDigitalMedia(any(),
+        eq(Map.of(MEDIA_URL, new PidProcessResult(MEDIA_PID, Set.of()))))).willReturn(
+        Set.of(givenDigitalMediaRecord()));
+
+    // When
+    var result = service.handleMessagesMedia(events);
+
+    // Then
+    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testHandleMessagesMediaEqualDuplicates() throws Exception {
+    // Given
+    var events = List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent());
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+    given(equalityService.mediaAreEqual(givenDigitalMediaRecord(),
+        givenDigitalMediaEvent().digitalMediaWrapper(), Set.of()))
+        .willReturn(true);
+
+    // When
+    var result = service.handleMessagesMedia(events);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(publisherService).should(times(1)).republishMediaEvent(givenDigitalMediaEvent());
+  }
+
 
   @Test
   void testNewSpecimenTooManyNewMedia() {
