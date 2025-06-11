@@ -310,7 +310,7 @@ public class ProcessingService {
         uniqueSet.add(entry.getValue().get(0));
       }
     }
-    if (uniqueSet.size() > 10000) {
+    if (uniqueSet.size() > applicationProperties.getMaxMedia()) {
       log.error("Too many media in batch. Attempting to publish {} media at once",
           uniqueSet.size());
       throw new TooManyObjectsException(
