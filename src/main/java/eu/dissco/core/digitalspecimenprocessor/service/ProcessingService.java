@@ -15,6 +15,8 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
+import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
+import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
@@ -50,6 +52,7 @@ public class ProcessingService {
   private final RabbitMqPublisherService publisherService;
   private final FdoRecordService fdoRecordService;
   private final HandleComponent handleComponent;
+  private final ApplicationProperties applicationProperties;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -264,6 +267,12 @@ public class ProcessingService {
         .map(DigitalSpecimenEvent::digitalMediaEvents)
         .flatMap(Collection::stream)
         .toList();
+    if (mediaList.size() > 10000) {
+      log.error("Too many media in batch. Attempting to publish {} media at once",
+          mediaList.size());
+      throw new TooManyObjectsException(
+          "Attempting to publish too many media objects. Max is 10000");
+    }
     return new HashSet<>(mediaList);
   }
 
@@ -310,8 +319,14 @@ public class ProcessingService {
       return Map.of();
     }
     var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
-    var request = fdoRecordService.buildPostHandleRequest(specimenList);
-    return createNewPids(request, true);
+    var pidMap = new HashMap<String, String>();
+    for (int i = 0; i < specimenList.size(); i += applicationProperties.getMaxHandles()) {
+      int j = Math.min(i + applicationProperties.getMaxHandles(), specimenList.size());
+      var sublist = specimenList.subList(i, j);
+      var request = fdoRecordService.buildPostHandleRequest(sublist);
+      pidMap.putAll(createNewPids(request, true));
+    }
+    return pidMap;
   }
 
   private Map<String, String> createPidsForNewMediaObjects(
@@ -329,8 +344,14 @@ public class ProcessingService {
     if (digitalMediaEvents.isEmpty()) {
       return Map.of();
     }
-    var request = fdoRecordService.buildPostRequestMedia(digitalMediaEvents);
-    return createNewPids(request, false);
+    var pidMap = new HashMap<String, String>();
+    for (int i = 0; i < digitalMediaEvents.size(); i += applicationProperties.getMaxHandles()) {
+      int j = Math.min(i + applicationProperties.getMaxHandles(), digitalMediaEvents.size());
+      var sublist = digitalMediaEvents.subList(i, j);
+      var request = fdoRecordService.buildPostRequestMedia(sublist);
+      pidMap.putAll(createNewPids(request, false));
+    }
+    return pidMap;
   }
 
   private Map<String, String> createNewPids(List<JsonNode> request, boolean isSpecimen) {
