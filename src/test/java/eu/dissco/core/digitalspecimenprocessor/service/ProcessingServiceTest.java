@@ -26,7 +26,9 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequ
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalMediaTuple;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenTuple;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -34,22 +36,26 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
+import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
-import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,13 +74,7 @@ class ProcessingServiceTest {
   @Mock
   private FdoRecordService fdoRecordService;
   @Mock
-  private ElasticSearchRepository elasticRepository;
-  @Mock
   private RabbitMqPublisherService publisherService;
-  @Mock
-  private MidsService midsService;
-  @Mock
-  private AnnotationPublisherService annotationPublisherService;
   @Mock
   private HandleComponent handleComponent;
   @Mock
@@ -83,8 +83,6 @@ class ProcessingServiceTest {
   private DigitalMediaService digitalMediaService;
   @Mock
   private EntityRelationshipService entityRelationshipService;
-  @Mock
-  private RollbackService rollbackService;
   @Mock
   private EqualityService equalityService;
   @Mock
@@ -98,7 +96,7 @@ class ProcessingServiceTest {
   void setup() {
     service = new ProcessingService(specimenRepository, mediaRepository,
         digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService,
-        publisherService, fdoRecordService, handleComponent);
+        publisherService, fdoRecordService, handleComponent, new ApplicationProperties());
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -389,6 +387,8 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(List.of());
+    then(digitalMediaService).should()
+        .createNewDigitalMedia(List.of(givenDigitalMediaEvent()), pidMapMedia);
     then(digitalSpecimenService).should()
         .createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent(true)), pidMap);
     then(digitalMediaService).should()
@@ -479,5 +479,46 @@ class ProcessingServiceTest {
     then(publisherService).should(times(1)).republishMediaEvent(givenDigitalMediaEvent());
   }
 
+
+  @Test
+  void testNewSpecimenTooManyNewMedia() {
+    // Given
+    var mediaEvents = new ArrayList<DigitalMediaEvent>();
+    IntStream.rangeClosed(0, 10000)
+        .forEach(i -> mediaEvents.add(givenDigitalMediaEvent(UUID.randomUUID().toString())));
+    var specimenEvents = List.of(new DigitalSpecimenEvent(
+        List.of(),
+        givenDigitalSpecimenWrapper(),
+        mediaEvents
+    ));
+
+    // When / Then
+    assertThrows(TooManyObjectsException.class, () -> service.handleMessages(specimenEvents));
+  }
+
+  @Test
+  void testNewSpecimenNewMediaBatchedPid() throws Exception {
+    given(specimenRepository.getDigitalSpecimens(any())).willReturn(
+        List.of());
+    given(mediaRepository.getExistingDigitalMedia(any())).willReturn(List.of());
+    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+        TestUtils.givenHandleResponseSpecimen());
+    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
+    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(givenHandleRequest()));
+    var mediaEvents = new ArrayList<DigitalMediaEvent>();
+    IntStream.rangeClosed(0, 2002)
+        .forEach(i -> mediaEvents.add(givenDigitalMediaEvent(UUID.randomUUID().toString())));
+    var specimenEvents = List.of(new DigitalSpecimenEvent(
+        List.of(),
+        givenDigitalSpecimenWrapper(false, true),
+        mediaEvents
+    ));
+
+    // When
+    service.handleMessages(specimenEvents);
+
+    // Then
+    then(handleComponent).should(times(4)).postHandle(any(), anyBoolean());
+  }
 
 }
