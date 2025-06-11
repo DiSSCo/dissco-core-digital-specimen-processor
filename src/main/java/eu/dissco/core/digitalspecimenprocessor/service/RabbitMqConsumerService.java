@@ -25,7 +25,7 @@ public class RabbitMqConsumerService {
   private final RabbitMqPublisherService publisherService;
 
   @RabbitListener(queues = {
-      "${rabbitmq.queue-name:digital-specimen-queue}"}, containerFactory = "consumerBatchContainerFactory")
+      "${rabbitmq.queue-name-specimen:digital-specimen-queue}"}, containerFactory = "consumerBatchContainerFactory")
   public void getMessages(@Payload List<String> messages) {
     var events = messages.stream().map(message -> {
       try {
@@ -40,7 +40,7 @@ public class RabbitMqConsumerService {
   }
 
   @RabbitListener(queues = {
-      "${rabbitmq.queue-name:digital-media-queue}"}, containerFactory = "consumerBatchContainerFactory")
+      "${rabbitmq.queue-name-media:digital-media-queue}"}, containerFactory = "consumerBatchContainerFactory")
   public void getMessagesMedia(@Payload List<String> messages) {
     var events = messages.stream().map(message -> {
       try {

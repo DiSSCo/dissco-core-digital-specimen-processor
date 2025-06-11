@@ -21,7 +21,6 @@ import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -58,7 +57,8 @@ public class ProcessingService {
     log.info("Processing {} digital specimen", events.size());
     try {
       var uniqueBatchSpecimens = removeDuplicateSpecimensInBatch(events);
-      var uniqueBatchMedia = removeDuplicateMediaInBatch(events);
+      var uniqueBatchMedia = removeDuplicateMediaInBatch(events.stream().map(
+          DigitalSpecimenEvent::digitalMediaEvents).flatMap(List::stream).toList());
       var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
       var specimenProcessResult = processSpecimens(uniqueBatchSpecimens, existingSpecimens,
@@ -86,7 +86,7 @@ public class ProcessingService {
   }
 
   public List<DigitalMediaRecord> handleMessagesMedia(List<DigitalMediaEvent> events) {
-    var uniqueBatchMedia = removeDuplicateMediaInBatchRepublish(events);
+    var uniqueBatchMedia = removeDuplicateMediaInBatch(events);
     var existingMedia = getCurrentMedia(uniqueBatchMedia);
     var mediaPids = processMediaPids(existingMedia, uniqueBatchMedia);
     var mediaProcessResult = processMedia(uniqueBatchMedia, existingMedia, mediaPids);
@@ -270,36 +270,25 @@ public class ProcessingService {
     var map = events.stream()
         .collect(
             Collectors.groupingBy(event -> event.digitalSpecimenWrapper().physicalSpecimenID()));
-    for (var entry : map.entrySet()) {
+    for (Entry<String, List<DigitalSpecimenEvent>> entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicate specimen in batch for id {}", entry.getValue().size(),
             entry.getKey());
-      }
-      for (var event : entry.getValue()) {
-        if (!uniqueSet.add(event)) {
-          republishSpecimenEvent(event);
+        for (int i = 0; i < entry.getValue().size(); i++) {
+          if (i == 0) {
+            uniqueSet.add(entry.getValue().get(i));
+          } else {
+            republishSpecimenEvent(entry.getValue().get(i));
+          }
         }
+      } else {
+        uniqueSet.add(entry.getValue().get(0));
       }
     }
     return uniqueSet;
   }
 
   private Set<DigitalMediaEvent> removeDuplicateMediaInBatch(
-      List<DigitalSpecimenEvent> specimenEvents) {
-    var mediaList = specimenEvents.stream()
-        .map(DigitalSpecimenEvent::digitalMediaEvents)
-        .flatMap(Collection::stream)
-        .toList();
-    if (mediaList.size() > 10000) {
-      log.error("Too many media in batch. Attempting to publish {} media at once",
-          mediaList.size());
-      throw new TooManyObjectsException(
-          "Attempting to publish too many media objects. Max is 10000");
-    }
-    return new HashSet<>(mediaList);
-  }
-
-  private Set<DigitalMediaEvent> removeDuplicateMediaInBatchRepublish(
       List<DigitalMediaEvent> mediaEvents) {
     var uniqueSet = new LinkedHashSet<DigitalMediaEvent>();
     var map = mediaEvents.stream()
@@ -310,12 +299,22 @@ public class ProcessingService {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicate media in batch for id {}", entry.getValue().size(),
             entry.getKey());
-      }
-      for (var event : entry.getValue()) {
-        if (!uniqueSet.add(event)) {
-          republishMediaEvent(event);
+        for (int i = 0; i < entry.getValue().size(); i++) {
+          if (i == 0) {
+            uniqueSet.add(entry.getValue().get(i));
+          } else {
+            republishMediaEvent(entry.getValue().get(i));
+          }
         }
+      } else {
+        uniqueSet.add(entry.getValue().get(0));
       }
+    }
+    if (uniqueSet.size() > 10000) {
+      log.error("Too many media in batch. Attempting to publish {} media at once",
+          uniqueSet.size());
+      throw new TooManyObjectsException(
+          "Attempting to publish too many media objects. Max is 10000");
     }
     return uniqueSet;
 
