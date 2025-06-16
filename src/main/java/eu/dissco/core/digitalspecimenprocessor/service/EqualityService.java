@@ -164,6 +164,7 @@ public class EqualityService {
   private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
       EntityRelationship entityRelationship) {
     if (currentEntityRelationship == null || entityRelationship == null) {
+      log.debug("Comparing null entity relationship");
       return false;
     }
     var jsonCurrentEntityRelationship = removeGeneratedTimestamps(
