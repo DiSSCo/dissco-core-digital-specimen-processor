@@ -106,10 +106,9 @@ public class EqualityService {
             Collectors.toMap(EntityRelationship::getDwcRelatedResourceID, Function.identity(),
                 (e1, e2) -> {
                   log.debug("Duplicate entity relationship found for resource");
-                  if (!e1.getDwcRelationshipOfResource().contains("COL")) {
-                    log.warn("Non-col entity relationship found for resource");
-                  }
-                  return e1;
+                  // Return older of the two entity relationships
+                  return e1.getDwcRelationshipEstablishedDate()
+                      .after(e2.getDwcRelationshipEstablishedDate()) ? e1 : e2;
                 }));
     entityRelationships.forEach(entityRelationship -> {
       var currentEntityRelationship = currentEntityRelationshipsMap.get(
@@ -125,8 +124,8 @@ public class EqualityService {
       MediaRelationshipProcessResult mediaRelationship,
       List<EntityRelationship> entityRelationships) {
     return Stream.concat(
-        entityRelationships.stream(), mediaRelationship.unchangedRelationships().stream()
-    ).toList();
+            entityRelationships.stream(), mediaRelationship.unchangedRelationships().stream())
+        .filter(er -> er.getDwcRelatedResourceID() != null).toList();
   }
 
   private boolean specimensAreEqual(DigitalSpecimenRecord currentDigitalSpecimen,
@@ -165,8 +164,8 @@ public class EqualityService {
   private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
       EntityRelationship entityRelationship) {
     if (currentEntityRelationship == null || entityRelationship == null) {
-      log.warn("Null ER!");
-      return currentEntityRelationship == null && entityRelationship == null;
+      log.debug("Comparing null entity relationship");
+      return false;
     }
     var jsonCurrentEntityRelationship = removeGeneratedTimestamps(
         mapper.valueToTree(currentEntityRelationship));

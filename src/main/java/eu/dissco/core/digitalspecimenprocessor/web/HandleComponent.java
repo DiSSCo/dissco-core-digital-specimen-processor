@@ -50,7 +50,6 @@ public class HandleComponent {
 
   public void updateHandle(List<JsonNode> request)
       throws PidException {
-    log.info("Patching Digital Specimens to Handle API");
     var requestBody = BodyInserters.fromValue(request);
     var response = sendRequest(HttpMethod.PATCH, requestBody, "");
     getFutureResponse(response);

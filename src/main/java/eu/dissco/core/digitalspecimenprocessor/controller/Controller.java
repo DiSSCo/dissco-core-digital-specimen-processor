@@ -1,6 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.controller;
 
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
@@ -23,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/")
 @RequiredArgsConstructor
-public class DigitalSpecimenController {
+public class Controller {
 
   private final ProcessingService processingService;
 
@@ -32,6 +34,17 @@ public class DigitalSpecimenController {
   DigitalSpecimenEvent event) throws NoChangesFoundException {
     log.info("Received digitalSpecimenWrapper upsert: {}", event);
     var result = processingService.handleMessages(List.of(event));
+    if (result.isEmpty()) {
+      throw new NoChangesFoundException("No changes found for specimen");
+    }
+    return ResponseEntity.status(HttpStatus.CREATED).body(result.get(0));
+  }
+
+  @PostMapping(value = "media", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<DigitalMediaRecord> upsertDigitalMedia(@RequestBody
+  DigitalMediaEvent event) throws NoChangesFoundException {
+    log.info("Received digitalMedia upsert: {}", event);
+    var result = processingService.handleMessagesMedia(List.of(event));
     if (result.isEmpty()) {
       throw new NoChangesFoundException("No changes found for specimen");
     }
