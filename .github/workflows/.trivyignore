@@ -1,4 +1,3 @@
-# March 20
-# Issues with Alpine
-CVE-2025-0840
-CVE-2024-8176
+# June 16
+# Issue with Postgres - Spring boot needs to update its version
+CVE-2025-49146
