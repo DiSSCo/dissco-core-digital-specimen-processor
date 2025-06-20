@@ -34,7 +34,6 @@ create table digital_media_object
             primary key,
     version             integer                  not null,
     type                text,
-    digital_specimen_id text                     ,
     media_url           text                     not null,
     created             timestamp with time zone not null,
     last_checked        timestamp with time zone not null,

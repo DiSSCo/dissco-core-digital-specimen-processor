@@ -69,11 +69,6 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
     public final TableField<DigitalMediaObjectRecord, String> TYPE = createField(DSL.name("type"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.digital_media_object.digital_specimen_id</code>.
-     */
-    public final TableField<DigitalMediaObjectRecord, String> DIGITAL_SPECIMEN_ID = createField(DSL.name("digital_specimen_id"), SQLDataType.CLOB, this, "");
-
-    /**
      * The column <code>public.digital_media_object.media_url</code>.
      */
     public final TableField<DigitalMediaObjectRecord, String> MEDIA_URL = createField(DSL.name("media_url"), SQLDataType.CLOB.nullable(false), this, "");
@@ -146,7 +141,8 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.DIGITAL_MEDIA_OBJECT_DIGITAL_SPECIMEN_ID_URL, Indexes.DIGITAL_MEDIA_OBJECT_ID_IDX, Indexes.DIGITAL_MEDIA_OBJECT_ID_VERSION_URL);
+      return Arrays.asList(Indexes.DIGITAL_MEDIA_OBJECT_ID_IDX,
+          Indexes.DIGITAL_MEDIA_OBJECT_ID_VERSION_URL);
     }
 
     @Override
