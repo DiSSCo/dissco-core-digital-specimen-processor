@@ -62,115 +62,101 @@ public class DigitalMediaObjectRecord extends UpdatableRecordImpl<DigitalMediaOb
     }
 
     /**
-     * Setter for <code>public.digital_media_object.digital_specimen_id</code>.
-     */
-    public void setDigitalSpecimenId(String value) {
-        set(3, value);
-    }
-
-    /**
-     * Getter for <code>public.digital_media_object.digital_specimen_id</code>.
-     */
-    public String getDigitalSpecimenId() {
-        return (String) get(3);
-    }
-
-    /**
      * Setter for <code>public.digital_media_object.media_url</code>.
      */
     public void setMediaUrl(String value) {
-        set(4, value);
+      set(3, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.media_url</code>.
      */
     public String getMediaUrl() {
-        return (String) get(4);
+      return (String) get(3);
     }
 
     /**
      * Setter for <code>public.digital_media_object.created</code>.
      */
     public void setCreated(Instant value) {
-        set(5, value);
+      set(4, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.created</code>.
      */
     public Instant getCreated() {
-        return (Instant) get(5);
+      return (Instant) get(4);
     }
 
     /**
      * Setter for <code>public.digital_media_object.last_checked</code>.
      */
     public void setLastChecked(Instant value) {
-        set(6, value);
+      set(5, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.last_checked</code>.
      */
     public Instant getLastChecked() {
-        return (Instant) get(6);
+      return (Instant) get(5);
     }
 
     /**
      * Setter for <code>public.digital_media_object.deleted</code>.
      */
     public void setDeleted(Instant value) {
-        set(7, value);
+      set(6, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.deleted</code>.
      */
     public Instant getDeleted() {
-        return (Instant) get(7);
+      return (Instant) get(6);
     }
 
     /**
      * Setter for <code>public.digital_media_object.data</code>.
      */
     public void setData(JSONB value) {
-        set(8, value);
+      set(7, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.data</code>.
      */
     public JSONB getData() {
-        return (JSONB) get(8);
+      return (JSONB) get(7);
     }
 
     /**
      * Setter for <code>public.digital_media_object.original_data</code>.
      */
     public void setOriginalData(JSONB value) {
-        set(9, value);
+      set(8, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.original_data</code>.
      */
     public JSONB getOriginalData() {
-        return (JSONB) get(9);
+      return (JSONB) get(8);
     }
 
     /**
      * Setter for <code>public.digital_media_object.modified</code>.
      */
     public void setModified(Instant value) {
-        set(10, value);
+      set(9, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.modified</code>.
      */
     public Instant getModified() {
-        return (Instant) get(10);
+      return (Instant) get(9);
     }
 
     // -------------------------------------------------------------------------
@@ -196,13 +182,14 @@ public class DigitalMediaObjectRecord extends UpdatableRecordImpl<DigitalMediaOb
     /**
      * Create a detached, initialised DigitalMediaObjectRecord
      */
-    public DigitalMediaObjectRecord(String id, Integer version, String type, String digitalSpecimenId, String mediaUrl, Instant created, Instant lastChecked, Instant deleted, JSONB data, JSONB originalData, Instant modified) {
+    public DigitalMediaObjectRecord(String id, Integer version, String type, String mediaUrl,
+        Instant created, Instant lastChecked, Instant deleted, JSONB data, JSONB originalData,
+        Instant modified) {
         super(DigitalMediaObject.DIGITAL_MEDIA_OBJECT);
 
         setId(id);
         setVersion(version);
         setType(type);
-        setDigitalSpecimenId(digitalSpecimenId);
         setMediaUrl(mediaUrl);
         setCreated(created);
         setLastChecked(lastChecked);
