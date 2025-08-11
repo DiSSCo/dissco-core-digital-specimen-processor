@@ -1,3 +1,24 @@
+create type translator_type as enum ('biocase', 'dwca');
+
+create table source_system
+(
+    id              text                     not null
+        primary key,
+    version         integer default 1        not null,
+    name            text                     not null,
+    endpoint        text                     not null,
+    created         timestamp with time zone not null,
+    modified        timestamp with time zone not null,
+    tombstoned      timestamp with time zone,
+    mapping_id      text                     not null,
+    creator         text                     not null,
+    translator_type translator_type          not null,
+    data            jsonb                    not null,
+    dwc_dp_link     text,
+    dwca_link       text,
+    eml             bytea
+);
+
 create table digital_specimen
 (
     id                     text                     not null
@@ -24,8 +45,6 @@ create index digital_specimen_created_idx
 
 create index digital_specimen_physical_specimen_id_idx
     on digital_specimen (physical_specimen_id);
-
-create type translator_type as enum ('biocase', 'dwca');
 
 create table digital_media_object
 (

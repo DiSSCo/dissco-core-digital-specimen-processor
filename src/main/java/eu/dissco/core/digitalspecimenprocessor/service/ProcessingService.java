@@ -52,6 +52,7 @@ public class ProcessingService {
   private final FdoRecordService fdoRecordService;
   private final HandleComponent handleComponent;
   private final ApplicationProperties applicationProperties;
+  private final MasSchedulerService masSchedulerService;
 
   public List<DigitalSpecimenRecord> handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
@@ -76,12 +77,24 @@ public class ProcessingService {
       var specimenResults = processSpecimenResults(specimenProcessResult, pids.getLeft());
       var mediaPids = updateMediaPidsWithResults(specimenResults, specimenProcessResult,
           pids.getRight());
-      processMediaResults(mediaProcessResult, mediaPids);
+      var mediaResults = processMediaResults(mediaProcessResult, mediaPids);
       log.info("Processed specimen and media");
+      scheduleMas(specimenResults, specimenProcessResult, mediaResults, mediaProcessResult);
       return specimenResults;
     } catch (DisscoRepositoryException e) {
       log.error("Unable to access database", e);
       return List.of();
+    }
+  }
+
+  private void scheduleMas(List<DigitalSpecimenRecord> specimenRecords,
+      SpecimenProcessResult specimenProcessResult, List<DigitalMediaRecord> mediaRecords,
+      MediaProcessResult mediaProcessResult) {
+    if (!specimenRecords.isEmpty()) {
+      masSchedulerService.scheduleMasSpecimen(specimenRecords, specimenProcessResult);
+    }
+    if (!mediaRecords.isEmpty()) {
+      masSchedulerService.scheduleMasMedia(mediaRecords, mediaProcessResult);
     }
   }
 

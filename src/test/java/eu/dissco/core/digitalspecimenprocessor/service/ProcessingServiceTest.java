@@ -87,6 +87,8 @@ class ProcessingServiceTest {
   private EqualityService equalityService;
   @Mock
   private DigitalSpecimenService digitalSpecimenService;
+  @Mock
+  private MasSchedulerService masSchedulerService;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -96,7 +98,8 @@ class ProcessingServiceTest {
   void setup() {
     service = new ProcessingService(specimenRepository, mediaRepository,
         digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService,
-        publisherService, fdoRecordService, handleComponent, new ApplicationProperties());
+        publisherService, fdoRecordService, handleComponent, new ApplicationProperties(),
+        masSchedulerService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -132,6 +135,8 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
+    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
+    then(masSchedulerService).shouldHaveNoMoreInteractions();
   }
 
   @Test
@@ -262,6 +267,8 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
+    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
+    then(masSchedulerService).should().scheduleMasMedia(any(), any());
   }
 
   @Test

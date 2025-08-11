@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
+import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
+import eu.dissco.core.digitalspecimenprocessor.domain.mas.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -62,6 +64,7 @@ public class TestUtils {
   public static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
   public static final String HANDLE = "20.5000.1025/V1Z-176-LL4";
   public static final String DOI_PREFIX = "https://doi.org/";
+  public static final String HANDLE_PREFIX = "https://hdl.handle.net/";
   public static final String SECOND_HANDLE = "20.5000.1025/XXX-XXX-XXX";
   public static final String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
   public static final String APP_HANDLE = "https://doi.org/10.5281/zenodo.14383054";
@@ -735,6 +738,26 @@ public class TestUtils {
         List.of(MEDIA_ENRICHMENT),
         givenDigitalMediaRecord(pid, uri, 1),
         givenJsonPatchMedia()
+    );
+  }
+
+  public static MasJobRequest givenMasJobRequestSpecimen() {
+    return new MasJobRequest(
+        SECOND_HANDLE,
+        HANDLE,
+        false,
+        APP_HANDLE,
+        MjrTargetType.DIGITAL_SPECIMEN
+    );
+  }
+
+  public static MasJobRequest givenMasJobRequestMedia() {
+    return new MasJobRequest(
+        THIRD_HANDLE,
+        MEDIA_PID,
+        false,
+        APP_HANDLE,
+        MjrTargetType.MEDIA_OBJECT
     );
   }
 

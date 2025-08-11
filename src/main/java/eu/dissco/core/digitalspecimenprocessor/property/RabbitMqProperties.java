@@ -22,6 +22,8 @@ public class RabbitMqProperties {
   private AutoAcceptedAnnotation autoAcceptedAnnotation = new AutoAcceptedAnnotation();
   @NotNull
   private CreateUpdateTombstone createUpdateTombstone = new CreateUpdateTombstone();
+  @NotNull
+  private MasScheduler masScheduler = new MasScheduler();
 
   @NotBlank
   private String masExchangeName = "mas-exchange";
@@ -86,6 +88,17 @@ public class RabbitMqProperties {
 
     @NotNull
     private String routingKeyName = "create-update-tombstone";
+  }
+
+  @Data
+  @Validated
+  public static class MasScheduler {
+
+    @NotBlank
+    private String exchangeName = "mas-scheduler-exchange";
+
+    @NotNull
+    private String routingKeyName = "mas-scheduler";
   }
 
 }

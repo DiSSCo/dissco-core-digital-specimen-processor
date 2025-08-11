@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
+import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
@@ -39,10 +40,10 @@ public class RabbitMqPublisherService {
         mapper.writeValueAsString(event));
   }
 
-  public void publishAnnotationRequestEventSpecimen(String enrichmentRoutingKey,
-      DigitalSpecimenRecord digitalSpecimenRecord) throws JsonProcessingException {
-    rabbitTemplate.convertAndSend(rabbitMqProperties.getMasExchangeName(),
-        enrichmentRoutingKey, mapper.writeValueAsString(digitalSpecimenRecord));
+  public void publishMasJobRequest(MasJobRequest masJobRequest) throws JsonProcessingException {
+    rabbitTemplate.convertAndSend(rabbitMqProperties.getMasScheduler().getExchangeName(),
+        rabbitMqProperties.getMasScheduler().getRoutingKeyName(),
+        mapper.writeValueAsString(masJobRequest));
   }
 
   public void publishAnnotationRequestEventMedia(String enrichmentRoutingKey,
