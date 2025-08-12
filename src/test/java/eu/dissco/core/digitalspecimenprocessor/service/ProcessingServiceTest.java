@@ -135,8 +135,6 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
-    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
-    then(masSchedulerService).shouldHaveNoMoreInteractions();
   }
 
   @Test
@@ -170,18 +168,21 @@ class ProcessingServiceTest {
         TestUtils.givenHandleResponseSpecimen());
     given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+    given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
+        Set.of(givenDigitalSpecimenRecord()));
 
     // When
-    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+    service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
     then(digitalSpecimenService).should()
         .createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent()), pidMap);
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
+    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
+    then(masSchedulerService).shouldHaveNoMoreInteractions();
   }
 
   @Test
@@ -267,8 +268,6 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
-    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
-    then(masSchedulerService).should().scheduleMasMedia(any(), any());
   }
 
   @Test
@@ -386,14 +385,17 @@ class ProcessingServiceTest {
     given(handleComponent.postHandle(any(), eq(false))).willReturn(givenHandleResponseMedia());
     given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
     given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(givenHandleRequest()));
+    given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
+        Set.of(givenDigitalSpecimenRecord()));
+    given(digitalMediaService.createNewDigitalMedia(any(), any())).willReturn(
+        Set.of(givenDigitalMediaRecord()));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
     var pidMapMedia = Map.of(MEDIA_URL, givenPidProcessResultMedia());
 
     // When
-    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
+    service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
     then(digitalMediaService).should()
         .createNewDigitalMedia(List.of(givenDigitalMediaEvent()), pidMapMedia);
     then(digitalSpecimenService).should()
@@ -403,6 +405,8 @@ class ProcessingServiceTest {
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
+    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
   }
 
   @Test
@@ -421,6 +425,8 @@ class ProcessingServiceTest {
     assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
     then(handleComponent).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(masSchedulerService).should().scheduleMasMedia(any(), any());
+    then(masSchedulerService).shouldHaveNoMoreInteractions();
   }
 
   @Test

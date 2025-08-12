@@ -103,7 +103,9 @@ public class ProcessingService {
     var existingMedia = getCurrentMedia(uniqueBatchMedia);
     var mediaPids = processMediaPids(existingMedia, uniqueBatchMedia);
     var mediaProcessResult = processMedia(uniqueBatchMedia, existingMedia, mediaPids);
-    return processMediaResults(mediaProcessResult, mediaPids);
+    var mediaResult = processMediaResults(mediaProcessResult, mediaPids);
+    scheduleMas(List.of(), null, mediaResult, mediaProcessResult);
+    return mediaResult;
   }
 
   private static Map<String, PidProcessResult> updateMediaPidsWithResults(
