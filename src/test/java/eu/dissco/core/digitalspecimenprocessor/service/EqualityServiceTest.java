@@ -151,7 +151,7 @@ class EqualityServiceTest {
     var currentDigitalSpecimen = givenDigitalSpecimenRecord();
     var digitalSpecimen = givenDigitalSpecimenWrapper();
     var mediaProcessResult = new MediaRelationshipProcessResult(List.of(),
-        List.of(new DigitalMediaEvent(null, null)), List.of());
+        List.of(new DigitalMediaEvent(null, null, false)), List.of());
 
     // When
     var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
@@ -185,8 +185,8 @@ class EqualityServiceTest {
     var digitalSpecimenEvent = new DigitalSpecimenEvent(
         List.of(MAS),
         digitalSpecimenWrapper,
-        List.of(givenDigitalMediaEvent())
-    );
+        List.of(givenDigitalMediaEvent()),
+        false);
     var mediaEr = givenEntityRelationship(MEDIA_PID, HAS_MEDIA.getRelationshipName());
 
     var attributes = givenDigitalSpecimenWrapper(true)
@@ -202,8 +202,8 @@ class EqualityServiceTest {
         new DigitalSpecimenWrapper(
             PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA
         ),
-        List.of(givenDigitalMediaEvent())
-    );
+        List.of(givenDigitalMediaEvent()),
+        false);
 
     // When
     var result = equalityService.setExistingEventDatesSpecimen(currentDigitalSpecimen,
@@ -224,10 +224,10 @@ class EqualityServiceTest {
     );
     var expected = new DigitalMediaEvent(
         List.of(MEDIA_ENRICHMENT),
-        expectedWrapper);
+        expectedWrapper, false);
     var event = new DigitalMediaEvent(
         List.of(MEDIA_ENRICHMENT),
-        changeTimestamps(expectedWrapper));
+        changeTimestamps(expectedWrapper), false);
     var currentRecord = new DigitalMediaRecord(
         MEDIA_PID,
         MEDIA_URL,

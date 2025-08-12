@@ -70,13 +70,13 @@ public class EqualityService {
     digitalSpecimen.withDctermsCreated(
         currentDigitalSpecimenWrapper.attributes().getDctermsCreated());
     // We create a new object because the events/wrappers are immutable, and we don't want the hash code to be out of sync
-    return new DigitalSpecimenEvent(digitalSpecimenEvent.enrichmentList(),
+    return new DigitalSpecimenEvent(digitalSpecimenEvent.masList(),
         new DigitalSpecimenWrapper(
             digitalSpecimenEvent.digitalSpecimenWrapper().physicalSpecimenID(),
             digitalSpecimenEvent.digitalSpecimenWrapper().type(),
             digitalSpecimen,
             digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
-        digitalSpecimenEvent.digitalMediaEvents());
+        digitalSpecimenEvent.digitalMediaEvents(), false);
   }
 
   public DigitalMediaEvent setExistingEventDatesMedia(
@@ -90,11 +90,11 @@ public class EqualityService {
     digitalMedia.withDctermsCreated(
         currentDigitalMediaRecord.attributes().getDctermsCreated());
     // We create a new object because the events/wrappers are immutable, and we don't want the hash code to be out of sync
-    return new DigitalMediaEvent(digitalMediaEvent.enrichmentList(),
+    return new DigitalMediaEvent(digitalMediaEvent.masList(),
         new DigitalMediaWrapper(
             digitalMediaEvent.digitalMediaWrapper().type(),
             digitalMedia,
-            digitalMediaEvent.digitalMediaWrapper().originalAttributes()));
+            digitalMediaEvent.digitalMediaWrapper().originalAttributes()), false);
   }
 
   private void setEntityRelationshipDates(List<EntityRelationship> currentEntityRelationships,

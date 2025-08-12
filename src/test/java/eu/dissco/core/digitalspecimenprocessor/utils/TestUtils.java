@@ -18,11 +18,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
-import eu.dissco.core.digitalspecimenprocessor.domain.mas.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -74,7 +74,7 @@ public class TestUtils {
   public static final Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
   public static final String UPDATED_STR = "2023-11-01T09:59:24.000Z";
   public static final Date UPDATED = Date.from(Instant.parse(UPDATED_STR));
-  public static final String MAS = "OCR";
+  public static final String MAS = "https://hdl.handle.net/20.5000.1025/TG2-A9R-ZDD";
   public static final String TYPE = "https://doi.org/21.T11148/894b1e6cad57e921764e";
   public static final String TYPE_MEDIA = "https://doi.org/21.T11148/bbad8c4e101e8af01115";
   public static final String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
@@ -94,7 +94,7 @@ public class TestUtils {
   public static final String MEDIA_URL_ALT = MEDIA_URL + "/2";
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
   public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
-  public static final String MEDIA_ENRICHMENT = "image-metadata";
+  public static final String MEDIA_ENRICHMENT = "https://hdl.handle.net/20.5000.1025/5E3-P4R-AQC";
 
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
@@ -237,8 +237,8 @@ public class TestUtils {
         List.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
             hasMedia),
-        List.of(givenDigitalMediaEvent(MEDIA_URL))
-    );
+        List.of(givenDigitalMediaEvent(MEDIA_URL)),
+        false);
   }
 
   public static MediaRelationshipProcessResult givenEmptyMediaProcessResult() {
@@ -307,8 +307,8 @@ public class TestUtils {
         new DigitalMediaWrapper(
             "StillImage",
             givenUnequalDigitalMedia(url),
-            MAPPER.createObjectNode())
-    );
+            MAPPER.createObjectNode()),
+        false);
   }
 
   public static DigitalMediaRecord givenUnequalDigitalMediaRecord() {
@@ -345,8 +345,8 @@ public class TestUtils {
     return new DigitalSpecimenEvent(
         List.of(MAS),
         givenDigitalSpecimenWrapper(entityRelationship, hasMedia),
-        hasMedia ? List.of(givenDigitalMediaEvent()) : List.of()
-    );
+        hasMedia ? List.of(givenDigitalMediaEvent()) : List.of(),
+        false);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId,
@@ -390,7 +390,7 @@ public class TestUtils {
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
         List.of(MEDIA_ENRICHMENT),
-        givenDigitalMediaWrapper(mediaUrl));
+        givenDigitalMediaWrapper(mediaUrl), false);
   }
 
   public static DigitalMediaEvent givenDigitalMediaEvent() {
@@ -428,7 +428,7 @@ public class TestUtils {
             "StillImage",
             digitalMedia,
             MAPPER.createObjectNode()
-        ));
+        ), false);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper() {
@@ -743,7 +743,7 @@ public class TestUtils {
 
   public static MasJobRequest givenMasJobRequestSpecimen() {
     return new MasJobRequest(
-        SECOND_HANDLE,
+        MAS,
         HANDLE,
         false,
         APP_HANDLE,
@@ -753,7 +753,7 @@ public class TestUtils {
 
   public static MasJobRequest givenMasJobRequestMedia() {
     return new MasJobRequest(
-        THIRD_HANDLE,
+        MEDIA_ENRICHMENT,
         MEDIA_PID,
         false,
         APP_HANDLE,

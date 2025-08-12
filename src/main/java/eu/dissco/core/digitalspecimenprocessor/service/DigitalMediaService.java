@@ -63,7 +63,7 @@ public class DigitalMediaService {
         .filter(event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
         .collect(toMap(
             event -> mapToNewDigitalMediaRecord(event, pidMap),
-            DigitalMediaEvent::enrichmentList));
+            DigitalMediaEvent::masList));
     if (digitalMediaRecords.isEmpty()) {
       log.info("Mapped 0 events to their generated PIDs");
       return Collections.emptySet();
@@ -104,7 +104,7 @@ public class DigitalMediaService {
     setNewEntityRelationshipsForMedia(attributes, pidMap.get(accessUri).doisOfRelatedObjects());
     return new DigitalMediaRecord(
         doi,
-        accessUri, 1, Instant.now(), event.enrichmentList(),
+        accessUri, 1, Instant.now(), event.masList(),
         event.digitalMediaWrapper().attributes(),
         event.digitalMediaWrapper().originalAttributes());
   }
@@ -268,9 +268,9 @@ public class DigitalMediaService {
                   tuple.currentDigitalMediaRecord().accessURI(),
                   tuple.currentDigitalMediaRecord().version() + 1,
                   tuple.currentDigitalMediaRecord().created(),
-                  tuple.digitalMediaEvent().enrichmentList(), attributes,
+                  tuple.digitalMediaEvent().masList(), attributes,
                   tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes()),
-              tuple.digitalMediaEvent().enrichmentList(),
+              tuple.digitalMediaEvent().masList(),
               tuple.currentDigitalMediaRecord(),
               createJsonPatch(tuple.currentDigitalMediaRecord().attributes(),
                   tuple.digitalMediaEvent().digitalMediaWrapper()

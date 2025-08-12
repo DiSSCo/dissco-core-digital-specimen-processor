@@ -181,7 +181,7 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
-    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
+    then(masSchedulerService).should().scheduleMasSpecimenFromEvent(any(), any(), any());
     then(masSchedulerService).shouldHaveNoMoreInteractions();
   }
 
@@ -286,8 +286,8 @@ class ProcessingServiceTest {
     var event = new DigitalSpecimenEvent(
         List.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
-        List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent())
-    );
+        List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent()),
+        false);
 
     // When
     service.handleMessages(List.of(event));
@@ -405,8 +405,8 @@ class ProcessingServiceTest {
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
-    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
-    then(masSchedulerService).should().scheduleMasSpecimen(any(), any());
+    then(masSchedulerService).should().scheduleMasSpecimenFromEvent(any(), any(), any());
+    then(masSchedulerService).should().scheduleMasMediaFromEvent(any(), any(), any());
   }
 
   @Test
@@ -425,7 +425,7 @@ class ProcessingServiceTest {
     assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
     then(handleComponent).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
-    then(masSchedulerService).should().scheduleMasMedia(any(), any());
+    then(masSchedulerService).should().scheduleMasMediaFromEvent(any(), any(), any());
     then(masSchedulerService).shouldHaveNoMoreInteractions();
   }
 
@@ -502,8 +502,8 @@ class ProcessingServiceTest {
     var specimenEvents = List.of(new DigitalSpecimenEvent(
         List.of(),
         givenDigitalSpecimenWrapper(),
-        mediaEvents
-    ));
+        mediaEvents,
+        false));
 
     // When / Then
     assertThrows(TooManyObjectsException.class, () -> service.handleMessages(specimenEvents));
@@ -524,8 +524,8 @@ class ProcessingServiceTest {
     var specimenEvents = List.of(new DigitalSpecimenEvent(
         List.of(),
         givenDigitalSpecimenWrapper(false, true),
-        mediaEvents
-    ));
+        mediaEvents,
+        false));
 
     // When
     service.handleMessages(specimenEvents);

@@ -282,7 +282,7 @@ public class DigitalSpecimenService {
                   updateTuple.mediaRelationshipProcessResult().unchangedRelationships()));
           return new UpdatedDigitalSpecimenRecord(
               digitalSpecimenRecord,
-              updateTuple.digitalSpecimenEvent().enrichmentList(),
+              updateTuple.digitalSpecimenEvent().masList(),
               updateTuple.currentSpecimen(),
               createJsonPatch(
                   updateTuple.currentSpecimen().digitalSpecimenWrapper().attributes(),

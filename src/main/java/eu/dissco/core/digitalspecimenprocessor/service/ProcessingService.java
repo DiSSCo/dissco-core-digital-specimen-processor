@@ -79,7 +79,9 @@ public class ProcessingService {
           pids.getRight());
       var mediaResults = processMediaResults(mediaProcessResult, mediaPids);
       log.info("Processed specimen and media");
-      scheduleMas(specimenResults, specimenProcessResult, mediaResults, mediaProcessResult);
+      scheduleMas(uniqueBatchSpecimens, specimenResults, specimenProcessResult, uniqueBatchMedia,
+          mediaResults,
+          mediaProcessResult);
       return specimenResults;
     } catch (DisscoRepositoryException e) {
       log.error("Unable to access database", e);
@@ -87,14 +89,15 @@ public class ProcessingService {
     }
   }
 
-  private void scheduleMas(List<DigitalSpecimenRecord> specimenRecords,
-      SpecimenProcessResult specimenProcessResult, List<DigitalMediaRecord> mediaRecords,
+  private void scheduleMas(
+      Set<DigitalSpecimenEvent> specimenEvents, List<DigitalSpecimenRecord> specimenRecords,
+      SpecimenProcessResult specimenProcessResult,
+      Set<DigitalMediaEvent> mediaEvents, List<DigitalMediaRecord> mediaRecords,
       MediaProcessResult mediaProcessResult) {
-    if (!specimenRecords.isEmpty()) {
-      masSchedulerService.scheduleMasSpecimen(specimenRecords, specimenProcessResult);
-    }
+    masSchedulerService.scheduleMasSpecimenFromEvent(specimenEvents, specimenRecords,
+        specimenProcessResult);
     if (!mediaRecords.isEmpty()) {
-      masSchedulerService.scheduleMasMedia(mediaRecords, mediaProcessResult);
+      masSchedulerService.scheduleMasMediaFromEvent(mediaEvents, mediaRecords, mediaProcessResult);
     }
   }
 
@@ -104,7 +107,8 @@ public class ProcessingService {
     var mediaPids = processMediaPids(existingMedia, uniqueBatchMedia);
     var mediaProcessResult = processMedia(uniqueBatchMedia, existingMedia, mediaPids);
     var mediaResult = processMediaResults(mediaProcessResult, mediaPids);
-    scheduleMas(List.of(), null, mediaResult, mediaProcessResult);
+    masSchedulerService.scheduleMasMediaFromEvent(uniqueBatchMedia, mediaResult,
+        mediaProcessResult);
     return mediaResult;
   }
 

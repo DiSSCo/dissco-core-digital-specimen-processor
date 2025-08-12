@@ -4,8 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public record DigitalMediaEvent(
-    List<String> enrichmentList,
+    List<String> masList,
     @JsonProperty("digitalMedia")
-    DigitalMediaWrapper digitalMediaWrapper) {
+    DigitalMediaWrapper digitalMediaWrapper,
+    Boolean forceMasSchedule) {
 
 }

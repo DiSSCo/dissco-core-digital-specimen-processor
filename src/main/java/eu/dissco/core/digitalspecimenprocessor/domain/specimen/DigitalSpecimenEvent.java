@@ -4,8 +4,9 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import java.util.List;
 
 public record DigitalSpecimenEvent(
-    List<String> enrichmentList,
+    List<String> masList,
     DigitalSpecimenWrapper digitalSpecimenWrapper,
-    List<DigitalMediaEvent> digitalMediaEvents) {
+    List<DigitalMediaEvent> digitalMediaEvents,
+    Boolean forceMasSchedule) {
 
 }

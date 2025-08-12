@@ -1,19 +1,17 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
-import eu.dissco.core.digitalspecimenprocessor.domain.mas.MjrTargetType;
-import eu.dissco.core.digitalspecimenprocessor.domain.mas.SourceSystemMass;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
-import eu.dissco.core.digitalspecimenprocessor.repository.SourceSystemRepository;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,100 +23,88 @@ import org.springframework.stereotype.Service;
 public class MasSchedulerService {
 
   private final RabbitMqPublisherService publisherService;
-  private final SourceSystemRepository sourceSystemRepository;
   private final ApplicationProperties applicationProperties;
 
-  public void scheduleMasSpecimen(List<DigitalSpecimenRecord> specimenRecords,
-      SpecimenProcessResult processResult) {
-    var newPids = new HashSet<>(processResult.newSpecimenPids().values());
-    if (newPids.isEmpty()) {
-      return;
-    }
-    var newSpecimens = specimenRecords.stream()
-        .filter(specimenRecord -> newPids.contains(specimenRecord.id()))
-        .toList();
-    log.info("Scheduling MASs on {} new specimens", newSpecimens.size());
-    var sourceSystemIds = newSpecimens.stream()
-        .map(specimenRecord -> specimenRecord.digitalSpecimenWrapper().attributes()
-            .getOdsSourceSystemID())
-        .map(MasSchedulerService::removeHandlePrefix)
-        .collect(Collectors.toSet());
-    Map<String, SourceSystemMass> sourceSystemMass;
-    try {
-      sourceSystemMass = sourceSystemRepository.getSourceSystemMass(sourceSystemIds);
-    } catch (DisscoJsonBMappingException e) {
-      log.error("Unable to schedule MASs for specimens");
-      return;
-    }
-    for (var specimen : newSpecimens) {
-      var sourceSystemId = removeHandlePrefix(
-          specimen.digitalSpecimenWrapper().attributes().getOdsSourceSystemID());
-      var specimenMas = sourceSystemMass.get(sourceSystemId).specimenMass();
-      for (var masId : specimenMas) {
-        var masJobRequest = new MasJobRequest(
-            masId,
-            specimen.id(),
-            false,
-            applicationProperties.getPid(),
-            MjrTargetType.DIGITAL_SPECIMEN
-        );
-        try {
-          publisherService.publishMasJobRequest(masJobRequest);
-        } catch (JsonProcessingException e) {
-          log.error("Unable to publish mas job request {}", masJobRequest);
-        }
-      }
-    }
-  }
 
-
-  public void scheduleMasMedia(List<DigitalMediaRecord> mediaRecords,
-      MediaProcessResult processResult) {
-    var newMediaUris = processResult.newDigitalMedia().stream()
-        .map(m -> m.digitalMediaWrapper().attributes().getAcAccessURI()).collect(
+  /*
+  There are two conditions in which we want to schedule a MAS
+  1. If the specimen is new
+  2. If the event has the "force mas schedule" flag set to true
+   */
+  public void scheduleMasSpecimenFromEvent(Set<DigitalSpecimenEvent> specimenEvents,
+      List<DigitalSpecimenRecord> digitalSpecimenRecords,
+      SpecimenProcessResult specimenProcessResult) {
+    var idMap = digitalSpecimenRecords.stream().collect(Collectors.toMap(
+        specimen -> specimen.digitalSpecimenWrapper().physicalSpecimenID(),
+        DigitalSpecimenRecord::id
+    ));
+    var newPhysicalSpecimenIds = specimenProcessResult.newSpecimens().stream()
+        .map(event -> event.digitalSpecimenWrapper().physicalSpecimenID()).collect(
             Collectors.toSet());
-    if (newMediaUris.isEmpty()) {
-      return;
-    }
-    log.info("Scheduling MASs on {} new media", newMediaUris.size());
-    var newMediaRecords = mediaRecords.stream().filter(mediaRecord -> newMediaUris.contains(
-        mediaRecord.accessURI()
-    )).toList();
-
-    var sourceSystemIds = newMediaRecords.stream()
-        .map(mediaRecord -> mediaRecord.attributes()
-            .getOdsSourceSystemID())
-        .map(MasSchedulerService::removeHandlePrefix)
-        .collect(Collectors.toSet());
-    Map<String, SourceSystemMass> sourceSystemMass;
-    try {
-      sourceSystemMass = sourceSystemRepository.getSourceSystemMass(sourceSystemIds);
-    } catch (DisscoJsonBMappingException e) {
-      log.error("Unable to schedule MASs for specimens");
-      return;
-    }
-    for (var media : newMediaRecords) {
-      var sourceSystemId = removeHandlePrefix(media.attributes().getOdsSourceSystemID());
-      var mediaMas = sourceSystemMass.get(sourceSystemId).mediaMass();
-      for (var masId : mediaMas) {
-        var masJobRequest = new MasJobRequest(
-            masId,
-            media.id(),
-            false,
-            applicationProperties.getPid(),
-            MjrTargetType.MEDIA_OBJECT
-        );
-        try {
-          publisherService.publishMasJobRequest(masJobRequest);
-        } catch (JsonProcessingException e) {
-          log.error("Unable to publish mas job request {}", masJobRequest);
+    for (var event : specimenEvents) {
+      if (!event.masList().isEmpty()
+          && (Boolean.TRUE.equals(event.forceMasSchedule()) || isNewSpecimen(event,
+          newPhysicalSpecimenIds))) { // Verify null still works
+        var specimenId = idMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
+        for (var masId : event.masList()) {
+          var masJobRequest = new MasJobRequest(
+              masId,
+              specimenId,
+              false,
+              applicationProperties.getPid(),
+              MjrTargetType.DIGITAL_SPECIMEN
+          );
+          try {
+            publisherService.publishMasJobRequest(masJobRequest);
+          } catch (JsonProcessingException e) {
+            log.error("Unable to publish mas job request {}", masJobRequest);
+          }
         }
       }
     }
   }
 
-  private static String removeHandlePrefix(String id) {
-    return id.replace("https://hdl.handle.net/", "");
+  public void scheduleMasMediaFromEvent(Set<DigitalMediaEvent> mediaEvents,
+      List<DigitalMediaRecord> digitalMediaRecords,
+      MediaProcessResult mediaProcessResult) {
+    var idMap = digitalMediaRecords.stream().collect(Collectors.toMap(
+        media -> media.attributes().getAcAccessURI(),
+        DigitalMediaRecord::id
+    ));
+    var newMediaUris = mediaProcessResult.newDigitalMedia().stream()
+        .map(event -> event.digitalMediaWrapper().attributes().getAcAccessURI()).collect(
+            Collectors.toSet());
+    for (var event : mediaEvents) {
+      if (!event.masList().isEmpty()
+          && (Boolean.TRUE.equals(event.forceMasSchedule()) || isNewMedia(event,
+          newMediaUris))) { // Verify null still works
+        var mediaId = idMap.get(event.digitalMediaWrapper().attributes().getAcAccessURI());
+        for (var masId : event.masList()) {
+          var masJobRequest = new MasJobRequest(
+              masId,
+              mediaId,
+              false,
+              applicationProperties.getPid(),
+              MjrTargetType.MEDIA_OBJECT
+          );
+          try {
+            publisherService.publishMasJobRequest(masJobRequest);
+          } catch (JsonProcessingException e) {
+            log.error("Unable to publish mas job request {}", masJobRequest);
+          }
+        }
+      }
+    }
+  }
+
+  private static boolean isNewSpecimen(DigitalSpecimenEvent specimenEvent,
+      Set<String> newPhysicalSpecimenIds) {
+    return newPhysicalSpecimenIds.contains(
+        specimenEvent.digitalSpecimenWrapper().physicalSpecimenID());
+  }
+
+  private static boolean isNewMedia(DigitalMediaEvent mediaEvent, Set<String> newMediaUris) {
+    return newMediaUris.contains(mediaEvent.digitalMediaWrapper().attributes().getAcAccessURI());
   }
 
 }
