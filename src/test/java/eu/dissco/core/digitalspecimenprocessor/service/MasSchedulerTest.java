@@ -85,7 +85,7 @@ class MasSchedulerTest {
   void testScheduleMaSpecimenNoNewSpecimenForced() throws Exception {
     // Given
     var event = new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenWrapper(),
         List.of(),
         true);
@@ -105,7 +105,7 @@ class MasSchedulerTest {
   void testScheduleMaSpecimenNoMas() {
     // Given
     var event = new DigitalSpecimenEvent(
-        List.of(),
+        Set.of(),
         givenDigitalSpecimenWrapper(),
         List.of(),
         false);
@@ -169,7 +169,7 @@ class MasSchedulerTest {
   void testScheduleMasMediaNoNewMediaForced() throws Exception {
     // Given
     var event = new DigitalMediaEvent(
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         givenDigitalMediaWrapper(), true);
 
     // When
@@ -184,7 +184,7 @@ class MasSchedulerTest {
   void testScheduleMasMediaNoMas() {
     // Given
     var event = new DigitalMediaEvent(
-        List.of(),
+        Set.of(),
         givenDigitalMediaWrapper(), false);
 
     // When

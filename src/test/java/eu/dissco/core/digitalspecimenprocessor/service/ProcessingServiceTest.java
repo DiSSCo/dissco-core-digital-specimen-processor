@@ -284,7 +284,7 @@ class ProcessingServiceTest {
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
     given(equalityService.mediaAreEqual(any(), any(), any())).willReturn(true);
     var event = new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent()),
         false);
@@ -500,7 +500,7 @@ class ProcessingServiceTest {
     IntStream.rangeClosed(0, 10000)
         .forEach(i -> mediaEvents.add(givenDigitalMediaEvent(UUID.randomUUID().toString())));
     var specimenEvents = List.of(new DigitalSpecimenEvent(
-        List.of(),
+        Set.of(),
         givenDigitalSpecimenWrapper(),
         mediaEvents,
         false));
@@ -522,7 +522,7 @@ class ProcessingServiceTest {
     IntStream.rangeClosed(0, 2002)
         .forEach(i -> mediaEvents.add(givenDigitalMediaEvent(UUID.randomUUID().toString())));
     var specimenEvents = List.of(new DigitalSpecimenEvent(
-        List.of(),
+        Set.of(),
         givenDigitalSpecimenWrapper(false, true),
         mediaEvents,
         false));

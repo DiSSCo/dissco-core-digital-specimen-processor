@@ -168,7 +168,7 @@ public class DigitalMediaService {
   }
 
   private void handleSuccessfulElasticInsert(
-      Map<DigitalMediaRecord, List<String>> digitalMediaRecords, List<DigitalMediaEvent> events,
+      Map<DigitalMediaRecord, Set<String>> digitalMediaRecords, List<DigitalMediaEvent> events,
       Map<String, PidProcessResult> pidMap) {
     log.debug("Successfully indexed {} digital media", digitalMediaRecords);
     var recordsToRollback = new HashSet<DigitalMediaRecord>();
@@ -188,7 +188,7 @@ public class DigitalMediaService {
     }
   }
 
-  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, List<String> enrichments) {
+  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, Set<String> enrichments) {
     try {
       publisherService.publishCreateEventMedia(digitalMediaRecord);
     } catch (JsonProcessingException e) {

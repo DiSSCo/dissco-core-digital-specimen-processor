@@ -212,7 +212,7 @@ class DigitalMediaServiceTest {
     var successfulRecord = givenDigitalMediaRecord();
     var records = Set.of(successfulRecord,
         givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
-    var successfulRecordMap = Map.of(successfulRecord, List.of(MEDIA_MAS));
+    var successfulRecordMap = Map.of(successfulRecord, Set.of(MEDIA_MAS));
     given(bulkResponse.errors()).willReturn(true);
     given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
     given(rollbackService.handlePartiallyFailedElasticInsertMedia(anyMap(), any(), any()))
@@ -330,7 +330,7 @@ class DigitalMediaServiceTest {
     var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
     var updatedRecord = Set.of(new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(VERSION + 1),
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         givenUnequalDigitalMediaRecord(),
         givenJsonPatchMedia()
     ));
@@ -369,7 +369,7 @@ class DigitalMediaServiceTest {
         .willReturn(Set.of(
             new UpdatedDigitalMediaRecord(
                 successfulRecord,
-                List.of(MEDIA_MAS),
+                Set.of(MEDIA_MAS),
                 givenUnequalDigitalMediaRecord(),
                 givenJsonPatchMedia()
             )

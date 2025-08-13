@@ -44,7 +44,7 @@ public class DigitalMediaRepository {
           dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL),
           dbRecord.get(DIGITAL_MEDIA_OBJECT.VERSION),
           dbRecord.get(DIGITAL_MEDIA_OBJECT.CREATED),
-          List.of(),
+          Set.of(),
           mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class),
           mapper.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data()));
     } catch (JsonProcessingException e) {

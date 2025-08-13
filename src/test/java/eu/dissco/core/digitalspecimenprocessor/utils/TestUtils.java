@@ -234,7 +234,7 @@ public class TestUtils {
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId,
       boolean hasMedia) {
     return new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
             hasMedia),
         List.of(givenDigitalMediaEvent(MEDIA_URL)),
@@ -260,7 +260,7 @@ public class TestUtils {
     er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
     media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
-        pid, uri, version, CREATED, List.of(MEDIA_MAS),
+        pid, uri, version, CREATED, Set.of(MEDIA_MAS),
         media,
         MAPPER.createObjectNode());
   }
@@ -288,7 +288,7 @@ public class TestUtils {
 
   public static DigitalMediaRecord givenDigitalMediaRecordNoEnrichment() {
     return new DigitalMediaRecord(
-        MEDIA_PID, MEDIA_URL, VERSION, CREATED, List.of(),
+        MEDIA_PID, MEDIA_URL, VERSION, CREATED, Set.of(),
         new DigitalMedia()
             .withAcAccessURI(MEDIA_URL)
             .withOdsOrganisationID(ORGANISATION_ID)
@@ -303,7 +303,7 @@ public class TestUtils {
   }
 
   public static DigitalMediaEvent givenUnequalDigitalMediaEvent(String url) {
-    return new DigitalMediaEvent(List.of(MEDIA_MAS),
+    return new DigitalMediaEvent(Set.of(MEDIA_MAS),
         new DigitalMediaWrapper(
             "StillImage",
             givenUnequalDigitalMedia(url),
@@ -326,7 +326,7 @@ public class TestUtils {
     er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
     media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, List.of(MEDIA_MAS), media, MAPPER.createObjectNode());
+        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, MAPPER.createObjectNode());
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url) {
@@ -343,7 +343,7 @@ public class TestUtils {
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(boolean hasMedia,
       boolean entityRelationship) {
     return new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenWrapper(entityRelationship, hasMedia),
         hasMedia ? List.of(givenDigitalMediaEvent()) : List.of(),
         false);
@@ -389,7 +389,7 @@ public class TestUtils {
 
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         givenDigitalMediaWrapper(mediaUrl), false);
   }
 
@@ -423,7 +423,7 @@ public class TestUtils {
                 .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
                     PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))));
     return new DigitalMediaEvent(
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         new DigitalMediaWrapper(
             "StillImage",
             digitalMedia,
@@ -591,7 +591,7 @@ public class TestUtils {
     if (hasMedia) {
       return new UpdatedDigitalSpecimenRecord(
           givenDigitalSpecimenRecord(2, true),
-          List.of(MAS),
+          Set.of(MAS),
           currentRecord,
           givenJsonPatchSpecimen(),
           List.of(givenDigitalMediaEvent()),
@@ -603,7 +603,7 @@ public class TestUtils {
     }
     return new UpdatedDigitalSpecimenRecord(
         givenDigitalSpecimenRecord(2, false),
-        List.of(MAS),
+        Set.of(MAS),
         currentRecord,
         givenJsonPatchSpecimen(),
         List.of(),
@@ -725,7 +725,7 @@ public class TestUtils {
   public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord() throws Exception {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(2),
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         givenDigitalMediaRecord(),
         givenJsonPatchMedia()
     );
@@ -735,7 +735,8 @@ public class TestUtils {
       throws Exception {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(pid, uri, 2),
-        List.of(MEDIA_MAS),
+        Set
+            .of(MEDIA_MAS),
         givenDigitalMediaRecord(pid, uri, 1),
         givenJsonPatchMedia()
     );

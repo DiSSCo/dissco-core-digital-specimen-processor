@@ -1,11 +1,11 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.media;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.util.List;
+import java.util.Set;
 
 public record UpdatedDigitalMediaRecord(
     DigitalMediaRecord digitalMediaRecord,
-    List<String> automatedAnnotations,
+    Set<String> masList,
     DigitalMediaRecord currentDigitalMediaRecord,
     JsonNode jsonPatch
 ){

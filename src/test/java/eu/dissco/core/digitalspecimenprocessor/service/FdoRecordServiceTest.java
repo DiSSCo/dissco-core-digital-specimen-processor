@@ -59,6 +59,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -171,7 +172,7 @@ class FdoRecordServiceTest {
   void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
     // Given
     var media = new DigitalMediaEvent(
-        List.of("image-metadata"),
+        Set.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
             new DigitalMedia()
@@ -200,7 +201,7 @@ class FdoRecordServiceTest {
       String expectedId) {
     // Given
     var media = new DigitalMediaEvent(
-        List.of("image-metadata"),
+        Set.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
             new DigitalMedia()

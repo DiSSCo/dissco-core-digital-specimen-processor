@@ -183,7 +183,7 @@ class EqualityServiceTest {
     var currentDigitalSpecimen = givenDigitalSpecimenWrapperWithMediaEr(PHYSICAL_SPECIMEN_ID, true);
     var digitalSpecimenWrapper = changeTimestamps(givenDigitalSpecimenWrapper(true, true));
     var digitalSpecimenEvent = new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         digitalSpecimenWrapper,
         List.of(givenDigitalMediaEvent()),
         false);
@@ -198,7 +198,7 @@ class EqualityServiceTest {
             currentDigitalSpecimen.attributes().getOdsHasEntityRelationships()
         );
     var expected = new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         new DigitalSpecimenWrapper(
             PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA
         ),
@@ -223,17 +223,17 @@ class EqualityServiceTest {
         MAPPER.createObjectNode()
     );
     var expected = new DigitalMediaEvent(
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         expectedWrapper, false);
     var event = new DigitalMediaEvent(
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         changeTimestamps(expectedWrapper), false);
     var currentRecord = new DigitalMediaRecord(
         MEDIA_PID,
         MEDIA_URL,
         VERSION,
         CREATED,
-        List.of(MEDIA_MAS),
+        Set.of(MEDIA_MAS),
         givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
         MAPPER.createObjectNode()
     );

@@ -508,7 +508,7 @@ class RollbackServiceTest {
     // Given
     var successfulRecord = givenDigitalMediaRecord();
     var failedRecord = givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION);
-    var records = Map.of(successfulRecord, List.of(MEDIA_MAS), failedRecord, List.of(MEDIA_MAS));
+    var records = Map.of(successfulRecord, Set.of(MEDIA_MAS), failedRecord, Set.of(MEDIA_MAS));
 
     var successfulEvent = givenDigitalMediaEvent();
     var failedEvent = givenUnequalDigitalMediaEvent();
@@ -524,7 +524,7 @@ class RollbackServiceTest {
     then(rabbitMqService).should().publishCreateEventMedia(successfulRecord);
     then(mediaRepository).should().rollBackDigitalMedia(MEDIA_PID_ALT);
     then(elasticSearchRepository).shouldHaveNoInteractions();
-    assertThat(result).isEqualTo(Map.of(successfulRecord, List.of(MEDIA_MAS)));
+    assertThat(result).isEqualTo(Map.of(successfulRecord, Set.of(MEDIA_MAS)));
   }
 
   @Test
@@ -532,7 +532,7 @@ class RollbackServiceTest {
     // Given
     var successfulRecord = givenDigitalMediaRecord();
     var failedRecord = givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION);
-    var records = Map.of(successfulRecord, List.of(MEDIA_MAS), failedRecord, List.of(MEDIA_MAS));
+    var records = Map.of(successfulRecord, Set.of(MEDIA_MAS), failedRecord, Set.of(MEDIA_MAS));
     var successfulEvent = givenDigitalMediaEvent();
     var failedEvent = givenUnequalDigitalMediaEvent();
     givenBulkResponse(MEDIA_PID, MEDIA_PID_ALT);
@@ -568,7 +568,7 @@ class RollbackServiceTest {
     var successfulRecord = givenUpdatedDigitalSpecimenRecord(false);
     var failedRecord = new UpdatedDigitalSpecimenRecord(
         givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT),
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT),
         givenJsonPatchSpecimen(),
         List.of(),
@@ -596,7 +596,7 @@ class RollbackServiceTest {
     var successfulRecord = givenUpdatedDigitalSpecimenRecord(false);
     var failedRecord = new UpdatedDigitalSpecimenRecord(
         givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT),
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT),
         givenJsonPatchSpecimen(),
         List.of(),
