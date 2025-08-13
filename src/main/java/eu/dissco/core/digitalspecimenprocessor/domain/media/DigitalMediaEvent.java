@@ -1,10 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.media;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
+import java.util.Set;
 
 public record DigitalMediaEvent(
-    List<String> masList,
+    Set<String> masList,
     @JsonProperty("digitalMedia")
     DigitalMediaWrapper digitalMediaWrapper,
     Boolean forceMasSchedule) {
