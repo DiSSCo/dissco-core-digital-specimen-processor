@@ -2,7 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
@@ -169,7 +169,7 @@ class MasSchedulerTest {
   void testScheduleMasMediaNoNewMediaForced() throws Exception {
     // Given
     var event = new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         givenDigitalMediaWrapper(), true);
 
     // When

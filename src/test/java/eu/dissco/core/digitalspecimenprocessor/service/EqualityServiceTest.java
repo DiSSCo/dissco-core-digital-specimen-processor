@@ -6,7 +6,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
@@ -223,17 +223,17 @@ class EqualityServiceTest {
         MAPPER.createObjectNode()
     );
     var expected = new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         expectedWrapper, false);
     var event = new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         changeTimestamps(expectedWrapper), false);
     var currentRecord = new DigitalMediaRecord(
         MEDIA_PID,
         MEDIA_URL,
         VERSION,
         CREATED,
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
         MAPPER.createObjectNode()
     );

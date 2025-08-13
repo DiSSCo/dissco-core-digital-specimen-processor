@@ -42,10 +42,8 @@ public class MasSchedulerService {
         .map(event -> event.digitalSpecimenWrapper().physicalSpecimenID()).collect(
             Collectors.toSet());
     for (var event : specimenEvents) {
-      if (!event.masList().isEmpty()
-          && (Boolean.TRUE.equals(event.forceMasSchedule()) || isNewSpecimen(event,
-          newPhysicalSpecimenIds))) { // Verify null still works
-        var specimenId = idMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
+      var specimenId = idMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
+      if (masShouldBeScheduled(event, newPhysicalSpecimenIds, specimenId)) {
         for (var masId : event.masList()) {
           var masJobRequest = new MasJobRequest(
               masId,
@@ -75,10 +73,8 @@ public class MasSchedulerService {
         .map(event -> event.digitalMediaWrapper().attributes().getAcAccessURI()).collect(
             Collectors.toSet());
     for (var event : mediaEvents) {
-      if (!event.masList().isEmpty()
-          && (Boolean.TRUE.equals(event.forceMasSchedule()) || isNewMedia(event,
-          newMediaUris))) { // Verify null still works
-        var mediaId = idMap.get(event.digitalMediaWrapper().attributes().getAcAccessURI());
+      var mediaId = idMap.get(event.digitalMediaWrapper().attributes().getAcAccessURI());
+      if (masShouldBeScheduled(event, newMediaUris, mediaId)) {
         for (var masId : event.masList()) {
           var masJobRequest = new MasJobRequest(
               masId,
@@ -93,18 +89,27 @@ public class MasSchedulerService {
             log.error("Unable to publish mas job request {}", masJobRequest);
           }
         }
+
       }
     }
   }
 
-  private static boolean isNewSpecimen(DigitalSpecimenEvent specimenEvent,
-      Set<String> newPhysicalSpecimenIds) {
-    return newPhysicalSpecimenIds.contains(
-        specimenEvent.digitalSpecimenWrapper().physicalSpecimenID());
+  private static boolean masShouldBeScheduled(DigitalSpecimenEvent event,
+      Set<String> newPhysicalSpecimenIds, String specimenId) {
+    return
+        !event.masList().isEmpty() &&
+            specimenId != null &&
+            (Boolean.TRUE.equals(event.forceMasSchedule()) ||
+                newPhysicalSpecimenIds.contains(
+                    event.digitalSpecimenWrapper().physicalSpecimenID()));
   }
 
-  private static boolean isNewMedia(DigitalMediaEvent mediaEvent, Set<String> newMediaUris) {
-    return newMediaUris.contains(mediaEvent.digitalMediaWrapper().attributes().getAcAccessURI());
+  private static boolean masShouldBeScheduled(DigitalMediaEvent event,
+      Set<String> newMediaUris, String mediaId) {
+    return !event.masList().isEmpty() &&
+        mediaId != null &&
+        (Boolean.TRUE.equals(event.forceMasSchedule()) ||
+            newMediaUris.contains(event.digitalMediaWrapper().attributes().getAcAccessURI()));
   }
 
 }

@@ -94,7 +94,7 @@ public class TestUtils {
   public static final String MEDIA_URL_ALT = MEDIA_URL + "/2";
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
   public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
-  public static final String MEDIA_ENRICHMENT = "https://hdl.handle.net/20.5000.1025/5E3-P4R-AQC";
+  public static final String MEDIA_MAS = "https://hdl.handle.net/20.5000.1025/5E3-P4R-AQC";
 
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
@@ -260,7 +260,7 @@ public class TestUtils {
     er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
     media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
-        pid, uri, version, CREATED, List.of(MEDIA_ENRICHMENT),
+        pid, uri, version, CREATED, List.of(MEDIA_MAS),
         media,
         MAPPER.createObjectNode());
   }
@@ -303,7 +303,7 @@ public class TestUtils {
   }
 
   public static DigitalMediaEvent givenUnequalDigitalMediaEvent(String url) {
-    return new DigitalMediaEvent(List.of(MEDIA_ENRICHMENT),
+    return new DigitalMediaEvent(List.of(MEDIA_MAS),
         new DigitalMediaWrapper(
             "StillImage",
             givenUnequalDigitalMedia(url),
@@ -326,7 +326,7 @@ public class TestUtils {
     er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
     media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, List.of(MEDIA_ENRICHMENT), media, MAPPER.createObjectNode());
+        pid, url, version, CREATED, List.of(MEDIA_MAS), media, MAPPER.createObjectNode());
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url) {
@@ -389,7 +389,7 @@ public class TestUtils {
 
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         givenDigitalMediaWrapper(mediaUrl), false);
   }
 
@@ -423,7 +423,7 @@ public class TestUtils {
                 .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
                     PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))));
     return new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         new DigitalMediaWrapper(
             "StillImage",
             digitalMedia,
@@ -725,7 +725,7 @@ public class TestUtils {
   public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord() throws Exception {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(2),
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         givenDigitalMediaRecord(),
         givenJsonPatchMedia()
     );
@@ -735,7 +735,7 @@ public class TestUtils {
       throws Exception {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(pid, uri, 2),
-        List.of(MEDIA_ENRICHMENT),
+        List.of(MEDIA_MAS),
         givenDigitalMediaRecord(pid, uri, 1),
         givenJsonPatchMedia()
     );
@@ -753,7 +753,7 @@ public class TestUtils {
 
   public static MasJobRequest givenMasJobRequestMedia() {
     return new MasJobRequest(
-        MEDIA_ENRICHMENT,
+        MEDIA_MAS,
         MEDIA_PID,
         false,
         APP_HANDLE,

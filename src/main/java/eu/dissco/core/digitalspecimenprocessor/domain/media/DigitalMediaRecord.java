@@ -9,7 +9,7 @@ public record DigitalMediaRecord(
     String id,
     String accessURI,
     int version, Instant created,
-    List<String> enrichmentList,
+    List<String> masList,
     DigitalMedia attributes,
     JsonNode originalAttributes) {
 
