@@ -1,0 +1,3 @@
+# Aug 18
+# Issue with netty; spring needs to update its version
+CVE-2025-55163
