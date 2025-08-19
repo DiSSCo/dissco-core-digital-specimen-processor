@@ -235,7 +235,7 @@ class EqualityServiceTest {
         CREATED,
         Set.of(MEDIA_MAS),
         givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
-        MAPPER.createObjectNode()
+        MAPPER.createObjectNode(), false
     );
 
     // When

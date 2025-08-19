@@ -1,14 +1,19 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGITAL_SPECIMEN;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.time.Instant;
 import java.util.List;
@@ -48,6 +53,14 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   @Test
   void testGetDigitalSpecimens() throws DisscoRepositoryException {
     // Given
+    var expected = new DigitalSpecimenRecord(
+        HANDLE,
+        MIDS_LEVEL,
+        VERSION,
+        CREATED,
+        givenDigitalSpecimenWrapper(),
+        null, null
+    );
     repository.createDigitalSpecimenRecord(
         Set.of(
             givenDigitalSpecimenRecord(),
@@ -58,7 +71,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
 
     // Then
-    assertThat(result.get(0)).isEqualTo(givenDigitalSpecimenRecord());
+    assertThat(result.getFirst()).isEqualTo(expected);
   }
 
   @Test

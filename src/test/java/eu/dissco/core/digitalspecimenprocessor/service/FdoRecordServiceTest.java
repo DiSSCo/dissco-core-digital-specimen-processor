@@ -278,7 +278,8 @@ class FdoRecordServiceTest {
   @Test
   void testRollbackUpdate() throws Exception {
     var specimen = givenDigitalSpecimenWrapper();
-    var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen);
+    var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen, Set.of(),
+        false);
     var expected = givenUpdateHandleRequest(true);
 
     // When

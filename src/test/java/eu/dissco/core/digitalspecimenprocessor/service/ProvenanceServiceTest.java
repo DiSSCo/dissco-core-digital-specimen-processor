@@ -26,6 +26,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
 import eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType;
 import eu.dissco.core.digitalspecimenprocessor.schema.OdsChangeValue;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,7 +61,7 @@ class ProvenanceServiceTest {
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
     var digitalSpecimen = new DigitalSpecimenRecord(HANDLE, 2, 1, CREATED,
-        givenDigitalSpecimenWrapper(true, false));
+        givenDigitalSpecimenWrapper(true, false), Set.of(), false);
 
     // When
     var event = service.generateCreateEventSpecimen(digitalSpecimen);

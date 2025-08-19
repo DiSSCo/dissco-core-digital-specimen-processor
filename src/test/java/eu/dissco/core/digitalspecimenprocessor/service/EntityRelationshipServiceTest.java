@@ -60,7 +60,8 @@ class EntityRelationshipServiceTest {
             TYPE,
             specimen,
             ORIGINAL_DATA
-        )
+        ),
+        Set.of(), false
     );
     var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, currentRecord);
     var digitalSpecimen = givenDigitalSpecimenEvent();

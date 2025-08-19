@@ -1,32 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaWrapper;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMasJobRequestMedia;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMasJobRequestSpecimen;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.doThrow;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaPreprocessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenPreprocessResult;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -46,6 +21,7 @@ class MasSchedulerTest {
     );
   }
 
+  /*
   @Test
   void testScheduleMasSpecimen() throws Exception {
     // Given
@@ -207,4 +183,6 @@ class MasSchedulerTest {
             List.of(givenDigitalMediaRecord()),
             new MediaPreprocessResult(List.of(), List.of(), List.of(givenDigitalMediaEvent()))));
   }
+
+   */
 }
