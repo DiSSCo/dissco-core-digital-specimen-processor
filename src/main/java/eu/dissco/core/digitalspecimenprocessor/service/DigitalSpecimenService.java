@@ -223,9 +223,12 @@ public class DigitalSpecimenService {
     var newEntityRelationships = mediaPids
         .stream()
         .filter(pid -> !existingMediaRelationshipPids.contains(pid))
-        .map(doi -> DigitalObjectUtils.buildEntityRelationship(HAS_MEDIA.getRelationshipName(), doi));
+        .map(doi -> DigitalObjectUtils.buildEntityRelationship(HAS_MEDIA.getRelationshipName(),
+            doi));
     var attributes = digitalSpecimenWrapper.attributes();
-    attributes.setOdsHasEntityRelationships(Stream.concat(newEntityRelationships, attributes.getOdsHasEntityRelationships().stream()).toList());
+    attributes.setOdsHasEntityRelationships(
+        Stream.concat(newEntityRelationships, attributes.getOdsHasEntityRelationships().stream())
+            .toList());
     return new DigitalSpecimenWrapper(
         digitalSpecimenWrapper.physicalSpecimenID(),
         digitalSpecimenWrapper.type(),
@@ -254,7 +257,8 @@ public class DigitalSpecimenService {
         midsService.calculateMids(event.digitalSpecimenWrapper()),
         1,
         Instant.now(),
-        addNewMediaEntityRelationshipToWrapper(event.digitalSpecimenWrapper(), pidMap, List.of())
+        addNewMediaEntityRelationshipToWrapper(event.digitalSpecimenWrapper(), pidMap, List.of()),
+        event.masList(), event.forceMasSchedule()
     );
   }
 
@@ -279,7 +283,9 @@ public class DigitalSpecimenService {
               Instant.now(),
               addNewMediaEntityRelationshipToWrapper(
                   updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
-                  updateTuple.mediaRelationshipProcessResult().unchangedRelationships()));
+                  updateTuple.mediaRelationshipProcessResult().unchangedRelationships()),
+              updateTuple.digitalSpecimenEvent().masList(),
+              updateTuple.digitalSpecimenEvent().forceMasSchedule());
           return new UpdatedDigitalSpecimenRecord(
               digitalSpecimenRecord,
               updateTuple.digitalSpecimenEvent().masList(),

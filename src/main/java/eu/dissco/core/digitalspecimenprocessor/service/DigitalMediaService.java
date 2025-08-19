@@ -60,7 +60,8 @@ public class DigitalMediaService {
   public Set<DigitalMediaRecord> createNewDigitalMedia(
       List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
     var digitalMediaRecords = events.stream()
-        .filter(event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
+        .filter(
+            event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
         .collect(toMap(
             event -> mapToNewDigitalMediaRecord(event, pidMap),
             DigitalMediaEvent::masList));
@@ -106,7 +107,7 @@ public class DigitalMediaService {
         doi,
         accessUri, 1, Instant.now(), event.masList(),
         event.digitalMediaWrapper().attributes(),
-        event.digitalMediaWrapper().originalAttributes());
+        event.digitalMediaWrapper().originalAttributes(), event.forceMasSchedule());
   }
 
   private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
@@ -182,7 +183,8 @@ public class DigitalMediaService {
       var rollbackAccessUris = recordsToRollback.stream().map(
           DigitalMediaRecord::accessURI).toList();
       var rollbackEvents = events.stream().filter(
-          event -> rollbackAccessUris.contains(event.digitalMediaWrapper().attributes().getAcAccessURI())
+          event -> rollbackAccessUris.contains(
+              event.digitalMediaWrapper().attributes().getAcAccessURI())
       ).toList();
       rollbackService.rollbackNewMedias(rollbackEvents, pidMap, true, true);
     }
@@ -269,7 +271,8 @@ public class DigitalMediaService {
                   tuple.currentDigitalMediaRecord().version() + 1,
                   tuple.currentDigitalMediaRecord().created(),
                   tuple.digitalMediaEvent().masList(), attributes,
-                  tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes()),
+                  tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes(),
+                  tuple.digitalMediaEvent().forceMasSchedule()),
               tuple.digitalMediaEvent().masList(),
               tuple.currentDigitalMediaRecord(),
               createJsonPatch(tuple.currentDigitalMediaRecord().attributes(),
@@ -283,7 +286,8 @@ public class DigitalMediaService {
       DigitalMedia currentAttributes, Set<String> relatedDois) {
     var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
         .stream().filter(
-            er -> er.getDwcRelationshipOfResource().equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
+            er -> er.getDwcRelationshipOfResource()
+                .equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
         ).toList();
     var er = new ArrayList<>(attributes.getOdsHasEntityRelationships());
     er.addAll(existingSpecimenErs);

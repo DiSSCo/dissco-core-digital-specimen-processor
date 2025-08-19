@@ -46,7 +46,7 @@ public class DigitalMediaRepository {
           dbRecord.get(DIGITAL_MEDIA_OBJECT.CREATED),
           Set.of(),
           mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class),
-          mapper.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data()));
+          mapper.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data()), null);
     } catch (JsonProcessingException e) {
       log.error("Unable to map record data to json: {}", dbRecord);
       return null;

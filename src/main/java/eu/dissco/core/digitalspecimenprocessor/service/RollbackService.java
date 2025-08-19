@@ -74,10 +74,12 @@ public class RollbackService {
     }
     try {
       publisherService.deadLetterEventSpecimen(
-          new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.masList(),
+          new DigitalSpecimenEvent(
+              updatedDigitalSpecimenRecord.digitalSpecimenRecord().masIds(),
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                   .digitalSpecimenWrapper(),
-              updatedDigitalSpecimenRecord.digitalMediaObjectEvents(), false));
+              updatedDigitalSpecimenRecord.digitalMediaObjectEvents(),
+              updatedDigitalSpecimenRecord.digitalSpecimenRecord().forceMasSchedule()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED, updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }

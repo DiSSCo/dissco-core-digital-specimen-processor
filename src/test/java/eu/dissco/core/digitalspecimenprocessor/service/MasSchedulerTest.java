@@ -17,10 +17,10 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import eu.dissco.core.digitalspecimenprocessor.domain.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaPreprocessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenPreprocessResult;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +54,7 @@ class MasSchedulerTest {
     masSchedulerService.scheduleMasSpecimenFromEvent(
         Set.of(givenDigitalSpecimenEvent()),
         List.of(givenDigitalSpecimenRecord()),
-        new SpecimenProcessResult(
+        new SpecimenPreprocessResult(
             List.of(),
             List.of(),
             List.of(givenDigitalSpecimenEvent()),
@@ -74,7 +74,7 @@ class MasSchedulerTest {
     masSchedulerService.scheduleMasSpecimenFromEvent(
         Set.of(givenDigitalSpecimenEvent()),
         List.of(givenDigitalSpecimenRecord()),
-        new SpecimenProcessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
+        new SpecimenPreprocessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
             Map.of()));
 
     // Then
@@ -94,7 +94,7 @@ class MasSchedulerTest {
     masSchedulerService.scheduleMasSpecimenFromEvent(
         Set.of(event),
         List.of(givenDigitalSpecimenRecord()),
-        new SpecimenProcessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
+        new SpecimenPreprocessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
             Map.of()));
 
     // Then
@@ -114,7 +114,7 @@ class MasSchedulerTest {
     masSchedulerService.scheduleMasSpecimenFromEvent(
         Set.of(event),
         List.of(givenDigitalSpecimenRecord()),
-        new SpecimenProcessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
+        new SpecimenPreprocessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
             Map.of()));
 
     // Then
@@ -131,7 +131,7 @@ class MasSchedulerTest {
     assertDoesNotThrow(() -> masSchedulerService.scheduleMasSpecimenFromEvent(
         Set.of(givenDigitalSpecimenEvent()),
         List.of(givenDigitalSpecimenRecord()),
-        new SpecimenProcessResult(
+        new SpecimenPreprocessResult(
             List.of(),
             List.of(),
             List.of(givenDigitalSpecimenEvent()),
@@ -146,7 +146,7 @@ class MasSchedulerTest {
     // When
     masSchedulerService.scheduleMasMediaFromEvent(Set.of(givenDigitalMediaEvent()),
         List.of(givenDigitalMediaRecord()),
-        new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaEvent())));
+        new MediaPreprocessResult(List.of(), List.of(), List.of(givenDigitalMediaEvent())));
 
     // Then
     then(publisherService).should().publishMasJobRequest(givenMasJobRequestMedia());
@@ -159,7 +159,7 @@ class MasSchedulerTest {
     // When
     masSchedulerService.scheduleMasMediaFromEvent(Set.of(givenDigitalMediaEvent()),
         List.of(givenDigitalMediaRecord()),
-        new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
+        new MediaPreprocessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
 
     // Then
     then(publisherService).shouldHaveNoInteractions();
@@ -174,7 +174,7 @@ class MasSchedulerTest {
 
     // When
     masSchedulerService.scheduleMasMediaFromEvent(Set.of(event), List.of(givenDigitalMediaRecord()),
-        new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
+        new MediaPreprocessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
 
     // Then
     then(publisherService).should().publishMasJobRequest(givenMasJobRequestMedia());
@@ -189,7 +189,7 @@ class MasSchedulerTest {
 
     // When
     masSchedulerService.scheduleMasMediaFromEvent(Set.of(event), List.of(givenDigitalMediaRecord()),
-        new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
+        new MediaPreprocessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
 
     // Then
     then(publisherService).shouldHaveNoInteractions();
@@ -205,6 +205,6 @@ class MasSchedulerTest {
     assertDoesNotThrow(
         () -> masSchedulerService.scheduleMasMediaFromEvent(Set.of(givenDigitalMediaEvent()),
             List.of(givenDigitalMediaRecord()),
-            new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaEvent()))));
+            new MediaPreprocessResult(List.of(), List.of(), List.of(givenDigitalMediaEvent()))));
   }
 }

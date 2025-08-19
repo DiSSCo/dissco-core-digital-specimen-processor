@@ -9,8 +9,10 @@ public record DigitalMediaRecord(
     String id,
     String accessURI,
     int version, Instant created,
-    Set<String> masList,
+    Set<String> masIds,
     DigitalMedia attributes,
-    JsonNode originalAttributes) {
+    JsonNode originalAttributes,
+    Boolean forceMasSchedule
+) {
 
 }
