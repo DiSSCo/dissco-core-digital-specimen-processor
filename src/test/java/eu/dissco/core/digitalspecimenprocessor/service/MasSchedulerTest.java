@@ -1,7 +1,35 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.doThrow;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
+import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,168 +49,102 @@ class MasSchedulerTest {
     );
   }
 
-  /*
   @Test
-  void testScheduleMasSpecimen() throws Exception {
+  void testPublishSpecimenForced() throws Exception {
     // Given
-
-    // When
-    masSchedulerService.scheduleMasSpecimenFromEvent(
-        Set.of(givenDigitalSpecimenEvent()),
-        List.of(givenDigitalSpecimenRecord()),
-        new SpecimenPreprocessResult(
-            List.of(),
-            List.of(),
-            List.of(givenDigitalSpecimenEvent()),
-            Map.of(PHYSICAL_SPECIMEN_ID, HANDLE)
-        ));
-
-    // Then
-    then(publisherService).should().publishMasJobRequest(givenMasJobRequestSpecimen());
-  }
-
-
-  @Test
-  void testScheduleMaSpecimenNoNewSpecimen() {
-    // Given
-
-    // When
-    masSchedulerService.scheduleMasSpecimenFromEvent(
-        Set.of(givenDigitalSpecimenEvent()),
-        List.of(givenDigitalSpecimenRecord()),
-        new SpecimenPreprocessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
-            Map.of()));
-
-    // Then
-    then(publisherService).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void testScheduleMaSpecimenNoNewSpecimenForced() throws Exception {
-    // Given
-    var event = new DigitalSpecimenEvent(
+    var forcedRecord = new DigitalSpecimenRecord(
+        HANDLE,
+        1,
+        1,
+        CREATED,
+        givenDigitalSpecimenWrapper(),
         Set.of(MAS),
-        givenDigitalSpecimenWrapper(),
-        List.of(),
-        true);
+        true
+    );
+    var specimenProcessResult = new SpecimenProcessResult(
+        List.of(forcedRecord), List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
     // When
-    masSchedulerService.scheduleMasSpecimenFromEvent(
-        Set.of(event),
-        List.of(givenDigitalSpecimenRecord()),
-        new SpecimenPreprocessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
-            Map.of()));
+    masSchedulerService.scheduleMasForSpecimen(specimenProcessResult);
 
     // Then
-    then(publisherService).should().publishMasJobRequest(givenMasJobRequestSpecimen());
+    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
+        MAS, HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
+    ));
+    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
+        MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
+    ));
   }
 
   @Test
-  void testScheduleMaSpecimenNoMas() {
+  void testPublishSpecimenNotForced() throws Exception {
     // Given
-    var event = new DigitalSpecimenEvent(
-        Set.of(),
-        givenDigitalSpecimenWrapper(),
-        List.of(),
-        false);
+    var specimenProcessResult = new SpecimenProcessResult(
+        List.of(givenDigitalSpecimenRecord()), List.of(),
+        List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
     // When
-    masSchedulerService.scheduleMasSpecimenFromEvent(
-        Set.of(event),
-        List.of(givenDigitalSpecimenRecord()),
-        new SpecimenPreprocessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of(),
-            Map.of()));
+    masSchedulerService.scheduleMasForSpecimen(specimenProcessResult);
 
     // Then
-    then(publisherService).shouldHaveNoInteractions();
+    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
+        MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
+    ));
+    then(publisherService).shouldHaveNoMoreInteractions();
   }
 
   @Test
-  void testScheduleMasSpecimenJpe() throws Exception {
+  void testPublishMediaNotForced() throws Exception {
     // Given
-    doThrow(JsonProcessingException.class).when(publisherService)
-        .publishMasJobRequest(givenMasJobRequestSpecimen());
-
-    // When / Then
-    assertDoesNotThrow(() -> masSchedulerService.scheduleMasSpecimenFromEvent(
-        Set.of(givenDigitalSpecimenEvent()),
-        List.of(givenDigitalSpecimenRecord()),
-        new SpecimenPreprocessResult(
-            List.of(),
-            List.of(),
-            List.of(givenDigitalSpecimenEvent()),
-            Map.of(PHYSICAL_SPECIMEN_ID, HANDLE)
-        )));
-  }
-
-  @Test
-  void testScheduleMasMedia() throws Exception {
-    // Given
+    var mediaProcessResult = new MediaProcessResult(
+        List.of(givenDigitalMediaRecord()), List.of(), List.of(givenDigitalMediaRecord(
+        SECOND_HANDLE, MEDIA_URL_ALT, 1
+    )));
 
     // When
-    masSchedulerService.scheduleMasMediaFromEvent(Set.of(givenDigitalMediaEvent()),
-        List.of(givenDigitalMediaRecord()),
-        new MediaPreprocessResult(List.of(), List.of(), List.of(givenDigitalMediaEvent())));
+    masSchedulerService.scheduleMasForMedia(mediaProcessResult);
 
     // Then
-    then(publisherService).should().publishMasJobRequest(givenMasJobRequestMedia());
+    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
+        MEDIA_MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
+    ));
+    then(publisherService).shouldHaveNoMoreInteractions();
   }
 
   @Test
-  void testScheduleMasMediaNoNewMedia() {
+  void testPublishMediaForced() throws Exception {
     // Given
+    var forcedRecord = new DigitalMediaRecord(
+        HANDLE, MEDIA_URL, 1, CREATED, Set.of(MEDIA_MAS),
+        givenDigitalMedia(MEDIA_URL),
+        MAPPER.createObjectNode(), true);
+
+    var mediaProcessResult = new MediaProcessResult(
+        List.of(forcedRecord), List.of(), List.of(givenDigitalMediaRecord(
+        SECOND_HANDLE, MEDIA_URL, 1
+    )));
 
     // When
-    masSchedulerService.scheduleMasMediaFromEvent(Set.of(givenDigitalMediaEvent()),
-        List.of(givenDigitalMediaRecord()),
-        new MediaPreprocessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
+    masSchedulerService.scheduleMasForMedia(mediaProcessResult);
 
     // Then
-    then(publisherService).shouldHaveNoInteractions();
+    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
+        MEDIA_MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
+    ));
+    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
+        MEDIA_MAS, HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
+    ));
   }
 
   @Test
-  void testScheduleMasMediaNoNewMediaForced() throws Exception {
+  void testPublishSpecimenPublishingFails() throws Exception {
     // Given
-    var event = new DigitalMediaEvent(
-        Set.of(MEDIA_MAS),
-        givenDigitalMediaWrapper(), true);
+    var specimenProcessResult = new SpecimenProcessResult(
+        List.of(givenDigitalSpecimenRecord()), List.of(),
+        List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
+    doThrow(JsonProcessingException.class).when(publisherService).publishMasJobRequest(any());
 
-    // When
-    masSchedulerService.scheduleMasMediaFromEvent(Set.of(event), List.of(givenDigitalMediaRecord()),
-        new MediaPreprocessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
-
-    // Then
-    then(publisherService).should().publishMasJobRequest(givenMasJobRequestMedia());
+    // When / then
+    assertDoesNotThrow(() -> masSchedulerService.scheduleMasForSpecimen(specimenProcessResult));
   }
-
-  @Test
-  void testScheduleMasMediaNoMas() {
-    // Given
-    var event = new DigitalMediaEvent(
-        Set.of(),
-        givenDigitalMediaWrapper(), false);
-
-    // When
-    masSchedulerService.scheduleMasMediaFromEvent(Set.of(event), List.of(givenDigitalMediaRecord()),
-        new MediaPreprocessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
-
-    // Then
-    then(publisherService).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void testScheduleMasMediaJpe() throws Exception {
-    // Given
-    doThrow(JsonProcessingException.class).when(publisherService)
-        .publishMasJobRequest(givenMasJobRequestMedia());
-
-    // When / Then
-    assertDoesNotThrow(
-        () -> masSchedulerService.scheduleMasMediaFromEvent(Set.of(givenDigitalMediaEvent()),
-            List.of(givenDigitalMediaRecord()),
-            new MediaPreprocessResult(List.of(), List.of(), List.of(givenDigitalMediaEvent()))));
-  }
-
-   */
 }
