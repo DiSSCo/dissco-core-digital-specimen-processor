@@ -24,6 +24,7 @@ public class MasSchedulerService {
 
   public void scheduleMasForSpecimen(SpecimenProcessResult processResult) {
     var recordsToSchedule = getDigitalSpecimenRecordsToSchedule(processResult);
+    log.info("Scheduling MASs on {} specimens", recordsToSchedule.size());
     for (var specimenRecord : recordsToSchedule) {
       for (var masId : specimenRecord.masIds()) {
         publishMas(masId, specimenRecord.id(), MjrTargetType.DIGITAL_SPECIMEN);
@@ -33,6 +34,7 @@ public class MasSchedulerService {
 
   public void scheduleMasForMedia(MediaProcessResult processResult) {
     var recordsToSchedule = getDigitalMediaRecordsToSchedule(processResult);
+    log.info("Scheduling MASs on {} media", recordsToSchedule.size());
     for (var mediaRecord : recordsToSchedule) {
       for (var masId : mediaRecord.masIds()) {
         publishMas(masId, mediaRecord.id(), MjrTargetType.MEDIA_OBJECT);
