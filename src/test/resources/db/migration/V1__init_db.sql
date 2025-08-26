@@ -1,3 +1,5 @@
+create type translator_type as enum ('biocase', 'dwca');
+
 create table digital_specimen
 (
     id                     text                     not null
@@ -24,8 +26,6 @@ create index digital_specimen_created_idx
 
 create index digital_specimen_physical_specimen_id_idx
     on digital_specimen (physical_specimen_id);
-
-create type translator_type as enum ('biocase', 'dwca');
 
 create table digital_media_object
 (

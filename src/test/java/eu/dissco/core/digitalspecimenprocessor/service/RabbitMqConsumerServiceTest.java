@@ -83,9 +83,10 @@ class RabbitMqConsumerServiceTest {
   private String givenInvalidMessage() {
     return """
         {
-          "enrichmentList": [
-            "OCR"
+          "masList": [
+            "https://hdl.handle.net/20.5000.1025/TG2-A9R-ZDD"
           ],
+          "forceMasSchedule": false,
           "digitalSpecimen": {
             "type": "GeologyRockSpecimen",
             "physicalSpecimenID": "https://geocollections.info/specimen/23602",
@@ -105,9 +106,10 @@ class RabbitMqConsumerServiceTest {
   private String givenMessage() {
     return """
         {
-          "enrichmentList": [
-            "OCR"
+          "masList": [
+            "https://hdl.handle.net/20.5000.1025/TG2-A9R-ZDD"
             ],
+            "forceMasSchedule": false,
           "digitalSpecimenWrapper": {
             "ods:normalisedPhysicalSpecimenID": "https://geocollections.info/specimen/23602",
             "ods:type": "https://doi.org/21.T11148/894b1e6cad57e921764e",

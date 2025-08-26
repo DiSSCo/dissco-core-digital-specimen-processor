@@ -6,7 +6,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_ENRICHMENT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
@@ -151,7 +151,7 @@ class EqualityServiceTest {
     var currentDigitalSpecimen = givenDigitalSpecimenRecord();
     var digitalSpecimen = givenDigitalSpecimenWrapper();
     var mediaProcessResult = new MediaRelationshipProcessResult(List.of(),
-        List.of(new DigitalMediaEvent(null, null)), List.of());
+        List.of(new DigitalMediaEvent(null, null, false)), List.of());
 
     // When
     var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
@@ -183,10 +183,10 @@ class EqualityServiceTest {
     var currentDigitalSpecimen = givenDigitalSpecimenWrapperWithMediaEr(PHYSICAL_SPECIMEN_ID, true);
     var digitalSpecimenWrapper = changeTimestamps(givenDigitalSpecimenWrapper(true, true));
     var digitalSpecimenEvent = new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         digitalSpecimenWrapper,
-        List.of(givenDigitalMediaEvent())
-    );
+        List.of(givenDigitalMediaEvent()),
+        false);
     var mediaEr = givenEntityRelationship(MEDIA_PID, HAS_MEDIA.getRelationshipName());
 
     var attributes = givenDigitalSpecimenWrapper(true)
@@ -198,12 +198,12 @@ class EqualityServiceTest {
             currentDigitalSpecimen.attributes().getOdsHasEntityRelationships()
         );
     var expected = new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         new DigitalSpecimenWrapper(
             PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA
         ),
-        List.of(givenDigitalMediaEvent())
-    );
+        List.of(givenDigitalMediaEvent()),
+        false);
 
     // When
     var result = equalityService.setExistingEventDatesSpecimen(currentDigitalSpecimen,
@@ -223,19 +223,19 @@ class EqualityServiceTest {
         MAPPER.createObjectNode()
     );
     var expected = new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
-        expectedWrapper);
+        Set.of(MEDIA_MAS),
+        expectedWrapper, false);
     var event = new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
-        changeTimestamps(expectedWrapper));
+        Set.of(MEDIA_MAS),
+        changeTimestamps(expectedWrapper), false);
     var currentRecord = new DigitalMediaRecord(
         MEDIA_PID,
         MEDIA_URL,
         VERSION,
         CREATED,
-        List.of(MEDIA_ENRICHMENT),
+        Set.of(MEDIA_MAS),
         givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
-        MAPPER.createObjectNode()
+        MAPPER.createObjectNode(), false
     );
 
     // When

@@ -37,8 +37,10 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
@@ -78,8 +80,6 @@ class ProcessingServiceTest {
   @Mock
   private HandleComponent handleComponent;
   @Mock
-  private ApplicationProperties applicationProperties;
-  @Mock
   private DigitalMediaService digitalMediaService;
   @Mock
   private EntityRelationshipService entityRelationshipService;
@@ -87,6 +87,8 @@ class ProcessingServiceTest {
   private EqualityService equalityService;
   @Mock
   private DigitalSpecimenService digitalSpecimenService;
+  @Mock
+  private MasSchedulerService masSchedulerService;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -96,7 +98,8 @@ class ProcessingServiceTest {
   void setup() {
     service = new ProcessingService(specimenRepository, mediaRepository,
         digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService,
-        publisherService, fdoRecordService, handleComponent, new ApplicationProperties());
+        publisherService, fdoRecordService, handleComponent, new ApplicationProperties(),
+        masSchedulerService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -126,7 +129,8 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
+    assertThat(result).isEqualTo(
+        new SpecimenProcessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of()));
     then(digitalSpecimenService).should()
         .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
@@ -148,7 +152,8 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenEvent(), givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
+    assertThat(result).isEqualTo(
+        new SpecimenProcessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of()));
     then(digitalSpecimenService).should()
         .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
@@ -165,18 +170,21 @@ class ProcessingServiceTest {
         TestUtils.givenHandleResponseSpecimen());
     given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+    given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
+        Set.of(givenDigitalSpecimenRecord()));
 
     // When
-    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+    service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
     then(digitalSpecimenService).should()
         .createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent()), pidMap);
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
+    then(masSchedulerService).should().scheduleMasForSpecimen(any());
+    then(masSchedulerService).should().scheduleMasForMedia(any());
   }
 
   @Test
@@ -190,7 +198,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
+    assertThat(result).isEqualTo(new SpecimenProcessResult(List.of(), List.of(), List.of()));
     then(digitalSpecimenService).shouldHaveNoInteractions();
     then(equalityService).shouldHaveNoInteractions();
     then(handleComponent).shouldHaveNoMoreInteractions();
@@ -212,7 +220,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
+    assertThat(result).isEqualTo(new SpecimenProcessResult(List.of(), List.of(), List.of()));
     then(digitalSpecimenService).should()
         .updateExistingDigitalSpecimen(
             List.of(givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult())),
@@ -233,7 +241,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEmpty();
+    assertThat(result).isEqualTo(new SpecimenProcessResult(List.of(), List.of(), List.of()));
     then(digitalMediaService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoInteractions();
   }
@@ -278,10 +286,10 @@ class ProcessingServiceTest {
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
     given(equalityService.mediaAreEqual(any(), any(), any())).willReturn(true);
     var event = new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
-        List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent())
-    );
+        List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent()),
+        false);
 
     // When
     service.handleMessages(List.of(event));
@@ -379,14 +387,17 @@ class ProcessingServiceTest {
     given(handleComponent.postHandle(any(), eq(false))).willReturn(givenHandleResponseMedia());
     given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
     given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(givenHandleRequest()));
+    given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
+        Set.of(givenDigitalSpecimenRecord()));
+    given(digitalMediaService.createNewDigitalMedia(any(), any())).willReturn(
+        Set.of(givenDigitalMediaRecord()));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
     var pidMapMedia = Map.of(MEDIA_URL, givenPidProcessResultMedia());
 
     // When
-    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
+    service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
 
     // Then
-    assertThat(result).isEqualTo(List.of());
     then(digitalMediaService).should()
         .createNewDigitalMedia(List.of(givenDigitalMediaEvent()), pidMapMedia);
     then(digitalSpecimenService).should()
@@ -396,6 +407,8 @@ class ProcessingServiceTest {
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(masSchedulerService).should().scheduleMasForSpecimen(any());
+    then(masSchedulerService).should().scheduleMasForMedia(any());
   }
 
   @Test
@@ -411,9 +424,12 @@ class ProcessingServiceTest {
     var result = service.handleMessagesMedia(events);
 
     // Then
-    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
+    assertThat(result).isEqualTo(
+        new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaRecord())));
     then(handleComponent).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(masSchedulerService).should().scheduleMasForMedia(any());
+    then(masSchedulerService).shouldHaveNoMoreInteractions();
   }
 
   @Test
@@ -430,7 +446,8 @@ class ProcessingServiceTest {
     var result = service.handleMessagesMedia(events);
 
     // Then
-    assertThat(result).isEmpty();
+    assertThat(result).isEqualTo(
+        new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalMediaService).shouldHaveNoMoreInteractions();
@@ -453,7 +470,8 @@ class ProcessingServiceTest {
     var result = service.handleMessagesMedia(events);
 
     // Then
-    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecord()));
+    assertThat(result).isEqualTo(
+        new MediaProcessResult(List.of(), List.of(givenDigitalMediaRecord()), List.of()));
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
   }
@@ -472,7 +490,8 @@ class ProcessingServiceTest {
     var result = service.handleMessagesMedia(events);
 
     // Then
-    assertThat(result).isEmpty();
+    assertThat(result).isEqualTo(
+        new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalMediaService).shouldHaveNoMoreInteractions();
@@ -487,10 +506,10 @@ class ProcessingServiceTest {
     IntStream.rangeClosed(0, 10000)
         .forEach(i -> mediaEvents.add(givenDigitalMediaEvent(UUID.randomUUID().toString())));
     var specimenEvents = List.of(new DigitalSpecimenEvent(
-        List.of(),
+        Set.of(),
         givenDigitalSpecimenWrapper(),
-        mediaEvents
-    ));
+        mediaEvents,
+        false));
 
     // When / Then
     assertThrows(TooManyObjectsException.class, () -> service.handleMessages(specimenEvents));
@@ -509,10 +528,10 @@ class ProcessingServiceTest {
     IntStream.rangeClosed(0, 2002)
         .forEach(i -> mediaEvents.add(givenDigitalMediaEvent(UUID.randomUUID().toString())));
     var specimenEvents = List.of(new DigitalSpecimenEvent(
-        List.of(),
+        Set.of(),
         givenDigitalSpecimenWrapper(false, true),
-        mediaEvents
-    ));
+        mediaEvents,
+        false));
 
     // When
     service.handleMessages(specimenEvents);
@@ -520,5 +539,4 @@ class ProcessingServiceTest {
     // Then
     then(handleComponent).should(times(4)).postHandle(any(), anyBoolean());
   }
-
 }

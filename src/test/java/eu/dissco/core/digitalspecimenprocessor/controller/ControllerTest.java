@@ -1,15 +1,14 @@
 package eu.dissco.core.digitalspecimenprocessor.controller;
 
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
 import eu.dissco.core.digitalspecimenprocessor.service.ProcessingService;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
@@ -40,7 +39,7 @@ class ControllerTest {
     var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
     given(processingService.handleMessages(
         List.of(digitalSpecimenEvent))).willReturn(
-        List.of(new DigitalSpecimenRecord(HANDLE, 0, 1, CREATED, givenDigitalSpecimenWrapper())));
+        new SpecimenProcessResult(List.of(), List.of(), List.of(givenDigitalSpecimenRecord())));
 
     // When
     var result = controller.upsertDigitalSpecimen(digitalSpecimenEvent);
@@ -54,7 +53,8 @@ class ControllerTest {
     // Given
     var digitalmediaEvent = TestUtils.givenDigitalMediaEvent();
     given(processingService.handleMessagesMedia(
-        List.of(digitalmediaEvent))).willReturn(List.of(givenDigitalMediaRecord()));
+        List.of(digitalmediaEvent))).willReturn(
+        new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaRecord())));
 
     // When
     var result = controller.upsertDigitalMedia(digitalmediaEvent);
@@ -68,7 +68,8 @@ class ControllerTest {
     // Given
     var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
     given(processingService.handleMessages(
-        List.of(digitalSpecimenEvent))).willReturn(List.of());
+        List.of(digitalSpecimenEvent))).willReturn(
+        new SpecimenProcessResult(List.of(), List.of(), List.of()));
 
     // When / Then
     assertThrows(NoChangesFoundException.class,
@@ -79,7 +80,8 @@ class ControllerTest {
   void testNoChangesMedia() {
     // Given
     given(processingService.handleMessagesMedia(
-        List.of(givenDigitalMediaEvent()))).willReturn(List.of());
+        List.of(givenDigitalMediaEvent()))).willReturn(
+        new MediaProcessResult(List.of(), List.of(), List.of()));
 
     // When / Then
     assertThrows(NoChangesFoundException.class,

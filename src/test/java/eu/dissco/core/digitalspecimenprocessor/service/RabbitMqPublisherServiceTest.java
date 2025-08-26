@@ -1,13 +1,13 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoAcceptedAnnotation;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMasJobRequestMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenNewAcceptedAnnotation;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,7 +15,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.RabbitMqProperties;
 import java.io.IOException;
 import org.junit.jupiter.api.AfterAll;
@@ -60,6 +59,8 @@ class RabbitMqPublisherServiceTest {
         "create-update-tombstone");
     // Declare mas ocr exchange, queue and binding
     declareRabbitResources("mas-exchange", "mas-ocr-queue", "OCR");
+    declareRabbitResources("mas-scheduler-exchange", "mas-scheduler-queue", "mas-scheduler");
+
 
     CachingConnectionFactory factory = new CachingConnectionFactory(container.getHost());
     factory.setPort(container.getAmqpPort());
@@ -118,21 +119,6 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testPublishAnnotationRequestEvent() throws JsonProcessingException {
-    // Given
-    var message = givenDigitalSpecimenRecord();
-
-    // When
-    rabbitMqPublisherService.publishAnnotationRequestEventSpecimen(MAS, message);
-
-    // Then
-    var result = rabbitTemplate.receive("mas-ocr-queue");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), DigitalSpecimenRecord.class)).isEqualTo(
-        message);
-  }
-
-  @Test
   void testRepublishEvent() throws JsonProcessingException {
     // Given
     var message = givenDigitalSpecimenEvent();
@@ -146,6 +132,19 @@ class RabbitMqPublisherServiceTest {
         MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(
         message);
   }
+
+  @Test
+  void testPublishMasJob() throws JsonProcessingException {
+    // Given
+
+    // When
+    rabbitMqPublisherService.publishMasJobRequest(givenMasJobRequestMedia());
+
+    // Then
+    var result = rabbitTemplate.receive("mas-scheduler-queue");
+    assertThat(result.getBody()).isNotEmpty();
+  }
+
 
   @Test
   void testRepublishEventMedia() throws JsonProcessingException {

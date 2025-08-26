@@ -59,6 +59,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -171,7 +172,7 @@ class FdoRecordServiceTest {
   void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
     // Given
     var media = new DigitalMediaEvent(
-        List.of("image-metadata"),
+        Set.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
             new DigitalMedia()
@@ -179,8 +180,8 @@ class FdoRecordServiceTest {
                 .withOdsOrganisationID(ORGANISATION_ID)
                 .withDctermsRights(fieldValue),
             MAPPER.createObjectNode()
-        )
-    );
+        ),
+        false);
     var expected = List.of(MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
             .put("type", TYPE_MEDIA)
@@ -200,7 +201,7 @@ class FdoRecordServiceTest {
       String expectedId) {
     // Given
     var media = new DigitalMediaEvent(
-        List.of("image-metadata"),
+        Set.of("image-metadata"),
         new DigitalMediaWrapper(
             "StillImage",
             new DigitalMedia()
@@ -208,8 +209,8 @@ class FdoRecordServiceTest {
                 .withOdsOrganisationID(ORGANISATION_ID)
                 .withOdsHasAgents(rightHolders),
             MAPPER.createObjectNode()
-        )
-    );
+        ),
+        false);
     var attributes = (ObjectNode) givenHandleMediaRequestAttributes();
     if (expectedName != null) {
       attributes.put(RIGHTS_HOLDER.getAttribute(), expectedName);
@@ -277,7 +278,8 @@ class FdoRecordServiceTest {
   @Test
   void testRollbackUpdate() throws Exception {
     var specimen = givenDigitalSpecimenWrapper();
-    var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen);
+    var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen, Set.of(),
+        false);
     var expected = givenUpdateHandleRequest(true);
 
     // When

@@ -74,10 +74,12 @@ public class RollbackService {
     }
     try {
       publisherService.deadLetterEventSpecimen(
-          new DigitalSpecimenEvent(updatedDigitalSpecimenRecord.enrichment(),
+          new DigitalSpecimenEvent(
+              updatedDigitalSpecimenRecord.digitalSpecimenRecord().masIds(),
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                   .digitalSpecimenWrapper(),
-              updatedDigitalSpecimenRecord.digitalMediaObjectEvents()));
+              updatedDigitalSpecimenRecord.digitalMediaObjectEvents(),
+              updatedDigitalSpecimenRecord.digitalSpecimenRecord().forceMasSchedule()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED, updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
@@ -248,8 +250,8 @@ public class RollbackService {
             Collectors.toSet());
   }
 
-  public Map<DigitalMediaRecord, List<String>> handlePartiallyFailedElasticInsertMedia(
-      Map<DigitalMediaRecord, List<String>> digitalMediaRecords,
+  public Map<DigitalMediaRecord, Set<String>> handlePartiallyFailedElasticInsertMedia(
+      Map<DigitalMediaRecord, Set<String>> digitalMediaRecords,
       BulkResponse bulkResponse, List<DigitalMediaEvent> events) {
     var digitalMediaEventMap = digitalMediaRecords.entrySet().stream()
         .collect(Collectors.toMap(

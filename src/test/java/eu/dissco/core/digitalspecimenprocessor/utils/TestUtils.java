@@ -18,9 +18,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
+import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -62,6 +64,7 @@ public class TestUtils {
   public static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
   public static final String HANDLE = "20.5000.1025/V1Z-176-LL4";
   public static final String DOI_PREFIX = "https://doi.org/";
+  public static final String HANDLE_PREFIX = "https://hdl.handle.net/";
   public static final String SECOND_HANDLE = "20.5000.1025/XXX-XXX-XXX";
   public static final String THIRD_HANDLE = "20.5000.1025/YYY-YYY-YYY";
   public static final String APP_HANDLE = "https://doi.org/10.5281/zenodo.14383054";
@@ -71,7 +74,7 @@ public class TestUtils {
   public static final Instant CREATED = Instant.parse("2022-11-01T09:59:24.000Z");
   public static final String UPDATED_STR = "2023-11-01T09:59:24.000Z";
   public static final Date UPDATED = Date.from(Instant.parse(UPDATED_STR));
-  public static final String MAS = "OCR";
+  public static final String MAS = "https://hdl.handle.net/20.5000.1025/TG2-A9R-ZDD";
   public static final String TYPE = "https://doi.org/21.T11148/894b1e6cad57e921764e";
   public static final String TYPE_MEDIA = "https://doi.org/21.T11148/bbad8c4e101e8af01115";
   public static final String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
@@ -91,7 +94,7 @@ public class TestUtils {
   public static final String MEDIA_URL_ALT = MEDIA_URL + "/2";
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
   public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
-  public static final String MEDIA_ENRICHMENT = "image-metadata";
+  public static final String MEDIA_MAS = "https://hdl.handle.net/20.5000.1025/5E3-P4R-AQC";
 
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
@@ -141,7 +144,9 @@ public class TestUtils {
         MIDS_LEVEL,
         1,
         CREATED,
-        givenDigitalSpecimenWrapper()
+        givenDigitalSpecimenWrapper(),
+        Set.of(MAS),
+        false
     );
   }
 
@@ -151,7 +156,9 @@ public class TestUtils {
         MIDS_LEVEL,
         version,
         CREATED,
-        givenDigitalSpecimenWrapper(hasMedia)
+        givenDigitalSpecimenWrapper(hasMedia),
+        Set.of(MAS),
+        false
     );
   }
 
@@ -172,7 +179,8 @@ public class TestUtils {
         MIDS_LEVEL,
         version,
         CREATED,
-        givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship, mediaId));
+        givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship, mediaId),
+        Set.of(MAS), false);
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
@@ -208,7 +216,8 @@ public class TestUtils {
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(physicalSpecimenId, specimenName, organisation, false,
-            hasMedia)
+            hasMedia),
+        Set.of(MAS), false
     );
   }
 
@@ -220,7 +229,7 @@ public class TestUtils {
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
-            false)
+            false), Set.of(MAS), false
     );
   }
 
@@ -231,11 +240,11 @@ public class TestUtils {
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId,
       boolean hasMedia) {
     return new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
             hasMedia),
-        List.of(givenDigitalMediaEvent(MEDIA_URL))
-    );
+        List.of(givenDigitalMediaEvent(MEDIA_URL)),
+        false);
   }
 
   public static MediaRelationshipProcessResult givenEmptyMediaProcessResult() {
@@ -254,12 +263,13 @@ public class TestUtils {
   public static DigitalMediaRecord givenDigitalMediaRecord(String pid, String uri, int version) {
     var media = givenDigitalMedia(uri);
     var er = new ArrayList<>(media.getOdsHasEntityRelationships());
-    er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
+    er.add(
+        givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
     media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
-        pid, uri, version, CREATED, List.of(MEDIA_ENRICHMENT),
+        pid, uri, version, CREATED, Set.of(MEDIA_MAS),
         media,
-        MAPPER.createObjectNode());
+        MAPPER.createObjectNode(), false);
   }
 
   public static DigitalMediaWrapper givenDigitalMediaWrapper() {
@@ -285,13 +295,14 @@ public class TestUtils {
 
   public static DigitalMediaRecord givenDigitalMediaRecordNoEnrichment() {
     return new DigitalMediaRecord(
-        MEDIA_PID, MEDIA_URL, VERSION, CREATED, List.of(),
+        MEDIA_PID, MEDIA_URL, VERSION, CREATED, Set.of(),
         new DigitalMedia()
             .withAcAccessURI(MEDIA_URL)
             .withOdsOrganisationID(ORGANISATION_ID)
             .withOdsHasEntityRelationships(
-                List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
-        MAPPER.createObjectNode());
+                List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
+                    EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
+        MAPPER.createObjectNode(), null);
   }
 
 
@@ -300,12 +311,12 @@ public class TestUtils {
   }
 
   public static DigitalMediaEvent givenUnequalDigitalMediaEvent(String url) {
-    return new DigitalMediaEvent(List.of(MEDIA_ENRICHMENT),
+    return new DigitalMediaEvent(Set.of(MEDIA_MAS),
         new DigitalMediaWrapper(
             "StillImage",
             givenUnequalDigitalMedia(url),
-            MAPPER.createObjectNode())
-    );
+            MAPPER.createObjectNode()),
+        false);
   }
 
   public static DigitalMediaRecord givenUnequalDigitalMediaRecord() {
@@ -320,10 +331,11 @@ public class TestUtils {
       int version) {
     var media = givenUnequalDigitalMedia(url);
     var er = new ArrayList<>(media.getOdsHasEntityRelationships());
-    er.add(givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
+    er.add(
+        givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
     media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, List.of(MEDIA_ENRICHMENT), media, MAPPER.createObjectNode());
+        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, MAPPER.createObjectNode(), false);
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url) {
@@ -340,10 +352,10 @@ public class TestUtils {
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(boolean hasMedia,
       boolean entityRelationship) {
     return new DigitalSpecimenEvent(
-        List.of(MAS),
+        Set.of(MAS),
         givenDigitalSpecimenWrapper(entityRelationship, hasMedia),
-        hasMedia ? List.of(givenDigitalMediaEvent()) : List.of()
-    );
+        hasMedia ? List.of(givenDigitalMediaEvent()) : List.of(),
+        false);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId,
@@ -357,7 +369,8 @@ public class TestUtils {
     var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true,
         addOtherEntityRelationship, true);
     var entityRelationships = new ArrayList<>(attributes.getOdsHasEntityRelationships());
-    entityRelationships.add(givenEntityRelationship(mediaId, EntityRelationshipType.HAS_MEDIA.getRelationshipName())
+    entityRelationships.add(
+        givenEntityRelationship(mediaId, EntityRelationshipType.HAS_MEDIA.getRelationshipName())
     );
     attributes.setOdsHasEntityRelationships(entityRelationships);
     return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
@@ -386,8 +399,8 @@ public class TestUtils {
 
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
-        givenDigitalMediaWrapper(mediaUrl));
+        Set.of(MEDIA_MAS),
+        givenDigitalMediaWrapper(mediaUrl), false);
   }
 
   public static DigitalMediaEvent givenDigitalMediaEvent() {
@@ -397,7 +410,8 @@ public class TestUtils {
   public static DigitalMediaEvent givenDigitalMediaEventWithSpecimenEr() {
     var event = givenDigitalMediaEvent(MEDIA_URL);
     event.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(
-        List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName())));
+        List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
+            EntityRelationshipType.HAS_SPECIMEN.getRelationshipName())));
     return event;
   }
 
@@ -420,12 +434,12 @@ public class TestUtils {
                 .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
                     PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))));
     return new DigitalMediaEvent(
-        List.of(MEDIA_ENRICHMENT),
+        Set.of(MEDIA_MAS),
         new DigitalMediaWrapper(
             "StillImage",
             digitalMedia,
             MAPPER.createObjectNode()
-        ));
+        ), false);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper() {
@@ -449,16 +463,6 @@ public class TestUtils {
         TYPE,
         givenAttributes(specimenName, organisation, true, entityRelationship, hasMedia),
         ORIGINAL_DATA
-    );
-  }
-
-  public static DigitalSpecimenRecord givenDigitalSpecimenRecordNoOriginalData() {
-    return new DigitalSpecimenRecord(
-        HANDLE,
-        MIDS_LEVEL,
-        VERSION,
-        CREATED,
-        givenDigitalSpecimenWrapperNoOriginalData()
     );
   }
 
@@ -588,7 +592,7 @@ public class TestUtils {
     if (hasMedia) {
       return new UpdatedDigitalSpecimenRecord(
           givenDigitalSpecimenRecord(2, true),
-          List.of(MAS),
+          Set.of(MAS),
           currentRecord,
           givenJsonPatchSpecimen(),
           List.of(givenDigitalMediaEvent()),
@@ -600,7 +604,7 @@ public class TestUtils {
     }
     return new UpdatedDigitalSpecimenRecord(
         givenDigitalSpecimenRecord(2, false),
-        List.of(MAS),
+        Set.of(MAS),
         currentRecord,
         givenJsonPatchSpecimen(),
         List.of(),
@@ -722,7 +726,7 @@ public class TestUtils {
   public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord() throws Exception {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(2),
-        List.of(MEDIA_ENRICHMENT),
+        Set.of(MEDIA_MAS),
         givenDigitalMediaRecord(),
         givenJsonPatchMedia()
     );
@@ -732,9 +736,30 @@ public class TestUtils {
       throws Exception {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(pid, uri, 2),
-        List.of(MEDIA_ENRICHMENT),
+        Set
+            .of(MEDIA_MAS),
         givenDigitalMediaRecord(pid, uri, 1),
         givenJsonPatchMedia()
+    );
+  }
+
+  public static MasJobRequest givenMasJobRequestSpecimen() {
+    return new MasJobRequest(
+        MAS,
+        HANDLE,
+        false,
+        APP_HANDLE,
+        MjrTargetType.DIGITAL_SPECIMEN
+    );
+  }
+
+  public static MasJobRequest givenMasJobRequestMedia() {
+    return new MasJobRequest(
+        MEDIA_MAS,
+        MEDIA_PID,
+        false,
+        APP_HANDLE,
+        MjrTargetType.MEDIA_OBJECT
     );
   }
 

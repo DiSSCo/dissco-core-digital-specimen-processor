@@ -2,9 +2,9 @@ package eu.dissco.core.digitalspecimenprocessor.controller;
 
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
 import eu.dissco.core.digitalspecimenprocessor.service.ProcessingService;
 import java.util.List;
@@ -30,25 +30,26 @@ public class Controller {
   private final ProcessingService processingService;
 
   @PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<DigitalSpecimenRecord> upsertDigitalSpecimen(@RequestBody
+  public ResponseEntity<SpecimenProcessResult> upsertDigitalSpecimen(@RequestBody
   DigitalSpecimenEvent event) throws NoChangesFoundException {
     log.info("Received digitalSpecimenWrapper upsert: {}", event);
     var result = processingService.handleMessages(List.of(event));
-    if (result.isEmpty()) {
+    if (result.newDigitalSpecimens().isEmpty() &&
+        result.updatedDigitalSpecimens().isEmpty()) {
       throw new NoChangesFoundException("No changes found for specimen");
     }
-    return ResponseEntity.status(HttpStatus.CREATED).body(result.get(0));
+    return ResponseEntity.status(HttpStatus.CREATED).body(result);
   }
 
   @PostMapping(value = "media", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<DigitalMediaRecord> upsertDigitalMedia(@RequestBody
+  public ResponseEntity<MediaProcessResult> upsertDigitalMedia(@RequestBody
   DigitalMediaEvent event) throws NoChangesFoundException {
     log.info("Received digitalMedia upsert: {}", event);
     var result = processingService.handleMessagesMedia(List.of(event));
-    if (result.isEmpty()) {
-      throw new NoChangesFoundException("No changes found for specimen");
+    if (result.newMedia().isEmpty() && result.updatedMedia().isEmpty()) {
+      throw new NoChangesFoundException("No changes found for media");
     }
-    return ResponseEntity.status(HttpStatus.CREATED).body(result.get(0));
+    return ResponseEntity.status(HttpStatus.CREATED).body(result);
   }
 
   @ExceptionHandler(NoChangesFoundException.class)

@@ -232,7 +232,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            List.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
+            Set.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
 
     // Then
     for (var expectedAnnotation : expectedAnnotations) {
@@ -250,7 +250,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            List.of(), null, givenLargeJsonPatch(), List.of(), givenEmptyMediaProcessResult())));
+            Set.of(), null, givenLargeJsonPatch(), List.of(), givenEmptyMediaProcessResult())));
 
     // Then
     then(rabbitMQService).should(times(29))
@@ -272,7 +272,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            List.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
+            Set.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
 
     // Then
     then(rabbitMQService).shouldHaveNoInteractions();

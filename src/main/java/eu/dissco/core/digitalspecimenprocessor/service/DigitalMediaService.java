@@ -60,10 +60,11 @@ public class DigitalMediaService {
   public Set<DigitalMediaRecord> createNewDigitalMedia(
       List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
     var digitalMediaRecords = events.stream()
-        .filter(event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
+        .filter(
+            event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
         .collect(toMap(
             event -> mapToNewDigitalMediaRecord(event, pidMap),
-            DigitalMediaEvent::enrichmentList));
+            DigitalMediaEvent::masList));
     if (digitalMediaRecords.isEmpty()) {
       log.info("Mapped 0 events to their generated PIDs");
       return Collections.emptySet();
@@ -104,9 +105,9 @@ public class DigitalMediaService {
     setNewEntityRelationshipsForMedia(attributes, pidMap.get(accessUri).doisOfRelatedObjects());
     return new DigitalMediaRecord(
         doi,
-        accessUri, 1, Instant.now(), event.enrichmentList(),
+        accessUri, 1, Instant.now(), event.masList(),
         event.digitalMediaWrapper().attributes(),
-        event.digitalMediaWrapper().originalAttributes());
+        event.digitalMediaWrapper().originalAttributes(), event.forceMasSchedule());
   }
 
   private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
@@ -168,7 +169,7 @@ public class DigitalMediaService {
   }
 
   private void handleSuccessfulElasticInsert(
-      Map<DigitalMediaRecord, List<String>> digitalMediaRecords, List<DigitalMediaEvent> events,
+      Map<DigitalMediaRecord, Set<String>> digitalMediaRecords, List<DigitalMediaEvent> events,
       Map<String, PidProcessResult> pidMap) {
     log.debug("Successfully indexed {} digital media", digitalMediaRecords);
     var recordsToRollback = new HashSet<DigitalMediaRecord>();
@@ -182,13 +183,14 @@ public class DigitalMediaService {
       var rollbackAccessUris = recordsToRollback.stream().map(
           DigitalMediaRecord::accessURI).toList();
       var rollbackEvents = events.stream().filter(
-          event -> rollbackAccessUris.contains(event.digitalMediaWrapper().attributes().getAcAccessURI())
+          event -> rollbackAccessUris.contains(
+              event.digitalMediaWrapper().attributes().getAcAccessURI())
       ).toList();
       rollbackService.rollbackNewMedias(rollbackEvents, pidMap, true, true);
     }
   }
 
-  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, List<String> enrichments) {
+  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, Set<String> enrichments) {
     try {
       publisherService.publishCreateEventMedia(digitalMediaRecord);
     } catch (JsonProcessingException e) {
@@ -268,9 +270,10 @@ public class DigitalMediaService {
                   tuple.currentDigitalMediaRecord().accessURI(),
                   tuple.currentDigitalMediaRecord().version() + 1,
                   tuple.currentDigitalMediaRecord().created(),
-                  tuple.digitalMediaEvent().enrichmentList(), attributes,
-                  tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes()),
-              tuple.digitalMediaEvent().enrichmentList(),
+                  tuple.digitalMediaEvent().masList(), attributes,
+                  tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes(),
+                  tuple.digitalMediaEvent().forceMasSchedule()),
+              tuple.digitalMediaEvent().masList(),
               tuple.currentDigitalMediaRecord(),
               createJsonPatch(tuple.currentDigitalMediaRecord().attributes(),
                   tuple.digitalMediaEvent().digitalMediaWrapper()
@@ -283,7 +286,8 @@ public class DigitalMediaService {
       DigitalMedia currentAttributes, Set<String> relatedDois) {
     var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
         .stream().filter(
-            er -> er.getDwcRelationshipOfResource().equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
+            er -> er.getDwcRelationshipOfResource()
+                .equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
         ).toList();
     var er = new ArrayList<>(attributes.getOdsHasEntityRelationships());
     er.addAll(existingSpecimenErs);
