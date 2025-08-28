@@ -59,8 +59,8 @@ class MasSchedulerTest {
         CREATED,
         givenDigitalSpecimenWrapper(),
         Set.of(MAS),
-        true
-    );
+        true,
+        List.of());
     var specimenProcessResult = new SpecimenProcessResult(
         List.of(forcedRecord), List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
@@ -116,7 +116,7 @@ class MasSchedulerTest {
     // Given
     var forcedRecord = new DigitalMediaRecord(
         HANDLE, MEDIA_URL, 1, CREATED, Set.of(MEDIA_MAS),
-        givenDigitalMedia(MEDIA_URL),
+        givenDigitalMedia(MEDIA_URL, false),
         MAPPER.createObjectNode(), true);
 
     var mediaProcessResult = new MediaProcessResult(
