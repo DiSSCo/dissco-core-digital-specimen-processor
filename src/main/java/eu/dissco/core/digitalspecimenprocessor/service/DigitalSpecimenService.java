@@ -24,7 +24,6 @@ import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -75,7 +74,7 @@ public class DigitalSpecimenService {
       repository.createDigitalSpecimenRecord(digitalSpecimenRecords);
     } catch (DataAccessException e) {
       log.error("Unable to insert new specimens into the database. Rolling back handles", e);
-      rollbackService.rollbackNewSpecimens(events, pidMap, false, false);
+      rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, false, false);
       return Collections.emptySet();
     }
     try {
@@ -84,10 +83,10 @@ public class DigitalSpecimenService {
       var bulkResponse = elasticRepository.indexDigitalSpecimen(
           digitalSpecimenRecords);
       if (!bulkResponse.errors()) {
-        handleSuccessfulElasticInsert(digitalSpecimenRecords, events, pidMap);
+        handleSuccessfulElasticInsert(digitalSpecimenRecords);
       } else {
         digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticInsertSpecimen(
-            digitalSpecimenRecords, bulkResponse, events);
+            digitalSpecimenRecords, bulkResponse);
       }
       log.info("Successfully created {} new digitalSpecimenRecord",
           digitalSpecimenRecords.size());
@@ -96,7 +95,7 @@ public class DigitalSpecimenService {
       return digitalSpecimenRecords;
     } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackNewSpecimens(events, pidMap, false, true);
+      rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, false, true);
       return Collections.emptySet();
     }
   }
@@ -149,25 +148,17 @@ public class DigitalSpecimenService {
   /* Elastic */
 
   private void handleSuccessfulElasticInsert(
-      Set<DigitalSpecimenRecord> digitalSpecimenRecords, List<DigitalSpecimenEvent> events,
-      Map<String, PidProcessResult> pidMap) {
+      Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
     log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
-    List<DigitalSpecimenRecord> rollbackRecords = new ArrayList<>();
+    Set<DigitalSpecimenRecord> rollbackRecords = new HashSet<>();
     digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
       if (!publishCreateSpecimenEvents(digitalSpecimenRecord)) {
         rollbackRecords.add(digitalSpecimenRecord);
       }
     });
     if (!rollbackRecords.isEmpty()) {
-      var rollbackRecordPhysId = rollbackRecords.stream().map(
-          digitalSpecimenRecord -> digitalSpecimenRecord.digitalSpecimenWrapper()
-              .physicalSpecimenID()).toList();
-      var rollbackEvents = events.stream().filter(
-          event -> rollbackRecordPhysId.contains(
-              event.digitalSpecimenWrapper().physicalSpecimenID())
-      ).toList();
       rollbackRecords.forEach(digitalSpecimenRecords::remove);
-      rollbackService.rollbackNewSpecimens(rollbackEvents, pidMap, true, true);
+      rollbackService.rollbackNewSpecimens(rollbackRecords, true, true);
     }
   }
 
@@ -258,8 +249,8 @@ public class DigitalSpecimenService {
         1,
         Instant.now(),
         addNewMediaEntityRelationshipToWrapper(event.digitalSpecimenWrapper(), pidMap, List.of()),
-        event.masList(), event.forceMasSchedule()
-    );
+        event.masList(), event.forceMasSchedule(),
+        event.digitalMediaEvents());
   }
 
   // We remove the dcterms:modified from the comparison as it is generated and will always differ
@@ -285,7 +276,8 @@ public class DigitalSpecimenService {
                   updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
                   updateTuple.mediaRelationshipProcessResult().unchangedRelationships()),
               updateTuple.digitalSpecimenEvent().masList(),
-              updateTuple.digitalSpecimenEvent().forceMasSchedule());
+              updateTuple.digitalSpecimenEvent().forceMasSchedule(),
+              updateTuple.digitalSpecimenEvent().digitalMediaEvents());
           return new UpdatedDigitalSpecimenRecord(
               digitalSpecimenRecord,
               updateTuple.digitalSpecimenEvent().masList(),

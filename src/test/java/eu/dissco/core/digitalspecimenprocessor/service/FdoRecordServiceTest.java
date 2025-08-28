@@ -101,7 +101,7 @@ class FdoRecordServiceTest {
   }
 
   private static Stream<Arguments> digitalMediaNeedsToBeChanged() {
-    var currentMedia = givenDigitalMedia(MEDIA_URL);
+    var currentMedia = givenDigitalMedia(MEDIA_URL, false);
     return Stream.of(
         Arguments.of(currentMedia.withDctermsRights("Rights")),
         Arguments.of(currentMedia.withDctermsType(DctermsType.COLLECTION)),
@@ -279,7 +279,7 @@ class FdoRecordServiceTest {
   void testRollbackUpdate() throws Exception {
     var specimen = givenDigitalSpecimenWrapper();
     var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen, Set.of(),
-        false);
+        false, List.of());
     var expected = givenUpdateHandleRequest(true);
 
     // When
@@ -451,7 +451,7 @@ class FdoRecordServiceTest {
     // Then
     assertThat(
         fdoRecordService.handleNeedsUpdateMedia(currentMedia,
-            givenDigitalMedia(MEDIA_URL))).isTrue();
+            givenDigitalMedia(MEDIA_URL, false))).isTrue();
   }
 
   @Test
@@ -469,8 +469,8 @@ class FdoRecordServiceTest {
   @Test
   void testHandleDoesNotNeedUpdateMedia() {
     // Then
-    assertThat(fdoRecordService.handleNeedsUpdateMedia(givenDigitalMedia(MEDIA_URL),
-        givenDigitalMedia(MEDIA_URL))).isFalse();
+    assertThat(fdoRecordService.handleNeedsUpdateMedia(givenDigitalMedia(MEDIA_URL, false),
+        givenDigitalMedia(MEDIA_URL, false))).isFalse();
   }
 
   @Test

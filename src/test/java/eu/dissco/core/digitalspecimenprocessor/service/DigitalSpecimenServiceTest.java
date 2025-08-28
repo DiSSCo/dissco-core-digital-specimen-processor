@@ -160,7 +160,7 @@ class DigitalSpecimenServiceTest {
 
     // Then
     assertThat(results).isEmpty();
-    then(rollbackService).should().rollbackNewSpecimens(events, pidMap, false, false);
+    then(rollbackService).should().rollbackNewSpecimens(records, false, false);
     then(repository).should().createDigitalSpecimenRecord(records);
     then(annotationPublisherService).shouldHaveNoInteractions();
     then(elasticRepository).shouldHaveNoInteractions();
@@ -180,7 +180,7 @@ class DigitalSpecimenServiceTest {
 
     // Then
     assertThat(results).isEmpty();
-    then(rollbackService).should().rollbackNewSpecimens(events, pidMap, false, true);
+    then(rollbackService).should().rollbackNewSpecimens(records, false, true);
     then(repository).should().createDigitalSpecimenRecord(records);
     then(annotationPublisherService).shouldHaveNoInteractions();
   }
@@ -190,7 +190,7 @@ class DigitalSpecimenServiceTest {
     // Given
     var events = List.of(givenDigitalSpecimenEvent(),
         givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false));
-    var records = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT),
+    var records = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false),
         givenDigitalSpecimenRecord());
     var expected = Set.of(givenDigitalSpecimenRecord());
     var pidMap = Map.of(
@@ -200,8 +200,8 @@ class DigitalSpecimenServiceTest {
     given(midsService.calculateMids(any())).willReturn(1);
     given(bulkResponse.errors()).willReturn(true);
     given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
-    given(rollbackService.handlePartiallyFailedElasticInsertSpecimen(records, bulkResponse,
-        events)).willReturn(expected);
+    given(rollbackService.handlePartiallyFailedElasticInsertSpecimen(records, bulkResponse
+    )).willReturn(expected);
 
     // When
     var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
@@ -216,7 +216,7 @@ class DigitalSpecimenServiceTest {
   void testNewSpecimenAnnotationPublicationFails() throws Exception {
     // Given
     var failedRecord = givenDigitalSpecimenRecord();
-    var expectedRecord = givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT);
+    var expectedRecord = givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false);
     var events = List.of(givenDigitalSpecimenEvent(),
         givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false));
     var records = Set.of(expectedRecord, failedRecord);
@@ -236,7 +236,7 @@ class DigitalSpecimenServiceTest {
     // Then
     assertThat(results).isEqualTo(Set.of(expectedRecord));
     then(rollbackService).should()
-        .rollbackNewSpecimens(List.of(givenDigitalSpecimenEvent()), pidMap, true, true);
+        .rollbackNewSpecimens(Set.of(failedRecord), true, true);
     then(publisherService).should().publishCreateEventSpecimen(expectedRecord);
   }
 
