@@ -2,7 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.getIdforUri;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -308,7 +308,6 @@ public class DigitalMediaService {
             specimenRelationships).toList());
   }
 
-
   private JsonNode createJsonPatch(DigitalMedia currentDigitalMedia, DigitalMedia digitalMedia) {
     var jsonCurrentMedia = (ObjectNode) mapper.valueToTree(currentDigitalMedia);
     var jsonMedia = (ObjectNode) mapper.valueToTree(digitalMedia);
@@ -317,28 +316,32 @@ public class DigitalMediaService {
     return JsonDiff.asJson(jsonCurrentMedia, jsonMedia);
   }
 
-
   public void tombstoneSpecimenRelations(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
     for (var updatedDigitalSpecimenTuple : updatedDigitalSpecimenTuples) {
       var tombstonedDigitalSpecimenToDigitalMediaRelationship = updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
           .tombstonedRelationships().stream().map(
               EntityRelationship::getOdsRelatedResourceURI)
-          .map(doi -> doi.toString().replace(DOI_PREFIX, "")).collect(toSet());
+          .map(DigitalObjectUtils::getIdforUri).collect(toSet());
       var affectedMedia = repository.getExistingDigitalMediaByDoi(
           tombstonedDigitalSpecimenToDigitalMediaRelationship);
       for (var digitalMedia : affectedMedia) {
         var updatedEntityRelationships = digitalMedia.getOdsHasEntityRelationships().stream()
             .filter(er -> !tombstonedDigitalSpecimenToDigitalMediaRelationship.contains(
-                er.getOdsRelatedResourceURI().toString().replace(DOI_PREFIX, ""))).toList();
+                getIdforUri(er.getOdsRelatedResourceURI()))).toList();
         digitalMedia.setOdsHasEntityRelationships(updatedEntityRelationships);
         try {
-          publisherService.republishMediaEvent(new DigitalMediaEvent(Collections.emptySet(), new DigitalMediaWrapper(digitalMedia.getOdsFdoType(), digitalMedia, mapper.createObjectNode()), false));
+          publisherService.republishMediaEvent(
+              new DigitalMediaEvent(
+                  Collections.emptySet(),
+                  new DigitalMediaWrapper(digitalMedia.getOdsFdoType(), digitalMedia,
+                      mapper.createObjectNode()),
+                  false));
         } catch (JsonProcessingException e) {
-          log.error("Failed to publish updated entity relationships for digital media: {}", digitalMedia.getId());
+          log.error("Failed to publish updated entity relationships for digital media: {}",
+              digitalMedia.getId());
         }
       }
-
     }
   }
 }

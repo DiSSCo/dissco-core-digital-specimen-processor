@@ -218,7 +218,8 @@ public class DigitalSpecimenService {
       DigitalSpecimenWrapper digitalSpecimenWrapper, Map<String, PidProcessResult> pidMap,
       MediaRelationshipProcessResult mediaRelationshipProcessResult) {
     var mediaPids = pidMap.get(digitalSpecimenWrapper.physicalSpecimenID()).doisOfRelatedObjects();
-    var existingMediaRelationshipPids = mediaRelationshipProcessResult.unchangedRelationships().stream()
+    var existingMediaRelationshipPids = mediaRelationshipProcessResult.unchangedRelationships()
+        .stream()
         .map(EntityRelationship::getDwcRelatedResourceID).toList();
     var newEntityRelationships = mediaPids
         .stream()
@@ -226,23 +227,32 @@ public class DigitalSpecimenService {
         .map(doi -> DigitalObjectUtils.buildEntityRelationship(HAS_MEDIA.getRelationshipName(),
             doi));
     var attributes = digitalSpecimenWrapper.attributes();
-    var allRelationships = Stream.concat(newEntityRelationships, attributes.getOdsHasEntityRelationships().stream())
+    var allRelationships = Stream.concat(newEntityRelationships,
+            attributes.getOdsHasEntityRelationships().stream())
         .toList();
-    var totalRelationships = allRelationships.stream().filter(
-        er -> !mediaRelationshipProcessResult.tombstonedRelationships().stream()
-            .map(EntityRelationship::getOdsRelatedResourceURI).toList()
-            .contains(er.getOdsRelatedResourceURI())).toList();
-    if (totalRelationships.stream().filter(er -> er.getDwcRelationshipOfResource().equals(HAS_MEDIA.getRelationshipName())).toList().isEmpty()){
+    allRelationships = removeTombstonedRelationships(mediaRelationshipProcessResult,
+        allRelationships);
+    if (allRelationships.stream().noneMatch(
+        er -> er.getDwcRelationshipOfResource().equals(HAS_MEDIA.getRelationshipName()))) {
       attributes.setOdsIsKnownToContainMedia(Boolean.FALSE);
     } else {
       attributes.setOdsIsKnownToContainMedia(Boolean.TRUE);
     }
-    attributes.setOdsHasEntityRelationships(totalRelationships);
+    attributes.setOdsHasEntityRelationships(allRelationships);
     return new DigitalSpecimenWrapper(
         digitalSpecimenWrapper.physicalSpecimenID(),
         digitalSpecimenWrapper.type(),
         attributes,
         digitalSpecimenWrapper.originalAttributes());
+  }
+
+  private List<EntityRelationship> removeTombstonedRelationships(
+      MediaRelationshipProcessResult mediaRelationshipProcessResult,
+      List<EntityRelationship> allRelationships) {
+    return allRelationships.stream().filter(
+        er -> !mediaRelationshipProcessResult.tombstonedRelationships().stream()
+            .map(EntityRelationship::getOdsRelatedResourceURI).toList()
+            .contains(er.getOdsRelatedResourceURI())).toList();
   }
 
   /* Transformations */
@@ -266,7 +276,8 @@ public class DigitalSpecimenService {
         midsService.calculateMids(event.digitalSpecimenWrapper()),
         1,
         Instant.now(),
-        determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap, new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
+        determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap,
+            new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
         event.masList(), event.forceMasSchedule()
     );
   }

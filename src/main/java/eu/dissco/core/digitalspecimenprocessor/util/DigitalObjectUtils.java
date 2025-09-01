@@ -24,6 +24,10 @@ public class DigitalObjectUtils {
   private DigitalObjectUtils() {
   }
 
+  public static String getIdforUri(URI uri) {
+    return uri.toString().replace(DOI_PREFIX, "");
+  }
+
   public static DigitalSpecimen flattenToDigitalSpecimen(
       DigitalSpecimenRecord digitalSpecimenrecord) {
     var digitalSpecimen = digitalSpecimenrecord.digitalSpecimenWrapper().attributes();
