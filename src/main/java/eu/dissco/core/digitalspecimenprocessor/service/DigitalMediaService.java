@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -13,13 +14,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
@@ -314,4 +318,27 @@ public class DigitalMediaService {
   }
 
 
+  public void tombstoneSpecimenRelations(
+      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+    for (var updatedDigitalSpecimenTuple : updatedDigitalSpecimenTuples) {
+      var tombstonedDigitalSpecimenToDigitalMediaRelationship = updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
+          .tombstonedRelationships().stream().map(
+              EntityRelationship::getOdsRelatedResourceURI)
+          .map(doi -> doi.toString().replace(DOI_PREFIX, "")).collect(toSet());
+      var affectedMedia = repository.getExistingDigitalMediaByDoi(
+          tombstonedDigitalSpecimenToDigitalMediaRelationship);
+      for (var digitalMedia : affectedMedia) {
+        var updatedEntityRelationships = digitalMedia.getOdsHasEntityRelationships().stream()
+            .filter(er -> !tombstonedDigitalSpecimenToDigitalMediaRelationship.contains(
+                er.getOdsRelatedResourceURI().toString().replace(DOI_PREFIX, ""))).toList();
+        digitalMedia.setOdsHasEntityRelationships(updatedEntityRelationships);
+        try {
+          publisherService.republishMediaEvent(new DigitalMediaEvent(Collections.emptySet(), new DigitalMediaWrapper(digitalMedia.getOdsFdoType(), digitalMedia, mapper.createObjectNode()), false));
+        } catch (JsonProcessingException e) {
+          log.error("Failed to publish updated entity relationships for digital media: {}", digitalMedia.getId());
+        }
+      }
+
+    }
+  }
 }

@@ -6,6 +6,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecordNoEnrichment;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaWithRelationship;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -54,6 +55,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
 
     // When
     var result = mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL));
+
     // Then
     assertThat(result).isEqualTo(List.of(givenDigitalMediaRecordNoEnrichment()));
   }
@@ -92,6 +94,18 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
 
     // Then
     assertThat(result).isAfter(lastChecked);
+  }
+
+  @Test
+  void testGetExistingDigitalMediaByDoi() {
+    // Given
+    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+
+    // When
+    var result = mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID));
+
+    // Then
+    assertThat(result).isEqualTo(List.of(givenDigitalMediaWithRelationship()));
   }
 
 }

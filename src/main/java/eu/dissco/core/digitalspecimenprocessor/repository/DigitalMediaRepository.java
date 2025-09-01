@@ -15,6 +15,7 @@ import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Query;
 import org.jooq.Record;
+import org.jooq.Record1;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -97,4 +98,20 @@ public class DigitalMediaRepository {
         .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now());
   }
 
+  public List<DigitalMedia> getExistingDigitalMediaByDoi(
+      Set<String> tombstonedDigitalSpecimenToDigitalMediaRelationship) {
+    return context.select(DIGITAL_MEDIA_OBJECT.DATA)
+        .from(DIGITAL_MEDIA_OBJECT)
+        .where(DIGITAL_MEDIA_OBJECT.ID.in(tombstonedDigitalSpecimenToDigitalMediaRelationship))
+        .fetch(this::mapToDigitalMedia);
+  }
+
+  private DigitalMedia mapToDigitalMedia(Record1<JSONB> dbRecord) {
+    try {
+      return mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class);
+    } catch (JsonProcessingException e) {
+      log.error("Unable to map record data to json: {}", dbRecord);
+      return null;
+    }
+  }
 }
