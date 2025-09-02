@@ -572,7 +572,8 @@ class RollbackServiceTest {
         givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT),
         givenJsonPatchSpecimen(),
         List.of(),
-        givenEmptyMediaProcessResult());
+        givenEmptyMediaProcessResult(),
+        true);
     givenBulkResponse(HANDLE, SECOND_HANDLE);
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
 
@@ -600,7 +601,8 @@ class RollbackServiceTest {
         givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT),
         givenJsonPatchSpecimen(),
         List.of(),
-        givenEmptyMediaProcessResult());
+        givenEmptyMediaProcessResult(),
+        true);
     givenBulkResponse(HANDLE, SECOND_HANDLE);
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(false);
     doThrow(JsonProcessingException.class).when(rabbitMqService).publishUpdateEventSpecimen(any(), any());

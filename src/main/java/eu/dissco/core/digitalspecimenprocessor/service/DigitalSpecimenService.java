@@ -276,8 +276,10 @@ public class DigitalSpecimenService {
         midsService.calculateMids(event.digitalSpecimenWrapper()),
         1,
         Instant.now(),
-        determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap,
-            new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
+        determineEntityRelationships(
+            event.digitalSpecimenWrapper(),
+            pidMap,
+            new MediaRelationshipProcessResult()),
         event.masList(), event.forceMasSchedule()
     );
   }
@@ -314,7 +316,8 @@ public class DigitalSpecimenService {
                   updateTuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
                   updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
               updateTuple.digitalSpecimenEvent().digitalMediaEvents(),
-              updateTuple.mediaRelationshipProcessResult());
+              updateTuple.mediaRelationshipProcessResult(),
+              updateTuple.digitalSpecimenEvent().isDataFromSourceSystem());
         }
     ).collect(Collectors.toSet());
   }
