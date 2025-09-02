@@ -186,7 +186,8 @@ class EqualityServiceTest {
         Set.of(MAS),
         digitalSpecimenWrapper,
         List.of(givenDigitalMediaEvent()),
-        false);
+        false,
+        true);
     var mediaEr = givenEntityRelationship(MEDIA_PID, HAS_MEDIA.getRelationshipName());
 
     var attributes = givenDigitalSpecimenWrapper(true)
@@ -203,7 +204,8 @@ class EqualityServiceTest {
             PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA
         ),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false,
+        true);
 
     // When
     var result = equalityService.setExistingEventDatesSpecimen(currentDigitalSpecimen,

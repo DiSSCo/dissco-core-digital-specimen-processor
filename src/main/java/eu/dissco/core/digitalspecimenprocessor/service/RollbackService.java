@@ -79,7 +79,8 @@ public class RollbackService {
               updatedDigitalSpecimenRecord.digitalSpecimenRecord()
                   .digitalSpecimenWrapper(),
               updatedDigitalSpecimenRecord.digitalMediaObjectEvents(),
-              updatedDigitalSpecimenRecord.digitalSpecimenRecord().forceMasSchedule()));
+              updatedDigitalSpecimenRecord.digitalSpecimenRecord().forceMasSchedule(),
+              updatedDigitalSpecimenRecord.isDataFromSourceSystem()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED, updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }

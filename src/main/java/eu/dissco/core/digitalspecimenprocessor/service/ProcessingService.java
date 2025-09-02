@@ -9,6 +9,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaPreprocessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -360,8 +361,13 @@ public class ProcessingService {
       } else {
         var currentDigitalSpecimen = currentSpecimens.get(
             digitalSpecimenWrapper.physicalSpecimenID());
-        var processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
-            currentSpecimens, event, currentMedia);
+        MediaRelationshipProcessResult processedMediaRelationships;
+        if (event.isDataFromSourceSystem().booleanValue()) {
+          processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
+              currentSpecimens, event, currentMedia);
+        } else {
+          processedMediaRelationships = new MediaRelationshipProcessResult();
+        }
         if (equalityService.specimensAreEqual(currentDigitalSpecimen,
             digitalSpecimenWrapper, processedMediaRelationships)) {
           log.debug("Received digital specimen is equal to digital specimen: {}",

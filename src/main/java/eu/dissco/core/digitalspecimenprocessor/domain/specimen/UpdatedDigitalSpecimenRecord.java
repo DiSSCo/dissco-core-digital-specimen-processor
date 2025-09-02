@@ -12,6 +12,7 @@ public record UpdatedDigitalSpecimenRecord(
     DigitalSpecimenRecord currentDigitalSpecimen,
     JsonNode jsonPatch,
     List<DigitalMediaEvent> digitalMediaObjectEvents,
-    MediaRelationshipProcessResult mediaRelationshipProcessResult) {
+    MediaRelationshipProcessResult mediaRelationshipProcessResult,
+    Boolean isDataFromSourceSystem) {
 
 }

@@ -76,7 +76,9 @@ public class EqualityService {
             digitalSpecimenEvent.digitalSpecimenWrapper().type(),
             digitalSpecimen,
             digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
-        digitalSpecimenEvent.digitalMediaEvents(), false);
+        digitalSpecimenEvent.digitalMediaEvents(),
+        false,
+        digitalSpecimenEvent.isDataFromSourceSystem());
   }
 
   public DigitalMediaEvent setExistingEventDatesMedia(

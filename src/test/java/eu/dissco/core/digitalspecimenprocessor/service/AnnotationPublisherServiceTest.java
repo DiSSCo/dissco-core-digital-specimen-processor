@@ -119,7 +119,8 @@ class AnnotationPublisherServiceTest {
             List.of(givenAcceptedAnnotation(OaMotivation.ODS_DELETING,
                 new OaHasSelector().withAdditionalProperty("@type", "ods:TermSelector")
                     .withAdditionalProperty("ods:term",
-                        "$['ods:hasEntityRelationship'][1]['dwc:relationshipEstablishedDate']"), null))
+                        "$['ods:hasEntityRelationship'][1]['dwc:relationshipEstablishedDate']"),
+                null))
         ),
         Arguments.of(
             MAPPER.readTree(
@@ -232,7 +233,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            Set.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
+            Set.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult(), true)));
 
     // Then
     for (var expectedAnnotation : expectedAnnotations) {
@@ -250,7 +251,8 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            Set.of(), null, givenLargeJsonPatch(), List.of(), givenEmptyMediaProcessResult())));
+            Set.of(), null, givenLargeJsonPatch(), List.of(), givenEmptyMediaProcessResult(),
+            true)));
 
     // Then
     then(rabbitMQService).should(times(29))
@@ -272,7 +274,7 @@ class AnnotationPublisherServiceTest {
     // When
     service.publishAnnotationUpdatedSpecimen(
         Set.of(new UpdatedDigitalSpecimenRecord(givenDigitalSpecimenRecord(),
-            Set.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult())));
+            Set.of(), null, jsonPatch, List.of(), givenEmptyMediaProcessResult(), true)));
 
     // Then
     then(rabbitMQService).shouldHaveNoInteractions();

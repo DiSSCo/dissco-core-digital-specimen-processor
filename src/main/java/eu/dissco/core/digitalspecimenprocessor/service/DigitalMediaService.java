@@ -323,6 +323,9 @@ public class DigitalMediaService {
           .tombstonedRelationships().stream().map(
               EntityRelationship::getOdsRelatedResourceURI)
           .map(DigitalObjectUtils::getIdforUri).collect(toSet());
+      if (tombstonedDigitalSpecimenToDigitalMediaRelationship.isEmpty()) {
+        return;
+      }
       var affectedMedia = repository.getExistingDigitalMediaByDoi(
           tombstonedDigitalSpecimenToDigitalMediaRelationship);
       for (var digitalMedia : affectedMedia) {
