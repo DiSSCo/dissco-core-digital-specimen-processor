@@ -529,7 +529,7 @@ public class ProcessingService {
             return new DigitalMediaRecord(
                 dbRecord.id(),
                 dbRecord.accessURI(),
-                dbRecord.version(), dbRecord.created(), dbRecord.masIds(), dbRecord.attributes(),
+                dbRecord.version(), dbRecord.created(), event.masList(), dbRecord.attributes(),
                 dbRecord.originalAttributes(),
                 event.forceMasSchedule());
           })

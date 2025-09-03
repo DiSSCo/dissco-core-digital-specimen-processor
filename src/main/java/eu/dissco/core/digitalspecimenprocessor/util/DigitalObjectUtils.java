@@ -17,7 +17,7 @@ import java.util.List;
 
 public class DigitalObjectUtils {
 
-  public static final String DOI_PREFIX = "https://doi.org/";
+  public static final String DOI_PROXY = "https://doi.org/";
   public static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: {}";
   public static final ApplicationProperties applicationProperties = new ApplicationProperties();
 
@@ -31,8 +31,8 @@ public class DigitalObjectUtils {
   public static DigitalSpecimen flattenToDigitalSpecimen(
       DigitalSpecimenRecord digitalSpecimenrecord) {
     var digitalSpecimen = digitalSpecimenrecord.digitalSpecimenWrapper().attributes();
-    digitalSpecimen.setId(DOI_PREFIX + digitalSpecimenrecord.id());
-    digitalSpecimen.setDctermsIdentifier(DOI_PREFIX + digitalSpecimenrecord.id());
+    digitalSpecimen.setId(DOI_PROXY + digitalSpecimenrecord.id());
+    digitalSpecimen.setDctermsIdentifier(DOI_PROXY + digitalSpecimenrecord.id());
     digitalSpecimen.setOdsVersion(digitalSpecimenrecord.version());
     digitalSpecimen.setOdsMidsLevel(digitalSpecimenrecord.midsLevel());
     digitalSpecimen.setDctermsCreated(Date.from(digitalSpecimenrecord.created()));
@@ -41,8 +41,8 @@ public class DigitalObjectUtils {
 
   public static DigitalMedia flattenToDigitalMedia(DigitalMediaRecord digitalMediaRecord) {
     var digitalMedia = digitalMediaRecord.attributes();
-    digitalMedia.setId(DOI_PREFIX + digitalMediaRecord.id());
-    digitalMedia.setDctermsIdentifier(DOI_PREFIX + digitalMediaRecord.id());
+    digitalMedia.setId(DOI_PROXY + digitalMediaRecord.id());
+    digitalMedia.setDctermsIdentifier(DOI_PROXY + digitalMediaRecord.id());
     digitalMedia.setOdsVersion(digitalMediaRecord.version());
     digitalMedia.setDctermsCreated(Date.from(digitalMediaRecord.created()));
     return digitalMedia;
@@ -57,7 +57,7 @@ public class DigitalObjectUtils {
         .withOdsHasAgents(List.of(AgentUtils.createMachineAgent(applicationProperties.getName(),
             applicationProperties.getPid(), PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))
         .withDwcRelatedResourceID(relatedResourceId)
-        .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedResourceId));
+        .withOdsRelatedResourceURI(URI.create(DOI_PROXY + relatedResourceId));
   }
 
 }
