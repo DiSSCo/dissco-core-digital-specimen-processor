@@ -319,15 +319,15 @@ public class DigitalMediaService {
   public void tombstoneSpecimenRelations(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
     for (var updatedDigitalSpecimenTuple : updatedDigitalSpecimenTuples) {
-      var tombstonedDigitalSpecimenToDigitalMediaRelationship = updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
+      var tombstonedDigitalSpecimenRelationshipsIds = updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
           .tombstonedRelationships().stream().map(
               EntityRelationship::getOdsRelatedResourceURI)
           .map(DigitalObjectUtils::getIdforUri).collect(toSet());
       var affectedMedia = repository.getExistingDigitalMediaByDoi(
-          tombstonedDigitalSpecimenToDigitalMediaRelationship);
+          tombstonedDigitalSpecimenRelationshipsIds);
       for (var digitalMedia : affectedMedia) {
         var updatedEntityRelationships = digitalMedia.getOdsHasEntityRelationships().stream()
-            .filter(er -> !tombstonedDigitalSpecimenToDigitalMediaRelationship.contains(
+            .filter(er -> !tombstonedDigitalSpecimenRelationshipsIds.contains(
                 getIdforUri(er.getOdsRelatedResourceURI()))).toList();
         digitalMedia.setOdsHasEntityRelationships(updatedEntityRelationships);
         try {
