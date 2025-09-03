@@ -1,7 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
@@ -53,7 +53,7 @@ public class EntityRelationshipService {
     var existingLinkedPids = digitalMediaRecord.attributes().getOdsHasEntityRelationships()
         .stream()
         .map(EntityRelationship::getDwcRelatedResourceID)
-        .map(id -> id.replace(DOI_PREFIX, ""))
+        .map(id -> id.replace(DOI_PROXY, ""))
         .collect(Collectors.toSet());
     return pidProcessResult.doisOfRelatedObjects().stream()
         .filter(relatedDoi -> !existingLinkedPids.contains(relatedDoi)).collect(Collectors.toSet());
@@ -81,7 +81,7 @@ public class EntityRelationshipService {
           if (er.getDwcRelatedResourceID() == null){
             return null; // We will tombstone this ER if the id is null
           }
-          return mediaIdMap.get(er.getDwcRelatedResourceID().replace(DOI_PREFIX, ""));
+          return mediaIdMap.get(er.getDwcRelatedResourceID().replace(DOI_PROXY, ""));
         })
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
@@ -108,7 +108,7 @@ public class EntityRelationshipService {
                 return true;
               }
               var mediaUri = mediaIdMap.get(
-                  er.getDwcRelatedResourceID().replace(DOI_PREFIX, ""));
+                  er.getDwcRelatedResourceID().replace(DOI_PROXY, ""));
               return !incomingMediaUris.contains(mediaUri);
             }
         )
