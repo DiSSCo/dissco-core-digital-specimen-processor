@@ -284,25 +284,35 @@ public class TestUtils {
     );
   }
 
-  public static DigitalMedia givenDigitalMedia(String uri) {
+  public static DigitalMedia givenDigitalMedia(String uri, List<EntityRelationship> relationships) {
     return new DigitalMedia()
+        .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(uri)
         .withOdsOrganisationID(ORGANISATION_ID)
-        .withOdsHasEntityRelationships(List.of(
-            givenEntityRelationship()
-        ));
+        .withOdsHasEntityRelationships(relationships);
+  }
+
+  public static DigitalMedia givenDigitalMedia(String uri) {
+    return givenDigitalMedia(uri, List.of(
+        givenEntityRelationship()
+    ));
   }
 
   public static DigitalMediaRecord givenDigitalMediaRecordNoEnrichment() {
     return new DigitalMediaRecord(
         MEDIA_PID, MEDIA_URL, VERSION, CREATED, Set.of(),
-        new DigitalMedia()
-            .withAcAccessURI(MEDIA_URL)
-            .withOdsOrganisationID(ORGANISATION_ID)
-            .withOdsHasEntityRelationships(
-                List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
-                    EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
+        givenDigitalMediaWithRelationship(),
         MAPPER.createObjectNode(), null);
+  }
+
+  public static DigitalMedia givenDigitalMediaWithRelationship() {
+    return new DigitalMedia()
+        .withOdsFdoType(FdoType.MEDIA.getPid())
+        .withAcAccessURI(MEDIA_URL)
+        .withOdsOrganisationID(ORGANISATION_ID)
+        .withOdsHasEntityRelationships(
+            List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
+                EntityRelationshipType.HAS_SPECIMEN.getRelationshipName())));
   }
 
 
@@ -340,6 +350,7 @@ public class TestUtils {
 
   public static DigitalMedia givenUnequalDigitalMedia(String url) {
     return new DigitalMedia()
+        .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(url)
         .withOdsOrganisationName(ANOTHER_ORGANISATION)
         .withOdsHasEntityRelationships(List.of(givenEntityRelationship()));
