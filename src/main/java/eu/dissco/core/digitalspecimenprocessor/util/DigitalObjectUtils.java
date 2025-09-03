@@ -25,7 +25,7 @@ public class DigitalObjectUtils {
   }
 
   public static String getIdforUri(URI uri) {
-    return uri.toString().replace(DOI_PREFIX, "");
+    return uri.toString().replace(DOI_PROXY, "");
   }
 
   public static DigitalSpecimen flattenToDigitalSpecimen(
