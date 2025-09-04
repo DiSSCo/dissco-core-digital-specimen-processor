@@ -6,7 +6,7 @@ import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_S
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -132,7 +132,7 @@ public class AnnotationPublisherService {
 
   private AnnotationTarget buildTarget(String id, FdoType type,
       OaHasSelector selector) {
-    var targetId = DOI_PREFIX + id;
+    var targetId = DOI_PROXY + id;
     return new AnnotationTarget()
         .withId(targetId)
         .withDctermsIdentifier(targetId)
