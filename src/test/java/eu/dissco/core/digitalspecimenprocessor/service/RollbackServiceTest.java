@@ -76,9 +76,9 @@ class RollbackServiceTest {
   }
 
   // Naming convention
-  // Case 1: Rollback handles only
-  // Case 2: Rollback handles, database
-  // Case 3: Rollback handles, database, elastic
+  // Case 1: Republish event only
+  // Case 2: Republish event, rollback database
+  // Case 3: Republish event, rollback database, rollback elastic
 
 
   @Test
