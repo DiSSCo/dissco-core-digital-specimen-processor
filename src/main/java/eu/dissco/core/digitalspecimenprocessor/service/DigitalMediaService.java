@@ -2,7 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
-import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
@@ -62,37 +61,36 @@ public class DigitalMediaService {
     var digitalMediaRecords = events.stream()
         .filter(
             event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
-        .collect(toMap(
-            event -> mapToNewDigitalMediaRecord(event, pidMap),
-            DigitalMediaEvent::masList));
+        .map(event -> mapToNewDigitalMediaRecord(event, pidMap))
+        .collect(toSet());
     if (digitalMediaRecords.isEmpty()) {
       log.info("Mapped 0 events to their generated PIDs");
       return Collections.emptySet();
     }
     try {
-      repository.createDigitalMediaRecord(digitalMediaRecords.keySet());
+      repository.createDigitalMediaRecord(digitalMediaRecords);
     } catch (DataAccessException e) {
       log.error("Database exception, unable to post new digital media to database", e);
-      rollbackService.rollbackNewMedias(events, pidMap, false, false);
+      rollbackService.rollbackNewMedias(digitalMediaRecords, false, false);
       return Collections.emptySet();
     }
     log.info("{} digital media has been successfully committed to database",
         events.size());
     try {
-      var bulkResponse = elasticRepository.indexDigitalMedia(digitalMediaRecords.keySet());
+      var bulkResponse = elasticRepository.indexDigitalMedia(digitalMediaRecords);
       if (!bulkResponse.errors()) {
-        handleSuccessfulElasticInsert(digitalMediaRecords, events, pidMap);
+        handleSuccessfulElasticInsert(digitalMediaRecords);
       } else {
         digitalMediaRecords = rollbackService.handlePartiallyFailedElasticInsertMedia(
             digitalMediaRecords,
-            bulkResponse, events);
+            bulkResponse);
       }
       log.info("Successfully created {} new digital media", digitalMediaRecords.size());
-      annotationPublisherService.publishAnnotationNewMedia(digitalMediaRecords.keySet());
-      return digitalMediaRecords.keySet();
+      annotationPublisherService.publishAnnotationNewMedia(digitalMediaRecords);
+      return digitalMediaRecords;
     } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackNewMedias(events, pidMap, false, true);
+      rollbackService.rollbackNewMedias(digitalMediaRecords, false, true);
       return Collections.emptySet();
     }
   }
@@ -138,8 +136,7 @@ public class DigitalMediaService {
   }
 
   private void handleSuccessfulElasticUpdate(
-      Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords,
-      List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
+      Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords) {
     log.debug("Successfully indexed {} digital media", updatedDigitalMediaRecords);
     var failedRecords = new HashSet<UpdatedDigitalMediaRecord>();
     for (var digitalMediaRecord : updatedDigitalMediaRecords) {
@@ -152,7 +149,7 @@ public class DigitalMediaService {
     }
     if (!failedRecords.isEmpty()) {
       log.info("Rolling back {} failed records", failedRecords.size());
-      rollbackService.rollbackUpdatedMedias(updatedDigitalMediaRecords, true, true, events, pidMap);
+      rollbackService.rollbackUpdatedMedias(updatedDigitalMediaRecords, true, true);
       updatedDigitalMediaRecords.removeAll(failedRecords);
     }
   }
@@ -169,53 +166,34 @@ public class DigitalMediaService {
   }
 
   private void handleSuccessfulElasticInsert(
-      Map<DigitalMediaRecord, Set<String>> digitalMediaRecords, List<DigitalMediaEvent> events,
-      Map<String, PidProcessResult> pidMap) {
+      Set<DigitalMediaRecord> digitalMediaRecords) {
     log.debug("Successfully indexed {} digital media", digitalMediaRecords);
     var recordsToRollback = new HashSet<DigitalMediaRecord>();
-    digitalMediaRecords.forEach((digitalMediaRecord, enrichments) -> {
-      if (!publishEvents(digitalMediaRecord, enrichments)) {
+    digitalMediaRecords.forEach(digitalMediaRecord -> {
+      if (!publishEvents(digitalMediaRecord)) {
         recordsToRollback.add(digitalMediaRecord);
       }
     });
     if (!recordsToRollback.isEmpty()) {
       recordsToRollback.forEach(digitalMediaRecords::remove);
-      var rollbackAccessUris = recordsToRollback.stream().map(
-          DigitalMediaRecord::accessURI).toList();
-      var rollbackEvents = events.stream().filter(
-          event -> rollbackAccessUris.contains(
-              event.digitalMediaWrapper().attributes().getAcAccessURI())
-      ).toList();
-      rollbackService.rollbackNewMedias(rollbackEvents, pidMap, true, true);
+      rollbackService.rollbackNewMedias(recordsToRollback, true, true);
     }
   }
 
-  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, Set<String> enrichments) {
+  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord) {
     try {
       publisherService.publishCreateEventMedia(digitalMediaRecord);
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish Create event", e);
       return false;
     }
-    enrichments.forEach(mas -> {
-      try {
-        publisherService.publishAnnotationRequestEventMedia(mas, digitalMediaRecord);
-      } catch (JsonProcessingException e) {
-        log.error(
-            "No action taken, failed to publish annotation request event for mas: {} digital media: {}",
-            mas, digitalMediaRecord.id(), e);
-      }
-    });
     return true;
   }
 
   public Set<DigitalMediaRecord> updateExistingDigitalMedia(
-      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples,
-      Map<String, PidProcessResult> pidMap) {
+      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
     var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples);
     var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples);
-    var events = updatedDigitalMediaTuples.stream().map(
-        UpdatedDigitalMediaTuple::digitalMediaEvent).toList();
     if (!successfullyUpdatedHandles) {
       return Set.of();
     }
@@ -225,7 +203,7 @@ public class DigitalMediaService {
           digitalMediaRecords.stream().map(UpdatedDigitalMediaRecord::digitalMediaRecord)
               .collect(toSet()));
     } catch (DataAccessException e) {
-      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, false, events, pidMap);
+      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, false);
       log.error("Database exception: unable to post updates to db", e);
       return Collections.emptySet();
     }
@@ -236,12 +214,12 @@ public class DigitalMediaService {
           .collect(toSet());
       var bulkResponse = elasticRepository.indexDigitalMedia(recordSet);
       if (!bulkResponse.errors()) {
-        handleSuccessfulElasticUpdate(digitalMediaRecords, events, pidMap);
+        handleSuccessfulElasticUpdate(digitalMediaRecords);
       } else {
         digitalMediaRecords = rollbackService.handlePartiallyFailedElasticUpdateMedia(
-            digitalMediaRecords, bulkResponse,
-            events, pidMap);
-        handleSuccessfulElasticUpdate(digitalMediaRecords, events, pidMap);
+            digitalMediaRecords, bulkResponse
+        );
+        handleSuccessfulElasticUpdate(digitalMediaRecords);
       }
       var successfullyProcessedRecords = digitalMediaRecords.stream()
           .map(UpdatedDigitalMediaRecord::digitalMediaRecord).collect(
@@ -252,7 +230,7 @@ public class DigitalMediaService {
       return successfullyProcessedRecords;
     } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, true, events, pidMap);
+      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, true);
       return Set.of();
     }
   }

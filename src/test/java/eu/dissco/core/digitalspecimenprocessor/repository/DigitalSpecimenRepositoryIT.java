@@ -59,13 +59,13 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(),
-        null, null
-    );
+        null, null,
+        List.of());
     repository.createDigitalSpecimenRecord(
         Set.of(
             givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
-            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
+            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
+            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
 
     // When
     var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
@@ -80,8 +80,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     repository.createDigitalSpecimenRecord(
         Set.of(
             givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1"),
-            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2")));
+            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
+            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
 
     // When
     var result = repository.createDigitalSpecimenRecord(
@@ -97,8 +97,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     repository.createDigitalSpecimenRecord(
         Set.of(
             givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
-            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
+            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
+            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
 
     // When
     repository.updateLastChecked(List.of(HANDLE));
@@ -116,8 +116,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     // Given
     var records = Set.of(
         givenDigitalSpecimenRecord(),
-        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"));
-    var upsertRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2"));
+        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false));
+    var upsertRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2", false));
 
     // When
     repository.createDigitalSpecimenRecord(records);
@@ -152,8 +152,8 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
     repository.createDigitalSpecimenRecord(
         Set.of(
             givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1"),
-            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2")));
+            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
+            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
 
     // When
     repository.rollbackSpecimen(HANDLE);
