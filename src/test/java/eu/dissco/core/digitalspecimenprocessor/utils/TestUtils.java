@@ -28,6 +28,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
@@ -396,7 +397,7 @@ public class TestUtils {
         .withDwcRelationshipOfResource(relationshipType)
         .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE,
             DOI, SCHEMA_SOFTWARE_APPLICATION)))
-        .withDwcRelatedResourceID(relatedId)
+        .withDwcRelatedResourceID(DOI_PREFIX + relatedId)
         .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedId));
   }
 
@@ -772,6 +773,10 @@ public class TestUtils {
         APP_HANDLE,
         MjrTargetType.MEDIA_OBJECT
     );
+  }
+
+  public static DigitalMediaRelationshipTombstoneEvent givenDigitalMediaTombstoneEvent() {
+    return new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
   }
 
 

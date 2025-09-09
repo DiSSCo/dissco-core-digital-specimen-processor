@@ -18,7 +18,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEventWithSpecimenEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
@@ -43,11 +42,9 @@ import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
@@ -60,7 +57,6 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -281,7 +277,7 @@ class DigitalMediaServiceTest {
     given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEqualTo(records);
@@ -302,7 +298,7 @@ class DigitalMediaServiceTest {
     given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEqualTo(records);
@@ -321,7 +317,7 @@ class DigitalMediaServiceTest {
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEmpty();
@@ -340,7 +336,7 @@ class DigitalMediaServiceTest {
     doThrow(JsonProcessingException.class).when(publisherService).deadLetterEventMedia(any());
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEmpty();
@@ -362,7 +358,7 @@ class DigitalMediaServiceTest {
     doThrow(ElasticsearchException.class).when(elasticRepository).indexDigitalMedia(records);
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEmpty();
@@ -402,7 +398,7 @@ class DigitalMediaServiceTest {
         ));
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEqualTo(Set.of(successfulRecord));
@@ -423,7 +419,7 @@ class DigitalMediaServiceTest {
         .publishUpdateEventMedia(any(), any());
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEmpty();
@@ -440,7 +436,7 @@ class DigitalMediaServiceTest {
     doThrow(DataAccessException.class).when(repository).createDigitalMediaRecord(records);
 
     // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap);
+    var result = mediaService.updateExistingDigitalMedia(tuples, pidMap, true);
 
     // Then
     assertThat(result).isEmpty();
@@ -457,28 +453,19 @@ class DigitalMediaServiceTest {
                 .withType("ods:EntityRelationship")
                 .withDwcRelationshipOfResource("hasDigitalMedia")
                 .withDwcRelationshipEstablishedDate(Date.from(CREATED))
-                .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
-                .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
+                .withDwcRelatedResourceID(DOI_PREFIX + MEDIA_PID)
+                .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
                 .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
                     PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
             List.of(),
             List.of()));
-    given(repository.getExistingDigitalMediaByDoi(Set.of(HANDLE))).willReturn(
-        List.of(givenDigitalMedia(
-            MEDIA_URL)));
-    var expected = new DigitalMediaEvent(
-        Collections.emptySet(), new DigitalMediaWrapper(
-        FdoType.MEDIA.getPid(),
-        givenDigitalMedia(MEDIA_URL, Collections.emptyList()),
-        MAPPER.createObjectNode()
-    ), false
-    );
+    var expected = new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
 
     // When
     mediaService.tombstoneSpecimenRelations(List.of(tuple));
 
     // Then
-    then(publisherService).should().republishMediaEvent(expected);
+    then(publisherService).should().publishDigitalMediaRelationTombstone(expected);
   }
 
 }
