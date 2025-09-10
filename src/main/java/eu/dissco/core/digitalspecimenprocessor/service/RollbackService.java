@@ -186,7 +186,7 @@ public class RollbackService {
     return new DigitalMediaEvent(
         digitalMediaRecord.masIds(),
         new DigitalMediaWrapper(
-            digitalMediaRecord.attributes().getType(),
+            digitalMediaRecord.attributes().getOdsFdoType(),
             digitalMediaRecord.attributes(),
             digitalMediaRecord.originalAttributes()
         ),

@@ -28,6 +28,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
@@ -284,10 +285,9 @@ public class TestUtils {
   public static DigitalMedia givenDigitalMedia(String uri, boolean addSpecimenEr) {
     var ers = addSpecimenEr ? List.of(givenEntityRelationship(),
         givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))
-        :
-            List.of(givenEntityRelationship());
+        : List.of(givenEntityRelationship());
     return new DigitalMedia()
-        .withType(FdoType.MEDIA.getPid())
+        .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(uri)
         .withOdsOrganisationID(ORGANISATION_ID)
         .withOdsHasEntityRelationships(ers);
@@ -297,13 +297,23 @@ public class TestUtils {
     return new DigitalMediaRecord(
         MEDIA_PID, MEDIA_URL, VERSION, CREATED, Set.of(),
         new DigitalMedia()
-            .withType(FdoType.MEDIA.getPid())
+            .withOdsFdoType(FdoType.MEDIA.getPid())
             .withAcAccessURI(MEDIA_URL)
             .withOdsOrganisationID(ORGANISATION_ID)
             .withOdsHasEntityRelationships(
                 List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
                     EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
         MAPPER.createObjectNode(), null);
+  }
+
+  public static DigitalMedia givenDigitalMediaWithRelationship() {
+    return new DigitalMedia()
+        .withOdsFdoType(FdoType.MEDIA.getPid())
+        .withAcAccessURI(MEDIA_URL)
+        .withOdsOrganisationID(ORGANISATION_ID)
+        .withOdsHasEntityRelationships(
+            List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
+                EntityRelationshipType.HAS_SPECIMEN.getRelationshipName())));
   }
 
 
@@ -341,7 +351,7 @@ public class TestUtils {
             EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))
             : List.of(givenEntityRelationship());
     return new DigitalMedia()
-        .withType(FdoType.MEDIA.getPid())
+        .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(url)
         .withOdsOrganisationName(ANOTHER_ORGANISATION)
         .withOdsHasEntityRelationships(ers);
@@ -387,7 +397,7 @@ public class TestUtils {
         .withDwcRelationshipOfResource(relationshipType)
         .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE,
             DOI, SCHEMA_SOFTWARE_APPLICATION)))
-        .withDwcRelatedResourceID(relatedId)
+        .withDwcRelatedResourceID(DOI_PREFIX + relatedId)
         .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + relatedId));
   }
 
@@ -422,7 +432,7 @@ public class TestUtils {
 
   public static DigitalMediaEvent givenDigitalMediaEventWithRelationship(String id) {
     var digitalMedia = new DigitalMedia()
-        .withType(FdoType.MEDIA.getPid())
+        .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(MEDIA_URL)
         .withId(id)
         .withDctermsIdentifier(id)
@@ -755,6 +765,10 @@ public class TestUtils {
         APP_HANDLE,
         MjrTargetType.MEDIA_OBJECT
     );
+  }
+
+  public static DigitalMediaRelationshipTombstoneEvent givenDigitalMediaTombstoneEvent() {
+    return new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
   }
 
 

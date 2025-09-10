@@ -32,9 +32,6 @@ public class EntityRelationshipService {
       DigitalSpecimenEvent digitalSpecimenEvent,
       Map<String, DigitalMediaRecord> currentMedia
   ) {
-    if (currentMedia.isEmpty() && digitalSpecimenEvent.digitalMediaEvents().isEmpty()) {
-      return new MediaRelationshipProcessResult(List.of(), List.of(), List.of());
-    }
     // Media Uri -> DOI
     var mediaIdMap = getExistingMediaIdMap(currentMedia);
     var currentSpecimen = currentSpecimens.get(

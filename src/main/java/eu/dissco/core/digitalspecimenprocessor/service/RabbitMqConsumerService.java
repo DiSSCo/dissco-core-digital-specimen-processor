@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import java.util.List;
 import java.util.Objects;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 public class RabbitMqConsumerService {
 
+  private static final String DLQ_MESSAGE = "Moving message to DLQ, failed to parse event message";
+
   private final ObjectMapper mapper;
   private final ProcessingService processingService;
   private final RabbitMqPublisherService publisherService;
@@ -31,7 +34,7 @@ public class RabbitMqConsumerService {
       try {
         return mapper.readValue(message, DigitalSpecimenEvent.class);
       } catch (JsonProcessingException e) {
-        log.error("Moving message to DLQ, failed to parse event message", e);
+        log.error(DLQ_MESSAGE, e);
         publisherService.deadLetterRaw(message);
         return null;
       }
@@ -46,12 +49,27 @@ public class RabbitMqConsumerService {
       try {
         return mapper.readValue(message, DigitalMediaEvent.class);
       } catch (JsonProcessingException e) {
-        log.error("Moving message to DLQ, failed to parse event message", e);
+        log.error(DLQ_MESSAGE, e);
         publisherService.deadLetterRawMedia(message);
         return null;
       }
     }).filter(Objects::nonNull).toList();
     processingService.handleMessagesMedia(events);
+  }
+
+  @RabbitListener(queues = {
+      "${rabbitmq.queue-name-media-relationship-tombstone:digital-media-relationship-tombstone-queue}"}, containerFactory = "consumerBatchContainerFactory")
+  public void getMessagesDigitalMediaRelationshipTombstone(@Payload List<String> messages) {
+    var events = messages.stream().map(message -> {
+      try {
+        return mapper.readValue(message, DigitalMediaRelationshipTombstoneEvent.class);
+      } catch (JsonProcessingException e) {
+        log.error(DLQ_MESSAGE, e);
+        publisherService.deadLetterRawDigitalMediaRelationshipTombstone(message);
+        return null;
+      }
+    }).filter(Objects::nonNull).toList();
+    processingService.handleMessagesMediaRelationshipTombstone(events);
   }
 
 }

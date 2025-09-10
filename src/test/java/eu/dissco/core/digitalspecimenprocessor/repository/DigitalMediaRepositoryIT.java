@@ -54,6 +54,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
 
     // When
     var result = mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL));
+
     // Then
     assertThat(result).isEqualTo(List.of(givenDigitalMediaRecordNoMas()));
   }
@@ -92,6 +93,18 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
 
     // Then
     assertThat(result).isAfter(lastChecked);
+  }
+
+  @Test
+  void testGetExistingDigitalMediaByDoi() {
+    // Given
+    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+
+    // When
+    var result = mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID));
+
+    // Then
+    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecordNoMas()));
   }
 
 }

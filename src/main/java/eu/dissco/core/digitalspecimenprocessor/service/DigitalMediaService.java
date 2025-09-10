@@ -14,11 +14,14 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
@@ -191,8 +194,8 @@ public class DigitalMediaService {
   }
 
   public Set<DigitalMediaRecord> updateExistingDigitalMedia(
-      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
-    var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples);
+      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples, boolean takeOverSpecimenRelationship) {
+    var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples, takeOverSpecimenRelationship);
     var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples);
     if (!successfullyUpdatedHandles) {
       return Set.of();
@@ -236,12 +239,12 @@ public class DigitalMediaService {
   }
 
   private Set<UpdatedDigitalMediaRecord> getUpdatedDigitalMediaRecords(
-      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
+      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples, boolean takeOverSpecimenRelationship) {
     return updatedDigitalMediaTuples.stream()
         .map(tuple -> {
           var attributes = tuple.digitalMediaEvent().digitalMediaWrapper().attributes();
           setEntityRelationshipsForExistingMedia(attributes,
-              tuple.currentDigitalMediaRecord().attributes(), tuple.newRelatedSpecimenDois());
+              tuple.currentDigitalMediaRecord().attributes(), tuple.newRelatedSpecimenDois(), takeOverSpecimenRelationship);
           return new UpdatedDigitalMediaRecord(
               new DigitalMediaRecord(
                   tuple.currentDigitalMediaRecord().id(),
@@ -261,14 +264,16 @@ public class DigitalMediaService {
   }
 
   private void setEntityRelationshipsForExistingMedia(DigitalMedia attributes,
-      DigitalMedia currentAttributes, Set<String> relatedDois) {
-    var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
-        .stream().filter(
-            er -> er.getDwcRelationshipOfResource()
-                .equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
-        ).toList();
+      DigitalMedia currentAttributes, Set<String> relatedDois, boolean takeOverSpecimenRelationship) {
     var er = new ArrayList<>(attributes.getOdsHasEntityRelationships());
-    er.addAll(existingSpecimenErs);
+    if (takeOverSpecimenRelationship) {
+      var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
+          .stream().filter(
+              entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
+                  .equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
+          ).toList();
+      er.addAll(existingSpecimenErs);
+    }
     attributes.setOdsHasEntityRelationships(er);
     setNewEntityRelationshipsForMedia(attributes, relatedDois);
   }
@@ -282,7 +287,6 @@ public class DigitalMediaService {
             specimenRelationships).toList());
   }
 
-
   private JsonNode createJsonPatch(DigitalMedia currentDigitalMedia, DigitalMedia digitalMedia) {
     var jsonCurrentMedia = (ObjectNode) mapper.valueToTree(currentDigitalMedia);
     var jsonMedia = (ObjectNode) mapper.valueToTree(digitalMedia);
@@ -291,5 +295,22 @@ public class DigitalMediaService {
     return JsonDiff.asJson(jsonCurrentMedia, jsonMedia);
   }
 
-
+  public void tombstoneSpecimenRelations(
+      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+    for (var updatedDigitalSpecimenTuple : updatedDigitalSpecimenTuples) {
+      updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
+          .tombstonedRelationships().stream().map(
+              EntityRelationship::getOdsRelatedResourceURI)
+          .map(uri -> new DigitalMediaRelationshipTombstoneEvent(updatedDigitalSpecimenTuple.currentSpecimen().id(), DigitalObjectUtils.getIdforUri(uri))).forEach(
+              event -> {
+                try {
+                  publisherService.publishDigitalMediaRelationTombstone(event);
+                } catch (JsonProcessingException e) {
+                  log.error("Failed to publish media relation tombstone event for event: {}",
+                      event, e);
+                }
+              }
+          );
+      }
+    }
 }

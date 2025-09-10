@@ -24,6 +24,8 @@ public class RabbitMqProperties {
   private CreateUpdateTombstone createUpdateTombstone = new CreateUpdateTombstone();
   @NotNull
   private MasScheduler masScheduler = new MasScheduler();
+  @NotNull
+  private DigitalMediaRelationshipTombstone digitalMediaRelationshipTombstone = new DigitalMediaRelationshipTombstone();
 
   @NotBlank
   private String masExchangeName = "mas-exchange";
@@ -77,6 +79,26 @@ public class RabbitMqProperties {
 
     @NotNull
     private String routingKeyName = "auto-accepted-annotation";
+  }
+
+  @Data
+  @Validated
+  public static class DigitalMediaRelationshipTombstone {
+
+    @NotBlank
+    private String queueName = "digital-media-relationship-tombstone-queue";
+
+    @NotBlank
+    private String exchangeName = "digital-media-relationship-tombstone-exchange";
+
+    @NotNull
+    private String routingKeyName = "digital-media-relationship-tombstone";
+
+    @NotBlank
+    private String dlqExchangeName = "digital-media-relationship-tombstone-exchange-dlq";
+
+    @NotBlank
+    private String dlqRoutingKeyName = "digital-media-relationship-tombstone-dlq";
   }
 
   @Data

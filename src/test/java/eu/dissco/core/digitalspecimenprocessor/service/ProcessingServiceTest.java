@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
@@ -12,6 +13,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_S
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
@@ -36,8 +39,11 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
@@ -53,6 +59,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,7 +103,7 @@ class ProcessingServiceTest {
 
   @BeforeEach
   void setup() {
-    service = new ProcessingService(specimenRepository, mediaRepository,
+    service = new ProcessingService(MAPPER, specimenRepository, mediaRepository,
         digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService,
         publisherService, fdoRecordService, handleComponent, new ApplicationProperties(),
         masSchedulerService);
@@ -328,7 +335,7 @@ class ProcessingServiceTest {
             List.of(givenUpdatedDigitalSpecimenTuple(true, givenEmptyMediaProcessResult())),
             pidMapSpecimen);
     then(digitalMediaService).should()
-        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)));
+        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), true);
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(fdoRecordService).shouldHaveNoInteractions();
@@ -367,7 +374,7 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).should()
         .updateExistingDigitalSpecimen(any(), eq(pidMapSpecimen));
     then(digitalMediaService).should()
-        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)));
+        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), true);
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
@@ -459,8 +466,7 @@ class ProcessingServiceTest {
     given(equalityService.mediaAreEqual(givenDigitalMediaRecord(),
         givenDigitalMediaEvent().digitalMediaWrapper(), Set.of()))
         .willReturn(false);
-    given(digitalMediaService.updateExistingDigitalMedia(any()
-    )).willReturn(
+    given(digitalMediaService.updateExistingDigitalMedia(any(), eq(true))).willReturn(
         Set.of(givenDigitalMediaRecord()));
 
     // When
@@ -535,5 +541,43 @@ class ProcessingServiceTest {
 
     // Then
     then(handleComponent).should(times(4)).postHandle(any(), anyBoolean());
+  }
+
+  @Test
+  void testHandleMessageMediaRelationshipTombstone() throws JsonProcessingException {
+    // Given
+    var event = givenDigitalMediaTombstoneEvent();
+    var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
+    given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+    var digitalMediaEvent = new DigitalMediaEvent(Set.of(), givenDigitalMediaWrapper(),
+        false);
+    digitalMediaEvent.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(List.of());
+    var updatedMediaTuple = new UpdatedDigitalMediaTuple(
+        givenDigitalMediaRecord(),
+        digitalMediaEvent,
+        Collections.emptySet()
+    );
+
+    // When
+    service.handleMessagesMediaRelationshipTombstone(List.of(event, duplicateEvent));
+
+    // Then
+    then(publisherService).should().publishDigitalMediaRelationTombstone(duplicateEvent);
+    then(digitalMediaService).should().updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
+  }
+
+  @Test
+  void testHandleMessageMediaRelationshipTombstoneNoChange() {
+    // Given
+    var event = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
+    given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+
+    // When
+    service.handleMessagesMediaRelationshipTombstone(List.of(event));
+
+    // Then
+    then(digitalMediaService).shouldHaveNoInteractions();
   }
 }
