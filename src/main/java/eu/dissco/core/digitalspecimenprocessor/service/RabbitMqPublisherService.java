@@ -48,12 +48,6 @@ public class RabbitMqPublisherService {
         mapper.writeValueAsString(masJobRequest));
   }
 
-  public void publishAnnotationRequestEventMedia(String enrichmentRoutingKey,
-      DigitalMediaRecord digitalMediaRecord) throws JsonProcessingException {
-    rabbitTemplate.convertAndSend(rabbitMqProperties.getMasExchangeName(),
-        enrichmentRoutingKey, mapper.writeValueAsString(digitalMediaRecord));
-  }
-
   public void publishUpdateEventSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
       JsonNode jsonPatch) throws JsonProcessingException {
     var event = provenanceService.generateUpdateEventSpecimen(digitalSpecimenRecord, jsonPatch);

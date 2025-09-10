@@ -304,7 +304,8 @@ public class ProcessingService {
       updatedMedia = new ArrayList<>(
           digitalMediaService.updateExistingDigitalMedia(
               mediaPreprocessResult.changedDigitalMedia(),
-              pidProcessResults, true));
+              true
+          ));
     }
     return new MediaProcessResult(equalMedia, updatedMedia, newMedia);
   }
@@ -522,8 +523,8 @@ public class ProcessingService {
               dbRecord.version(),
               dbRecord.created(),
               dbRecord.digitalSpecimenWrapper(),
-              event.masList(), event.forceMasSchedule()
-          );
+              event.masList(), event.forceMasSchedule(),
+              List.of());
         })
         .collect(
             toMap(
@@ -594,7 +595,6 @@ public class ProcessingService {
         updatedMediaEvent.size());
     digitalMediaService.updateExistingDigitalMedia(
         updatedMediaEvent,
-        Map.of(),
         false);
   }
 

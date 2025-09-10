@@ -325,7 +325,6 @@ class ProcessingServiceTest {
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
         any())).willReturn(givenEmptyMediaProcessResult());
     var pidMapSpecimen = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
-    var pidMapMedia = Map.of(MEDIA_URL, givenPidProcessResultMedia());
 
     // When
     service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
@@ -336,7 +335,7 @@ class ProcessingServiceTest {
             List.of(givenUpdatedDigitalSpecimenTuple(true, givenEmptyMediaProcessResult())),
             pidMapSpecimen);
     then(digitalMediaService).should()
-        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), pidMapMedia, true);
+        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), true);
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(fdoRecordService).shouldHaveNoInteractions();
@@ -367,8 +366,6 @@ class ProcessingServiceTest {
     var pidMapSpecimen = Map.of(
         PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true),
         PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of(MEDIA_PID)));
-    var pidMapMedia = Map.of(MEDIA_URL,
-        new PidProcessResult(MEDIA_PID, Set.of(HANDLE, SECOND_HANDLE)));
 
     // When
     service.handleMessages(List.of(event1, event2));
@@ -377,7 +374,7 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).should()
         .updateExistingDigitalSpecimen(any(), eq(pidMapSpecimen));
     then(digitalMediaService).should()
-        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), pidMapMedia, true);
+        .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), true);
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
@@ -469,8 +466,7 @@ class ProcessingServiceTest {
     given(equalityService.mediaAreEqual(givenDigitalMediaRecord(),
         givenDigitalMediaEvent().digitalMediaWrapper(), Set.of()))
         .willReturn(false);
-    given(digitalMediaService.updateExistingDigitalMedia(any(),
-        eq(Map.of(MEDIA_URL, new PidProcessResult(MEDIA_PID, Set.of()))), eq(true))).willReturn(
+    given(digitalMediaService.updateExistingDigitalMedia(any(), eq(true))).willReturn(
         Set.of(givenDigitalMediaRecord()));
 
     // When
@@ -554,7 +550,7 @@ class ProcessingServiceTest {
     var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
     given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID))).willReturn(
         List.of(givenDigitalMediaRecord()));
-    var digitalMediaEvent = new DigitalMediaEvent(Set.of(), givenDigitalMediaWrapper(MEDIA_URL),
+    var digitalMediaEvent = new DigitalMediaEvent(Set.of(), givenDigitalMediaWrapper(),
         false);
     digitalMediaEvent.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(List.of());
     var updatedMediaTuple = new UpdatedDigitalMediaTuple(
@@ -568,7 +564,7 @@ class ProcessingServiceTest {
 
     // Then
     then(publisherService).should().publishDigitalMediaRelationTombstone(duplicateEvent);
-    then(digitalMediaService).should().updateExistingDigitalMedia(List.of(updatedMediaTuple), Collections.emptyMap(), false);
+    then(digitalMediaService).should().updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
   }
 
   @Test

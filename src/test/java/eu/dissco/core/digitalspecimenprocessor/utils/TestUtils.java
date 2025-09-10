@@ -147,8 +147,8 @@ public class TestUtils {
         CREATED,
         givenDigitalSpecimenWrapper(),
         Set.of(MAS),
-        false
-    );
+        false,
+        List.of());
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecord(int version, boolean hasMedia) {
@@ -159,8 +159,8 @@ public class TestUtils {
         CREATED,
         givenDigitalSpecimenWrapper(hasMedia),
         Set.of(MAS),
-        false
-    );
+        false,
+        List.of());
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr() {
@@ -181,7 +181,7 @@ public class TestUtils {
         version,
         CREATED,
         givenDigitalSpecimenWrapperWithMediaEr(physicalId, addOtherEntityRelationship, mediaId),
-        Set.of(MAS), false);
+        Set.of(MAS), false, List.of(givenDigitalMediaEvent()));
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecordWithMediaEr(String handle,
@@ -218,20 +218,21 @@ public class TestUtils {
         CREATED,
         givenDigitalSpecimenWrapper(physicalSpecimenId, specimenName, organisation, false,
             hasMedia),
-        Set.of(MAS), false
-    );
+        Set.of(MAS), false,
+        List.of());
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecord(String handle,
-      String physicalSpecimenId) {
+      String physicalSpecimenId, boolean hasMedia) {
+    List<DigitalMediaEvent> mediaEvents = hasMedia ? List.of(givenDigitalMediaEvent()) : List.of();
     return new DigitalSpecimenRecord(
         handle,
         MIDS_LEVEL,
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
-            false), Set.of(MAS), false
-    );
+            hasMedia), Set.of(MAS), false,
+        mediaEvents);
   }
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId) {
@@ -240,11 +241,12 @@ public class TestUtils {
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent(String physicalSpecimenId,
       boolean hasMedia) {
+    List<DigitalMediaEvent> mediaEvents = hasMedia ? List.of(givenDigitalMediaEvent()) : List.of();
     return new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
             hasMedia),
-        List.of(givenDigitalMediaEvent(MEDIA_URL)),
+        mediaEvents,
         false);
   }
 
@@ -262,47 +264,45 @@ public class TestUtils {
   }
 
   public static DigitalMediaRecord givenDigitalMediaRecord(String pid, String uri, int version) {
-    var media = givenDigitalMedia(uri);
-    var er = new ArrayList<>(media.getOdsHasEntityRelationships());
-    er.add(
-        givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
-    media.setOdsHasEntityRelationships(er);
     return new DigitalMediaRecord(
         pid, uri, version, CREATED, Set.of(MEDIA_MAS),
-        media,
+        givenDigitalMedia(uri, true),
         MAPPER.createObjectNode(), false);
   }
 
   public static DigitalMediaWrapper givenDigitalMediaWrapper() {
-    return givenDigitalMediaWrapper(MEDIA_URL);
+    return givenDigitalMediaWrapper(MEDIA_URL, false);
   }
 
-  public static DigitalMediaWrapper givenDigitalMediaWrapper(String url) {
+  public static DigitalMediaWrapper givenDigitalMediaWrapper(String url, boolean addSpecimenEr) {
     return new DigitalMediaWrapper(
         FdoType.MEDIA.getPid(),
-        givenDigitalMedia(url),
+        givenDigitalMedia(url, addSpecimenEr),
         MAPPER.createObjectNode()
     );
   }
 
-  public static DigitalMedia givenDigitalMedia(String uri, List<EntityRelationship> relationships) {
+  public static DigitalMedia givenDigitalMedia(String uri, boolean addSpecimenEr) {
+    var ers = addSpecimenEr ? List.of(givenEntityRelationship(),
+        givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))
+        : List.of(givenEntityRelationship());
     return new DigitalMedia()
         .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(uri)
         .withOdsOrganisationID(ORGANISATION_ID)
-        .withOdsHasEntityRelationships(relationships);
+        .withOdsHasEntityRelationships(ers);
   }
 
-  public static DigitalMedia givenDigitalMedia(String uri) {
-    return givenDigitalMedia(uri, List.of(
-        givenEntityRelationship()
-    ));
-  }
-
-  public static DigitalMediaRecord givenDigitalMediaRecordNoEnrichment() {
+  public static DigitalMediaRecord givenDigitalMediaRecordNoMas() {
     return new DigitalMediaRecord(
         MEDIA_PID, MEDIA_URL, VERSION, CREATED, Set.of(),
-        givenDigitalMediaWithRelationship(),
+        new DigitalMedia()
+            .withOdsFdoType(FdoType.MEDIA.getPid())
+            .withAcAccessURI(MEDIA_URL)
+            .withOdsOrganisationID(ORGANISATION_ID)
+            .withOdsHasEntityRelationships(
+                List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
+                    EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
         MAPPER.createObjectNode(), null);
   }
 
@@ -318,14 +318,14 @@ public class TestUtils {
 
 
   public static DigitalMediaEvent givenUnequalDigitalMediaEvent() {
-    return givenUnequalDigitalMediaEvent(MEDIA_URL_ALT);
+    return givenUnequalDigitalMediaEvent(MEDIA_URL_ALT, false);
   }
 
-  public static DigitalMediaEvent givenUnequalDigitalMediaEvent(String url) {
+  public static DigitalMediaEvent givenUnequalDigitalMediaEvent(String url, boolean addSpecimenEr) {
     return new DigitalMediaEvent(Set.of(MEDIA_MAS),
         new DigitalMediaWrapper(
-            "StillImage",
-            givenUnequalDigitalMedia(url),
+            FdoType.MEDIA.getPid(),
+            givenUnequalDigitalMedia(url, addSpecimenEr),
             MAPPER.createObjectNode()),
         false);
   }
@@ -340,21 +340,21 @@ public class TestUtils {
 
   public static DigitalMediaRecord givenUnequalDigitalMediaRecord(String pid, String url,
       int version) {
-    var media = givenUnequalDigitalMedia(url);
-    var er = new ArrayList<>(media.getOdsHasEntityRelationships());
-    er.add(
-        givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()));
-    media.setOdsHasEntityRelationships(er);
+    var media = givenUnequalDigitalMedia(url, true);
     return new DigitalMediaRecord(
         pid, url, version, CREATED, Set.of(MEDIA_MAS), media, MAPPER.createObjectNode(), false);
   }
 
-  public static DigitalMedia givenUnequalDigitalMedia(String url) {
+  public static DigitalMedia givenUnequalDigitalMedia(String url, boolean addSpecimenEr) {
+    List<EntityRelationship> ers =
+        addSpecimenEr ? List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
+            EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))
+            : List.of(givenEntityRelationship());
     return new DigitalMedia()
         .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(url)
         .withOdsOrganisationName(ANOTHER_ORGANISATION)
-        .withOdsHasEntityRelationships(List.of(givenEntityRelationship()));
+        .withOdsHasEntityRelationships(ers);
   }
 
   public static DigitalSpecimenEvent givenDigitalSpecimenEvent() {
@@ -409,22 +409,21 @@ public class TestUtils {
     return givenDigitalSpecimenEvent(hasMedia, false);
   }
 
+  public static DigitalMediaEvent givenDigitalMediaEventWithSpecimenEr() {
+    return new DigitalMediaEvent(
+        Set.of(MEDIA_MAS),
+        givenDigitalMediaWrapper(MEDIA_URL, true), false);
+
+  }
+
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
         Set.of(MEDIA_MAS),
-        givenDigitalMediaWrapper(mediaUrl), false);
+        givenDigitalMediaWrapper(mediaUrl, false), false);
   }
 
   public static DigitalMediaEvent givenDigitalMediaEvent() {
     return givenDigitalMediaEvent(MEDIA_URL);
-  }
-
-  public static DigitalMediaEvent givenDigitalMediaEventWithSpecimenEr() {
-    var event = givenDigitalMediaEvent(MEDIA_URL);
-    event.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(
-        List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
-            EntityRelationshipType.HAS_SPECIMEN.getRelationshipName())));
-    return event;
   }
 
   public static DigitalMediaEvent givenDigitalMediaEventWithRelationship() {
@@ -432,7 +431,9 @@ public class TestUtils {
   }
 
   public static DigitalMediaEvent givenDigitalMediaEventWithRelationship(String id) {
-    var digitalMedia = new DigitalMedia().withAcAccessURI(MEDIA_URL)
+    var digitalMedia = new DigitalMedia()
+        .withOdsFdoType(FdoType.MEDIA.getPid())
+        .withAcAccessURI(MEDIA_URL)
         .withId(id)
         .withDctermsIdentifier(id)
         .withOdsOrganisationID(ORGANISATION_ID)
@@ -755,15 +756,6 @@ public class TestUtils {
     );
   }
 
-  public static MasJobRequest givenMasJobRequestSpecimen() {
-    return new MasJobRequest(
-        MAS,
-        HANDLE,
-        false,
-        APP_HANDLE,
-        MjrTargetType.DIGITAL_SPECIMEN
-    );
-  }
 
   public static MasJobRequest givenMasJobRequestMedia() {
     return new MasJobRequest(

@@ -1,6 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.specimen;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 public record DigitalSpecimenRecord(
@@ -10,6 +12,7 @@ public record DigitalSpecimenRecord(
     Instant created,
     DigitalSpecimenWrapper digitalSpecimenWrapper,
     Set<String> masIds,
-    Boolean forceMasSchedule) {
+    Boolean forceMasSchedule,
+    List<DigitalMediaEvent> digitalMediaEvents) {
 
 }
