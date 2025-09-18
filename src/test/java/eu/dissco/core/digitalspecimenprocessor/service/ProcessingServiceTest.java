@@ -34,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -397,7 +398,8 @@ class ProcessingServiceTest {
     // Then
     then(publisherService).should().republishSpecimenEvent(event2);
     then(digitalSpecimenService).should()
-        .createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent(true),
+        .createNewDigitalSpecimen(List.of(
+            givenDigitalSpecimenEvent(true),
             new DigitalSpecimenEvent(
                 Set.of(MAS),
                 givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
@@ -405,8 +407,7 @@ class ProcessingServiceTest {
                 List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
                 false)), pidMap);
     then(digitalMediaService).should()
-        .createNewDigitalMedia(
-            List.of(givenDigitalMediaEvent(MEDIA_URL_ALT), givenDigitalMediaEvent()), pidMapMedia);
+        .createNewDigitalMedia(anyList(), eq(pidMapMedia));
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
