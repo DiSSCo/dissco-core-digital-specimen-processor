@@ -34,7 +34,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -407,7 +406,8 @@ class ProcessingServiceTest {
                 List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
                 false)), pidMap);
     then(digitalMediaService).should()
-        .createNewDigitalMedia(anyList(), eq(pidMapMedia));
+        .createNewDigitalMedia(
+            List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent(MEDIA_URL_ALT)), pidMapMedia);
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
