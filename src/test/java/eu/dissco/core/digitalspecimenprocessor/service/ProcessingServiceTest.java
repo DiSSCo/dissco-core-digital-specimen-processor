@@ -397,8 +397,6 @@ class ProcessingServiceTest {
     given(digitalMediaService.createNewDigitalMedia(any(), any())).willReturn(
         Set.of(givenDigitalMediaRecord(),
             givenDigitalMediaRecord(SECOND_HANDLE, MEDIA_URL_ALT, 1)));
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true),
-        PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of(MEDIA_PID_ALT)));
 
     // When
     service.handleMessages(List.of(event, event2, event3));

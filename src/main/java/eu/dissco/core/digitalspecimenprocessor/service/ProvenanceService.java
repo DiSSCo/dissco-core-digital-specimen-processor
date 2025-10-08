@@ -137,13 +137,11 @@ public class ProvenanceService {
 
 
   private String determineComment(ProvActivity.Type activityType) {
-    if (activityType == ProvActivity.Type.ODS_CREATE) {
-      return "Digital Specimen created";
-    } else if (activityType == ProvActivity.Type.ODS_UPDATE) {
-      return "Digital Specimen updated";
-    } else {
-      return null;
-    }
+    return switch (activityType) {
+      case ProvActivity.Type.ODS_CREATE -> "Digital Specimen created";
+      case ProvActivity.Type.ODS_UPDATE -> "Digital Specimen updated";
+      default -> null;
+    };
   }
 
   private List<OdsChangeValue> mapJsonPatch(JsonNode jsonPatch) {
