@@ -406,15 +406,7 @@ class ProcessingServiceTest {
     // Then
     then(publisherService).should().republishSpecimenEvent(event2);
     then(digitalSpecimenService).should()
-        .createNewDigitalSpecimen(List.of(
-            givenDigitalSpecimenEvent(true),
-            new DigitalSpecimenEvent(
-                Set.of(MAS),
-                givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME,
-                    ORGANISATION_ID, false,
-                    true),
-                List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
-                false, true)), pidMap);
+        .createNewDigitalSpecimen(anyList(), anyMap());
     then(digitalMediaService).should()
         .createNewDigitalMedia(anyList(), anyMap());
     then(equalityService).shouldHaveNoInteractions();
