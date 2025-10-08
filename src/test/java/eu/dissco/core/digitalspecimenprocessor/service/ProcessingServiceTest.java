@@ -53,6 +53,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelat
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
@@ -462,12 +463,10 @@ class ProcessingServiceTest {
   void testSpecimenAddVirtualCollection() throws Exception {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
-            true)));
+            false)));
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
-    given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
-        givenDigitalSpecimenEvent(true));
     var pidMapSpecimen = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    var digitalSpecimen = givenDigitalSpecimenWrapper(true, true);
+    var digitalSpecimen = givenDigitalSpecimenWrapper(false, false);
     digitalSpecimen.attributes()
         .setOdsHasEntityRelationships(List.of(givenEntityRelationship(),
             new EntityRelationship()
@@ -475,19 +474,26 @@ class ProcessingServiceTest {
                 .withOdsRelatedResourceURI(
                     URI.create("https://hdl.handle.net/20.5000.1025/V1Z-176-VCL"))
                 .withDwcRelationshipOfResource("hasVirtualCollection")));
-
-    // When
-    service.handleMessages(List.of(new DigitalSpecimenEvent(
+    var digitalSpecimenEvent = new DigitalSpecimenEvent(
         Set.of(MAS),
         digitalSpecimen,
         List.of(),
         false,
-        false)));
+        false);
+    given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
+        digitalSpecimenEvent);
+
+    // When
+    service.handleMessages(List.of(digitalSpecimenEvent));
 
     // Then
     then(digitalSpecimenService).should()
         .updateExistingDigitalSpecimen(
-            List.of(givenUpdatedDigitalSpecimenTuple(true, givenEmptyMediaProcessResult())),
+            List.of(new UpdatedDigitalSpecimenTuple(
+                givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
+                    false),
+                digitalSpecimenEvent,
+                givenEmptyMediaProcessResult())),
             pidMapSpecimen);
     then(digitalMediaService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();

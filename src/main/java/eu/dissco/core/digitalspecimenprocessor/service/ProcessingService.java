@@ -334,7 +334,7 @@ public class ProcessingService {
             digitalSpecimenService.createNewDigitalSpecimen(specimenPreprocessResult.newSpecimens(),
                 pidProcessResults));
       } else {
-        log.warn("Unable to create new specimen pids for {} speicmens. Ignoring new specimens",
+        log.warn("Unable to create new specimen pids for {} specimens. Ignoring new specimens",
             specimenPreprocessResult.newSpecimens().size());
       }
     }
@@ -595,8 +595,8 @@ public class ProcessingService {
               dbRecord.created(),
               dbRecord.digitalSpecimenWrapper(),
               event.masList(),
-              event.forceMasSchedule(),
-              event.isDataFromSourceSystem(),
+              dbRecord.forceMasSchedule(),
+              dbRecord.isDataFromSourceSystem(),
               List.of());
         })
         .collect(
