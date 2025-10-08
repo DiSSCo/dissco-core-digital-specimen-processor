@@ -1,6 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.flattenToDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.flattenToDigitalSpecimen;
 
@@ -42,7 +42,7 @@ public class ElasticSearchRepository {
       throws IOException {
     var index = isSpecimen ? properties.getSpecimenIndexName() : properties.getMediaIndexName();
     return client.delete(
-        d -> d.index(index).id(DOI_PREFIX + id));
+        d -> d.index(index).id(DOI_PROXY + id));
   }
 
   public void rollbackVersion(DigitalSpecimenRecord currentDigitalSpecimen) throws IOException {

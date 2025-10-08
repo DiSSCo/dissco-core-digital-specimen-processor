@@ -15,7 +15,6 @@ import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Query;
 import org.jooq.Record;
-import org.jooq.Record1;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -31,14 +30,14 @@ public class DigitalMediaRepository {
     return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
         .from(DIGITAL_MEDIA_OBJECT)
         .where(DIGITAL_MEDIA_OBJECT.MEDIA_URL.in(mediaURIs))
-        .fetch(this::mapDigitalMedia);
+        .fetch(this::mapToDigitalMediaRecord);
   }
 
   public void rollBackDigitalMedia(String id) {
     context.delete(DIGITAL_MEDIA_OBJECT).where(DIGITAL_MEDIA_OBJECT.ID.eq(id)).execute();
   }
 
-  private DigitalMediaRecord mapDigitalMedia(Record dbRecord) {
+  private DigitalMediaRecord mapToDigitalMediaRecord(Record dbRecord) {
     try {
       return new DigitalMediaRecord(
           dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),
@@ -98,20 +97,11 @@ public class DigitalMediaRepository {
         .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now());
   }
 
-  public List<DigitalMedia> getExistingDigitalMediaByDoi(
+  public List<DigitalMediaRecord> getExistingDigitalMediaByDoi(
       Set<String> tombstonedDigitalSpecimenToDigitalMediaRelationship) {
-    return context.select(DIGITAL_MEDIA_OBJECT.DATA)
+    return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
         .from(DIGITAL_MEDIA_OBJECT)
         .where(DIGITAL_MEDIA_OBJECT.ID.in(tombstonedDigitalSpecimenToDigitalMediaRelationship))
-        .fetch(this::mapToDigitalMedia);
-  }
-
-  private DigitalMedia mapToDigitalMedia(Record1<JSONB> dbRecord) {
-    try {
-      return mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class);
-    } catch (JsonProcessingException e) {
-      log.error("Unable to map record data to json: {}", dbRecord);
-      return null;
-    }
+        .fetch(this::mapToDigitalMediaRecord);
   }
 }

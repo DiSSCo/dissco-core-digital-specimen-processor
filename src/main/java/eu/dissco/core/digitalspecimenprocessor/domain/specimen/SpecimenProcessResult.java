@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.specimen;
 
+import static java.util.Collections.emptyList;
+
 import java.util.List;
 
 public record SpecimenProcessResult(
@@ -8,4 +10,7 @@ public record SpecimenProcessResult(
     List<DigitalSpecimenRecord> newDigitalSpecimens
 ) {
 
+  public SpecimenProcessResult() {
+    this(emptyList(), emptyList(), emptyList());
+  }
 }

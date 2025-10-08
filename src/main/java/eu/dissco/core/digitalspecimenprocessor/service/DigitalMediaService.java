@@ -2,8 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.getIdforUri;
-import static java.util.stream.Collectors.toMap;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.getIdForUri;
 import static java.util.stream.Collectors.toSet;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
@@ -14,9 +13,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
@@ -66,37 +65,36 @@ public class DigitalMediaService {
     var digitalMediaRecords = events.stream()
         .filter(
             event -> pidMap.containsKey(event.digitalMediaWrapper().attributes().getAcAccessURI()))
-        .collect(toMap(
-            event -> mapToNewDigitalMediaRecord(event, pidMap),
-            DigitalMediaEvent::masList));
+        .map(event -> mapToNewDigitalMediaRecord(event, pidMap))
+        .collect(toSet());
     if (digitalMediaRecords.isEmpty()) {
       log.info("Mapped 0 events to their generated PIDs");
       return Collections.emptySet();
     }
     try {
-      repository.createDigitalMediaRecord(digitalMediaRecords.keySet());
+      repository.createDigitalMediaRecord(digitalMediaRecords);
     } catch (DataAccessException e) {
       log.error("Database exception, unable to post new digital media to database", e);
-      rollbackService.rollbackNewMedias(events, pidMap, false, false);
+      rollbackService.rollbackNewMedias(digitalMediaRecords, false, false);
       return Collections.emptySet();
     }
     log.info("{} digital media has been successfully committed to database",
         events.size());
     try {
-      var bulkResponse = elasticRepository.indexDigitalMedia(digitalMediaRecords.keySet());
+      var bulkResponse = elasticRepository.indexDigitalMedia(digitalMediaRecords);
       if (!bulkResponse.errors()) {
-        handleSuccessfulElasticInsert(digitalMediaRecords, events, pidMap);
+        handleSuccessfulElasticInsert(digitalMediaRecords);
       } else {
         digitalMediaRecords = rollbackService.handlePartiallyFailedElasticInsertMedia(
             digitalMediaRecords,
-            bulkResponse, events);
+            bulkResponse);
       }
       log.info("Successfully created {} new digital media", digitalMediaRecords.size());
-      annotationPublisherService.publishAnnotationNewMedia(digitalMediaRecords.keySet());
-      return digitalMediaRecords.keySet();
+      annotationPublisherService.publishAnnotationNewMedia(digitalMediaRecords);
+      return digitalMediaRecords;
     } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackNewMedias(events, pidMap, false, true);
+      rollbackService.rollbackNewMedias(digitalMediaRecords, false, true);
       return Collections.emptySet();
     }
   }
@@ -142,8 +140,7 @@ public class DigitalMediaService {
   }
 
   private void handleSuccessfulElasticUpdate(
-      Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords,
-      List<DigitalMediaEvent> events, Map<String, PidProcessResult> pidMap) {
+      Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords) {
     log.debug("Successfully indexed {} digital media", updatedDigitalMediaRecords);
     var failedRecords = new HashSet<UpdatedDigitalMediaRecord>();
     for (var digitalMediaRecord : updatedDigitalMediaRecords) {
@@ -156,7 +153,7 @@ public class DigitalMediaService {
     }
     if (!failedRecords.isEmpty()) {
       log.info("Rolling back {} failed records", failedRecords.size());
-      rollbackService.rollbackUpdatedMedias(updatedDigitalMediaRecords, true, true, events, pidMap);
+      rollbackService.rollbackUpdatedMedias(updatedDigitalMediaRecords, true, true);
       updatedDigitalMediaRecords.removeAll(failedRecords);
     }
   }
@@ -173,53 +170,34 @@ public class DigitalMediaService {
   }
 
   private void handleSuccessfulElasticInsert(
-      Map<DigitalMediaRecord, Set<String>> digitalMediaRecords, List<DigitalMediaEvent> events,
-      Map<String, PidProcessResult> pidMap) {
+      Set<DigitalMediaRecord> digitalMediaRecords) {
     log.debug("Successfully indexed {} digital media", digitalMediaRecords);
     var recordsToRollback = new HashSet<DigitalMediaRecord>();
-    digitalMediaRecords.forEach((digitalMediaRecord, enrichments) -> {
-      if (!publishEvents(digitalMediaRecord, enrichments)) {
+    digitalMediaRecords.forEach(digitalMediaRecord -> {
+      if (!publishEvents(digitalMediaRecord)) {
         recordsToRollback.add(digitalMediaRecord);
       }
     });
     if (!recordsToRollback.isEmpty()) {
       recordsToRollback.forEach(digitalMediaRecords::remove);
-      var rollbackAccessUris = recordsToRollback.stream().map(
-          DigitalMediaRecord::accessURI).toList();
-      var rollbackEvents = events.stream().filter(
-          event -> rollbackAccessUris.contains(
-              event.digitalMediaWrapper().attributes().getAcAccessURI())
-      ).toList();
-      rollbackService.rollbackNewMedias(rollbackEvents, pidMap, true, true);
+      rollbackService.rollbackNewMedias(recordsToRollback, true, true);
     }
   }
 
-  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord, Set<String> enrichments) {
+  private boolean publishEvents(DigitalMediaRecord digitalMediaRecord) {
     try {
       publisherService.publishCreateEventMedia(digitalMediaRecord);
     } catch (JsonProcessingException e) {
       log.error("Rolling back, failed to publish Create event", e);
       return false;
     }
-    enrichments.forEach(mas -> {
-      try {
-        publisherService.publishAnnotationRequestEventMedia(mas, digitalMediaRecord);
-      } catch (JsonProcessingException e) {
-        log.error(
-            "No action taken, failed to publish annotation request event for mas: {} digital media: {}",
-            mas, digitalMediaRecord.id(), e);
-      }
-    });
     return true;
   }
 
   public Set<DigitalMediaRecord> updateExistingDigitalMedia(
-      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples,
-      Map<String, PidProcessResult> pidMap) {
-    var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples);
+      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples, boolean takeOverSpecimenRelationship) {
+    var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples, takeOverSpecimenRelationship);
     var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples);
-    var events = updatedDigitalMediaTuples.stream().map(
-        UpdatedDigitalMediaTuple::digitalMediaEvent).toList();
     if (!successfullyUpdatedHandles) {
       return Set.of();
     }
@@ -229,7 +207,7 @@ public class DigitalMediaService {
           digitalMediaRecords.stream().map(UpdatedDigitalMediaRecord::digitalMediaRecord)
               .collect(toSet()));
     } catch (DataAccessException e) {
-      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, false, events, pidMap);
+      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, false);
       log.error("Database exception: unable to post updates to db", e);
       return Collections.emptySet();
     }
@@ -240,12 +218,12 @@ public class DigitalMediaService {
           .collect(toSet());
       var bulkResponse = elasticRepository.indexDigitalMedia(recordSet);
       if (!bulkResponse.errors()) {
-        handleSuccessfulElasticUpdate(digitalMediaRecords, events, pidMap);
+        handleSuccessfulElasticUpdate(digitalMediaRecords);
       } else {
         digitalMediaRecords = rollbackService.handlePartiallyFailedElasticUpdateMedia(
-            digitalMediaRecords, bulkResponse,
-            events, pidMap);
-        handleSuccessfulElasticUpdate(digitalMediaRecords, events, pidMap);
+            digitalMediaRecords, bulkResponse
+        );
+        handleSuccessfulElasticUpdate(digitalMediaRecords);
       }
       var successfullyProcessedRecords = digitalMediaRecords.stream()
           .map(UpdatedDigitalMediaRecord::digitalMediaRecord).collect(
@@ -256,18 +234,18 @@ public class DigitalMediaService {
       return successfullyProcessedRecords;
     } catch (IOException | ElasticsearchException e) {
       log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, true, events, pidMap);
+      rollbackService.rollbackUpdatedMedias(digitalMediaRecords, false, true);
       return Set.of();
     }
   }
 
   private Set<UpdatedDigitalMediaRecord> getUpdatedDigitalMediaRecords(
-      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
+      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples, boolean takeOverSpecimenRelationship) {
     return updatedDigitalMediaTuples.stream()
         .map(tuple -> {
           var attributes = tuple.digitalMediaEvent().digitalMediaWrapper().attributes();
           setEntityRelationshipsForExistingMedia(attributes,
-              tuple.currentDigitalMediaRecord().attributes(), tuple.newRelatedSpecimenDois());
+              tuple.currentDigitalMediaRecord().attributes(), tuple.newRelatedSpecimenDois(), takeOverSpecimenRelationship);
           return new UpdatedDigitalMediaRecord(
               new DigitalMediaRecord(
                   tuple.currentDigitalMediaRecord().id(),
@@ -287,14 +265,16 @@ public class DigitalMediaService {
   }
 
   private void setEntityRelationshipsForExistingMedia(DigitalMedia attributes,
-      DigitalMedia currentAttributes, Set<String> relatedDois) {
-    var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
-        .stream().filter(
-            er -> er.getDwcRelationshipOfResource()
-                .equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
-        ).toList();
+      DigitalMedia currentAttributes, Set<String> relatedDois, boolean takeOverSpecimenRelationship) {
     var er = new ArrayList<>(attributes.getOdsHasEntityRelationships());
-    er.addAll(existingSpecimenErs);
+    if (takeOverSpecimenRelationship) {
+      var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
+          .stream().filter(
+              entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
+                  .equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
+          ).toList();
+      er.addAll(existingSpecimenErs);
+    }
     attributes.setOdsHasEntityRelationships(er);
     setNewEntityRelationshipsForMedia(attributes, relatedDois);
   }
@@ -319,32 +299,19 @@ public class DigitalMediaService {
   public void tombstoneSpecimenRelations(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
     for (var updatedDigitalSpecimenTuple : updatedDigitalSpecimenTuples) {
-      var tombstonedDigitalSpecimenToDigitalMediaRelationship = updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
+      updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
           .tombstonedRelationships().stream().map(
               EntityRelationship::getOdsRelatedResourceURI)
-          .map(DigitalObjectUtils::getIdforUri).collect(toSet());
-      if (tombstonedDigitalSpecimenToDigitalMediaRelationship.isEmpty()) {
-        return;
-      }
-      var affectedMedia = repository.getExistingDigitalMediaByDoi(
-          tombstonedDigitalSpecimenToDigitalMediaRelationship);
-      for (var digitalMedia : affectedMedia) {
-        var updatedEntityRelationships = digitalMedia.getOdsHasEntityRelationships().stream()
-            .filter(er -> !tombstonedDigitalSpecimenToDigitalMediaRelationship.contains(
-                getIdforUri(er.getOdsRelatedResourceURI()))).toList();
-        digitalMedia.setOdsHasEntityRelationships(updatedEntityRelationships);
-        try {
-          publisherService.republishMediaEvent(
-              new DigitalMediaEvent(
-                  Collections.emptySet(),
-                  new DigitalMediaWrapper(digitalMedia.getOdsFdoType(), digitalMedia,
-                      mapper.createObjectNode()),
-                  false));
-        } catch (JsonProcessingException e) {
-          log.error("Failed to publish updated entity relationships for digital media: {}",
-              digitalMedia.getId());
-        }
+          .map(uri -> new DigitalMediaRelationshipTombstoneEvent(updatedDigitalSpecimenTuple.currentSpecimen().id(), getIdForUri(uri))).forEach(
+              event -> {
+                try {
+                  publisherService.publishDigitalMediaRelationTombstone(event);
+                } catch (JsonProcessingException e) {
+                  log.error("Failed to publish media relation tombstone event for event: {}",
+                      event, e);
+                }
+              }
+          );
       }
     }
-  }
 }

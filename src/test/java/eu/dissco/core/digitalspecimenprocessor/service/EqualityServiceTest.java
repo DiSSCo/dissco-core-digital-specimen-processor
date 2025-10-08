@@ -122,7 +122,7 @@ class EqualityServiceTest {
     // Given
     var wrapper = new DigitalMediaWrapper(
         TYPE_MEDIA,
-        givenUnequalDigitalMedia(MEDIA_URL),
+        givenUnequalDigitalMedia(MEDIA_URL, true),
         MAPPER.createObjectNode()
     );
 
@@ -221,7 +221,8 @@ class EqualityServiceTest {
     var entityRelationship = givenEntityRelationship(ORGANISATION_ID, "hasRor");
     var expectedWrapper = new DigitalMediaWrapper(
         TYPE_MEDIA,
-        givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
+        givenDigitalMedia(MEDIA_URL, false).withOdsHasEntityRelationships(
+            List.of(entityRelationship)),
         MAPPER.createObjectNode()
     );
     var expected = new DigitalMediaEvent(
@@ -236,7 +237,8 @@ class EqualityServiceTest {
         VERSION,
         CREATED,
         Set.of(MEDIA_MAS),
-        givenDigitalMedia(MEDIA_URL).withOdsHasEntityRelationships(List.of(entityRelationship)),
+        givenDigitalMedia(MEDIA_URL, false).withOdsHasEntityRelationships(
+            List.of(entityRelationship)),
         MAPPER.createObjectNode(), false
     );
 

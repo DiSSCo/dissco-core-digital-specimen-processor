@@ -21,7 +21,7 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_DISCIPLINE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_DOMAIN;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_ORIGIN;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -169,7 +169,7 @@ public class FdoRecordService {
     return mapper.createObjectNode()
         .set("data", mapper.createObjectNode()
             .put("type", fdoProperties.getMediaFdoType())
-            .put("id", id.replace(DOI_PREFIX, ""))
+            .put("id", id.replace(DOI_PROXY, ""))
             .set(ATTRIBUTES,
                 generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
   }
@@ -177,7 +177,7 @@ public class FdoRecordService {
   private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
-    data.put(ID, specimenTuple.currentSpecimen().id().replace(DOI_PREFIX, ""));
+    data.put(ID, specimenTuple.currentSpecimen().id().replace(DOI_PROXY, ""));
     data.put(TYPE, fdoProperties.getSpecimenFdoType());
     var attributes = genRequestAttributes(
         specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
@@ -189,7 +189,7 @@ public class FdoRecordService {
   private JsonNode buildSingleRollbackUpdateRequestSpecimen(DigitalSpecimenRecord specimen) {
     return mapper.createObjectNode()
         .set(DATA, mapper.createObjectNode()
-            .put(ID, specimen.id().replace(DOI_PREFIX, ""))
+            .put(ID, specimen.id().replace(DOI_PROXY, ""))
             .put(TYPE, fdoProperties.getSpecimenFdoType())
             .set(ATTRIBUTES, genRequestAttributes(specimen.digitalSpecimenWrapper())));
 
@@ -199,7 +199,7 @@ public class FdoRecordService {
     return mapper.createObjectNode()
         .set("data", mapper.createObjectNode()
             .put("type", fdoProperties.getMediaFdoType())
-            .put("id", media.id().replace(DOI_PREFIX, ""))
+            .put("id", media.id().replace(DOI_PROXY, ""))
             .set(ATTRIBUTES, generateMediaAttributes(media.attributes())));
 
   }

@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static org.mockito.BDDMockito.then;
 
@@ -79,6 +80,33 @@ class RabbitMqConsumerServiceTest {
     then(rabbitMqPublisherService).should().deadLetterRawMedia(message);
     then(processingService).should().handleMessagesMedia(List.of());
   }
+
+  @Test
+  void testGetMessagesDigitalMediaRelationshipTombstone() throws JsonProcessingException {
+    // Given
+    var message = MAPPER.writeValueAsString(givenDigitalMediaTombstoneEvent());
+
+    // When
+    rabbitMqConsumerServiceTest.getMessagesDigitalMediaRelationshipTombstone(List.of(message));
+
+    // Then
+    then(rabbitMqPublisherService).shouldHaveNoInteractions();
+    then(processingService).should().handleMessagesMediaRelationshipTombstone(List.of(givenDigitalMediaTombstoneEvent()));
+  }
+
+  @Test
+  void testGetInvalidMessagesDigitalMediaRelationshipTombstone() {
+    // Given
+    var message = givenInvalidMessage();
+
+    // When
+    rabbitMqConsumerServiceTest.getMessagesDigitalMediaRelationshipTombstone(List.of(message));
+
+    // Then
+    then(rabbitMqPublisherService).should().deadLetterRawDigitalMediaRelationshipTombstone(message);
+    then(processingService).should().handleMessagesMediaRelationshipTombstone(List.of());
+  }
+
 
   private String givenInvalidMessage() {
     return """

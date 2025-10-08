@@ -1,5 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
@@ -27,7 +29,7 @@ public class MasSchedulerService {
     log.info("Scheduling MASs on {} specimens", recordsToSchedule.size());
     for (var specimenRecord : recordsToSchedule) {
       for (var masId : specimenRecord.masIds()) {
-        publishMas(masId, specimenRecord.id(), MjrTargetType.DIGITAL_SPECIMEN);
+        publishMas(masId, DOI_PROXY + specimenRecord.id(), MjrTargetType.DIGITAL_SPECIMEN);
       }
     }
   }
@@ -37,7 +39,7 @@ public class MasSchedulerService {
     log.info("Scheduling MASs on {} media", recordsToSchedule.size());
     for (var mediaRecord : recordsToSchedule) {
       for (var masId : mediaRecord.masIds()) {
-        publishMas(masId, mediaRecord.id(), MjrTargetType.MEDIA_OBJECT);
+        publishMas(masId, DOI_PROXY + mediaRecord.id(), MjrTargetType.MEDIA_OBJECT);
       }
     }
   }

@@ -5,7 +5,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequestMin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -18,7 +17,6 @@ import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
@@ -216,17 +214,6 @@ class HandleComponentTest {
 
     // Then
     assertDoesNotThrow(() -> handleComponent.rollbackFromPhysId(List.of(PHYSICAL_SPECIMEN_ID)));
-  }
-
-  @Test
-  void testRollbackHandleCreation() {
-    // Given
-    var requestBody = Set.of(HANDLE, SECOND_HANDLE);
-    mockHandleServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.value())
-        .addHeader("Content-Type", "application/json"));
-
-    // Then
-    assertDoesNotThrow(() -> handleComponent.rollbackHandleCreation(requestBody));
   }
 
   @Test

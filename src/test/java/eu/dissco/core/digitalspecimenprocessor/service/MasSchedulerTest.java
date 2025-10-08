@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
@@ -59,8 +60,8 @@ class MasSchedulerTest {
         CREATED,
         givenDigitalSpecimenWrapper(),
         Set.of(MAS),
-        true
-    );
+        true,
+        List.of());
     var specimenProcessResult = new SpecimenProcessResult(
         List.of(forcedRecord), List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
@@ -69,10 +70,10 @@ class MasSchedulerTest {
 
     // Then
     then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MAS, HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
+        MAS, DOI_PREFIX + HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
     ));
     then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
+        MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
     ));
   }
 
@@ -88,7 +89,7 @@ class MasSchedulerTest {
 
     // Then
     then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
+        MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
     ));
     then(publisherService).shouldHaveNoMoreInteractions();
   }
@@ -106,7 +107,7 @@ class MasSchedulerTest {
 
     // Then
     then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MEDIA_MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
+        MEDIA_MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
     ));
     then(publisherService).shouldHaveNoMoreInteractions();
   }
@@ -116,7 +117,7 @@ class MasSchedulerTest {
     // Given
     var forcedRecord = new DigitalMediaRecord(
         HANDLE, MEDIA_URL, 1, CREATED, Set.of(MEDIA_MAS),
-        givenDigitalMedia(MEDIA_URL),
+        givenDigitalMedia(MEDIA_URL, false),
         MAPPER.createObjectNode(), true);
 
     var mediaProcessResult = new MediaProcessResult(
@@ -129,10 +130,10 @@ class MasSchedulerTest {
 
     // Then
     then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MEDIA_MAS, SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
+        MEDIA_MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
     ));
     then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MEDIA_MAS, HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
+        MEDIA_MAS, DOI_PREFIX + HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
     ));
   }
 
