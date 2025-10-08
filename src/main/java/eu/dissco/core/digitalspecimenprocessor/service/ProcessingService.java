@@ -69,35 +69,36 @@ public class ProcessingService {
   private static Map<String, PidProcessResult> updateMediaPidsWithResults(
       SpecimenProcessResult specimenResult, SpecimenPreprocessResult specimenPreprocessResult,
       Map<String, PidProcessResult> mediaPidsFull) {
-        .size())
     if ((specimenResult.updatedDigitalSpecimens().size() + specimenPreprocessResult.newSpecimens()
-        < (specimenPreprocessResult.changedSpecimens().size() + specimenPreprocessResult.newSpecimens().size())) {
-    }
+        .size()) < (specimenPreprocessResult.changedSpecimens().size()
+        + specimenPreprocessResult.newSpecimens().size())) {
       return mediaPidsFull;
+    }
     // If we had a partial success, and not all specimens were created, we don't want to create meaningless ERS on our media
-    var changedSpecimens = Stream.concat(specimenResult.updatedDigitalSpecimens().stream(),
     // So we filter out the specimen PIDs that were not in our results
+    var changedSpecimens = Stream.concat(specimenResult.updatedDigitalSpecimens().stream(),
             specimenResult.newDigitalSpecimens().stream())
         .toList();
-    var mediaPidsFiltered = new HashMap<String, PidProcessResult>();
     var specimenDOIs = changedSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
+    var mediaPidsFiltered = new HashMap<String, PidProcessResult>();
     for (var mediaPid : mediaPidsFull.entrySet()) {
       var relatedDois = mediaPid.getValue().doisOfRelatedObjects().stream().filter(
+          specimenDOIs::contains
+      ).collect(Collectors.toSet());
       mediaPidsFiltered.put(mediaPid.getKey(),
-          specimenDOIs::contains).collect(Collectors.toSet());
           new PidProcessResult(mediaPid.getValue().doiOfTarget(), relatedDois));
     }
     return mediaPidsFiltered;
   }
 
   // Given a specimen PID, links it to the relevant media object
-      Set<String> mediaPidsForThisSpecimen, Map<String, String> allMediaPids, String specimenPid) {
   private static void updateMediaHashMap(HashMap<String, HashSet<String>> mediaHashMap,
+      Set<String> mediaPidsForThisSpecimen, Map<String, String> allMediaPids, String specimenPid) {
     if (mediaPidsForThisSpecimen.isEmpty()) {
       return;
     }
-        .stream()
     allMediaPids.entrySet()
+        .stream()
         .filter(e -> mediaPidsForThisSpecimen.contains(e.getValue())) // Only look at relevant pids
         .forEach(e -> {
           var uri = e.getKey();
@@ -117,14 +118,14 @@ public class ProcessingService {
     ));
     return concatMaps(specimenPreprocessResult.newSpecimenPids(), existingSpecimenPids);
   }
-  private static Map<String, String> concatMediaPids(
 
+  private static Map<String, String> concatMediaPids(
       Map<String, DigitalMediaRecord> existingMedias, Map<String, String> newMediaPids) {
     var existingPidMap = existingMedias.entrySet()
         .stream().collect(toMap(
             Entry::getKey,
-        ));
             e -> e.getValue().id()
+        ));
     return concatMaps(existingPidMap, newMediaPids);
   }
 
@@ -133,24 +134,10 @@ public class ProcessingService {
         m1.entrySet().stream(), m2.entrySet().stream()
     ).collect(toMap(
         Entry::getKey,
-    ));
         Entry::getValue
+    ));
   }
 
-  private static void addToUniqueSets(LinkedHashSet<DigitalSpecimenEvent> uniqueSet,
-    uniqueSet.add(entry);
-      DigitalSpecimenEvent entry, HashSet<String> uniqueMediaSet) {
-    uniqueMediaSet.addAll(entry.digitalMediaEvents().stream()
-        .map(e -> e.digitalMediaWrapper().attributes().getAcAccessURI())
-        .toList());
-  }
-  private static boolean checkIfMediaIsUnique(DigitalSpecimenEvent entry,
-
-      HashSet<String> uniqueMediaSet) {
-    return entry.digitalMediaEvents().stream()
-        .map(e -> e.digitalMediaWrapper().attributes().getAcAccessURI())
-        .noneMatch(uniqueMediaSet::contains);
-  }
 
   private static List<EntityRelationship> removeRelationship(
       DigitalMediaRelationshipTombstoneEvent event,
@@ -160,6 +147,21 @@ public class ProcessingService {
             er -> !er.getOdsRelatedResourceURI().toString().equals(DOI_PROXY + event.specimenDoi()))
         .forEach(newEntityRelationships::add);
     return newEntityRelationships;
+  }
+
+  private static void addToUniqueSets(LinkedHashSet<DigitalSpecimenEvent> uniqueSet,
+      DigitalSpecimenEvent entry, HashSet<String> uniqueMediaSet) {
+    uniqueSet.add(entry);
+    uniqueMediaSet.addAll(entry.digitalMediaEvents().stream()
+        .map(e -> e.digitalMediaWrapper().attributes().getAcAccessURI())
+        .toList());
+  }
+
+  private static boolean checkIfMediaIsUnique(DigitalSpecimenEvent entry,
+      HashSet<String> uniqueMediaSet) {
+    return entry.digitalMediaEvents().stream()
+        .map(e -> e.digitalMediaWrapper().attributes().getAcAccessURI())
+        .noneMatch(uniqueMediaSet::contains);
   }
 
   public SpecimenProcessResult handleMessages(List<DigitalSpecimenEvent> events) {
@@ -365,6 +367,7 @@ public class ProcessingService {
     }
     return new MediaProcessResult(equalMedia, updatedMedia, newMedia);
   }
+
 
   private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(
       List<DigitalSpecimenEvent> events) {

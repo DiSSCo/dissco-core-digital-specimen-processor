@@ -394,8 +394,9 @@ class ProcessingServiceTest {
             givenDigitalMediaRecord(SECOND_HANDLE, MEDIA_URL_ALT, 1)));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true),
         PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of(MEDIA_PID_ALT)));
-    var pidMapMedia = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT,
-        new PidProcessResult(MEDIA_PID_ALT, Set.of(SECOND_HANDLE)));
+    var pidMapMedia = Map.of(MEDIA_URL_ALT,
+        new PidProcessResult(MEDIA_PID_ALT, Set.of(SECOND_HANDLE)), MEDIA_URL,
+        givenPidProcessResultMedia());
 
     // When
     service.handleMessages(List.of(event, event2, event3));
@@ -407,13 +408,14 @@ class ProcessingServiceTest {
             givenDigitalSpecimenEvent(true),
             new DigitalSpecimenEvent(
                 Set.of(MAS),
-                givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
+                givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME,
+                    ORGANISATION_ID, false,
                     true),
                 List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
                 false)), pidMap);
     then(digitalMediaService).should()
         .createNewDigitalMedia(
-            List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent(MEDIA_URL_ALT)), pidMapMedia);
+            List.of(givenDigitalMediaEvent(MEDIA_URL_ALT), givenDigitalMediaEvent()), pidMapMedia);
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
@@ -668,7 +670,8 @@ class ProcessingServiceTest {
 
     // Then
     then(publisherService).should().publishDigitalMediaRelationTombstone(duplicateEvent);
-    then(digitalMediaService).should().updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
+    then(digitalMediaService).should()
+        .updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
   }
 
   @Test
