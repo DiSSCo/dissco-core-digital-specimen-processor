@@ -61,6 +61,7 @@ class MasSchedulerTest {
         givenDigitalSpecimenWrapper(),
         Set.of(MAS),
         true,
+        true,
         List.of());
     var specimenProcessResult = new SpecimenProcessResult(
         List.of(forcedRecord), List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));

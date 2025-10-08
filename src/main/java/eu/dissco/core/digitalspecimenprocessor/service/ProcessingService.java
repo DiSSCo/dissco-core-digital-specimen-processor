@@ -12,8 +12,8 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaPreprocessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
-import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -596,6 +596,7 @@ public class ProcessingService {
               dbRecord.digitalSpecimenWrapper(),
               event.masList(),
               event.forceMasSchedule(),
+              event.isDataFromSourceSystem(),
               List.of());
         })
         .collect(

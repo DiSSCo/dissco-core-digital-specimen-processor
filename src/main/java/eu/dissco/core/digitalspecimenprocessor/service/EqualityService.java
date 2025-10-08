@@ -76,7 +76,8 @@ public class EqualityService {
             digitalSpecimenEvent.digitalSpecimenWrapper().type(),
             digitalSpecimen,
             digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
-        digitalSpecimenEvent.digitalMediaEvents(), digitalSpecimenEvent.forceMasSchedule());
+        digitalSpecimenEvent.digitalMediaEvents(),
+        digitalSpecimenEvent.forceMasSchedule(),
         digitalSpecimenEvent.isDataFromSourceSystem());
   }
 

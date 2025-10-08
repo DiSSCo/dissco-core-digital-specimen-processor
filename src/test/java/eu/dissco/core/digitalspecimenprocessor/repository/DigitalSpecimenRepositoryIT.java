@@ -59,7 +59,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(),
-        null, null,
+        null, null, null,
         List.of());
     repository.createDigitalSpecimenRecord(
         Set.of(
