@@ -69,37 +69,35 @@ public class ProcessingService {
   private static Map<String, PidProcessResult> updateMediaPidsWithResults(
       SpecimenProcessResult specimenResult, SpecimenPreprocessResult specimenPreprocessResult,
       Map<String, PidProcessResult> mediaPidsFull) {
-    if ((specimenResult.updatedDigitalSpecimens().size() + specimenPreprocessResult.newSpecimens()
         .size())
-        < (specimenPreprocessResult.changedSpecimens().size()
-        + specimenPreprocessResult.newSpecimens().size())) {
-      return mediaPidsFull;
+    if ((specimenResult.updatedDigitalSpecimens().size() + specimenPreprocessResult.newSpecimens()
+        < (specimenPreprocessResult.changedSpecimens().size() + specimenPreprocessResult.newSpecimens().size())) {
     }
+      return mediaPidsFull;
     // If we had a partial success, and not all specimens were created, we don't want to create meaningless ERS on our media
-    // So we filter out the specimen PIDs that were not in our results
     var changedSpecimens = Stream.concat(specimenResult.updatedDigitalSpecimens().stream(),
+    // So we filter out the specimen PIDs that were not in our results
             specimenResult.newDigitalSpecimens().stream())
         .toList();
-    var specimenDOIs = changedSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
     var mediaPidsFiltered = new HashMap<String, PidProcessResult>();
+    var specimenDOIs = changedSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
     for (var mediaPid : mediaPidsFull.entrySet()) {
       var relatedDois = mediaPid.getValue().doisOfRelatedObjects().stream().filter(
-          specimenDOIs::contains
-      ).collect(Collectors.toSet());
       mediaPidsFiltered.put(mediaPid.getKey(),
+          specimenDOIs::contains).collect(Collectors.toSet());
           new PidProcessResult(mediaPid.getValue().doiOfTarget(), relatedDois));
     }
     return mediaPidsFiltered;
   }
 
   // Given a specimen PID, links it to the relevant media object
-  private static void updateMediaHashMap(HashMap<String, HashSet<String>> mediaHashMap,
       Set<String> mediaPidsForThisSpecimen, Map<String, String> allMediaPids, String specimenPid) {
+  private static void updateMediaHashMap(HashMap<String, HashSet<String>> mediaHashMap,
     if (mediaPidsForThisSpecimen.isEmpty()) {
       return;
     }
-    allMediaPids.entrySet()
         .stream()
+    allMediaPids.entrySet()
         .filter(e -> mediaPidsForThisSpecimen.contains(e.getValue())) // Only look at relevant pids
         .forEach(e -> {
           var uri = e.getKey();
@@ -119,14 +117,14 @@ public class ProcessingService {
     ));
     return concatMaps(specimenPreprocessResult.newSpecimenPids(), existingSpecimenPids);
   }
-
   private static Map<String, String> concatMediaPids(
+
       Map<String, DigitalMediaRecord> existingMedias, Map<String, String> newMediaPids) {
     var existingPidMap = existingMedias.entrySet()
         .stream().collect(toMap(
             Entry::getKey,
-            e -> e.getValue().id()
         ));
+            e -> e.getValue().id()
     return concatMaps(existingPidMap, newMediaPids);
   }
 
@@ -135,8 +133,23 @@ public class ProcessingService {
         m1.entrySet().stream(), m2.entrySet().stream()
     ).collect(toMap(
         Entry::getKey,
-        Entry::getValue
     ));
+        Entry::getValue
+  }
+
+  private static void addToUniqueSets(LinkedHashSet<DigitalSpecimenEvent> uniqueSet,
+    uniqueSet.add(entry);
+      DigitalSpecimenEvent entry, HashSet<String> uniqueMediaSet) {
+    uniqueMediaSet.addAll(entry.digitalMediaEvents().stream()
+        .map(e -> e.digitalMediaWrapper().attributes().getAcAccessURI())
+        .toList());
+  }
+  private static boolean checkIfMediaIsUnique(DigitalSpecimenEvent entry,
+
+      HashSet<String> uniqueMediaSet) {
+    return entry.digitalMediaEvents().stream()
+        .map(e -> e.digitalMediaWrapper().attributes().getAcAccessURI())
+        .noneMatch(uniqueMediaSet::contains);
   }
 
   private static List<EntityRelationship> removeRelationship(
@@ -152,14 +165,19 @@ public class ProcessingService {
   public SpecimenProcessResult handleMessages(List<DigitalSpecimenEvent> events) {
     log.info("Processing {} digital specimen", events.size());
     try {
-      var uniqueBatchSpecimens = removeDuplicateSpecimensInBatch(events);
-      var uniqueBatchMedia = removeDuplicateMediaInBatch(events.stream().map(
-          DigitalSpecimenEvent::digitalMediaEvents).flatMap(List::stream).toList());
+      var validEvents = checkImageDuplicationSingleSpecimen(events);
+      var uniqueBatchSpecimens = removeDuplicatesInBatch(validEvents);
+      if (uniqueBatchSpecimens.isEmpty()) {
+        log.warn("After removing any non-complaint events, there is nothing to process");
+        return new SpecimenProcessResult();
+      }
+      var uniqueBatchMedia = getUniqueDigitalMediaEvents(uniqueBatchSpecimens);
       var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
       var specimenPreprocessResult = preprocessSpecimens(uniqueBatchSpecimens, existingSpecimens,
           existingMedia);
-      var pids = processPids(specimenPreprocessResult, existingMedia, events, uniqueBatchMedia);
+      var pids = processPids(specimenPreprocessResult, existingMedia, uniqueBatchSpecimens,
+          uniqueBatchMedia);
       var mediaPreprocessResult = preprocessMedia(uniqueBatchMedia, existingMedia, pids.getRight());
       log.info("Batch consists of: {} new, {} update, and {} equal specimens",
           specimenPreprocessResult.newSpecimens().size(),
@@ -180,6 +198,46 @@ public class ProcessingService {
       log.error("Unable to access database", e);
       return new SpecimenProcessResult(List.of(), List.of(), List.of());
     }
+  }
+
+  private Set<DigitalMediaEvent> getUniqueDigitalMediaEvents(
+      Set<DigitalSpecimenEvent> validEvents) {
+    var uniqueBatchMedia = validEvents.stream()
+        .flatMap(event -> event.digitalMediaEvents().stream())
+        .collect(
+            Collectors.toSet());
+    if (uniqueBatchMedia.size() > applicationProperties.getMaxMedia()) {
+      log.error("Too many media in batch. Attempting to publish {} media at once",
+          uniqueBatchMedia.size());
+      throw new TooManyObjectsException(
+          "Attempting to publish too many media objects. Max is 10000");
+    }
+    return uniqueBatchMedia;
+  }
+
+  private List<DigitalSpecimenEvent> checkImageDuplicationSingleSpecimen(
+      List<DigitalSpecimenEvent> events) {
+    var validEvent = new ArrayList<DigitalSpecimenEvent>();
+    for (var event : events) {
+      if (event.digitalMediaEvents().stream()
+          .collect(
+              Collectors.groupingBy(e -> e.digitalMediaWrapper().attributes().getAcAccessURI()))
+          .values()
+          .stream()
+          .anyMatch(e -> e.size() > 1)) {
+        try {
+          log.error(
+              "Found duplicate media in single specimen event for specimen id: {}. Dead lettering event",
+              event.digitalSpecimenWrapper().physicalSpecimenID());
+          publisherService.deadLetterEventSpecimen(event);
+        } catch (JsonProcessingException e) {
+          log.error("Fatal exception, unable to dead letter queue: {}", event, e);
+        }
+      } else {
+        validEvent.add(event);
+      }
+    }
+    return validEvent;
   }
 
   private void scheduleMas(SpecimenProcessResult specimenResult,
@@ -205,7 +263,7 @@ public class ProcessingService {
   private Pair<Map<String, PidProcessResult>, Map<String, PidProcessResult>> processPids(
       SpecimenPreprocessResult specimenPreprocessResult,
       Map<String, DigitalMediaRecord> existingMedias,
-      List<DigitalSpecimenEvent> digitalSpecimenEvents,
+      Set<DigitalSpecimenEvent> digitalSpecimenEvents,
       Set<DigitalMediaEvent> digitalMediaEvents) {
     var specimenPids = new HashMap<String, PidProcessResult>();
     var mediaHashMap = new HashMap<String, HashSet<String>>(); // key = local id
@@ -308,9 +366,10 @@ public class ProcessingService {
     return new MediaProcessResult(equalMedia, updatedMedia, newMedia);
   }
 
-  private Set<DigitalSpecimenEvent> removeDuplicateSpecimensInBatch(
+  private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(
       List<DigitalSpecimenEvent> events) {
     var uniqueSet = new LinkedHashSet<DigitalSpecimenEvent>();
+    var uniqueMediaSet = new HashSet<String>();
     var map = events.stream()
         .collect(
             Collectors.groupingBy(event -> event.digitalSpecimenWrapper().physicalSpecimenID()));
@@ -318,15 +377,20 @@ public class ProcessingService {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicate specimen in batch for id {}", entry.getValue().size(),
             entry.getKey());
-        for (int i = 0; i < entry.getValue().size(); i++) {
-          if (i == 0) {
-            uniqueSet.add(entry.getValue().get(i));
+        var specimenIsNotPublished = true;
+        for (var duplicateSpecimenEvent : entry.getValue()) {
+          if (specimenIsNotPublished && checkIfMediaIsUnique(duplicateSpecimenEvent,
+              uniqueMediaSet)) {
+            addToUniqueSets(uniqueSet, duplicateSpecimenEvent, uniqueMediaSet);
+            specimenIsNotPublished = false;
           } else {
-            republishSpecimenEvent(entry.getValue().get(i));
+            republishSpecimenEvent(duplicateSpecimenEvent);
           }
         }
+      } else if (checkIfMediaIsUnique(entry.getValue().getFirst(), uniqueMediaSet)) {
+        addToUniqueSets(uniqueSet, entry.getValue().getFirst(), uniqueMediaSet);
       } else {
-        uniqueSet.add(entry.getValue().get(0));
+        republishSpecimenEvent(entry.getValue().getFirst());
       }
     }
     return uniqueSet;
@@ -351,7 +415,7 @@ public class ProcessingService {
           }
         }
       } else {
-        uniqueSet.add(entry.getValue().get(0));
+        uniqueSet.add(entry.getValue().getFirst());
       }
     }
     if (uniqueSet.size() > applicationProperties.getMaxMedia()) {
@@ -521,7 +585,8 @@ public class ProcessingService {
               dbRecord.version(),
               dbRecord.created(),
               dbRecord.digitalSpecimenWrapper(),
-              event.masList(), event.forceMasSchedule(),
+              event.masList(),
+              event.forceMasSchedule(),
               List.of());
         })
         .collect(
