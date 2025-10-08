@@ -143,11 +143,9 @@ public class ProcessingService {
       DigitalMediaRelationshipTombstoneEvent event,
       DigitalMedia updatedMedia) {
     var newEntityRelationships = new ArrayList<EntityRelationship>();
-    for (var er : updatedMedia.getOdsHasEntityRelationships()) {
-      if (!er.getOdsRelatedResourceURI().toString().equals(DOI_PROXY + event.specimenDOI())) {
-        newEntityRelationships.add(er);
-      }
-    }
+    updatedMedia.getOdsHasEntityRelationships().stream().filter(
+            er -> !er.getOdsRelatedResourceURI().toString().equals(DOI_PROXY + event.specimenDoi()))
+        .forEach(newEntityRelationships::add);
     return newEntityRelationships;
   }
 
@@ -571,30 +569,30 @@ public class ProcessingService {
     log.info("Processing {} digital media relationship tombstone events", events.size());
     var uniqueEvents = uniqueMediaRelationshipTombstoneEvents(events);
     var mediaDois = uniqueEvents.stream()
-        .map(DigitalMediaRelationshipTombstoneEvent::mediaDOI)
+        .map(DigitalMediaRelationshipTombstoneEvent::mediaDoi)
         .collect(Collectors.toSet());
     var currentDigitalMediaRecords = mediaRepository.getExistingDigitalMediaByDoi(mediaDois)
         .stream()
         .collect(Collectors.toMap(DigitalMediaRecord::id, Function.identity()));
-    var updatedMediaEvent = uniqueEvents.stream()
+    var updatedDigitalMediaTuples = uniqueEvents.stream()
         .map(event -> {
           try {
             return createDigitalMediaEventWithoutER(event, currentDigitalMediaRecords);
           } catch (JsonProcessingException e) {
             log.error("Failed to process media tombstone event for media id {}",
-                event.mediaDOI(), e);
+                event.mediaDoi(), e);
             throw new JsonMappingException(e);
           }
         })
         .filter(Optional::isPresent).map(Optional::get).toList();
-    if (updatedMediaEvent.isEmpty()) {
+    if (updatedDigitalMediaTuples.isEmpty()) {
       log.info("No media relationships to tombstone");
       return;
     }
     log.info("Relationships removed for: {} digital media objects, processing updates",
-        updatedMediaEvent.size());
+        updatedDigitalMediaTuples.size());
     digitalMediaService.updateExistingDigitalMedia(
-        updatedMediaEvent,
+        updatedDigitalMediaTuples,
         false);
   }
 
@@ -602,7 +600,7 @@ public class ProcessingService {
       List<DigitalMediaRelationshipTombstoneEvent> events) {
     var uniqueSet = new LinkedHashSet<DigitalMediaRelationshipTombstoneEvent>();
     var map = events.stream()
-        .collect(Collectors.groupingBy(DigitalMediaRelationshipTombstoneEvent::mediaDOI));
+        .collect(Collectors.groupingBy(DigitalMediaRelationshipTombstoneEvent::mediaDoi));
     for (var entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicate media relationship tombstone events in batch for media id {}",
@@ -633,12 +631,12 @@ public class ProcessingService {
   private Optional<UpdatedDigitalMediaTuple> createDigitalMediaEventWithoutER(
       DigitalMediaRelationshipTombstoneEvent event, Map<String, DigitalMediaRecord> existingMedia)
       throws JsonProcessingException {
-    var currentDigitalMediaRecord = existingMedia.get(event.mediaDOI());
+    var currentDigitalMediaRecord = existingMedia.get(event.mediaDoi());
     var updatedDigitalMediaEvent = generatedUpdatedMediaEvent(event, currentDigitalMediaRecord);
     if (Objects.equals(currentDigitalMediaRecord.attributes(),
         updatedDigitalMediaEvent.digitalMediaWrapper().attributes())) {
       log.warn("No change in digital media: {} after removing relationship to specimen {}",
-          event.mediaDOI(), event.specimenDOI());
+          event.mediaDoi(), event.specimenDoi());
       return Optional.empty();
     }
     return Optional.of(

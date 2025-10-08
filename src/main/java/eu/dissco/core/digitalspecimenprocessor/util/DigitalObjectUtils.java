@@ -24,7 +24,7 @@ public class DigitalObjectUtils {
   private DigitalObjectUtils() {
   }
 
-  public static String getIdforUri(URI uri) {
+  public static String getIdForUri(URI uri) {
     return uri.toString().replace(DOI_PROXY, "");
   }
 

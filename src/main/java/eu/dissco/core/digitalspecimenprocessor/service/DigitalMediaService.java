@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.getIdForUri;
 import static java.util.stream.Collectors.toSet;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
@@ -301,7 +302,7 @@ public class DigitalMediaService {
       updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
           .tombstonedRelationships().stream().map(
               EntityRelationship::getOdsRelatedResourceURI)
-          .map(uri -> new DigitalMediaRelationshipTombstoneEvent(updatedDigitalSpecimenTuple.currentSpecimen().id(), DigitalObjectUtils.getIdforUri(uri))).forEach(
+          .map(uri -> new DigitalMediaRelationshipTombstoneEvent(updatedDigitalSpecimenTuple.currentSpecimen().id(), getIdForUri(uri))).forEach(
               event -> {
                 try {
                   publisherService.publishDigitalMediaRelationTombstone(event);
