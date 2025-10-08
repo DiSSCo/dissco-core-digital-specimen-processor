@@ -419,7 +419,7 @@ class ProcessingServiceTest {
                 false, true)), pidMap);
     then(digitalMediaService).should()
         .createNewDigitalMedia(
-            List.of(givenDigitalMediaEvent(MEDIA_URL_ALT), givenDigitalMediaEvent()), pidMapMedia);
+            List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent(MEDIA_URL_ALT)), pidMapMedia);
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
