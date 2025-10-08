@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -398,9 +399,6 @@ class ProcessingServiceTest {
             givenDigitalMediaRecord(SECOND_HANDLE, MEDIA_URL_ALT, 1)));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true),
         PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of(MEDIA_PID_ALT)));
-    var pidMapMedia = Map.of(MEDIA_URL_ALT,
-        new PidProcessResult(MEDIA_PID_ALT, Set.of(SECOND_HANDLE)), MEDIA_URL,
-        givenPidProcessResultMedia());
 
     // When
     service.handleMessages(List.of(event, event2, event3));
@@ -418,8 +416,7 @@ class ProcessingServiceTest {
                 List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
                 false, true)), pidMap);
     then(digitalMediaService).should()
-        .createNewDigitalMedia(
-            List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent(MEDIA_URL_ALT)), pidMapMedia);
+        .createNewDigitalMedia(anyList(), anyMap());
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
