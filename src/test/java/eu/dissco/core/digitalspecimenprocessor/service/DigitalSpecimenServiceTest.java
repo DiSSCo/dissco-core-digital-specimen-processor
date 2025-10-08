@@ -1,8 +1,17 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
+import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
+import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
@@ -12,6 +21,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenTuple;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,15 +35,20 @@ import static org.mockito.Mockito.mockStatic;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.io.IOException;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,6 +83,8 @@ class DigitalSpecimenServiceTest {
   private MidsService midsService;
   @Mock
   private BulkResponse bulkResponse;
+  @Mock
+  private DigitalMediaService digitalMediaService;
   private static MockedStatic<Instant> mockedInstant;
   private static MockedStatic<Clock> mockedClock;
 
@@ -77,7 +94,7 @@ class DigitalSpecimenServiceTest {
   void setUp() {
     digitalSpecimenService = new DigitalSpecimenService(repository, rollbackService,
         elasticRepository, fdoRecordService, publisherService, handleComponent,
-        annotationPublisherService, midsService, MAPPER);
+        annotationPublisherService, midsService, MAPPER, digitalMediaService);
   }
 
   @BeforeAll
@@ -277,6 +294,43 @@ class DigitalSpecimenServiceTest {
     // Then
     assertThat(result).isEqualTo(Set.of(expectedRecord));
     then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(publisherService).should()
+        .publishUpdateEventSpecimen(eq(expectedRecord), any());
+    then(rollbackService).shouldHaveNoInteractions();
+    then(handleComponent).should().updateHandle(any());
+  }
+
+  @Test
+  void testUpdatedSpecimenMediaERTombstone() throws Exception {
+    // Given
+    var tuple = new UpdatedDigitalSpecimenTuple(
+        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, true),
+        givenDigitalSpecimenEvent(false),
+        new MediaRelationshipProcessResult(
+        List.of(new EntityRelationship()
+            .withType("ods:EntityRelationship")
+            .withDwcRelationshipOfResource("hasDigitalSpecimen")
+            .withDwcRelationshipEstablishedDate(Date.from(CREATED))
+            .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
+            .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
+            .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
+                PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
+        List.of(),
+        List.of()));
+    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+    var expectedRecord = givenDigitalSpecimenRecord(2, false);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
+    given(midsService.calculateMids(any())).willReturn(1);
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
+
+    // When
+    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+
+    // Then
+    assertThat(result).isEqualTo(Set.of(expectedRecord));
+    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(digitalMediaService).should().tombstoneSpecimenRelations(List.of(tuple));
     then(publisherService).should()
         .publishUpdateEventSpecimen(eq(expectedRecord), any());
     then(rollbackService).shouldHaveNoInteractions();

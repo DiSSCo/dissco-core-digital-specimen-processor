@@ -24,6 +24,10 @@ public class DigitalObjectUtils {
   private DigitalObjectUtils() {
   }
 
+  public static String getIdForUri(URI uri) {
+    return uri.toString().replace(DOI_PROXY, "");
+  }
+
   public static DigitalSpecimen flattenToDigitalSpecimen(
       DigitalSpecimenRecord digitalSpecimenrecord) {
     var digitalSpecimen = digitalSpecimenrecord.digitalSpecimenWrapper().attributes();
@@ -52,7 +56,7 @@ public class DigitalObjectUtils {
         .withDwcRelationshipOfResource(relationshipType)
         .withOdsHasAgents(List.of(AgentUtils.createMachineAgent(applicationProperties.getName(),
             applicationProperties.getPid(), PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))
-        .withDwcRelatedResourceID(relatedResourceId)
+        .withDwcRelatedResourceID(DOI_PROXY + relatedResourceId)
         .withOdsRelatedResourceURI(URI.create(DOI_PROXY + relatedResourceId));
   }
 
