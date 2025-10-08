@@ -60,7 +60,6 @@ import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
-import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.net.URI;
 import java.time.Clock;
@@ -316,13 +315,13 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
@@ -364,19 +363,19 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     var event3 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
-        false);
+        false, true);
     given(specimenRepository.getDigitalSpecimens(
         List.of(PHYSICAL_SPECIMEN_ID, PHYSICAL_SPECIMEN_ID_ALT))).willReturn(
         List.of());
@@ -416,7 +415,7 @@ class ProcessingServiceTest {
                     ORGANISATION_ID, false,
                     true),
                 List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
-                false)), pidMap);
+                false, true)), pidMap);
     then(digitalMediaService).should()
         .createNewDigitalMedia(
             List.of(givenDigitalMediaEvent(MEDIA_URL_ALT), givenDigitalMediaEvent()), pidMapMedia);
