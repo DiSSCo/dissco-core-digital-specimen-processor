@@ -269,7 +269,7 @@ public class DigitalSpecimenService {
         Instant.now(),
         determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap,
             new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
-        event.masList(), event.forceMasSchedule(),
+        event.masList(), event.forceMasSchedule(), event.isDataFromSourceSystem(),
         event.digitalMediaEvents());
   }
 
@@ -297,6 +297,7 @@ public class DigitalSpecimenService {
                   updateTuple.mediaRelationshipProcessResult()),
               updateTuple.digitalSpecimenEvent().masList(),
               updateTuple.digitalSpecimenEvent().forceMasSchedule(),
+              updateTuple.digitalSpecimenEvent().isDataFromSourceSystem(),
               updateTuple.digitalSpecimenEvent().digitalMediaEvents());
           return new UpdatedDigitalSpecimenRecord(
               digitalSpecimenRecord,
@@ -306,7 +307,8 @@ public class DigitalSpecimenService {
                   updateTuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
                   updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
               updateTuple.digitalSpecimenEvent().digitalMediaEvents(),
-              updateTuple.mediaRelationshipProcessResult());
+              updateTuple.mediaRelationshipProcessResult(),
+              updateTuple.digitalSpecimenEvent().isDataFromSourceSystem());
         }
     ).collect(Collectors.toSet());
   }

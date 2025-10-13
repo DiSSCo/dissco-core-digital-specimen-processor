@@ -200,7 +200,8 @@ public class RollbackService {
         digitalSpecimenRecord.masIds(),
         digitalSpecimenRecord.digitalSpecimenWrapper(),
         digitalSpecimenRecord.digitalMediaEvents(),
-        digitalSpecimenRecord.forceMasSchedule()
+        digitalSpecimenRecord.forceMasSchedule(),
+        digitalSpecimenRecord.isDataFromSourceSystem()
     );
   }
 

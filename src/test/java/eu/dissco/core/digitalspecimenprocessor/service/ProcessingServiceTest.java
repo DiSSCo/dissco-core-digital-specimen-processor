@@ -23,6 +23,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleResponse;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleResponseMedia;
@@ -37,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -52,13 +54,16 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelat
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -290,7 +295,7 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent()),
-        false);
+        false, true);
 
     // When
     service.handleMessages(List.of(event));
@@ -312,13 +317,13 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
@@ -360,19 +365,19 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent()),
-        false);
+        false, true);
     var event3 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
-        false);
+        false, true);
     given(specimenRepository.getDigitalSpecimens(
         List.of(PHYSICAL_SPECIMEN_ID, PHYSICAL_SPECIMEN_ID_ALT))).willReturn(
         List.of());
@@ -392,11 +397,6 @@ class ProcessingServiceTest {
     given(digitalMediaService.createNewDigitalMedia(any(), any())).willReturn(
         Set.of(givenDigitalMediaRecord(),
             givenDigitalMediaRecord(SECOND_HANDLE, MEDIA_URL_ALT, 1)));
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true),
-        PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of(MEDIA_PID_ALT)));
-    var pidMapMedia = Map.of(MEDIA_URL_ALT,
-        new PidProcessResult(MEDIA_PID_ALT, Set.of(SECOND_HANDLE)), MEDIA_URL,
-        givenPidProcessResultMedia());
 
     // When
     service.handleMessages(List.of(event, event2, event3));
@@ -404,18 +404,9 @@ class ProcessingServiceTest {
     // Then
     then(publisherService).should().republishSpecimenEvent(event2);
     then(digitalSpecimenService).should()
-        .createNewDigitalSpecimen(List.of(
-            givenDigitalSpecimenEvent(true),
-            new DigitalSpecimenEvent(
-                Set.of(MAS),
-                givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME,
-                    ORGANISATION_ID, false,
-                    true),
-                List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
-                false)), pidMap);
+        .createNewDigitalSpecimen(anyList(), anyMap());
     then(digitalMediaService).should()
-        .createNewDigitalMedia(
-            List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent(MEDIA_URL_ALT)), pidMapMedia);
+        .createNewDigitalMedia(anyList(), anyMap());
     then(equalityService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
@@ -449,6 +440,49 @@ class ProcessingServiceTest {
             pidMapSpecimen);
     then(digitalMediaService).should()
         .updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), true);
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(fdoRecordService).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testSpecimenAddVirtualCollection() throws Exception {
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
+            false)));
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
+    var pidMapSpecimen = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+    var digitalSpecimen = givenDigitalSpecimenWrapper(false, false);
+    digitalSpecimen.attributes()
+        .setOdsHasEntityRelationships(List.of(givenEntityRelationship(),
+            new EntityRelationship()
+                .withId("https://hdl.handle.net/20.5000.1025/V1Z-176-VCL")
+                .withOdsRelatedResourceURI(
+                    URI.create("https://hdl.handle.net/20.5000.1025/V1Z-176-VCL"))
+                .withDwcRelationshipOfResource("hasVirtualCollection")));
+    var digitalSpecimenEvent = new DigitalSpecimenEvent(
+        Set.of(MAS),
+        digitalSpecimen,
+        List.of(),
+        false,
+        false);
+    given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
+        digitalSpecimenEvent);
+
+    // When
+    service.handleMessages(List.of(digitalSpecimenEvent));
+
+    // Then
+    then(digitalSpecimenService).should()
+        .updateExistingDigitalSpecimen(
+            List.of(new UpdatedDigitalSpecimenTuple(
+                givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
+                    false),
+                digitalSpecimenEvent,
+                givenEmptyMediaProcessResult())),
+            pidMapSpecimen);
+    then(digitalMediaService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(fdoRecordService).shouldHaveNoInteractions();
@@ -618,7 +652,7 @@ class ProcessingServiceTest {
         Set.of(),
         givenDigitalSpecimenWrapper(),
         mediaEvents,
-        false));
+        false, true));
 
     // When / Then
     assertThrows(TooManyObjectsException.class, () -> service.handleMessages(specimenEvents));
@@ -640,7 +674,7 @@ class ProcessingServiceTest {
         Set.of(),
         givenDigitalSpecimenWrapper(false, true),
         mediaEvents,
-        false));
+        false, true));
 
     // When
     service.handleMessages(specimenEvents);

@@ -206,7 +206,7 @@ class DigitalSpecimenServiceTest {
   void testNewSpecimenElasticPartiallyFails() throws Exception {
     // Given
     var events = List.of(givenDigitalSpecimenEvent(),
-        givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false));
+        givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false, true));
     var records = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false),
         givenDigitalSpecimenRecord());
     var expected = Set.of(givenDigitalSpecimenRecord());
@@ -235,7 +235,7 @@ class DigitalSpecimenServiceTest {
     var failedRecord = givenDigitalSpecimenRecord();
     var expectedRecord = givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false);
     var events = List.of(givenDigitalSpecimenEvent(),
-        givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false));
+        givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false, true));
     var records = Set.of(expectedRecord, failedRecord);
     var pidMap = Map.of(
         PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false),

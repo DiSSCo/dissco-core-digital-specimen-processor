@@ -76,7 +76,9 @@ public class EqualityService {
             digitalSpecimenEvent.digitalSpecimenWrapper().type(),
             digitalSpecimen,
             digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
-        digitalSpecimenEvent.digitalMediaEvents(), digitalSpecimenEvent.forceMasSchedule());
+        digitalSpecimenEvent.digitalMediaEvents(),
+        digitalSpecimenEvent.forceMasSchedule(),
+        digitalSpecimenEvent.isDataFromSourceSystem());
   }
 
   public DigitalMediaEvent setExistingEventDatesMedia(
@@ -190,7 +192,7 @@ public class EqualityService {
   public JsonNode removeGeneratedTimestamps(JsonNode node) {
     if (node.isObject()) {
       ObjectNode result = mapper.createObjectNode();
-      node.fields().forEachRemaining(entry -> {
+      node.properties().forEach(entry -> {
         if (!IGNORED_FIELDS.contains(entry.getKey())) {
           result.set(entry.getKey(), removeGeneratedTimestamps(entry.getValue()));
         }

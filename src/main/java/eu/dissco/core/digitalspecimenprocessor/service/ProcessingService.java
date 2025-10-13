@@ -13,6 +13,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaPreprocessResul
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -333,7 +334,7 @@ public class ProcessingService {
             digitalSpecimenService.createNewDigitalSpecimen(specimenPreprocessResult.newSpecimens(),
                 pidProcessResults));
       } else {
-        log.warn("Unable to create new specimen pids for {} speicmens. Ignoring new specimens",
+        log.warn("Unable to create new specimen pids for {} specimens. Ignoring new specimens",
             specimenPreprocessResult.newSpecimens().size());
       }
     }
@@ -447,8 +448,13 @@ public class ProcessingService {
       } else {
         var currentDigitalSpecimen = currentSpecimens.get(
             digitalSpecimenWrapper.physicalSpecimenID());
-        var processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
-            currentSpecimens, event, currentMedia);
+        MediaRelationshipProcessResult processedMediaRelationships;
+        if (event.isDataFromSourceSystem().booleanValue()) {
+          processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
+              currentSpecimens, event, currentMedia);
+        } else {
+          processedMediaRelationships = new MediaRelationshipProcessResult();
+        }
         if (equalityService.specimensAreEqual(currentDigitalSpecimen,
             digitalSpecimenWrapper, processedMediaRelationships)) {
           log.debug("Received digital specimen is equal to digital specimen: {}",
@@ -589,7 +595,8 @@ public class ProcessingService {
               dbRecord.created(),
               dbRecord.digitalSpecimenWrapper(),
               event.masList(),
-              event.forceMasSchedule(),
+              dbRecord.forceMasSchedule(),
+              dbRecord.isDataFromSourceSystem(),
               List.of());
         })
         .collect(

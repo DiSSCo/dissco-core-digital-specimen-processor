@@ -427,4 +427,20 @@ class DigitalMediaServiceTest {
     then(publisherService).should().publishDigitalMediaRelationTombstone(expected);
   }
 
+  @Test
+  void testNoTombstoneSpecimenRelations() {
+    // Given
+    var tuple = new UpdatedDigitalSpecimenTuple(
+        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
+        givenDigitalSpecimenEvent(true),
+        new MediaRelationshipProcessResult());
+
+    // When
+    mediaService.tombstoneSpecimenRelations(List.of(tuple));
+
+    // Then
+    then(repository).shouldHaveNoInteractions();
+    then(publisherService).shouldHaveNoInteractions();
+  }
+
 }
