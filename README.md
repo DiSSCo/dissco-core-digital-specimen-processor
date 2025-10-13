@@ -55,6 +55,7 @@ When only the Digital Specimen is updated, for example when a Virtual Collection
 This indicates that it should ignore any changes in the `digitalMediaEvents` as the DigitalMedia are not included in the message.
 It will keep the existing EntityRelationships to any digital media (if the ERs are in the provided digitalSpecimen) and will only check the specimen info for equality.
 When this property is `true` and the media are not attached it will remove all relationships as it assumes the media have been removed.
+If the Digital Specimen has been updated we will increment the version and update the `lastModified` timestamp.
 
 ## Equal digital specimen
 When the stored digital specimen and the received digital specimen are equal, we will only update the `last_checked` timestamp.
