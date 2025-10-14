@@ -595,8 +595,8 @@ public class ProcessingService {
               dbRecord.created(),
               dbRecord.digitalSpecimenWrapper(),
               event.masList(),
-              dbRecord.forceMasSchedule(),
-              dbRecord.isDataFromSourceSystem(),
+              event.forceMasSchedule(),
+              event.isDataFromSourceSystem(),
               List.of());
         })
         .collect(
