@@ -478,7 +478,7 @@ class ProcessingServiceTest {
         .updateExistingDigitalSpecimen(
             List.of(new UpdatedDigitalSpecimenTuple(
                 givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
-                    false),
+                    false, false),
                 digitalSpecimenEvent,
                 givenEmptyMediaProcessResult())),
             pidMapSpecimen);

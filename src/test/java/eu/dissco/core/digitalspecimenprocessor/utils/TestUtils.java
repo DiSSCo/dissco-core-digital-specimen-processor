@@ -206,13 +206,20 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String handle,
-      String specimenName, String organisation, boolean hasMedia) {
+      String specimenName, String organisation, boolean hasMedia, boolean isDataFromSourceSystem) {
     return givenUnequalDigitalSpecimenRecord(handle, specimenName, organisation, hasMedia,
-        PHYSICAL_SPECIMEN_ID);
+        PHYSICAL_SPECIMEN_ID, isDataFromSourceSystem);
   }
 
   public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String handle,
-      String specimenName, String organisation, boolean hasMedia, String physicalSpecimenId) {
+      String specimenName, String organisation, boolean hasMedia) {
+    return givenUnequalDigitalSpecimenRecord(handle, specimenName, organisation, hasMedia,
+        PHYSICAL_SPECIMEN_ID, true);
+  }
+
+  public static DigitalSpecimenRecord givenUnequalDigitalSpecimenRecord(String handle,
+      String specimenName, String organisation, boolean hasMedia, String physicalSpecimenId,
+      boolean isDataFromSourceSystem) {
     return new DigitalSpecimenRecord(
         handle,
         MIDS_LEVEL,
@@ -220,7 +227,9 @@ public class TestUtils {
         CREATED,
         givenDigitalSpecimenWrapper(physicalSpecimenId, specimenName, organisation, false,
             hasMedia),
-        Set.of(MAS), false, true,
+        Set.of(MAS),
+        false,
+        isDataFromSourceSystem,
         List.of());
   }
 
