@@ -524,12 +524,13 @@ class RollbackServiceTest {
     // Given
     var successfulRecord = givenUpdatedDigitalSpecimenRecord(false);
     var failedRecord = new UpdatedDigitalSpecimenRecord(
-        givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT),
+        givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT, true),
         Set.of(MAS),
         givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false),
         givenJsonPatchSpecimen(),
         List.of(),
-        givenEmptyMediaProcessResult());
+        givenEmptyMediaProcessResult(),
+        true);
     givenBulkResponse(HANDLE, SECOND_HANDLE);
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
 
@@ -552,12 +553,13 @@ class RollbackServiceTest {
     // Given
     var successfulRecord = givenUpdatedDigitalSpecimenRecord(false);
     var failedRecord = new UpdatedDigitalSpecimenRecord(
-        givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT),
+        givenUnequalDigitalSpecimenRecord(SECOND_HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false, PHYSICAL_SPECIMEN_ID_ALT, true),
         Set.of(MAS),
         givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false),
         givenJsonPatchSpecimen(),
         List.of(),
-        givenEmptyMediaProcessResult());
+        givenEmptyMediaProcessResult(),
+        true);
     givenBulkResponse(HANDLE, SECOND_HANDLE);
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(false);
     doThrow(JsonProcessingException.class).when(rabbitMqService).publishUpdateEventSpecimen(any(), any());

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class MavenRunner {
 
   private static String downloadSchema(String schemaUrl) throws IOException {
     StringBuilder result = new StringBuilder();
-    URL url = new URL(schemaUrl);
+    URL url = URI.create(schemaUrl).toURL();
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod(RequestMethod.GET.name());
     try (BufferedReader reader = new BufferedReader(

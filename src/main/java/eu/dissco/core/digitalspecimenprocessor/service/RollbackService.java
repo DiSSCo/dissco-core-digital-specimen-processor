@@ -186,7 +186,7 @@ public class RollbackService {
     return new DigitalMediaEvent(
         digitalMediaRecord.masIds(),
         new DigitalMediaWrapper(
-            digitalMediaRecord.attributes().getType(),
+            digitalMediaRecord.attributes().getOdsFdoType(),
             digitalMediaRecord.attributes(),
             digitalMediaRecord.originalAttributes()
         ),
@@ -200,7 +200,8 @@ public class RollbackService {
         digitalSpecimenRecord.masIds(),
         digitalSpecimenRecord.digitalSpecimenWrapper(),
         digitalSpecimenRecord.digitalMediaEvents(),
-        digitalSpecimenRecord.forceMasSchedule()
+        digitalSpecimenRecord.forceMasSchedule(),
+        digitalSpecimenRecord.isDataFromSourceSystem()
     );
   }
 

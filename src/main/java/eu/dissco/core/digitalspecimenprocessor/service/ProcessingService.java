@@ -1,14 +1,19 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 import static java.util.stream.Collectors.toMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaPreprocessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -16,13 +21,17 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenPreproces
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
+import eu.dissco.core.digitalspecimenprocessor.exception.JsonMappingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
+import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -30,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -44,6 +54,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ProcessingService {
 
+  private final ObjectMapper objectMapper;
   private final DigitalSpecimenRepository repository;
   private final DigitalMediaRepository mediaRepository;
   private final DigitalSpecimenService digitalSpecimenService;
@@ -60,8 +71,8 @@ public class ProcessingService {
       SpecimenProcessResult specimenResult, SpecimenPreprocessResult specimenPreprocessResult,
       Map<String, PidProcessResult> mediaPidsFull) {
     if ((specimenResult.updatedDigitalSpecimens().size() + specimenPreprocessResult.newSpecimens()
-        .size())
-        < (specimenPreprocessResult.changedSpecimens().size() + specimenPreprocessResult.newSpecimens().size())) {
+        .size()) < (specimenPreprocessResult.changedSpecimens().size()
+        + specimenPreprocessResult.newSpecimens().size())) {
       return mediaPidsFull;
     }
     // If we had a partial success, and not all specimens were created, we don't want to create meaningless ERS on our media
@@ -73,7 +84,8 @@ public class ProcessingService {
     var mediaPidsFiltered = new HashMap<String, PidProcessResult>();
     for (var mediaPid : mediaPidsFull.entrySet()) {
       var relatedDois = mediaPid.getValue().doisOfRelatedObjects().stream().filter(
-          specimenDOIs::contains).collect(Collectors.toSet());
+          specimenDOIs::contains
+      ).collect(Collectors.toSet());
       mediaPidsFiltered.put(mediaPid.getKey(),
           new PidProcessResult(mediaPid.getValue().doiOfTarget(), relatedDois));
     }
@@ -125,6 +137,17 @@ public class ProcessingService {
         Entry::getKey,
         Entry::getValue
     ));
+  }
+
+
+  private static List<EntityRelationship> removeRelationship(
+      DigitalMediaRelationshipTombstoneEvent event,
+      DigitalMedia updatedMedia) {
+    var newEntityRelationships = new ArrayList<EntityRelationship>();
+    updatedMedia.getOdsHasEntityRelationships().stream().filter(
+            er -> !er.getOdsRelatedResourceURI().toString().equals(DOI_PROXY + event.specimenDoi()))
+        .forEach(newEntityRelationships::add);
+    return newEntityRelationships;
   }
 
   private static void addToUniqueSets(LinkedHashSet<DigitalSpecimenEvent> uniqueSet,
@@ -311,7 +334,7 @@ public class ProcessingService {
             digitalSpecimenService.createNewDigitalSpecimen(specimenPreprocessResult.newSpecimens(),
                 pidProcessResults));
       } else {
-        log.warn("Unable to create new specimen pids for {} speicmens. Ignoring new specimens",
+        log.warn("Unable to create new specimen pids for {} specimens. Ignoring new specimens",
             specimenPreprocessResult.newSpecimens().size());
       }
     }
@@ -339,11 +362,13 @@ public class ProcessingService {
     if (!mediaPreprocessResult.changedDigitalMedia().isEmpty()) {
       updatedMedia = new ArrayList<>(
           digitalMediaService.updateExistingDigitalMedia(
-              mediaPreprocessResult.changedDigitalMedia()
+              mediaPreprocessResult.changedDigitalMedia(),
+              true
           ));
     }
     return new MediaProcessResult(equalMedia, updatedMedia, newMedia);
   }
+
 
   private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(
       List<DigitalSpecimenEvent> events) {
@@ -423,8 +448,13 @@ public class ProcessingService {
       } else {
         var currentDigitalSpecimen = currentSpecimens.get(
             digitalSpecimenWrapper.physicalSpecimenID());
-        var processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
-            currentSpecimens, event, currentMedia);
+        MediaRelationshipProcessResult processedMediaRelationships;
+        if (event.isDataFromSourceSystem().booleanValue()) {
+          processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
+              currentSpecimens, event, currentMedia);
+        } else {
+          processedMediaRelationships = new MediaRelationshipProcessResult();
+        }
         if (equalityService.specimensAreEqual(currentDigitalSpecimen,
             digitalSpecimenWrapper, processedMediaRelationships)) {
           log.debug("Received digital specimen is equal to digital specimen: {}",
@@ -496,7 +526,6 @@ public class ProcessingService {
     return Map.of();
   }
 
-
   private MediaPreprocessResult preprocessMedia(Set<DigitalMediaEvent> events,
       Map<String, DigitalMediaRecord> currentDigitalMedias, Map<String, PidProcessResult> pidMap) {
     var equalDigitalMedia = new ArrayList<DigitalMediaRecord>();
@@ -567,6 +596,7 @@ public class ProcessingService {
               dbRecord.digitalSpecimenWrapper(),
               event.masList(),
               event.forceMasSchedule(),
+              event.isDataFromSourceSystem(),
               List.of());
         })
         .collect(
@@ -607,6 +637,102 @@ public class ProcessingService {
           ));
     }
     return Map.of();
+  }
+
+  public void handleMessagesMediaRelationshipTombstone(
+      List<DigitalMediaRelationshipTombstoneEvent> events) {
+    log.info("Processing {} digital media relationship tombstone events", events.size());
+    var uniqueEvents = uniqueMediaRelationshipTombstoneEvents(events);
+    var mediaDois = uniqueEvents.stream()
+        .map(DigitalMediaRelationshipTombstoneEvent::mediaDoi)
+        .collect(Collectors.toSet());
+    var currentDigitalMediaRecords = mediaRepository.getExistingDigitalMediaByDoi(mediaDois)
+        .stream()
+        .collect(Collectors.toMap(DigitalMediaRecord::id, Function.identity()));
+    var updatedDigitalMediaTuples = uniqueEvents.stream()
+        .map(event -> {
+          try {
+            return createDigitalMediaEventWithoutER(event, currentDigitalMediaRecords);
+          } catch (JsonProcessingException e) {
+            log.error("Failed to process media tombstone event for media id {}",
+                event.mediaDoi(), e);
+            throw new JsonMappingException(e);
+          }
+        })
+        .filter(Optional::isPresent).map(Optional::get).toList();
+    if (updatedDigitalMediaTuples.isEmpty()) {
+      log.info("No media relationships to tombstone");
+      return;
+    }
+    log.info("Relationships removed for: {} digital media objects, processing updates",
+        updatedDigitalMediaTuples.size());
+    digitalMediaService.updateExistingDigitalMedia(
+        updatedDigitalMediaTuples,
+        false);
+  }
+
+  private List<DigitalMediaRelationshipTombstoneEvent> uniqueMediaRelationshipTombstoneEvents(
+      List<DigitalMediaRelationshipTombstoneEvent> events) {
+    var uniqueSet = new LinkedHashSet<DigitalMediaRelationshipTombstoneEvent>();
+    var map = events.stream()
+        .collect(Collectors.groupingBy(DigitalMediaRelationshipTombstoneEvent::mediaDoi));
+    for (var entry : map.entrySet()) {
+      if (entry.getValue().size() > 1) {
+        log.warn("Found {} duplicate media relationship tombstone events in batch for media id {}",
+            entry.getValue().size(), entry.getKey());
+        for (int i = 0; i < entry.getValue().size(); i++) {
+          if (i == 0) {
+            uniqueSet.add(entry.getValue().get(i));
+          } else {
+            republishMediaRelationshipTombstoneEvent(entry.getValue().get(i));
+          }
+        }
+      } else {
+        uniqueSet.add(entry.getValue().getFirst());
+      }
+    }
+    return new ArrayList<>(uniqueSet);
+  }
+
+  private void republishMediaRelationshipTombstoneEvent(
+      DigitalMediaRelationshipTombstoneEvent event) {
+    try {
+      publisherService.publishDigitalMediaRelationTombstone(event);
+    } catch (JsonProcessingException e) {
+      log.error("Fatal exception, unable to republish specimen message due to invalid json", e);
+    }
+  }
+
+  private Optional<UpdatedDigitalMediaTuple> createDigitalMediaEventWithoutER(
+      DigitalMediaRelationshipTombstoneEvent event, Map<String, DigitalMediaRecord> existingMedia)
+      throws JsonProcessingException {
+    var currentDigitalMediaRecord = existingMedia.get(event.mediaDoi());
+    var updatedDigitalMediaEvent = generatedUpdatedMediaEvent(event, currentDigitalMediaRecord);
+    if (Objects.equals(currentDigitalMediaRecord.attributes(),
+        updatedDigitalMediaEvent.digitalMediaWrapper().attributes())) {
+      log.warn("No change in digital media: {} after removing relationship to specimen {}",
+          event.mediaDoi(), event.specimenDoi());
+      return Optional.empty();
+    }
+    return Optional.of(
+        new UpdatedDigitalMediaTuple(currentDigitalMediaRecord, updatedDigitalMediaEvent,
+            Collections.emptySet()));
+  }
+
+  private DigitalMediaEvent generatedUpdatedMediaEvent(DigitalMediaRelationshipTombstoneEvent event,
+      DigitalMediaRecord currentDigitalMediaRecord) throws JsonProcessingException {
+    var updatedDigitalMediaAttributes = deepCopy(currentDigitalMediaRecord.attributes());
+    updatedDigitalMediaAttributes.setOdsHasEntityRelationships(
+        removeRelationship(event, updatedDigitalMediaAttributes));
+    return new DigitalMediaEvent(Collections.emptySet(),
+        new DigitalMediaWrapper(updatedDigitalMediaAttributes.getOdsFdoType(),
+            updatedDigitalMediaAttributes, objectMapper.createObjectNode()), false);
+  }
+
+  private DigitalMedia deepCopy(DigitalMedia currentDigitalMedia)
+      throws JsonProcessingException {
+    return objectMapper
+        .readValue(objectMapper.writeValueAsString(currentDigitalMedia), DigitalMedia.class);
   }
 
 }

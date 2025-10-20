@@ -30,14 +30,14 @@ public class DigitalMediaRepository {
     return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
         .from(DIGITAL_MEDIA_OBJECT)
         .where(DIGITAL_MEDIA_OBJECT.MEDIA_URL.in(mediaURIs))
-        .fetch(this::mapDigitalMedia);
+        .fetch(this::mapToDigitalMediaRecord);
   }
 
   public void rollBackDigitalMedia(String id) {
     context.delete(DIGITAL_MEDIA_OBJECT).where(DIGITAL_MEDIA_OBJECT.ID.eq(id)).execute();
   }
 
-  private DigitalMediaRecord mapDigitalMedia(Record dbRecord) {
+  private DigitalMediaRecord mapToDigitalMediaRecord(Record dbRecord) {
     try {
       return new DigitalMediaRecord(
           dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),
@@ -97,4 +97,11 @@ public class DigitalMediaRepository {
         .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now());
   }
 
+  public List<DigitalMediaRecord> getExistingDigitalMediaByDoi(
+      Set<String> tombstonedDigitalSpecimenToDigitalMediaRelationship) {
+    return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+        .from(DIGITAL_MEDIA_OBJECT)
+        .where(DIGITAL_MEDIA_OBJECT.ID.in(tombstonedDigitalSpecimenToDigitalMediaRelationship))
+        .fetch(this::mapToDigitalMediaRecord);
+  }
 }
