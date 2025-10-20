@@ -5,6 +5,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
@@ -14,6 +15,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_S
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
@@ -47,7 +49,9 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
@@ -620,7 +624,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testHandleMessagesMediaEqualDuplicates() throws Exception {
+  void testHandleMessagesMediaEqualDuplicatesNoChanges() {
     // Given
     var events = List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent());
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
@@ -638,7 +642,39 @@ class ProcessingServiceTest {
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalMediaService).shouldHaveNoMoreInteractions();
-    then(publisherService).should(times(1)).republishMediaEvent(givenDigitalMediaEvent());
+    then(publisherService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void testHandleMessagesMediaEqualDuplicatesWithChanges() throws Exception {
+    // Given
+    var secondEvent =
+        new DigitalMediaEvent(
+            Set.of(MEDIA_MAS),
+            new DigitalMediaWrapper(
+                FdoType.MEDIA.getPid(),
+                givenDigitalMedia(MEDIA_URL, false).withAcCaptureDevice("a camera"),
+                MAPPER.createObjectNode()
+            ),
+            false
+        );
+    var events = List.of(secondEvent, givenDigitalMediaEvent());
+    given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
+        List.of(givenDigitalMediaRecord()));
+    given(equalityService.mediaAreEqual(givenDigitalMediaRecord(),
+        givenDigitalMediaEvent().digitalMediaWrapper(), Set.of()))
+        .willReturn(true);
+
+    // When
+    var result = service.handleMessagesMedia(events);
+
+    // Then
+    assertThat(result).isEqualTo(
+        new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+    then(publisherService).should(times(1)).republishMediaEvent(secondEvent);
   }
 
 
