@@ -266,7 +266,9 @@ public class DigitalMediaService {
         .stream().filter(
             er -> er.getDwcRelationshipOfResource()
                 .equalsIgnoreCase(HAS_SPECIMEN.getRelationshipName())
-        ).toList();
+        )
+        .filter(er -> er.getDwcRelatedResourceID() != null)
+        .toList();
     var er = new ArrayList<>(attributes.getOdsHasEntityRelationships());
     er.addAll(existingSpecimenErs);
     attributes.setOdsHasEntityRelationships(er);
