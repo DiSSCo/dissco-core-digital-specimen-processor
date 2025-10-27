@@ -134,12 +134,10 @@ public class FdoRecordService {
 
   public List<JsonNode> buildUpdateHandleRequestMedia(
       List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
-    List<JsonNode> requestBody = new ArrayList<>();
-    for (var media : digitalMediaTuples) {
-      requestBody.add(buildSingleUpdateRequestMedia(media.digitalMediaEvent(),
-          media.currentDigitalMediaRecord().id()));
-    }
-    return requestBody;
+    return digitalMediaTuples.stream()
+        .map(media -> buildSingleUpdateRequestMedia(media.digitalMediaEvent(),
+            media.currentDigitalMediaRecord().id()))
+        .toList();
   }
 
   public List<JsonNode> buildRollbackUpdateRequest(

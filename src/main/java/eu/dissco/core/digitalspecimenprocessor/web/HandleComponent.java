@@ -41,7 +41,7 @@ public class HandleComponent {
   public Map<String, String> postHandle(List<JsonNode> request, boolean isSpecimen)
       throws PidException {
     var requestBody = BodyInserters.fromValue(request);
-    var response = sendRequest(HttpMethod.POST, requestBody, "batch");
+    var response = sendRequest(HttpMethod.POST, requestBody, "/batch");
     var responseJsonNode = getFutureResponse(response);
     var localAttribute = isSpecimen ? NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID : PRIMARY_MEDIA_ID;
     return getHandleName(responseJsonNode, localAttribute);
@@ -59,7 +59,7 @@ public class HandleComponent {
     log.info("Rolling back handles from phys ids");
     try {
       var requestBody = BodyInserters.fromValue(physIds);
-      var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/physId");
+      var response = sendRequest(HttpMethod.DELETE, requestBody, "/rollback/physId");
       response.toFuture().get();
     } catch (ExecutionException e){
       log.error("Unable to rollback handles based on physical identifier: {}", physIds);
@@ -74,7 +74,7 @@ public class HandleComponent {
       throws PidException {
     log.info("Rolling back handle update");
     var requestBody = BodyInserters.fromValue(request);
-    var response = sendRequest(HttpMethod.DELETE, requestBody, "rollback/update");
+    var response = sendRequest(HttpMethod.DELETE, requestBody, "/rollback/update");
     getFutureResponse(response);
   }
 
