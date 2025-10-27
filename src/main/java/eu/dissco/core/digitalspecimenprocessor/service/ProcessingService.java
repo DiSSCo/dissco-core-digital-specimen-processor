@@ -406,20 +406,23 @@ public class ProcessingService {
     var map = mediaEvents.stream()
         .collect(
             Collectors.groupingBy(
-                event -> event.digitalMediaWrapper().attributes().getAcAccessURI()));
+                event -> event.digitalMediaWrapper().attributes().getAcAccessURI(),
+                Collectors.toSet()));
     for (var entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicate media in batch for id {}", entry.getValue().size(),
             entry.getKey());
-        for (int i = 0; i < entry.getValue().size(); i++) {
-          if (i == 0) {
-            uniqueSet.add(entry.getValue().get(i));
+        boolean isFirst = true;
+        for (var event : entry.getValue()) {
+          if (isFirst) {
+            uniqueSet.add(event);
+            isFirst = false;
           } else {
-            republishMediaEvent(entry.getValue().get(i));
+            republishMediaEvent(event);
           }
         }
       } else {
-        uniqueSet.add(entry.getValue().getFirst());
+        entry.getValue().stream().findFirst().ifPresent(uniqueSet::add);
       }
     }
     if (uniqueSet.size() > applicationProperties.getMaxMedia()) {

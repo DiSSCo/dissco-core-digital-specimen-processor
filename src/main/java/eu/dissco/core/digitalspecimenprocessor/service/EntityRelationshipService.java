@@ -47,12 +47,17 @@ public class EntityRelationshipService {
 
   public Set<String> findNewSpecimenRelationshipsForMedia(
       DigitalMediaRecord digitalMediaRecord, PidProcessResult pidProcessResult) {
+    if (digitalMediaRecord.attributes().getOdsHasEntityRelationships() == null) {
+      return Set.of();
+    }
     var existingLinkedPids = digitalMediaRecord.attributes().getOdsHasEntityRelationships()
         .stream()
         .map(EntityRelationship::getDwcRelatedResourceID)
+        .filter(Objects::nonNull)
         .map(id -> id.replace(DOI_PROXY, ""))
         .collect(Collectors.toSet());
     return pidProcessResult.doisOfRelatedObjects().stream()
+        .filter(Objects::nonNull)
         .filter(relatedDoi -> !existingLinkedPids.contains(relatedDoi)).collect(Collectors.toSet());
   }
 
