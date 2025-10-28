@@ -373,7 +373,7 @@ public class ProcessingService {
   private Set<DigitalSpecimenEvent> removeDuplicatesInBatch(
       List<DigitalSpecimenEvent> events) {
     var uniqueSet = new LinkedHashSet<DigitalSpecimenEvent>();
-    var uniqueMediaSet = new HashSet<String>();
+    var uniqueMediaSet = new LinkedHashSet<String>();
     var map = events.stream()
         .collect(
             Collectors.groupingBy(event -> event.digitalSpecimenWrapper().physicalSpecimenID()));
@@ -407,7 +407,7 @@ public class ProcessingService {
         .collect(
             Collectors.groupingBy(
                 event -> event.digitalMediaWrapper().attributes().getAcAccessURI(),
-                Collectors.toSet()));
+                Collectors.toCollection(LinkedHashSet::new)));
     for (var entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
         log.warn("Found {} duplicate media in batch for id {}", entry.getValue().size(),
