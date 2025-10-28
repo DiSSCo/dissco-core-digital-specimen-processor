@@ -51,10 +51,10 @@ class ElasticSearchRepositoryIT {
   private ElasticSearchRepository repository;
 
   @BeforeAll
-  static void initContainer() {
+  static void initContainer() throws InterruptedException {
     // Create the elasticsearch container.
     container.start();
-
+    Thread.sleep(2500);
     var creds = Base64.getEncoder()
         .encodeToString((ELASTICSEARCH_USERNAME + ":" + ELASTICSEARCH_PASSWORD).getBytes());
 
