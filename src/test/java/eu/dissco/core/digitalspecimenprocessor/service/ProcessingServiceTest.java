@@ -658,7 +658,9 @@ class ProcessingServiceTest {
             ),
             false
         );
-    var events = List.of(secondEvent, givenDigitalMediaEvent());
+    var events = new ArrayList<DigitalMediaEvent>();
+    events.add(givenDigitalMediaEvent());
+    events.add(secondEvent);
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(
         List.of(givenDigitalMediaRecord()));
     given(equalityService.mediaAreEqual(givenDigitalMediaRecord(),
