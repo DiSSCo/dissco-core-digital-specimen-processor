@@ -16,8 +16,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATI
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.generateSpecimenOriginalData;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributesPlusIdentifier;
@@ -233,7 +233,7 @@ class FdoRecordServiceTest {
   @Test
   void testGenRequestMinimal() throws Exception {
     // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
     var expected = new ArrayList<>(
         List.of(givenHandleRequestMin()));
@@ -262,7 +262,7 @@ class FdoRecordServiceTest {
   @Test
   void testGenRequestMinimalCombined() throws Exception {
     // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
     specimen.attributes().setOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL);
     var expected = new ArrayList<>(
@@ -328,7 +328,7 @@ class FdoRecordServiceTest {
   @ValueSource(booleans = {true, false})
   void testGenRequestFull(boolean markedAsType) throws Exception {
     // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false, false)
             .withOdsTopicDomain(OdsTopicDomain.EARTH_SYSTEM)
             .withOdsTopicOrigin(OdsTopicOrigin.NATURAL),
@@ -338,7 +338,7 @@ class FdoRecordServiceTest {
     expectedAttributes.put("topicOrigin", OdsTopicOrigin.NATURAL.value());
     var expected = List.of(MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE)
+            .put("type", TYPE_PID)
             .set("attributes", expectedAttributes)));
 
     // When
@@ -351,7 +351,7 @@ class FdoRecordServiceTest {
   @Test
   void testGenRequestIdentifier() throws Exception {
     // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, false, false, false)
             .withOdsHasIdentifiers(List.of(
                 new Identifier().withDctermsTitle("Other id").withDctermsIdentifier("123"),
@@ -375,7 +375,7 @@ class FdoRecordServiceTest {
         """);
     var expected = List.of(MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE)
+            .put("type", TYPE_PID)
             .set("attributes", expectedAttributes)));
 
     // When
@@ -389,7 +389,7 @@ class FdoRecordServiceTest {
   void testGenRequestIdentifiers() throws Exception {
     // Given
     var markedAsType = false;
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenAttributesPlusIdentifier(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
         ORIGINAL_DATA);
     var expectedJson = MAPPER.readTree(
@@ -436,7 +436,7 @@ class FdoRecordServiceTest {
   @ParameterizedTest
   @MethodSource("digitalSpecimensNeedToBeChanged")
   void testHandleNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
-    var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+    var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         currentAttributes,
         ORIGINAL_DATA);
     // Then
@@ -462,7 +462,7 @@ class FdoRecordServiceTest {
 
     // Then
     assertThat(fdoRecordService.handleNeedsUpdateSpecimen(
-        new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, currentDigitalSpecimen,
+        new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, currentDigitalSpecimen,
             generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
   }
 

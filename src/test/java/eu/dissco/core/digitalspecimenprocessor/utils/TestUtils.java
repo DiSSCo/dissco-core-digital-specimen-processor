@@ -76,7 +76,8 @@ public class TestUtils {
   public static final String UPDATED_STR = "2023-11-01T09:59:24.000Z";
   public static final Date UPDATED = Date.from(Instant.parse(UPDATED_STR));
   public static final String MAS = "https://hdl.handle.net/20.5000.1025/TG2-A9R-ZDD";
-  public static final String TYPE = "https://doi.org/21.T11148/894b1e6cad57e921764e";
+  public static final String TYPE_PID = "https://doi.org/21.T11148/894b1e6cad57e921764e";
+  public static final String TYPE = "ods:DigitalSpecimen";
   public static final String TYPE_MEDIA = "https://doi.org/21.T11148/bbad8c4e101e8af01115";
   public static final String PHYSICAL_SPECIMEN_ID = "https://geocollections.info/specimen/23602";
   public static final String PHYSICAL_SPECIMEN_ID_ALT = "A second specimen";
@@ -397,7 +398,7 @@ public class TestUtils {
         givenEntityRelationship(mediaId, EntityRelationshipType.HAS_MEDIA.getRelationshipName())
     );
     attributes.setOdsHasEntityRelationships(entityRelationships);
-    return new DigitalSpecimenWrapper(physicalId, TYPE, attributes,
+    return new DigitalSpecimenWrapper(physicalId, TYPE_PID, attributes,
         ORIGINAL_DATA);
   }
 
@@ -485,7 +486,7 @@ public class TestUtils {
       String specimenName, String organisation, boolean entityRelationship, boolean hasMedia) {
     return new DigitalSpecimenWrapper(
         physicalSpecimenId,
-        TYPE,
+        TYPE_PID,
         givenAttributes(specimenName, organisation, true, entityRelationship, hasMedia),
         ORIGINAL_DATA
     );
@@ -494,7 +495,7 @@ public class TestUtils {
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperNoOriginalData() {
     return new DigitalSpecimenWrapper(
         PHYSICAL_SPECIMEN_ID,
-        TYPE,
+        TYPE_PID,
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false),
         MAPPER.createObjectNode()
     );
@@ -537,7 +538,7 @@ public class TestUtils {
     return MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
             .put("id", HANDLE)
-            .put("type", TYPE)
+            .put("type", TYPE_PID)
             .set("attributes", attributes));
   }
 
@@ -569,7 +570,7 @@ public class TestUtils {
     var attributes = (ObjectNode) givenHandleAttributes(markedAsType);
     return MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE)
+            .put("type", TYPE_PID)
             .set("attributes", attributes));
   }
 
@@ -696,7 +697,7 @@ public class TestUtils {
             .withId(DOI_PREFIX + HANDLE)
             .withDctermsIdentifier(DOI_PREFIX + HANDLE)
             .withType(TYPE)
-            .withOdsFdoType(TYPE)
+            .withOdsFdoType(TYPE_PID)
             .withOaHasSelector(new OaHasSelector()
                 .withAdditionalProperty("@type", "ods:ClassSelector")
                 .withAdditionalProperty("ods:class", "$")));

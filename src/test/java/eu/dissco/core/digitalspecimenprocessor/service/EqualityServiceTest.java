@@ -12,8 +12,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED_STR;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
@@ -201,7 +201,7 @@ class EqualityServiceTest {
     var expected = new DigitalSpecimenEvent(
         Set.of(MAS),
         new DigitalSpecimenWrapper(
-            PHYSICAL_SPECIMEN_ID, TYPE, attributes, ORIGINAL_DATA
+            PHYSICAL_SPECIMEN_ID, TYPE_PID, attributes, ORIGINAL_DATA
         ),
         List.of(givenDigitalMediaEvent()),
         false,
