@@ -8,7 +8,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_S
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_TYPE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
@@ -44,55 +44,59 @@ class MidsServiceTest {
     return Stream.of(
         Arguments.of(TestUtils.givenDigitalSpecimenWrapper(), 0),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue(null),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenPreparationValue(null),
                 MAPPER.createObjectNode()), 0),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("      "),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+                givenPreparationValue("      "),
                 MAPPER.createObjectNode()), 0),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenPreparationValue("null"),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+                givenPreparationValue("null"),
                 MAPPER.createObjectNode()), 0),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingTopic(),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenMissingTopic(),
                 MAPPER.createObjectNode()), 0),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenPreparationValue("in alcohol"),
                 MAPPER.createObjectNode()), 1),
-        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingLongitude(),
-            MAPPER.createObjectNode()), 1),
-        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingCountry(),
-            MAPPER.createObjectNode()), 1),
-        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenInvalidType(),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenMissingLongitude(),
             MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenMissingCountry(),
+            MAPPER.createObjectNode()), 1),
+        Arguments.of(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenInvalidType(),
+            MAPPER.createObjectNode()), 1),
+        Arguments.of(
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanySpecimen(Boolean.FALSE),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanySpecimen(null),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanySpecimenMissingFieldNumber(),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingLocation(),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenMissingLocation(),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMissingGeoReference(),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenMissingGeoReference(),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanyNoOccurrenceSpecimen(List.of()),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanyNoOccurrenceSpecimen(null),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanyNoOccurrenceSpecimen(new ArrayList<>() {
                   {
                     add(null);
@@ -100,59 +104,59 @@ class MidsServiceTest {
                 }),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(
                     new Location().withOdsHasGeoreference(new Georeference())),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(new Location().withOdsHasGeoreference(null)),
                 MAPPER.createObjectNode()), 1),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanySpecimen(Boolean.TRUE),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenBotanySpecimenAlternative(),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenFullPaleoSpecimen(),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenFullPaleoSpecimen(),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenFullBioSpecimenMissingTax(true, null),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenFullBioSpecimenMissingTax(false, "ID2"),
                 MAPPER.createObjectNode()), 2),
 
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(givenMissingUncertaintyLocation()),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(givenMissingPercisionLocation()),
                 MAPPER.createObjectNode()), 2),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(givenLocationId()),
                 MAPPER.createObjectNode()), 3),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE, givenMidsThreeBioSpecimen(),
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenMidsThreeBioSpecimen(),
                 MAPPER.createObjectNode()), 3),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(givenFootprintLocation()),
                 MAPPER.createObjectNode()), 3),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(givenVerbatimCoordinateLocation()),
                 MAPPER.createObjectNode()), 3),
         Arguments.of(
-            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE,
+            new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
                 givenMidsThreeGenericSpecimen(givenVerbatimLatLongLocation()),
                 MAPPER.createObjectNode()), 3)
     );

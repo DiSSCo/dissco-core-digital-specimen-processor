@@ -10,7 +10,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_D
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
@@ -57,7 +57,7 @@ class EntityRelationshipServiceTest {
         CREATED,
         new DigitalSpecimenWrapper(
             PHYSICAL_SPECIMEN_ID,
-            TYPE,
+            TYPE_PID,
             specimen,
             ORIGINAL_DATA
         ),

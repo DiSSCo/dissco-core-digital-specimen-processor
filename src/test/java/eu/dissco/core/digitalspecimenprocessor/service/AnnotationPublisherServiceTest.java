@@ -9,6 +9,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAutoAcceptedAnnotation;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
@@ -165,7 +166,7 @@ class AnnotationPublisherServiceTest {
         .withOaMotivation(motivation)
         .withOaHasBody(body)
         .withOaHasTarget(new AnnotationTarget()
-            .withOdsFdoType(TYPE)
+            .withOdsFdoType(TYPE_PID)
             .withType(TYPE)
             .withId(DOI_PREFIX + HANDLE)
             .withDctermsIdentifier(DOI_PREFIX + HANDLE)
