@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +113,8 @@ public class DigitalMediaService {
         event.digitalMediaWrapper().originalAttributes(), event.forceMasSchedule());
   }
 
-  private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
+  private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples,
+      Set<UpdatedDigitalMediaRecord> digitalMediaRecords) {
     var digitalMediasToUpdate = updatedDigitalMediaTuples.stream()
         .filter(tuple -> fdoRecordService.handleNeedsUpdateMedia(
             tuple.currentDigitalMediaRecord().attributes(),
@@ -125,14 +127,21 @@ public class DigitalMediaService {
         var requests = fdoRecordService.buildUpdateHandleRequestMedia(digitalMediasToUpdate);
         handleComponent.updateHandle(requests);
       } catch (PidException e) {
-        log.error("Unable to update Handle record. Not proceeding with update. ", e);
-        try {
-          for (var tuple : updatedDigitalMediaTuples) {
-            publisherService.deadLetterEventMedia(tuple.digitalMediaEvent());
+        log.error("Unable to update Handle record. Not proceeding with update.", e);
+        updatedDigitalMediaTuples.stream().map(tuple -> {
+          var attributes = tuple.digitalMediaEvent().digitalMediaWrapper().attributes();
+          attributes.setId(tuple.currentDigitalMediaRecord().id());
+          attributes.setDctermsIdentifier(tuple.currentDigitalMediaRecord().id());
+          attributes.setOdsVersion(tuple.currentDigitalMediaRecord().version() + 1);
+          attributes.setDctermsCreated(Date.from(tuple.currentDigitalMediaRecord().created()));
+          return tuple.digitalMediaEvent();
+        }).forEach(event -> {
+          try {
+            publisherService.deadLetterEventMedia(event);
+          } catch (JsonProcessingException ex) {
+            log.error(DLQ_FAILED, updatedDigitalMediaTuples, ex);
           }
-        } catch (JsonProcessingException jsonEx) {
-          log.error(DLQ_FAILED, updatedDigitalMediaTuples, jsonEx);
-        }
+        });
         return false;
       }
     }
@@ -195,9 +204,11 @@ public class DigitalMediaService {
   }
 
   public Set<DigitalMediaRecord> updateExistingDigitalMedia(
-      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples, boolean takeOverSpecimenRelationship) {
-    var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples, takeOverSpecimenRelationship);
-    var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples);
+      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples,
+      boolean takeOverSpecimenRelationship) {
+    var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples,
+        takeOverSpecimenRelationship);
+    var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples, digitalMediaRecords);
     if (!successfullyUpdatedHandles) {
       return Set.of();
     }
@@ -240,19 +251,22 @@ public class DigitalMediaService {
   }
 
   private Set<UpdatedDigitalMediaRecord> getUpdatedDigitalMediaRecords(
-      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples, boolean takeOverSpecimenRelationship) {
+      List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples,
+      boolean takeOverSpecimenRelationship) {
     return updatedDigitalMediaTuples.stream()
         .map(tuple -> {
           var attributes = tuple.digitalMediaEvent().digitalMediaWrapper().attributes();
           setEntityRelationshipsForExistingMedia(attributes,
-              tuple.currentDigitalMediaRecord().attributes(), tuple.newRelatedSpecimenDois(), takeOverSpecimenRelationship);
+              tuple.currentDigitalMediaRecord().attributes(), tuple.newRelatedSpecimenDois(),
+              takeOverSpecimenRelationship);
           return new UpdatedDigitalMediaRecord(
               new DigitalMediaRecord(
                   tuple.currentDigitalMediaRecord().id(),
                   tuple.currentDigitalMediaRecord().accessURI(),
                   tuple.currentDigitalMediaRecord().version() + 1,
                   tuple.currentDigitalMediaRecord().created(),
-                  tuple.digitalMediaEvent().masList(), attributes,
+                  tuple.digitalMediaEvent().masList(),
+                  attributes,
                   tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes(),
                   tuple.digitalMediaEvent().forceMasSchedule()),
               tuple.digitalMediaEvent().masList(),
@@ -265,7 +279,8 @@ public class DigitalMediaService {
   }
 
   private void setEntityRelationshipsForExistingMedia(DigitalMedia attributes,
-      DigitalMedia currentAttributes, Set<String> relatedDois, boolean takeOverSpecimenRelationship) {
+      DigitalMedia currentAttributes, Set<String> relatedDois,
+      boolean takeOverSpecimenRelationship) {
     var er = new ArrayList<>(attributes.getOdsHasEntityRelationships());
     if (takeOverSpecimenRelationship) {
       var existingSpecimenErs = currentAttributes.getOdsHasEntityRelationships()
@@ -302,7 +317,8 @@ public class DigitalMediaService {
       updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
           .tombstonedRelationships().stream().map(
               EntityRelationship::getOdsRelatedResourceURI)
-          .map(uri -> new DigitalMediaRelationshipTombstoneEvent(updatedDigitalSpecimenTuple.currentSpecimen().id(), getIdForUri(uri))).forEach(
+          .map(uri -> new DigitalMediaRelationshipTombstoneEvent(
+              updatedDigitalSpecimenTuple.currentSpecimen().id(), getIdForUri(uri))).forEach(
               event -> {
                 try {
                   publisherService.publishDigitalMediaRelationTombstone(event);
@@ -312,6 +328,6 @@ public class DigitalMediaService {
                 }
               }
           );
-      }
     }
+  }
 }
