@@ -113,8 +113,7 @@ public class DigitalMediaService {
         event.digitalMediaWrapper().originalAttributes(), event.forceMasSchedule());
   }
 
-  private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples,
-      Set<UpdatedDigitalMediaRecord> digitalMediaRecords) {
+  private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
     var digitalMediasToUpdate = updatedDigitalMediaTuples.stream()
         .filter(tuple -> fdoRecordService.handleNeedsUpdateMedia(
             tuple.currentDigitalMediaRecord().attributes(),
@@ -208,7 +207,7 @@ public class DigitalMediaService {
       boolean takeOverSpecimenRelationship) {
     var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples,
         takeOverSpecimenRelationship);
-    var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples, digitalMediaRecords);
+    var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples);
     if (!successfullyUpdatedHandles) {
       return Set.of();
     }
