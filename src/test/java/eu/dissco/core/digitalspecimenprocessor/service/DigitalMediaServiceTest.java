@@ -41,6 +41,7 @@ import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
@@ -66,6 +67,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -93,6 +96,8 @@ class DigitalMediaServiceTest {
   private RabbitMqPublisherService publisherService;
   @Mock
   private BulkResponse bulkResponse;
+  @Captor
+  private ArgumentCaptor<DigitalMediaEvent> digitalMediaEventCaptor;
   private DigitalMediaService mediaService;
 
   @BeforeAll
@@ -221,10 +226,12 @@ class DigitalMediaServiceTest {
   @Test
   void testCreateNewMediaPublishingFails() throws Exception {
     // Given
-    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT, new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
+    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT,
+        new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
     var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent(MEDIA_URL_ALT,
         false));
-    var records = Set.of(givenDigitalMediaRecord(), givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
+    var records = Set.of(givenDigitalMediaRecord(),
+        givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
     lenient().doThrow(JsonProcessingException.class).when(publisherService)
@@ -234,7 +241,8 @@ class DigitalMediaServiceTest {
     var result = mediaService.createNewDigitalMedia(events, pidMap);
 
     // Then
-    assertThat(result).isEqualTo(Set.of(givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION)));
+    assertThat(result).isEqualTo(
+        Set.of(givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION)));
     then(rollbackService).should().rollbackNewMedias(Set.of(givenDigitalMediaRecord()), true, true);
   }
 
@@ -290,8 +298,15 @@ class DigitalMediaServiceTest {
     // Then
     assertThat(result).isEmpty();
     then(handleComponent).should().updateHandle(any());
-    then(publisherService).should().deadLetterEventMedia(any());
+    then(publisherService).should().deadLetterEventMedia(digitalMediaEventCaptor.capture());
     then(annotationPublisherService).shouldHaveNoInteractions();
+    var mediaEvent = digitalMediaEventCaptor.getValue();
+    assertThat(mediaEvent.digitalMediaWrapper().attributes().getId()).isEqualTo(MEDIA_PID);
+    assertThat(mediaEvent.digitalMediaWrapper().attributes().getDctermsIdentifier()).isEqualTo(
+        MEDIA_PID);
+    assertThat(mediaEvent.digitalMediaWrapper().attributes().getDctermsCreated()).isEqualTo(
+        CREATED);
+    assertThat(mediaEvent.digitalMediaWrapper().attributes().getOdsVersion()).isEqualTo(2);
   }
 
   @Test

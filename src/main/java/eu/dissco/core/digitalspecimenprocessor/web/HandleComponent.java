@@ -50,20 +50,20 @@ public class HandleComponent {
   public void updateHandle(List<JsonNode> request)
       throws PidException {
     var requestBody = BodyInserters.fromValue(request);
-    var response = sendRequest(HttpMethod.PATCH, requestBody, "");
+    var response = sendRequest(HttpMethod.PATCH, requestBody, "/");
     getFutureResponse(response);
   }
 
 
-  public void rollbackFromPhysId(List<String> physIds) throws PidException{
+  public void rollbackFromPhysId(List<String> physIds) throws PidException {
     log.info("Rolling back handles from phys ids");
     try {
       var requestBody = BodyInserters.fromValue(physIds);
       var response = sendRequest(HttpMethod.DELETE, requestBody, "/rollback/physId");
       response.toFuture().get();
-    } catch (ExecutionException e){
+    } catch (ExecutionException e) {
       log.error("Unable to rollback handles based on physical identifier: {}", physIds);
-    } catch (InterruptedException e){
+    } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       log.error("A critical interrupted exception has occurred.");
       throw new PidException("Interrupted exception");
@@ -83,12 +83,15 @@ public class HandleComponent {
     var token = "Bearer " + tokenAuthenticator.getToken();
     return handleClient.method(httpMethod)
         .uri(uriBuilder -> uriBuilder.path(endpoint).build())
-        .body(requestBody).header("Authorization", token)
+        .body(requestBody)
+        .header("Authorization", token)
         .acceptCharset(StandardCharsets.UTF_8).retrieve()
         .onStatus(HttpStatus.UNAUTHORIZED::equals, r -> Mono.error(
             new PidException("Unable to authenticate with Handle Service.")))
-        .onStatus(HttpStatusCode::is4xxClientError, r -> Mono.error(new PidException(
-            "Unable to create PID. Response from Handle API: " + r.statusCode())))
+        .onStatus(HttpStatusCode::is4xxClientError,
+            r -> r.bodyToMono(String.class).flatMap(error -> Mono.error(new PidException(
+                "Unable to create PID. Response from Handle API: " + r.statusCode()
+                    + ". With message: " + error))))
         .bodyToMono(JsonNode.class).retryWhen(
             Retry.fixedDelay(3, Duration.ofSeconds(2)).filter(WebClientUtils::is5xxServerError)
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> new PidException(
@@ -110,7 +113,8 @@ public class HandleComponent {
     }
   }
 
-  private HashMap<String, String> getHandleName(JsonNode handleResponse, FdoProfileAttributes localAttribute)
+  private HashMap<String, String> getHandleName(JsonNode handleResponse,
+      FdoProfileAttributes localAttribute)
       throws PidException {
     try {
       var dataNode = handleResponse.get("data");
