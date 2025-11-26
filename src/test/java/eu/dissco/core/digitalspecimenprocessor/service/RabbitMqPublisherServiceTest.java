@@ -47,23 +47,27 @@ class RabbitMqPublisherServiceTest {
     container.start();
     // Declare digital specimen exchange, queue and binding
     declareRabbitResources("digital-specimen-exchange", "digital-specimen-queue",
-        "digital-specimen");
+        "digital-specimen", "direct");
     // Declare dlq exchange, queue and binding
     declareRabbitResources("digital-specimen-exchange-dlq", "digital-specimen-queue-dlq",
-        "digital-specimen-dlq");
+        "digital-specimen-dlq", "direct");
     // Declare digital media exchange, queue and binding
-    declareRabbitResources("digital-media-exchange", "digital-media-queue", "digital-media");
+    declareRabbitResources("digital-media-exchange", "digital-media-queue", "digital-media",
+        "direct");
     // Declare auto annotation exchange, queue and binding
     declareRabbitResources("auto-accepted-annotation-exchange", "auto-accepted-annotation-queue",
-        "auto-accepted-annotation");
+        "auto-accepted-annotation", "direct");
     // Declare create update tombstone exchange, queue and binding
-    declareRabbitResources("create-update-tombstone-exchange", "create-update-tombstone-queue",
-        "create-update-tombstone");
+    declareRabbitResources("provenance-exchange", "provenance-queue",
+        "provenance.#", "topic");
     // Declare mas ocr exchange, queue and binding
-    declareRabbitResources("mas-exchange", "mas-ocr-queue", "OCR");
-    declareRabbitResources("mas-scheduler-exchange", "mas-scheduler-queue", "mas-scheduler");
-    declareRabbitResources("digital-media-relationship-tombstone-exchange", "digital-media-relationship-tombstone-queue", "digital-media-relationship-tombstone");
-    declareRabbitResources("digital-media-relationship-tombstone-exchange-dlq", "digital-media-relationship-tombstone-queue-dlq", "digital-media-relationship-tombstone-dlq");
+    declareRabbitResources("mas-exchange", "mas-ocr-queue", "OCR", "direct");
+    declareRabbitResources("mas-scheduler-exchange", "mas-scheduler-queue", "mas-scheduler",
+        "direct");
+    declareRabbitResources("digital-media-relationship-tombstone-exchange", "digital-media-relationship-tombstone-queue", "digital-media-relationship-tombstone",
+        "direct");
+    declareRabbitResources("digital-media-relationship-tombstone-exchange-dlq", "digital-media-relationship-tombstone-queue-dlq", "digital-media-relationship-tombstone-dlq",
+        "direct");
 
     CachingConnectionFactory factory = new CachingConnectionFactory(container.getHost());
     factory.setPort(container.getAmqpPort());
@@ -75,10 +79,10 @@ class RabbitMqPublisherServiceTest {
 
 
   private static void declareRabbitResources(String exchangeName, String queueName,
-      String routingKey)
+      String routingKey, String exchangeType)
       throws IOException, InterruptedException {
     container.execInContainer("rabbitmqadmin", "declare", "exchange", "name=" + exchangeName,
-        "type=direct", "durable=true");
+        "type=" + exchangeType, "durable=true");
     container.execInContainer("rabbitmqadmin", "declare", "queue", "name=" + queueName,
         "queue_type=quorum", "durable=true");
     container.execInContainer("rabbitmqadmin", "declare", "binding", "source=" + exchangeName,
@@ -104,8 +108,8 @@ class RabbitMqPublisherServiceTest {
     rabbitMqPublisherService.publishCreateEventSpecimen(givenDigitalSpecimenRecord());
 
     // Then
-    var dlqMessage = rabbitTemplate.receive("create-update-tombstone-queue");
-    assertThat(new String(dlqMessage.getBody())).isNotNull();
+    var message = rabbitTemplate.receive("provenance-queue");
+    assertThat(new String(message.getBody())).isNotNull();
   }
 
   @Test
@@ -117,7 +121,7 @@ class RabbitMqPublisherServiceTest {
         givenJsonPatchSpecimen());
 
     // Then
-    var dlqMessage = rabbitTemplate.receive("create-update-tombstone-queue");
+    var dlqMessage = rabbitTemplate.receive("provenance-queue");
     assertThat(new String(dlqMessage.getBody())).isNotNull();
   }
 

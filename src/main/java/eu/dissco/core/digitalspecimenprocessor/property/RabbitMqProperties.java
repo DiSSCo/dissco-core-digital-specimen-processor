@@ -106,10 +106,10 @@ public class RabbitMqProperties {
   public static class CreateUpdateTombstone {
 
     @NotBlank
-    private String exchangeName = "create-update-tombstone-exchange";
+    private String exchangeName = "provenance-exchange";
 
     @NotNull
-    private String routingKeyName = "create-update-tombstone";
+    private String routingKeyName = "provenance";
   }
 
   @Data

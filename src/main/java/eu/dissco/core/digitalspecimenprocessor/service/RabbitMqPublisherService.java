@@ -21,6 +21,9 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 public class RabbitMqPublisherService {
 
+  private static final String MEDIA_ROUTING_KEY_PREFIX = ".digital-media.";
+  private static final String SPECIMEN_ROUTING_KEY_PREFIX = ".digital-specimen.";
+
   private final ObjectMapper mapper;
   private final ProvenanceService provenanceService;
   private final RabbitTemplate rabbitTemplate;
@@ -30,7 +33,7 @@ public class RabbitMqPublisherService {
       throws JsonProcessingException {
     var event = provenanceService.generateCreateEventSpecimen(digitalSpecimenRecord);
     rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
-        rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName(),
+        generateRoutingKeySpecimen(digitalSpecimenRecord),
         mapper.writeValueAsString(event));
   }
 
@@ -38,7 +41,7 @@ public class RabbitMqPublisherService {
       throws JsonProcessingException {
     var event = provenanceService.generateCreateEventMedia(digitalMediaRecord);
     rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
-        rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName(),
+        generateRoutingKeyMedia(digitalMediaRecord),
         mapper.writeValueAsString(event));
   }
 
@@ -52,16 +55,28 @@ public class RabbitMqPublisherService {
       JsonNode jsonPatch) throws JsonProcessingException {
     var event = provenanceService.generateUpdateEventSpecimen(digitalSpecimenRecord, jsonPatch);
     rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
-        rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName(),
+        generateRoutingKeySpecimen(digitalSpecimenRecord),
         mapper.writeValueAsString(event));
+  }
+
+  private String generateRoutingKeySpecimen(DigitalSpecimenRecord digitalSpecimenRecord) {
+    return rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName()
+        + SPECIMEN_ROUTING_KEY_PREFIX + stripSourceSystemId(
+        digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID());
   }
 
   public void publishUpdateEventMedia(DigitalMediaRecord digitalMediaRecord,
       JsonNode jsonPatch) throws JsonProcessingException {
     var event = provenanceService.generateUpdateEventMedia(digitalMediaRecord, jsonPatch);
     rabbitTemplate.convertAndSend(rabbitMqProperties.getCreateUpdateTombstone().getExchangeName(),
-        rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName(),
+        generateRoutingKeyMedia(digitalMediaRecord),
         mapper.writeValueAsString(event));
+  }
+
+  private String generateRoutingKeyMedia(DigitalMediaRecord digitalMediaRecord) {
+    return rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName()
+        + MEDIA_ROUTING_KEY_PREFIX + stripSourceSystemId(
+        digitalMediaRecord.attributes().getOdsSourceSystemID());
   }
 
   public void republishSpecimenEvent(DigitalSpecimenEvent event) throws JsonProcessingException {
@@ -114,5 +129,9 @@ public class RabbitMqPublisherService {
     rabbitTemplate.convertAndSend(
         rabbitMqProperties.getDigitalMediaRelationshipTombstone().getDlqExchangeName(),
         rabbitMqProperties.getDigitalMediaRelationshipTombstone().getDlqRoutingKeyName(), event);
+  }
+
+  private static String stripSourceSystemId(String sourceSystemId) {
+    return sourceSystemId.substring(sourceSystemId.lastIndexOf('/') + 1);
   }
 }
