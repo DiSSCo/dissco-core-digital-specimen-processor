@@ -60,7 +60,7 @@ public class RabbitMqPublisherService {
   }
 
   private String generateRoutingKeySpecimen(DigitalSpecimenRecord digitalSpecimenRecord) {
-    return rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName()
+    return rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyPrefix()
         + SPECIMEN_ROUTING_KEY_PREFIX + stripSourceSystemId(
         digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID());
   }
@@ -74,7 +74,7 @@ public class RabbitMqPublisherService {
   }
 
   private String generateRoutingKeyMedia(DigitalMediaRecord digitalMediaRecord) {
-    return rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyName()
+    return rabbitMqProperties.getCreateUpdateTombstone().getRoutingKeyPrefix()
         + MEDIA_ROUTING_KEY_PREFIX + stripSourceSystemId(
         digitalMediaRecord.attributes().getOdsSourceSystemID());
   }

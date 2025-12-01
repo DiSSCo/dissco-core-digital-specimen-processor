@@ -109,7 +109,7 @@ public class RabbitMqProperties {
     private String exchangeName = "provenance-exchange";
 
     @NotNull
-    private String routingKeyName = "provenance";
+    private String routingKeyPrefix = "provenance";
   }
 
   @Data
