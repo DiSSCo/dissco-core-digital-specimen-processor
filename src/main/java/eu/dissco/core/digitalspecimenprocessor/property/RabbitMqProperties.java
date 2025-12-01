@@ -21,7 +21,7 @@ public class RabbitMqProperties {
   @NotNull
   private AutoAcceptedAnnotation autoAcceptedAnnotation = new AutoAcceptedAnnotation();
   @NotNull
-  private CreateUpdateTombstone createUpdateTombstone = new CreateUpdateTombstone();
+  private Provenance provenance = new Provenance();
   @NotNull
   private MasScheduler masScheduler = new MasScheduler();
   @NotNull
@@ -103,7 +103,7 @@ public class RabbitMqProperties {
 
   @Data
   @Validated
-  public static class CreateUpdateTombstone {
+  public static class Provenance {
 
     @NotBlank
     private String exchangeName = "provenance-exchange";
