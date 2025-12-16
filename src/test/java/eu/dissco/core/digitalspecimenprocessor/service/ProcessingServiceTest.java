@@ -747,6 +747,20 @@ class ProcessingServiceTest {
   }
 
   @Test
+  void testHandleMessageMediaRelationshipTombstoneEmptyMediaDoi() {
+    // Given
+    var event = new DigitalMediaRelationshipTombstoneEvent(HANDLE, "null");
+    given(mediaRepository.getExistingDigitalMediaByDoi(Set.of())).willReturn(List.of());
+
+    // When
+    service.handleMessagesMediaRelationshipTombstone(List.of(event));
+
+    // Then
+    then(publisherService).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+  }
+
+  @Test
   void testHandleMessageMediaRelationshipTombstoneNoChange() {
     // Given
     var event = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);

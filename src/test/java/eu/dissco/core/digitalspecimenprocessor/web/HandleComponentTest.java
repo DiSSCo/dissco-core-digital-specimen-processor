@@ -33,8 +33,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 class HandleComponentTest {
 
   private static MockWebServer mockHandleServer;
-  @Mock
-  private TokenAuthenticator tokenAuthenticator;
   private HandleComponent handleComponent;
 
   @BeforeAll
@@ -52,7 +50,7 @@ class HandleComponentTest {
   void setup() {
     WebClient webClient = WebClient.create(
         String.format("http://%s:%s", mockHandleServer.getHostName(), mockHandleServer.getPort()));
-    handleComponent = new HandleComponent(webClient, tokenAuthenticator);
+    handleComponent = new HandleComponent(webClient);
   }
 
   @Test
