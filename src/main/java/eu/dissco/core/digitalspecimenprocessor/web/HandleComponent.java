@@ -77,7 +77,7 @@ public class HandleComponent {
   }
 
   private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod,
-      BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint) throws PidException {
+      BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint) {
     return handleClient.method(httpMethod)
         .uri(uriBuilder -> uriBuilder.path(endpoint).build())
         .body(requestBody)
