@@ -11,5 +11,4 @@ public class DigitalSpecimenProcessorApplication {
   public static void main(String[] args) {
     SpringApplication.run(DigitalSpecimenProcessorApplication.class, args);
   }
-
 }

@@ -82,6 +82,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -746,10 +749,12 @@ class ProcessingServiceTest {
         .updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
   }
 
-  @Test
-  void testHandleMessageMediaRelationshipTombstoneEmptyMediaDoi() {
+  @ParameterizedTest
+  @ValueSource(strings = {"null", " "})
+  @NullAndEmptySource
+  void testHandleMessageMediaRelationshipTombstoneNullMediaDoi(String mediaDoi) {
     // Given
-    var event = new DigitalMediaRelationshipTombstoneEvent(HANDLE, "null");
+    var event = new DigitalMediaRelationshipTombstoneEvent(HANDLE, mediaDoi);
     given(mediaRepository.getExistingDigitalMediaByDoi(Set.of())).willReturn(List.of());
 
     // When
