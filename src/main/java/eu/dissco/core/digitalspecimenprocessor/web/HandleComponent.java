@@ -31,9 +31,7 @@ import reactor.util.retry.Retry;
 @Slf4j
 public class HandleComponent {
 
-  @Qualifier("handleClient")
   private final WebClient handleClient;
-  private final TokenAuthenticator tokenAuthenticator;
 
   private static final String UNEXPECTED_MSG = "Unexpected response from handle API";
   private static final String UNEXPECTED_LOG = "Unexpected response from Handle API. Error: {}. Response: {}";
@@ -79,12 +77,10 @@ public class HandleComponent {
   }
 
   private <T> Mono<JsonNode> sendRequest(HttpMethod httpMethod,
-      BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint) throws PidException {
-    var token = "Bearer " + tokenAuthenticator.getToken();
+      BodyInserter<T, ReactiveHttpOutputMessage> requestBody, String endpoint) {
     return handleClient.method(httpMethod)
         .uri(uriBuilder -> uriBuilder.path(endpoint).build())
         .body(requestBody)
-        .header("Authorization", token)
         .acceptCharset(StandardCharsets.UTF_8).retrieve()
         .onStatus(HttpStatus.UNAUTHORIZED::equals, r -> Mono.error(
             new PidException("Unable to authenticate with Handle Service.")))

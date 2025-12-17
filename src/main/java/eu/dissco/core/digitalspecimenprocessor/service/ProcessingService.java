@@ -674,10 +674,26 @@ public class ProcessingService {
         false);
   }
 
+  /*
+   In the exceptional case that the media object is null due to an issue earlier in the pipeline, we log an warning and skip
+   The media relationship should be removed from the DigitalSpecimen, however there is no Media object to update
+ */
+  private static boolean mediaIsNotNull(DigitalMediaRelationshipTombstoneEvent event) {
+    if (event.mediaDoi() == null || event.mediaDoi().isBlank() || event.mediaDoi().equals("null")) {
+      log.warn(
+          "Received media relationship tombstone event with empty media DOI for specimen: {}, skipping event",
+          event.specimenDoi());
+      return false;
+    } else {
+      return true;
+    }
+  }
+
   private List<DigitalMediaRelationshipTombstoneEvent> uniqueMediaRelationshipTombstoneEvents(
       List<DigitalMediaRelationshipTombstoneEvent> events) {
     var uniqueSet = new LinkedHashSet<DigitalMediaRelationshipTombstoneEvent>();
     var map = events.stream()
+        .filter(ProcessingService::mediaIsNotNull)
         .collect(Collectors.groupingBy(DigitalMediaRelationshipTombstoneEvent::mediaDoi));
     for (var entry : map.entrySet()) {
       if (entry.getValue().size() > 1) {
