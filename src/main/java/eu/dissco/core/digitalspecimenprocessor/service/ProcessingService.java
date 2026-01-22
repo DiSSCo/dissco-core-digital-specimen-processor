@@ -177,7 +177,7 @@ public class ProcessingService {
       var uniqueBatchMedia = getUniqueDigitalMediaEvents(uniqueBatchSpecimens);
       var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
-      log.info("Retrieved {} existing specimen, {} existing media", existingMedia.size(),
+      log.info("Retrieved {} existing specimen, {} existing media", existingSpecimens.size(),
           existingMedia.size());
       var specimenPreprocessResult = preprocessSpecimens(uniqueBatchSpecimens, existingSpecimens,
           existingMedia);
