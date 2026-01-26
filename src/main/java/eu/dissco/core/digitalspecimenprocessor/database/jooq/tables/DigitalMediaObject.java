@@ -141,8 +141,8 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
 
     @Override
     public List<Index> getIndexes() {
-      return Arrays.asList(Indexes.DIGITAL_MEDIA_OBJECT_ID_IDX,
-          Indexes.DIGITAL_MEDIA_OBJECT_ID_VERSION_URL);
+        return Arrays.asList(Indexes.DIGITAL_MEDIA_OBJECT_ID_IDX,
+            Indexes.DIGITAL_MEDIA_OBJECT_ID_VERSION_URL);
     }
 
     @Override

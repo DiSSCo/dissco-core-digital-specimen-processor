@@ -65,98 +65,98 @@ public class DigitalMediaObjectRecord extends UpdatableRecordImpl<DigitalMediaOb
      * Setter for <code>public.digital_media_object.media_url</code>.
      */
     public void setMediaUrl(String value) {
-      set(3, value);
+        set(3, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.media_url</code>.
      */
     public String getMediaUrl() {
-      return (String) get(3);
+        return (String) get(3);
     }
 
     /**
      * Setter for <code>public.digital_media_object.created</code>.
      */
     public void setCreated(Instant value) {
-      set(4, value);
+        set(4, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.created</code>.
      */
     public Instant getCreated() {
-      return (Instant) get(4);
+        return (Instant) get(4);
     }
 
     /**
      * Setter for <code>public.digital_media_object.last_checked</code>.
      */
     public void setLastChecked(Instant value) {
-      set(5, value);
+        set(5, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.last_checked</code>.
      */
     public Instant getLastChecked() {
-      return (Instant) get(5);
+        return (Instant) get(5);
     }
 
     /**
      * Setter for <code>public.digital_media_object.deleted</code>.
      */
     public void setDeleted(Instant value) {
-      set(6, value);
+        set(6, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.deleted</code>.
      */
     public Instant getDeleted() {
-      return (Instant) get(6);
+        return (Instant) get(6);
     }
 
     /**
      * Setter for <code>public.digital_media_object.data</code>.
      */
     public void setData(JSONB value) {
-      set(7, value);
+        set(7, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.data</code>.
      */
     public JSONB getData() {
-      return (JSONB) get(7);
+        return (JSONB) get(7);
     }
 
     /**
      * Setter for <code>public.digital_media_object.original_data</code>.
      */
     public void setOriginalData(JSONB value) {
-      set(8, value);
+        set(8, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.original_data</code>.
      */
     public JSONB getOriginalData() {
-      return (JSONB) get(8);
+        return (JSONB) get(8);
     }
 
     /**
      * Setter for <code>public.digital_media_object.modified</code>.
      */
     public void setModified(Instant value) {
-      set(9, value);
+        set(9, value);
     }
 
     /**
      * Getter for <code>public.digital_media_object.modified</code>.
      */
     public Instant getModified() {
-      return (Instant) get(9);
+        return (Instant) get(9);
     }
 
     // -------------------------------------------------------------------------
