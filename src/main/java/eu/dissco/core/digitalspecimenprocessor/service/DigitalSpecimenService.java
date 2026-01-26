@@ -291,7 +291,7 @@ public class DigitalSpecimenService {
               updateTuple.currentSpecimen().id(),
               midsService.calculateMids(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
               updateTuple.currentSpecimen().version() + 1,
-              Instant.now(),
+              updateTuple.currentSpecimen().created(),
               determineEntityRelationships(
                   updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
                   updateTuple.mediaRelationshipProcessResult()),

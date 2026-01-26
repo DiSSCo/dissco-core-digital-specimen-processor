@@ -111,7 +111,10 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.MODIFIED, Instant.now())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,
-            mapToJsonB(digitalSpecimenRecord));
+            mapToJsonB(digitalSpecimenRecord))
+        .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
+            JSONB.valueOf(
+                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
   }
 
   private JSONB mapToJsonB(DigitalSpecimenRecord digitalSpecimenRecord) {
