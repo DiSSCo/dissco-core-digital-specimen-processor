@@ -454,7 +454,8 @@ public class ProcessingService {
         var currentDigitalSpecimen = currentSpecimens.get(
             digitalSpecimenWrapper.physicalSpecimenID());
         MediaRelationshipProcessResult processedMediaRelationships;
-        if (event.isDataFromSourceSystem().booleanValue()) {
+        if (event.isDataFromSourceSystem().booleanValue()
+            && event.updateMediaEntityRelationships()) {
           processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
               currentSpecimens, event, currentMedia);
         } else {
@@ -471,7 +472,7 @@ public class ProcessingService {
               currentDigitalSpecimen.digitalSpecimenWrapper(), event, processedMediaRelationships);
           changedSpecimens.add(
               new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, eventWithUpdatedEr,
-                  processedMediaRelationships));
+                  processedMediaRelationships, event.updateMediaEntityRelationships()));
         }
       }
     }

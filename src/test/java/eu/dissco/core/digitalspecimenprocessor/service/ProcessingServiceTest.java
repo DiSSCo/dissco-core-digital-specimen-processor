@@ -302,7 +302,7 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent()),
-        false, true);
+        false, true, true);
 
     // When
     service.handleMessages(List.of(event));
@@ -324,13 +324,13 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent()),
-        false, true);
+        false, true, Boolean.TRUE);
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent()),
-        false, true);
+        false, true, Boolean.TRUE);
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
@@ -372,19 +372,19 @@ class ProcessingServiceTest {
         Set.of(MAS),
         givenDigitalSpecimenWrapper(false, true),
         List.of(givenDigitalMediaEvent()),
-        false, true);
+        false, true, true);
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent()),
-        false, true);
+        false, true, true);
     var event3 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
             true),
         List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
-        false, true);
+        false, true, true);
     given(specimenRepository.getDigitalSpecimens(
         List.of(PHYSICAL_SPECIMEN_ID, PHYSICAL_SPECIMEN_ID_ALT))).willReturn(
         List.of());
@@ -454,6 +454,40 @@ class ProcessingServiceTest {
   }
 
   @Test
+  void testChangedSpecimenIgnoreMediaErChanges() throws Exception {
+    var event = new DigitalSpecimenEvent(
+        Set.of(MAS),
+        givenDigitalSpecimenWrapper(false, true),
+        List.of(),
+        false,
+        true, false);
+    var updatedTuple = new UpdatedDigitalSpecimenTuple(
+        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, true),
+        event,
+        givenEmptyMediaProcessResult(), false
+    );
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
+            true)));
+    given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
+    given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
+        event);
+    var pidMapSpecimen = Map.of(PHYSICAL_SPECIMEN_ID, new PidProcessResult(HANDLE, Set.of()));
+
+    // When
+    service.handleMessages(List.of(event));
+
+    // Then
+    then(digitalSpecimenService).should()
+        .updateExistingDigitalSpecimen(List.of(updatedTuple), pidMapSpecimen);
+    then(digitalMediaService).shouldHaveNoInteractions();
+    then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(fdoRecordService).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
   void testSpecimenAddVirtualCollection() throws Exception {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
@@ -473,7 +507,7 @@ class ProcessingServiceTest {
         digitalSpecimen,
         List.of(),
         false,
-        false);
+        false, true);
     given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
         digitalSpecimenEvent);
 
@@ -487,7 +521,7 @@ class ProcessingServiceTest {
                 givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
                     false, false),
                 digitalSpecimenEvent,
-                givenEmptyMediaProcessResult())),
+                givenEmptyMediaProcessResult(), true)),
             pidMapSpecimen);
     then(digitalMediaService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
@@ -693,7 +727,7 @@ class ProcessingServiceTest {
         Set.of(),
         givenDigitalSpecimenWrapper(),
         mediaEvents,
-        false, true));
+        false, true, true));
 
     // When / Then
     assertThrows(TooManyObjectsException.class, () -> service.handleMessages(specimenEvents));
@@ -715,7 +749,7 @@ class ProcessingServiceTest {
         Set.of(),
         givenDigitalSpecimenWrapper(false, true),
         mediaEvents,
-        false, true));
+        false, true, true));
 
     // When
     service.handleMessages(specimenEvents);

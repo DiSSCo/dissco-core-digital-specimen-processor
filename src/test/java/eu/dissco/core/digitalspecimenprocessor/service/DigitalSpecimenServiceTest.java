@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
@@ -11,14 +12,24 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
@@ -37,6 +48,8 @@ import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
@@ -110,7 +123,7 @@ class DigitalSpecimenServiceTest {
   }
 
   @AfterAll
-  static void teardown(){
+  static void teardown() {
     mockedInstant.close();
     mockedClock.close();
   }
@@ -307,18 +320,93 @@ class DigitalSpecimenServiceTest {
         givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, true),
         givenDigitalSpecimenEvent(false),
         new MediaRelationshipProcessResult(
-        List.of(new EntityRelationship()
-            .withType("ods:EntityRelationship")
-            .withDwcRelationshipOfResource("hasDigitalSpecimen")
-            .withDwcRelationshipEstablishedDate(Date.from(CREATED))
-            .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
-            .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
-            .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
-                PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
-        List.of(),
-        List.of()));
+            List.of(new EntityRelationship()
+                .withType("ods:EntityRelationship")
+                .withDwcRelationshipOfResource("hasDigitalSpecimen")
+                .withDwcRelationshipEstablishedDate(Date.from(CREATED))
+                .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
+                .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
+                .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
+                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
+            List.of(),
+            List.of()),
+        true);
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     var expectedRecord = givenDigitalSpecimenRecord(2, false);
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
+    given(midsService.calculateMids(any())).willReturn(1);
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
+
+    // When
+    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+
+    // Then
+    assertThat(result).isEqualTo(Set.of(expectedRecord));
+    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(digitalMediaService).should().tombstoneSpecimenRelations(List.of(tuple));
+    then(publisherService).should()
+        .publishUpdateEventSpecimen(eq(expectedRecord), any());
+    then(rollbackService).shouldHaveNoInteractions();
+    then(handleComponent).should().updateHandle(any());
+  }
+
+  @Test
+  void testUpdatedSpecimenIgnoreMediaErTombstone() throws Exception {
+    // Given
+    var specimenWrapper = new DigitalSpecimenWrapper(
+        PHYSICAL_SPECIMEN_ID, TYPE_PID,
+        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, true)
+            .withOdsHasEntityRelationships(
+                List.of(givenEntityRelationship(MEDIA_PID, HAS_MEDIA.getRelationshipName()))),
+        ORIGINAL_DATA);
+    var tuple = new UpdatedDigitalSpecimenTuple(
+        new DigitalSpecimenRecord(
+            HANDLE, MIDS_LEVEL, VERSION, CREATED,
+            specimenWrapper,
+            Set.of(MAS),
+            false,
+            true,
+            List.of()),
+        givenDigitalSpecimenEvent(false),
+        givenEmptyMediaProcessResult(), false);
+    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+    var expectedRecord = new DigitalSpecimenRecord(
+        HANDLE, MIDS_LEVEL, VERSION + 1, CREATED, specimenWrapper, Set.of(MAS), false, true,
+        List.of());
+    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
+    given(midsService.calculateMids(any())).willReturn(1);
+    given(bulkResponse.errors()).willReturn(false);
+    given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
+
+    // When
+    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+
+    // Then
+    assertThat(result).isEqualTo(Set.of(expectedRecord));
+    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(digitalMediaService).should().tombstoneSpecimenRelations(List.of(tuple));
+    then(publisherService).should()
+        .publishUpdateEventSpecimen(eq(expectedRecord), any());
+    then(rollbackService).shouldHaveNoInteractions();
+    then(handleComponent).should().updateHandle(any());
+  }
+
+  @Test
+  void testUpdatedSpecimenIgnoreMediaEmptyMedia() throws Exception {
+    // Given
+    var tuple = new UpdatedDigitalSpecimenTuple(
+        new DigitalSpecimenRecord(
+            HANDLE, MIDS_LEVEL, VERSION, CREATED,
+            givenDigitalSpecimenWrapper(),
+            Set.of(MAS),
+            false,
+            true,
+            List.of()),
+        givenDigitalSpecimenEvent(false),
+        givenEmptyMediaProcessResult(), false);
+    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+    var expectedRecord = givenDigitalSpecimenRecord(VERSION + 1, false);
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(midsService.calculateMids(any())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
@@ -410,7 +498,8 @@ class DigitalSpecimenServiceTest {
     given(midsService.calculateMids(any())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
-    doThrow(JsonProcessingException.class).when(publisherService).publishUpdateEventSpecimen(expectedRecord, givenJsonPatchSpecimen());
+    doThrow(JsonProcessingException.class).when(publisherService)
+        .publishUpdateEventSpecimen(expectedRecord, givenJsonPatchSpecimen());
 
     // When
     var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
@@ -444,7 +533,8 @@ class DigitalSpecimenServiceTest {
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(publisherService).deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
+    doThrow(JsonProcessingException.class).when(publisherService)
+        .deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
 
     // When
     var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);

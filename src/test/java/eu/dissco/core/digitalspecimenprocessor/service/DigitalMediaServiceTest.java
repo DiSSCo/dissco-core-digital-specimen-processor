@@ -432,7 +432,8 @@ class DigitalMediaServiceTest {
                 .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
                     PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
             List.of(),
-            List.of()));
+            List.of()),
+        true);
     var expected = new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
 
     // When
@@ -448,7 +449,7 @@ class DigitalMediaServiceTest {
     var tuple = new UpdatedDigitalSpecimenTuple(
         givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
         givenDigitalSpecimenEvent(true),
-        new MediaRelationshipProcessResult());
+        new MediaRelationshipProcessResult(), true);
 
     // When
     mediaService.tombstoneSpecimenRelations(List.of(tuple));

@@ -250,7 +250,7 @@ class FdoRecordServiceTest {
     // Given
     var tupleList = List.of(
         new UpdatedDigitalSpecimenTuple(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent(),
-            givenEmptyMediaProcessResult()));
+            givenEmptyMediaProcessResult(), true));
 
     // When
     var response = fdoRecordService.buildUpdateHandleRequest(tupleList);

@@ -126,7 +126,7 @@ public class EntityRelationshipService {
     ).toList();
   }
 
-  private static List<EntityRelationship> getMediaEntityRelationshipsForSpecimen(
+  public static List<EntityRelationship> getMediaEntityRelationshipsForSpecimen(
       DigitalSpecimenRecord digitalSpecimenRecord) {
     return digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
         .getOdsHasEntityRelationships()

@@ -71,7 +71,8 @@ public class RollbackService {
     }
     try {
       publisherService.deadLetterEventSpecimen(
-          specimenEventFromRecord(updatedDigitalSpecimenRecord.digitalSpecimenRecord()));
+          specimenEventFromRecord(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
+              updatedDigitalSpecimenRecord.updateMediaEntityRelationships()));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED, updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
     }
@@ -148,7 +149,8 @@ public class RollbackService {
       specimenRepository.rollbackSpecimen(digitalSpecimenRecord.id());
     }
     try {
-      publisherService.deadLetterEventSpecimen(specimenEventFromRecord(digitalSpecimenRecord));
+      publisherService.deadLetterEventSpecimen(
+          specimenEventFromRecord(digitalSpecimenRecord, true));
     } catch (JsonProcessingException e) {
       log.error(DLQ_FAILED, digitalSpecimenRecord.id(), e);
     }
@@ -195,13 +197,14 @@ public class RollbackService {
   }
 
   private static DigitalSpecimenEvent specimenEventFromRecord(
-      DigitalSpecimenRecord digitalSpecimenRecord) {
+      DigitalSpecimenRecord digitalSpecimenRecord, boolean updateMediaEntityRelationships) {
     return new DigitalSpecimenEvent(
         digitalSpecimenRecord.masIds(),
         digitalSpecimenRecord.digitalSpecimenWrapper(),
         digitalSpecimenRecord.digitalMediaEvents(),
         digitalSpecimenRecord.forceMasSchedule(),
-        digitalSpecimenRecord.isDataFromSourceSystem()
+        digitalSpecimenRecord.isDataFromSourceSystem(),
+        updateMediaEntityRelationships
     );
   }
 

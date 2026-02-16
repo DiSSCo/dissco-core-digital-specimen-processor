@@ -10,15 +10,17 @@ public record DigitalSpecimenEvent(
     DigitalSpecimenWrapper digitalSpecimenWrapper,
     List<DigitalMediaEvent> digitalMediaEvents,
     Boolean forceMasSchedule,
-    Boolean isDataFromSourceSystem) {
+    Boolean isDataFromSourceSystem,
+    boolean updateMediaEntityRelationships) {
 
   public DigitalSpecimenEvent(Set<String> masList, DigitalSpecimenWrapper digitalSpecimenWrapper,
       List<DigitalMediaEvent> digitalMediaEvents, Boolean forceMasSchedule,
-      Boolean isDataFromSourceSystem) {
+      Boolean isDataFromSourceSystem, boolean updateMediaEntityRelationships) {
     this.masList = masList;
     this.digitalSpecimenWrapper = digitalSpecimenWrapper;
     this.digitalMediaEvents = digitalMediaEvents;
     this.forceMasSchedule = forceMasSchedule;
     this.isDataFromSourceSystem = Objects.requireNonNullElse(isDataFromSourceSystem, Boolean.TRUE);
+    this.updateMediaEntityRelationships = updateMediaEntityRelationships;
   }
 }

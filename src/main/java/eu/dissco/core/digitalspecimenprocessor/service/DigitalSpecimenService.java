@@ -205,7 +205,7 @@ public class DigitalSpecimenService {
   }
 
   /* Entity Relationship */
-  private DigitalSpecimenWrapper determineEntityRelationships(
+  private DigitalSpecimenWrapper determineEntityRelationshipsFromMediaProcessing(
       DigitalSpecimenWrapper digitalSpecimenWrapper, Map<String, PidProcessResult> pidMap,
       MediaRelationshipProcessResult mediaRelationshipProcessResult) {
     var mediaPids = pidMap.get(digitalSpecimenWrapper.physicalSpecimenID()).doisOfRelatedObjects();
@@ -230,6 +230,28 @@ public class DigitalSpecimenService {
       attributes.setOdsIsKnownToContainMedia(Boolean.TRUE);
     }
     attributes.setOdsHasEntityRelationships(allRelationships);
+    return new DigitalSpecimenWrapper(
+        digitalSpecimenWrapper.physicalSpecimenID(),
+        digitalSpecimenWrapper.type(),
+        attributes,
+        digitalSpecimenWrapper.originalAttributes());
+  }
+
+  private DigitalSpecimenWrapper determineEntityRelationshipsFromPreviousVersion(
+      DigitalSpecimenRecord currentDigitalSpecimen, DigitalSpecimenWrapper digitalSpecimenWrapper) {
+    var existingMediaEntityRelationships = EntityRelationshipService.getMediaEntityRelationshipsForSpecimen(
+        currentDigitalSpecimen);
+    var attributes = digitalSpecimenWrapper.attributes();
+    if (existingMediaEntityRelationships.isEmpty()) {
+      attributes.setOdsIsKnownToContainMedia(Boolean.FALSE);
+    } else {
+      attributes.setOdsHasEntityRelationships(
+          Stream.concat(attributes.getOdsHasEntityRelationships().stream(),
+                  existingMediaEntityRelationships.stream())
+              .toList()
+      );
+      attributes.setOdsIsKnownToContainMedia(true);
+    }
     return new DigitalSpecimenWrapper(
         digitalSpecimenWrapper.physicalSpecimenID(),
         digitalSpecimenWrapper.type(),
@@ -267,7 +289,7 @@ public class DigitalSpecimenService {
         midsService.calculateMids(event.digitalSpecimenWrapper()),
         1,
         Instant.now(),
-        determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap,
+        determineEntityRelationshipsFromMediaProcessing(event.digitalSpecimenWrapper(), pidMap,
             new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
         event.masList(), event.forceMasSchedule(), event.isDataFromSourceSystem(),
         event.digitalMediaEvents());
@@ -287,14 +309,19 @@ public class DigitalSpecimenService {
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples,
       Map<String, PidProcessResult> pidMap) {
     return updatedDigitalSpecimenTuples.stream().map(updateTuple -> {
+      var specimenWrapper = updateTuple.updateMediaEntityRelationships() ?
+          determineEntityRelationshipsFromMediaProcessing(
+              updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
+              updateTuple.mediaRelationshipProcessResult()) :
+          determineEntityRelationshipsFromPreviousVersion(updateTuple.currentSpecimen(),
+              updateTuple.digitalSpecimenEvent()
+                  .digitalSpecimenWrapper());
           var digitalSpecimenRecord = new DigitalSpecimenRecord(
               updateTuple.currentSpecimen().id(),
               midsService.calculateMids(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
               updateTuple.currentSpecimen().version() + 1,
               updateTuple.currentSpecimen().created(),
-              determineEntityRelationships(
-                  updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
-                  updateTuple.mediaRelationshipProcessResult()),
+              specimenWrapper,
               updateTuple.digitalSpecimenEvent().masList(),
               updateTuple.digitalSpecimenEvent().forceMasSchedule(),
               updateTuple.digitalSpecimenEvent().isDataFromSourceSystem(),
@@ -308,7 +335,8 @@ public class DigitalSpecimenService {
                   updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
               updateTuple.digitalSpecimenEvent().digitalMediaEvents(),
               updateTuple.mediaRelationshipProcessResult(),
-              updateTuple.digitalSpecimenEvent().isDataFromSourceSystem());
+              updateTuple.digitalSpecimenEvent().isDataFromSourceSystem(),
+              updateTuple.updateMediaEntityRelationships());
         }
     ).collect(Collectors.toSet());
   }
@@ -321,7 +349,6 @@ public class DigitalSpecimenService {
             tuple.currentSpecimen().digitalSpecimenWrapper(),
             tuple.digitalSpecimenEvent().digitalSpecimenWrapper()))
         .toList();
-
     if (!digitalSpecimensToUpdate.isEmpty()) {
       try {
         log.info("Updating {} handle records", digitalSpecimensToUpdate.size());

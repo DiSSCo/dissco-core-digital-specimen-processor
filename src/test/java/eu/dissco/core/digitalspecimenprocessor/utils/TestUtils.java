@@ -260,7 +260,7 @@ public class TestUtils {
             hasMedia),
         mediaEvents,
         false,
-        isDataFromSourceSystem);
+        isDataFromSourceSystem, true);
   }
 
   public static MediaRelationshipProcessResult givenEmptyMediaProcessResult() {
@@ -380,7 +380,7 @@ public class TestUtils {
         givenDigitalSpecimenWrapper(entityRelationship, hasMedia),
         hasMedia ? List.of(givenDigitalMediaEvent()) : List.of(),
         false,
-        isDataFromSourceSystem);
+        isDataFromSourceSystem, true);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapperWithMediaEr(String physicalId,
@@ -626,7 +626,7 @@ public class TestUtils {
               List.of(),
               List.of(givenDigitalMediaEvent()),
               List.of()
-          ), true);
+          ), true, true);
     }
     return new UpdatedDigitalSpecimenRecord(
         givenDigitalSpecimenRecord(2, false),
@@ -635,7 +635,7 @@ public class TestUtils {
         givenJsonPatchSpecimen(),
         List.of(),
         givenEmptyMediaProcessResult(),
-        true);
+        true, true);
   }
 
   public static DigitalSpecimen givenAttributes(
@@ -741,7 +741,7 @@ public class TestUtils {
     return new UpdatedDigitalSpecimenTuple(
         givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, hasMedia),
         givenDigitalSpecimenEvent(hasMedia, false, isDataFromSourceSystem),
-        mediaRelations
+        mediaRelations, true
     );
   }
 

@@ -5,6 +5,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationship
 public record UpdatedDigitalSpecimenTuple(
     DigitalSpecimenRecord currentSpecimen,
     DigitalSpecimenEvent digitalSpecimenEvent,
-    MediaRelationshipProcessResult mediaRelationshipProcessResult) {
+    MediaRelationshipProcessResult mediaRelationshipProcessResult,
+    boolean updateMediaEntityRelationships) {
 
 }

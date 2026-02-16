@@ -13,6 +13,7 @@ public record UpdatedDigitalSpecimenRecord(
     JsonNode jsonPatch,
     List<DigitalMediaEvent> digitalMediaObjectEvents,
     MediaRelationshipProcessResult mediaRelationshipProcessResult,
-    Boolean isDataFromSourceSystem) {
+    Boolean isDataFromSourceSystem,
+    boolean updateMediaEntityRelationships) {
 
 }

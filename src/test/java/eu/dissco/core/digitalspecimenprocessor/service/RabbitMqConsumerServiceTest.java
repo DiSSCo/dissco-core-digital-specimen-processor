@@ -190,7 +190,8 @@ class RabbitMqConsumerServiceTest {
                 "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronoStratigraphicDivision": "Stage"
               }
           },
-          "digitalMediaEvents": []
+          "digitalMediaEvents": [],
+          "updateMediaEntityRelationships": true
         }""";
   }
 
