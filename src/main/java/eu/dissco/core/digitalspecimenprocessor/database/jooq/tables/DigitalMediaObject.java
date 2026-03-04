@@ -103,6 +103,12 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
      */
     public final TableField<DigitalMediaObjectRecord, Instant> MODIFIED = createField(DSL.name("modified"), SQLDataType.INSTANT, this, "");
 
+    /**
+     * The column <code>public.digital_media_object.source_system_id</code>.
+     */
+    public final TableField<DigitalMediaObjectRecord, String> SOURCE_SYSTEM_ID = createField(
+        DSL.name("source_system_id"), SQLDataType.CLOB, this, "");
+
     private DigitalMediaObject(Name alias, Table<DigitalMediaObjectRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -142,7 +148,8 @@ public class DigitalMediaObject extends TableImpl<DigitalMediaObjectRecord> {
     @Override
     public List<Index> getIndexes() {
         return Arrays.asList(Indexes.DIGITAL_MEDIA_OBJECT_ID_IDX,
-            Indexes.DIGITAL_MEDIA_OBJECT_ID_VERSION_URL);
+            Indexes.DIGITAL_MEDIA_OBJECT_ID_VERSION_URL,
+            Indexes.DIGITAL_MEDIA_SOURCE_SYSTEM_ID_INDEX);
     }
 
     @Override
