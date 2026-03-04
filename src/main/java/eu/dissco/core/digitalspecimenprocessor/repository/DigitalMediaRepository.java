@@ -83,6 +83,8 @@ public class DigitalMediaRepository {
             JSONB.jsonb(
                 digitalMediaRecord.originalAttributes().toString()))
         .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now())
+        .set(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID,
+            digitalMediaRecord.attributes().getOdsSourceSystemID())
         .onConflict(DIGITAL_MEDIA_OBJECT.ID).doUpdate()
         .set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
         .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
@@ -97,7 +99,9 @@ public class DigitalMediaRepository {
         .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now())
         .set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA,
             JSONB.jsonb(
-                digitalMediaRecord.originalAttributes().toString()));
+                digitalMediaRecord.originalAttributes().toString()))
+        .set(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID,
+            digitalMediaRecord.attributes().getOdsSourceSystemID());
   }
 
   public List<DigitalMediaRecord> getExistingDigitalMediaByDoi(
