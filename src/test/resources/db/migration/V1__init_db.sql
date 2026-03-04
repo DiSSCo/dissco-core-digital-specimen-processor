@@ -17,8 +17,8 @@ create table digital_specimen
     last_checked           timestamp with time zone not null,
     deleted                timestamp with time zone,
     data                   jsonb,
-    col_id text,
     original_data          jsonb,
+    col_id                 text,
     modified               timestamp with time zone
 );
 
