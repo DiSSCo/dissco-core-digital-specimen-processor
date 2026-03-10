@@ -54,11 +54,11 @@ public class DigitalSpecimenService {
   private final ObjectMapper mapper;
   private final DigitalMediaService digitalMediaService;
 
-  public void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalMedia) {
-    var currentIds = currentDigitalMedia.stream().map(DigitalSpecimenRecord::id).toList();
+  public void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalSpecimen) {
+    var currentIds = currentDigitalSpecimen.stream().map(DigitalSpecimenRecord::id).toList();
     repository.updateLastChecked(currentIds);
     log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
-        currentDigitalMedia.size());
+        currentDigitalSpecimen.size());
   }
 
   public Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events,

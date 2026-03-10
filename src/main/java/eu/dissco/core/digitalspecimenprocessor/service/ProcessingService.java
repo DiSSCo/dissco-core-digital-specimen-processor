@@ -179,7 +179,7 @@ public class ProcessingService {
       var uniqueBatchMedia = getUniqueDigitalMediaEvents(uniqueBatchSpecimens);
       var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
-      var annotationsForSpecimens = getAcceptedAnnotationsForSpecmiens(existingSpecimens);
+      var annotationsForSpecimens = getAcceptedAnnotationsForSpecimens(existingSpecimens);
       log.info("Retrieved {} existing specimen, {} existing media", existingSpecimens.size(),
           existingMedia.size());
       var specimenPreprocessResult = preprocessSpecimens(uniqueBatchSpecimens, existingSpecimens,
@@ -616,9 +616,9 @@ public class ProcessingService {
                 Function.identity()));
   }
 
-  private Map<String, List<Annotation>> getAcceptedAnnotationsForSpecmiens(
+  private Map<String, List<Annotation>> getAcceptedAnnotationsForSpecimens(
       Map<String, DigitalSpecimenRecord> digitalSpecimenRecords) {
-    return annotationService.getAnnotationsForSpecimen(
+    return annotationService.getAnnotationsForSpecimens(
         new HashSet<>(digitalSpecimenRecords.values()));
   }
 

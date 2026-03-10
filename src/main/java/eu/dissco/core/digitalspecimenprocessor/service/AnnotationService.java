@@ -28,8 +28,11 @@ public class AnnotationService {
   private final AnnotationValidator annotationValidator;
   private final ObjectMapper mapper;
 
-  public Map<String, List<Annotation>> getAnnotationsForSpecimen(
+  public Map<String, List<Annotation>> getAnnotationsForSpecimens(
       Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
+    if (digitalSpecimenRecords.isEmpty()){
+      return Map.of();
+    }
     var targetIdsWithProxy = digitalSpecimenRecords.stream()
         .map(DigitalSpecimenRecord::id)
         .map(id -> DOI_PROXY + id)
@@ -64,6 +67,7 @@ public class AnnotationService {
     } catch (InvalidAnnotationException | InvalidTargetException e) {
       log.error("Unable to apply annotation {} to digital specimen. Ignoring annotation",
           annotation.getDctermsIdentifier(), e);
+      return digitalSpecimen;
     }
     return mapper.convertValue(digitalSpecimenConverted, DigitalSpecimen.class);
   }

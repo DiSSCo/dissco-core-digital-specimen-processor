@@ -112,6 +112,8 @@ class ProcessingServiceTest {
   private DigitalSpecimenService digitalSpecimenService;
   @Mock
   private MasSchedulerService masSchedulerService;
+  @Mock
+  AnnotationService annotationService;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -122,7 +124,7 @@ class ProcessingServiceTest {
     service = new ProcessingService(MAPPER, specimenRepository, mediaRepository,
         digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService,
         publisherService, fdoRecordService, handleComponent, new ApplicationProperties(),
-        masSchedulerService);
+        masSchedulerService, annotationService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
