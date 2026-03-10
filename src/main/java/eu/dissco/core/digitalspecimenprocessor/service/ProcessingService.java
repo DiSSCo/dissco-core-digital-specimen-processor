@@ -66,6 +66,7 @@ public class ProcessingService {
   private final HandleComponent handleComponent;
   private final ApplicationProperties applicationProperties;
   private final MasSchedulerService masSchedulerService;
+  private final AnnotationService annotationService;
 
   private static Map<String, PidProcessResult> updateMediaPidsWithResults(
       SpecimenProcessResult specimenResult, SpecimenPreprocessResult specimenPreprocessResult,
@@ -608,6 +609,13 @@ public class ProcessingService {
             toMap(
                 specimenRecord -> specimenRecord.digitalSpecimenWrapper().physicalSpecimenID(),
                 Function.identity()));
+  }
+
+  private Map<String, DigitalSpecimenRecord> applyAcceptedAnnotationsToSpecimen(
+      Map<String, DigitalSpecimenRecord> digitalSpecimenRecords) {
+    return annotationService.applyAnnotationsForSpecimen(
+        digitalSpecimenRecords.values().stream().collect(
+            Collectors.toSet()));
   }
 
   private Map<String, DigitalMediaRecord> getCurrentMedia(
