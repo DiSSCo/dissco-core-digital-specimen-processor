@@ -4,6 +4,7 @@ import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DO
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.repository.AnnotationRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import io.github.dissco.annotationlogic.exception.InvalidAnnotationException;
@@ -27,15 +28,8 @@ public class AnnotationService {
   private final AnnotationValidator annotationValidator;
   private final ObjectMapper mapper;
 
-
-  public Map<String, DigitalSpecimenRecord> applyAnnotationsForSpecimen(
+  public Map<String, List<Annotation>> getAnnotationsForSpecimen(
       Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    var acceptedAnnotations = getAnnotationsForSpecimen(digitalSpecimenRecords);
-    return null;
-
-  }
-
-  private Map<String, List<Annotation>> getAnnotationsForSpecimen(Set<DigitalSpecimenRecord> digitalSpecimenRecords){
     var targetIdsWithProxy = digitalSpecimenRecords.stream()
         .map(DigitalSpecimenRecord::id)
         .map(id -> DOI_PROXY + id)
@@ -43,12 +37,33 @@ public class AnnotationService {
     return annotationRepository.getAcceptedAnnotationsForObject(targetIdsWithProxy);
   }
 
-  private DigitalSpecimen applyAnnotation(DigitalSpecimen digitalSpecimen, Annotation annotation) {
-    var digitalSpecimenConverted = mapper.convertValue(digitalSpecimen, io.github.dissco.core.annotationlogic.schema.DigitalSpecimen.class);
+  public DigitalSpecimenWrapper applyAcceptedAnnotations(DigitalSpecimenWrapper digitalSpecimenWrapper,
+      String specimenId, Map<String, List<Annotation>> acceptedAnnotations) {
+    var annotationList = acceptedAnnotations.get(specimenId);
+    var digitalSpecimen = digitalSpecimenWrapper.attributes();
+    for (var annotation : annotationList) {
+      digitalSpecimen = applySingleAnnotation(digitalSpecimen, annotation, specimenId);
+    }
+    return new DigitalSpecimenWrapper(
+        digitalSpecimenWrapper.physicalSpecimenID(),
+        digitalSpecimenWrapper.type(),
+        digitalSpecimen,
+        digitalSpecimenWrapper.originalAttributes()
+    );
+  }
+
+  private DigitalSpecimen applySingleAnnotation(DigitalSpecimen digitalSpecimen,
+      Annotation annotation, String specimenId) {
+    var digitalSpecimenConverted = mapper.convertValue(digitalSpecimen,
+            io.github.dissco.core.annotationlogic.schema.DigitalSpecimen.class)
+        .withDctermsIdentifier(DOI_PROXY + specimenId)
+        .withId(specimenId);
     try {
-      digitalSpecimenConverted = annotationValidator.applyAnnotation(digitalSpecimenConverted, annotation);
-    } catch (InvalidAnnotationException | InvalidTargetException e){
-      log.error("Unable to apply annotation {} to digital specimen. Ignoring annotation", annotation.getDctermsIdentifier(), e);
+      digitalSpecimenConverted = annotationValidator.applyAnnotation(digitalSpecimenConverted,
+          annotation);
+    } catch (InvalidAnnotationException | InvalidTargetException e) {
+      log.error("Unable to apply annotation {} to digital specimen. Ignoring annotation",
+          annotation.getDctermsIdentifier(), e);
     }
     return mapper.convertValue(digitalSpecimenConverted, DigitalSpecimen.class);
   }

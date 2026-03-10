@@ -30,6 +30,7 @@ import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenReposit
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import io.github.dissco.core.annotationlogic.schema.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -178,10 +179,11 @@ public class ProcessingService {
       var uniqueBatchMedia = getUniqueDigitalMediaEvents(uniqueBatchSpecimens);
       var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
+      var annotationsForSpecimens = getAcceptedAnnotationsForSpecmiens(existingSpecimens);
       log.info("Retrieved {} existing specimen, {} existing media", existingSpecimens.size(),
           existingMedia.size());
       var specimenPreprocessResult = preprocessSpecimens(uniqueBatchSpecimens, existingSpecimens,
-          existingMedia);
+          existingMedia, annotationsForSpecimens);
       var pids = processPids(specimenPreprocessResult, existingMedia, uniqueBatchSpecimens,
           uniqueBatchMedia);
       var mediaPreprocessResult = preprocessMedia(uniqueBatchMedia, existingMedia, pids.getRight());
@@ -440,7 +442,8 @@ public class ProcessingService {
 
   private SpecimenPreprocessResult preprocessSpecimens(Set<DigitalSpecimenEvent> events,
       Map<String, DigitalSpecimenRecord> currentSpecimens,
-      Map<String, DigitalMediaRecord> currentMedia) {
+      Map<String, DigitalMediaRecord> currentMedia,
+      Map<String, List<Annotation>> acceptedAnnotations) {
     var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
     var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
     var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
@@ -461,6 +464,8 @@ public class ProcessingService {
         } else {
           processedMediaRelationships = new MediaRelationshipProcessResult();
         }
+        digitalSpecimenWrapper = annotationService.applyAcceptedAnnotations(digitalSpecimenWrapper,
+            currentDigitalSpecimen.id(), acceptedAnnotations);
         if (equalityService.specimensAreEqual(currentDigitalSpecimen,
             digitalSpecimenWrapper, processedMediaRelationships)) {
           log.debug("Received digital specimen is equal to digital specimen: {}",
@@ -611,11 +616,10 @@ public class ProcessingService {
                 Function.identity()));
   }
 
-  private Map<String, DigitalSpecimenRecord> applyAcceptedAnnotationsToSpecimen(
+  private Map<String, List<Annotation>> getAcceptedAnnotationsForSpecmiens(
       Map<String, DigitalSpecimenRecord> digitalSpecimenRecords) {
-    return annotationService.applyAnnotationsForSpecimen(
-        digitalSpecimenRecords.values().stream().collect(
-            Collectors.toSet()));
+    return annotationService.getAnnotationsForSpecimen(
+        new HashSet<>(digitalSpecimenRecords.values()));
   }
 
   private Map<String, DigitalMediaRecord> getCurrentMedia(
