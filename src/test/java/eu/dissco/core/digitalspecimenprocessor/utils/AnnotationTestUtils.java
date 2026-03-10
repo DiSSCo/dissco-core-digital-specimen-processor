@@ -5,15 +5,15 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE_PREFIX;
 
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent;
-import eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type;
-import eu.dissco.core.digitalspecimenprocessor.schema.Annotation;
-import eu.dissco.core.digitalspecimenprocessor.schema.Annotation.OaMotivation;
-import eu.dissco.core.digitalspecimenprocessor.schema.Annotation.OdsMergingDecisionStatus;
-import eu.dissco.core.digitalspecimenprocessor.schema.Annotation.OdsStatus;
-import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationBody;
-import eu.dissco.core.digitalspecimenprocessor.schema.AnnotationTarget;
-import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
+import io.github.dissco.core.annotationlogic.schema.Agent;
+import io.github.dissco.core.annotationlogic.schema.Agent.Type;
+import io.github.dissco.core.annotationlogic.schema.Annotation;
+import io.github.dissco.core.annotationlogic.schema.Annotation.OaMotivation;
+import io.github.dissco.core.annotationlogic.schema.Annotation.OdsMergingDecisionStatus;
+import io.github.dissco.core.annotationlogic.schema.Annotation.OdsStatus;
+import io.github.dissco.core.annotationlogic.schema.AnnotationBody;
+import io.github.dissco.core.annotationlogic.schema.AnnotationTarget;
+import io.github.dissco.core.annotationlogic.schema.OaHasSelector;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -105,8 +105,8 @@ public class AnnotationTestUtils {
         .withDctermsIdentifier(targetId)
         .withOaHasSelector(
             new OaHasSelector()
-                .withAdditionalProperty("ods:term", path)
                 .withAdditionalProperty("@type", "ods:TermSelector")
+                .withAdditionalProperty("ods:term", path)
         );
   }
 

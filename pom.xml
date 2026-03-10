@@ -89,6 +89,11 @@
       <artifactId>postgresql</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.github.dissco</groupId>
+      <artifactId>annotation-logic</artifactId>
+      <version>${dissco-annotation-logic.version}</version>
+    </dependency>
+    <dependency>
       <groupId>co.elastic.clients</groupId>
       <artifactId>elasticsearch-java</artifactId>
       <version>${elasticsearch.version}</version>
@@ -215,7 +220,6 @@
             <argument>https://schemas.dissco.tech/schemas/fdo-type/digital-media/0.4.0/digital-media.json</argument>
             <argument>https://schemas.dissco.tech/schemas/fdo-type/create-update-tombstone-event/0.4.0/create-update-tombstone-event.json</argument>
             <argument>https://schemas.dissco.tech/schemas/developer-schema/annotation/0.4.0/annotation-processing-request.json</argument>
-            <argument>https://schemas.dissco.tech/schemas/fdo-type/annotation/0.4.0/annotation.json</argument>
           </arguments>
         </configuration>
       </plugin>
