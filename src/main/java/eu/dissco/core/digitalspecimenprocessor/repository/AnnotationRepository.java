@@ -7,7 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.AnnotationStatusEnum;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingException;
-import eu.dissco.core.digitalspecimenprocessor.schema.Annotation;
+import io.github.dissco.core.annotationlogic.schema.Annotation;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

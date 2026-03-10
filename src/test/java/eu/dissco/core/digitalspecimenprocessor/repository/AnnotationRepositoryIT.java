@@ -14,8 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.AnnotationStatusEnum;
-import eu.dissco.core.digitalspecimenprocessor.schema.Annotation;
-import eu.dissco.core.digitalspecimenprocessor.schema.Annotation.OaMotivation;
+import io.github.dissco.core.annotationlogic.schema.Annotation;
+import io.github.dissco.core.annotationlogic.schema.Annotation.OaMotivation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
