@@ -158,7 +158,7 @@ class ProcessingServiceTest {
     assertThat(result).isEqualTo(
         new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), List.of(), List.of()));
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), Map.of());
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
@@ -181,7 +181,7 @@ class ProcessingServiceTest {
     assertThat(result).isEqualTo(
         new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), List.of(), List.of()));
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), Map.of());
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
@@ -291,7 +291,7 @@ class ProcessingServiceTest {
 
     // Then
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(1, true), ORIGINAL_DATA));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(1, true), ORIGINAL_DATA), Map.of());
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();

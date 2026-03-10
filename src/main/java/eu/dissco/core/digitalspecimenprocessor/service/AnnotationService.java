@@ -3,6 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.HANDLE_PROXY;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
@@ -12,8 +13,10 @@ import io.github.dissco.annotationlogic.exception.InvalidAnnotationException;
 import io.github.dissco.annotationlogic.exception.InvalidTargetException;
 import io.github.dissco.annotationlogic.validator.AnnotationValidator;
 import io.github.dissco.core.annotationlogic.schema.Annotation;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -57,11 +60,21 @@ public class AnnotationService {
     );
   }
 
-  public void markAnnotationsAsMerged(List<Annotation> annotations) {
-    annotationRepository.markAnnotationsAsMerged(
-        annotations.stream()
-            .map(annotation -> annotation.getDctermsIdentifier().replace(HANDLE_PROXY, ""))
-            .collect(Collectors.toSet()));
+  public void markAnnotationsAsMerged(Map<DigitalSpecimenRecord, JsonNode> equalDigitalSpecimenMap,
+      Map<String, List<Annotation>> acceptedAnnotations) {
+    var specimenIds = equalDigitalSpecimenMap.keySet().stream().map(DigitalSpecimenRecord::id).collect(
+        Collectors.toSet());
+    var annotationsForEqualSpecimens = acceptedAnnotations.entrySet()
+        .stream()
+        .filter(entry -> specimenIds.contains(entry.getKey()))
+        .map(Entry::getValue)
+        .flatMap(Collection::stream)
+        .map(annotation -> annotation.getDctermsIdentifier().replace(HANDLE_PROXY, ""))
+        .collect(Collectors.toSet());
+    if (!annotationsForEqualSpecimens.isEmpty()){
+      annotationRepository.markAnnotationsAsMerged(annotationsForEqualSpecimens);
+    }
+
   }
 
   private DigitalSpecimen applySingleAnnotation(DigitalSpecimen digitalSpecimen,

@@ -195,7 +195,7 @@ public class ProcessingService {
           mediaPreprocessResult.newDigitalMedia().size(),
           mediaPreprocessResult.changedDigitalMedia().size(),
           mediaPreprocessResult.equalDigitalMedia().size());
-      var specimenResults = processSpecimens(specimenPreprocessResult, pids.getLeft());
+      var specimenResults = processSpecimens(specimenPreprocessResult, pids.getLeft(), annotationsForSpecimens);
       var mediaPids = updateMediaPidsWithResults(specimenResults, specimenPreprocessResult,
           pids.getRight());
       var mediaResults = processMedia(mediaPreprocessResult, mediaPids);
@@ -324,12 +324,13 @@ public class ProcessingService {
 
   private SpecimenProcessResult processSpecimens(
       SpecimenPreprocessResult specimenPreprocessResult,
-      Map<String, PidProcessResult> pidProcessResults) {
+      Map<String, PidProcessResult> pidProcessResults,
+      Map<String, List<Annotation>> acceptedAnnotations) {
     var equalSpecimens = new HashMap<DigitalSpecimenRecord, JsonNode>();
     var updatedSpecimens = new ArrayList<DigitalSpecimenRecord>();
     var newSpecimens = new ArrayList<DigitalSpecimenRecord>();
     if (!specimenPreprocessResult.equalSpecimens().isEmpty()) {
-      digitalSpecimenService.updateEqualSpecimen(specimenPreprocessResult.equalSpecimens());
+      digitalSpecimenService.updateEqualSpecimen(specimenPreprocessResult.equalSpecimens(), acceptedAnnotations);
       equalSpecimens = new HashMap<>(specimenPreprocessResult.equalSpecimens());
     }
     if (!specimenPreprocessResult.newSpecimens().isEmpty()) {

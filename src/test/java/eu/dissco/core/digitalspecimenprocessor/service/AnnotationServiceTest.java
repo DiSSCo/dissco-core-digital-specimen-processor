@@ -1,5 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
+import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.ANNOTATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.NEW_VALUE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotatedSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotation;
@@ -83,7 +84,8 @@ class AnnotationServiceTest {
             .withDwcOrganismRemarks(NEW_VALUE),
         ORIGINAL_DATA
     );
-    given(annotationValidator.applyAnnotation(any(DigitalSpecimen.class), eq(givenAnnotation()))).willReturn(
+    given(annotationValidator.applyAnnotation(any(DigitalSpecimen.class),
+        eq(givenAnnotation()))).willReturn(
         annotatedSpecimen);
 
     // When
@@ -106,6 +108,18 @@ class AnnotationServiceTest {
 
     // Then
     assertThat(result).isEqualTo(givenDigitalSpecimenWrapper());
+  }
+
+  @Test
+  void testMarkAnnotationsAsMerged() {
+    // Given
+
+    // When
+    annotationService.markAnnotationsAsMerged(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA),
+        Map.of(HANDLE, List.of(givenAnnotation())));
+
+    // Then
+    then(annotationRepository).should().markAnnotationsAsMerged(Set.of(ANNOTATION_ID));
   }
 
 }

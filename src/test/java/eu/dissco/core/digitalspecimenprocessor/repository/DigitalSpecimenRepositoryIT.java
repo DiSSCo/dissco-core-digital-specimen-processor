@@ -5,6 +5,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
@@ -17,6 +18,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.jooq.Record1;
 import org.junit.jupiter.api.AfterEach;
@@ -101,7 +103,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
 
     // When
-    repository.updateLastChecked(List.of(HANDLE));
+    repository.updateLastCheckedAndOriginalData(Map.of(HANDLE, ORIGINAL_DATA));
     var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED)
         .from(DIGITAL_SPECIMEN)
         .where(DIGITAL_SPECIMEN.ID.eq(HANDLE)).fetchOne(Record1::value1);

@@ -134,13 +134,6 @@ public class DigitalSpecimenRepository {
     context.batch(queries).execute();
   }
 
-  public int updateLastChecked(List<String> currentDigitalSpecimen) {
-    var query = context.update(DIGITAL_SPECIMEN)
-        .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .where(DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen));
-    return query.execute();
-  }
-
   public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList)
       throws DisscoRepositoryException {
     try {
