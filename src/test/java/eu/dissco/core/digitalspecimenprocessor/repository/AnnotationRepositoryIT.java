@@ -65,7 +65,9 @@ class AnnotationRepositoryIT extends BaseRepositoryIT {
 
     // Then
     assertThat(result.keySet()).isEqualTo(expected.keySet());
-    assertThat(result.values()).hasSameElementsAs(expected.values());
+    for (var entry : result.entrySet()){
+      assertThat(entry.getValue()).hasSameElementsAs(expected.get(entry.getKey()));
+    }
   }
 
   private void postAnnotations(Map<Annotation, AnnotationStatusEnum> annotations) throws JsonProcessingException {
