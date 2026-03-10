@@ -57,7 +57,7 @@ public class MasSchedulerService {
   private static List<DigitalSpecimenRecord> getDigitalSpecimenRecordsToSchedule(
       SpecimenProcessResult processResult) {
     var recordsToSchedule = new ArrayList<>(processResult.newDigitalSpecimens());
-    recordsToSchedule.addAll(processResult.equalDigitalSpecimens().stream()
+    recordsToSchedule.addAll(processResult.equalDigitalSpecimens().keySet().stream()
         .filter(DigitalSpecimenRecord::forceMasSchedule).toList());
     recordsToSchedule.addAll(processResult.updatedDigitalSpecimens().stream()
         .filter(DigitalSpecimenRecord::forceMasSchedule).toList());

@@ -112,7 +112,7 @@ public class ProcessingService {
   private static Map<String, String> concatSpecimenPids(
       SpecimenPreprocessResult specimenPreprocessResult) {
     var existingSpecimenPids = Stream.concat(
-        specimenPreprocessResult.equalSpecimens().stream(),
+        specimenPreprocessResult.equalSpecimens().keySet().stream(),
         specimenPreprocessResult.changedSpecimens().stream()
             .map(UpdatedDigitalSpecimenTuple::currentSpecimen)
     ).collect(toMap(
@@ -204,7 +204,7 @@ public class ProcessingService {
       return specimenResults;
     } catch (DisscoRepositoryException e) {
       log.error("Unable to access database", e);
-      return new SpecimenProcessResult(List.of(), List.of(), List.of());
+      return new SpecimenProcessResult(Map.of(), List.of(), List.of());
     }
   }
 
@@ -325,12 +325,12 @@ public class ProcessingService {
   private SpecimenProcessResult processSpecimens(
       SpecimenPreprocessResult specimenPreprocessResult,
       Map<String, PidProcessResult> pidProcessResults) {
-    var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
+    var equalSpecimens = new HashMap<DigitalSpecimenRecord, JsonNode>();
     var updatedSpecimens = new ArrayList<DigitalSpecimenRecord>();
     var newSpecimens = new ArrayList<DigitalSpecimenRecord>();
     if (!specimenPreprocessResult.equalSpecimens().isEmpty()) {
       digitalSpecimenService.updateEqualSpecimen(specimenPreprocessResult.equalSpecimens());
-      equalSpecimens = new ArrayList<>(specimenPreprocessResult.equalSpecimens());
+      equalSpecimens = new HashMap<>(specimenPreprocessResult.equalSpecimens());
     }
     if (!specimenPreprocessResult.newSpecimens().isEmpty()) {
       if (!specimenPreprocessResult.newSpecimenPids()
@@ -444,7 +444,7 @@ public class ProcessingService {
       Map<String, DigitalSpecimenRecord> currentSpecimens,
       Map<String, DigitalMediaRecord> currentMedia,
       Map<String, List<Annotation>> acceptedAnnotations) {
-    var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
+    var equalSpecimens = new HashMap<DigitalSpecimenRecord, JsonNode>();
     var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
     var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
     for (DigitalSpecimenEvent event : events) {
@@ -470,7 +470,8 @@ public class ProcessingService {
             digitalSpecimenWrapper, processedMediaRelationships)) {
           log.debug("Received digital specimen is equal to digital specimen: {}",
               currentDigitalSpecimen.id());
-          equalSpecimens.add(currentDigitalSpecimen);
+          equalSpecimens.put(currentDigitalSpecimen, event.digitalSpecimenWrapper()
+              .originalAttributes());
         } else {
           log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
           var eventWithUpdatedEr = equalityService.setExistingEventDatesSpecimen(

@@ -12,6 +12,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
@@ -120,11 +121,10 @@ class DigitalSpecimenServiceTest {
     // Given
 
     // When
-    digitalSpecimenService.updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
+    digitalSpecimenService.updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA));
 
     // Then
-    then(repository).should().updateLastChecked(List.of(HANDLE));
-
+    then(repository).should().updateLastCheckedAndOriginalData(Map.of(HANDLE, ORIGINAL_DATA));
   }
 
   @Test

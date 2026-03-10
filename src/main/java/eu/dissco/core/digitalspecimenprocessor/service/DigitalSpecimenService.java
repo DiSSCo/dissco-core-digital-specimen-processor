@@ -2,6 +2,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
+import static java.util.stream.Collectors.toMap;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -29,6 +30,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,11 +56,16 @@ public class DigitalSpecimenService {
   private final ObjectMapper mapper;
   private final DigitalMediaService digitalMediaService;
 
-  public void updateEqualSpecimen(List<DigitalSpecimenRecord> currentDigitalSpecimen) {
-    var currentIds = currentDigitalSpecimen.stream().map(DigitalSpecimenRecord::id).toList();
-    repository.updateLastChecked(currentIds);
+  public void updateEqualSpecimen(Map<DigitalSpecimenRecord, JsonNode> equalDigitalSpecimenMap) {
+    var idMap = equalDigitalSpecimenMap.entrySet().stream()
+            .collect(toMap(
+                entry ->
+                entry.getKey().id(),
+                Entry::getValue
+            ));
+    repository.updateLastCheckedAndOriginalData(idMap);
     log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
-        currentDigitalSpecimen.size());
+        equalDigitalSpecimenMap.size());
   }
 
   public Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events,

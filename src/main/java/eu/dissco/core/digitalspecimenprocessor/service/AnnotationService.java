@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
+import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.HANDLE_PROXY;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -30,7 +31,7 @@ public class AnnotationService {
 
   public Map<String, List<Annotation>> getAnnotationsForSpecimens(
       Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    if (digitalSpecimenRecords.isEmpty()){
+    if (digitalSpecimenRecords.isEmpty()) {
       return Map.of();
     }
     var targetIdsWithProxy = digitalSpecimenRecords.stream()
@@ -40,7 +41,8 @@ public class AnnotationService {
     return annotationRepository.getAcceptedAnnotationsForObject(targetIdsWithProxy);
   }
 
-  public DigitalSpecimenWrapper applyAcceptedAnnotations(DigitalSpecimenWrapper digitalSpecimenWrapper,
+  public DigitalSpecimenWrapper applyAcceptedAnnotations(
+      DigitalSpecimenWrapper digitalSpecimenWrapper,
       String specimenId, Map<String, List<Annotation>> acceptedAnnotations) {
     var annotationList = acceptedAnnotations.get(specimenId);
     var digitalSpecimen = digitalSpecimenWrapper.attributes();
@@ -53,6 +55,13 @@ public class AnnotationService {
         digitalSpecimen,
         digitalSpecimenWrapper.originalAttributes()
     );
+  }
+
+  public void markAnnotationsAsMerged(List<Annotation> annotations) {
+    annotationRepository.markAnnotationsAsMerged(
+        annotations.stream()
+            .map(annotation -> annotation.getDctermsIdentifier().replace(HANDLE_PROXY, ""))
+            .collect(Collectors.toSet()));
   }
 
   private DigitalSpecimen applySingleAnnotation(DigitalSpecimen digitalSpecimen,
