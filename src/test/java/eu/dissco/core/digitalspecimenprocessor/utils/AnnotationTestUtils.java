@@ -1,9 +1,16 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DATASET_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_COLLECTION;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
 
 import io.github.dissco.core.annotationlogic.schema.Agent;
 import io.github.dissco.core.annotationlogic.schema.Agent.Type;
@@ -13,6 +20,10 @@ import io.github.dissco.core.annotationlogic.schema.Annotation.OdsMergingDecisio
 import io.github.dissco.core.annotationlogic.schema.Annotation.OdsStatus;
 import io.github.dissco.core.annotationlogic.schema.AnnotationBody;
 import io.github.dissco.core.annotationlogic.schema.AnnotationTarget;
+import io.github.dissco.core.annotationlogic.schema.DigitalSpecimen;
+import io.github.dissco.core.annotationlogic.schema.DigitalSpecimen.OdsLivingOrPreserved;
+import io.github.dissco.core.annotationlogic.schema.DigitalSpecimen.OdsPhysicalSpecimenIDType;
+import io.github.dissco.core.annotationlogic.schema.DigitalSpecimen.OdsTopicDiscipline;
 import io.github.dissco.core.annotationlogic.schema.OaHasSelector;
 import java.util.ArrayList;
 import java.util.Date;
@@ -32,8 +43,8 @@ public class AnnotationTestUtils {
     // Utility class
   }
 
-  public static Annotation givenAnnotation(){
-    return givenAnnotation(HANDLE_PREFIX + ANNOTATION_ID,  DOI_PREFIX + HANDLE);
+  public static Annotation givenAnnotation() {
+    return givenAnnotation(HANDLE_PREFIX + ANNOTATION_ID, DOI_PREFIX + HANDLE);
   }
 
   public static Annotation givenAnnotation(String annotationId, String targetId) {
@@ -92,8 +103,8 @@ public class AnnotationTestUtils {
 
   private static AnnotationTarget givenOaTargetTerm(OaMotivation motivation, String targetId) {
     var path = OaMotivation.ODS_ADDING.equals(motivation) ?
-        "$['ods:topicOrigin']" :
-        "$['ods:topicDiscipline']";
+        "$['dwc:remarks']" :
+        "$['dwc:collectionID']";
     return givenAnnotationTargetTerm(path, targetId);
   }
 
@@ -134,6 +145,36 @@ public class AnnotationTestUtils {
         .withSchemaName("Some agent")
         .withId(ORCID)
         .withType(type);
+  }
+
+  public static DigitalSpecimen givenAnnotatedSpecimen(){
+    return givenAnnotatedSpecimen(OaMotivation.ODS_ADDING);
+  }
+
+  public static DigitalSpecimen givenAnnotatedSpecimen(OaMotivation motivation) {
+    var specimen = new DigitalSpecimen()
+        .withOdsOrganisationID(ORGANISATION_ID)
+        .withOdsOrganisationName("National Museum of Natural History")
+        .withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.GLOBAL)
+        .withOdsPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID)
+        .withOdsNormalisedPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID)
+        .withOdsSpecimenName(SPECIMEN_NAME)
+        .withOdsTopicDiscipline(OdsTopicDiscipline.BOTANY)
+        .withOdsSourceSystemID(SOURCE_SYSTEM_ID)
+        .withOdsSourceSystemName(SOURCE_SYSTEM_NAME)
+        .withOdsLivingOrPreserved(OdsLivingOrPreserved.PRESERVED)
+        .withDctermsLicense("http://creativecommons.org/licenses/by-nc/4.0/")
+        .withDwcCollectionID(PHYSICAL_SPECIMEN_COLLECTION)
+        .withDwcDatasetName(DATASET_ID)
+        .withOdsIsMarkedAsType(true)
+        .withOdsIsKnownToContainMedia(false)
+        .withDctermsModified("2022-11-01T09:59:24.000Z");
+    if (motivation.equals(OaMotivation.OA_EDITING)){
+      specimen.withDwcCollectionID(NEW_VALUE);
+    } else {
+      specimen.withDwcOrganismRemarks(NEW_VALUE);
+    }
+    return specimen;
   }
 
 }

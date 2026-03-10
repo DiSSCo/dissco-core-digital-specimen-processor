@@ -12,6 +12,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
@@ -85,6 +86,8 @@ class DigitalSpecimenServiceTest {
   private BulkResponse bulkResponse;
   @Mock
   private DigitalMediaService digitalMediaService;
+  @Mock
+  private AnnotationService annotationService;
   private static MockedStatic<Instant> mockedInstant;
   private static MockedStatic<Clock> mockedClock;
 
@@ -94,7 +97,7 @@ class DigitalSpecimenServiceTest {
   void setUp() {
     digitalSpecimenService = new DigitalSpecimenService(repository, rollbackService,
         elasticRepository, fdoRecordService, publisherService, handleComponent,
-        annotationPublisherService, midsService, MAPPER, digitalMediaService);
+        annotationPublisherService, midsService, MAPPER, digitalMediaService, annotationService);
   }
 
   @BeforeAll
@@ -120,11 +123,10 @@ class DigitalSpecimenServiceTest {
     // Given
 
     // When
-    digitalSpecimenService.updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
+    digitalSpecimenService.updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), Map.of());
 
     // Then
-    then(repository).should().updateLastChecked(List.of(HANDLE));
-
+    then(repository).should().updateLastCheckedAndOriginalData(Map.of(HANDLE, ORIGINAL_DATA));
   }
 
   @Test

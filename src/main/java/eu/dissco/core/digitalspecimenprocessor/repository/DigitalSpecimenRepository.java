@@ -12,6 +12,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryExcepti
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -123,11 +124,14 @@ public class DigitalSpecimenRepository {
             .toString().replace("\\u0000", ""));
   }
 
-  public int updateLastChecked(List<String> currentDigitalSpecimen) {
-    var query = context.update(DIGITAL_SPECIMEN)
-        .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .where(DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen));
-    return query.execute();
+  public void updateLastCheckedAndOriginalData(Map<String, JsonNode> specimenMap) {
+    var queries = specimenMap.entrySet().stream()
+        .map(entry -> context.update(DIGITAL_SPECIMEN)
+            .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
+            .set(DIGITAL_SPECIMEN.ORIGINAL_DATA, JSONB.valueOf(entry.getValue().toString()))
+            .where(DIGITAL_SPECIMEN.ID.in(entry.getKey())))
+        .toList();
+    context.batch(queries).execute();
   }
 
   public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList)
