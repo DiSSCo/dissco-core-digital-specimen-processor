@@ -195,7 +195,7 @@ public class ProcessingService {
           mediaPreprocessResult.newDigitalMedia().size(),
           mediaPreprocessResult.changedDigitalMedia().size(),
           mediaPreprocessResult.equalDigitalMedia().size());
-      var specimenResults = processSpecimens(specimenPreprocessResult, pids.getLeft(), annotationsForSpecimens);
+      var specimenResults = processSpecimens(specimenPreprocessResult, pids.getLeft());
       var mediaPids = updateMediaPidsWithResults(specimenResults, specimenPreprocessResult,
           pids.getRight());
       var mediaResults = processMedia(mediaPreprocessResult, mediaPids);
@@ -324,13 +324,12 @@ public class ProcessingService {
 
   private SpecimenProcessResult processSpecimens(
       SpecimenPreprocessResult specimenPreprocessResult,
-      Map<String, PidProcessResult> pidProcessResults,
-      Map<String, List<Annotation>> acceptedAnnotations) {
+      Map<String, PidProcessResult> pidProcessResults) {
     var equalSpecimens = new HashMap<DigitalSpecimenRecord, JsonNode>();
     var updatedSpecimens = new ArrayList<DigitalSpecimenRecord>();
     var newSpecimens = new ArrayList<DigitalSpecimenRecord>();
     if (!specimenPreprocessResult.equalSpecimens().isEmpty()) {
-      digitalSpecimenService.updateEqualSpecimen(specimenPreprocessResult.equalSpecimens(), acceptedAnnotations);
+      digitalSpecimenService.updateEqualSpecimen(specimenPreprocessResult.equalSpecimens());
       equalSpecimens = new HashMap<>(specimenPreprocessResult.equalSpecimens());
     }
     if (!specimenPreprocessResult.newSpecimens().isEmpty()) {
@@ -449,15 +448,14 @@ public class ProcessingService {
     var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
     var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
     for (DigitalSpecimenEvent event : events) {
-      var digitalSpecimenWrapper = event.digitalSpecimenWrapper();
-      log.debug("ds: {}", digitalSpecimenWrapper);
-      if (!currentSpecimens.containsKey(digitalSpecimenWrapper.physicalSpecimenID())) {
+      log.debug("ds: {}", event.digitalSpecimenWrapper());
+      if (!currentSpecimens.containsKey(event.digitalSpecimenWrapper().physicalSpecimenID())) {
         log.debug("Specimen with id: {} is completely new",
-            digitalSpecimenWrapper.physicalSpecimenID());
+           event.digitalSpecimenWrapper().physicalSpecimenID());
         newSpecimens.add(event);
       } else {
         var currentDigitalSpecimen = currentSpecimens.get(
-            digitalSpecimenWrapper.physicalSpecimenID());
+            event.digitalSpecimenWrapper().physicalSpecimenID());
         MediaRelationshipProcessResult processedMediaRelationships;
         if (event.isDataFromSourceSystem().booleanValue()) {
           processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
@@ -465,10 +463,10 @@ public class ProcessingService {
         } else {
           processedMediaRelationships = new MediaRelationshipProcessResult();
         }
-        digitalSpecimenWrapper = annotationService.applyAcceptedAnnotations(digitalSpecimenWrapper,
-            currentDigitalSpecimen.id(), acceptedAnnotations);
+        event = annotationService.applyAcceptedAnnotations(event,
+            currentDigitalSpecimen, acceptedAnnotations);
         if (equalityService.specimensAreEqual(currentDigitalSpecimen,
-            digitalSpecimenWrapper, processedMediaRelationships)) {
+            event.digitalSpecimenWrapper(), processedMediaRelationships)) {
           log.debug("Received digital specimen is equal to digital specimen: {}",
               currentDigitalSpecimen.id());
           equalSpecimens.put(currentDigitalSpecimen, event.digitalSpecimenWrapper()

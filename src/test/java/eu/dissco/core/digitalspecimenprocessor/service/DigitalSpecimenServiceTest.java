@@ -86,8 +86,6 @@ class DigitalSpecimenServiceTest {
   private BulkResponse bulkResponse;
   @Mock
   private DigitalMediaService digitalMediaService;
-  @Mock
-  private AnnotationService annotationService;
   private static MockedStatic<Instant> mockedInstant;
   private static MockedStatic<Clock> mockedClock;
 
@@ -97,7 +95,7 @@ class DigitalSpecimenServiceTest {
   void setUp() {
     digitalSpecimenService = new DigitalSpecimenService(repository, rollbackService,
         elasticRepository, fdoRecordService, publisherService, handleComponent,
-        annotationPublisherService, midsService, MAPPER, digitalMediaService, annotationService);
+        annotationPublisherService, midsService, MAPPER, digitalMediaService);
   }
 
   @BeforeAll
@@ -123,7 +121,7 @@ class DigitalSpecimenServiceTest {
     // Given
 
     // When
-    digitalSpecimenService.updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), Map.of());
+    digitalSpecimenService.updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA));
 
     // Then
     then(repository).should().updateLastCheckedAndOriginalData(Map.of(HANDLE, ORIGINAL_DATA));
