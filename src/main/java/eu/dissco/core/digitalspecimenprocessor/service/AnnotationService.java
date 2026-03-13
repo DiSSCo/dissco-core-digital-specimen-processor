@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.exception.AnnotationProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.property.AnnotationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.AnnotationRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
@@ -46,7 +47,8 @@ public class AnnotationService {
 
   public DigitalSpecimenEvent applyAcceptedAnnotations(
       DigitalSpecimenEvent digitalSpecimenEvent,
-      DigitalSpecimenRecord currentSpecimen, Map<String, List<Annotation>> acceptedAnnotations) {
+      DigitalSpecimenRecord currentSpecimen, Map<String, List<Annotation>> acceptedAnnotations)
+      throws AnnotationProcessingException {
     if (!properties.isApplyAcceptedAnnotations() || acceptedAnnotations.isEmpty()) {
       return digitalSpecimenEvent;
     }
@@ -70,7 +72,8 @@ public class AnnotationService {
   }
 
   private DigitalSpecimen applySingleAnnotation(DigitalSpecimen digitalSpecimen,
-      Annotation annotation, DigitalSpecimenRecord currentSpecimen) {
+      Annotation annotation, DigitalSpecimenRecord currentSpecimen)
+      throws AnnotationProcessingException {
     var digitalSpecimenConverted = mapper.convertValue(digitalSpecimen,
             io.github.dissco.core.annotationlogic.schema.DigitalSpecimen.class)
         // Add required fields so that our annotation validator accepts the annotation
@@ -83,7 +86,7 @@ public class AnnotationService {
     } catch (InvalidAnnotationException | InvalidTargetException e) {
       log.error("Unable to apply annotation {} to digital specimen. Ignoring annotation",
           annotation.getDctermsIdentifier(), e);
-      return digitalSpecimen;
+      throw new AnnotationProcessingException();
     }
     return mapper.convertValue(digitalSpecimenConverted, DigitalSpecimen.class);
   }

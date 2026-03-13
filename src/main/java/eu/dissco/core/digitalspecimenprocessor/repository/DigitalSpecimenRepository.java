@@ -126,10 +126,15 @@ public class DigitalSpecimenRepository {
 
   public void updateLastCheckedAndOriginalData(Map<String, JsonNode> specimenMap) {
     var queries = specimenMap.entrySet().stream()
-        .map(entry -> context.update(DIGITAL_SPECIMEN)
-            .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-            .set(DIGITAL_SPECIMEN.ORIGINAL_DATA, JSONB.valueOf(entry.getValue().toString()))
-            .where(DIGITAL_SPECIMEN.ID.in(entry.getKey())))
+        .map(entry -> {
+          var query = context.update(DIGITAL_SPECIMEN)
+              .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now());
+          if (entry.getValue() != null) {
+            query = query.set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
+                JSONB.valueOf(entry.getValue().toString()));
+          }
+          return query.where(DIGITAL_SPECIMEN.ID.in(entry.getKey()));
+        })
         .toList();
     context.batch(queries).execute();
   }

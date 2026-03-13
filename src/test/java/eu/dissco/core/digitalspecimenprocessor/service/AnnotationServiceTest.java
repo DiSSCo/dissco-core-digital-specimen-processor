@@ -15,12 +15,14 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttri
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
+import eu.dissco.core.digitalspecimenprocessor.exception.AnnotationProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.property.AnnotationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.AnnotationRepository;
 import io.github.dissco.annotationlogic.exception.InvalidAnnotationException;
@@ -110,13 +112,10 @@ class AnnotationServiceTest {
     given(annotationValidator.applyAnnotation(any(DigitalSpecimen.class), eq(givenAnnotation())))
         .willThrow(InvalidAnnotationException.class);
 
-    // When
-    var result = annotationService.applyAcceptedAnnotations(givenDigitalSpecimenEvent(),
+    // When / Then
+    assertThrows(AnnotationProcessingException.class, () -> annotationService.applyAcceptedAnnotations(givenDigitalSpecimenEvent(),
         givenDigitalSpecimenRecord(),
-        Map.of(HANDLE, List.of(givenAnnotation())));
-
-    // Then
-    assertThat(result).isEqualTo(givenDigitalSpecimenEvent());
+        Map.of(HANDLE, List.of(givenAnnotation()))));
   }
 
 }

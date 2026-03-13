@@ -60,6 +60,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.exception.AnnotationProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
@@ -163,6 +164,28 @@ class ProcessingServiceTest {
     then(digitalSpecimenService).should()
         .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testAnnotationApplicationFailed() throws Exception {
+    // Given
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenDigitalSpecimenRecord()));
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
+        anyMap())).willReturn(givenEmptyMediaProcessResult());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willThrow(new AnnotationProcessingException());
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(
+        new SpecimenProcessResult(Map.of(), List.of(),
+            List.of()));
+    then(publisherService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    then(digitalSpecimenService).shouldHaveNoInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
   }
