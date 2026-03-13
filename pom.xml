@@ -89,11 +89,6 @@
       <artifactId>postgresql</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.github.dissco</groupId>
-      <artifactId>annotation-logic</artifactId>
-      <version>${dissco-annotation-logic.version}</version>
-    </dependency>
-    <dependency>
       <groupId>co.elastic.clients</groupId>
       <artifactId>elasticsearch-java</artifactId>
       <version>${elasticsearch.version}</version>
