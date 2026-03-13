@@ -56,7 +56,7 @@ public class DigitalSpecimenService {
   private final ObjectMapper mapper;
   private final DigitalMediaService digitalMediaService;
 
-  public void updateEqualSpecimen(Map<DigitalSpecimenRecord, JsonNode> equalDigitalSpecimenMap) {
+  public void updateEqualSpecimen(Map<DigitalSpecimenRecord, DigitalSpecimenEvent> equalDigitalSpecimenMap) {
     var idMap = equalDigitalSpecimenMap.entrySet().stream()
         .collect(toMap(
             entry ->

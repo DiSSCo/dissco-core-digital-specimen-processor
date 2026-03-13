@@ -11,7 +11,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
@@ -159,10 +158,10 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), List.of(),
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
             List.of()));
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
@@ -211,10 +210,10 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), List.of(),
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
             List.of()));
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
@@ -328,7 +327,7 @@ class ProcessingServiceTest {
 
     // Then
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(1, true), ORIGINAL_DATA));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(1, true), givenDigitalSpecimenEvent(true)));
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();

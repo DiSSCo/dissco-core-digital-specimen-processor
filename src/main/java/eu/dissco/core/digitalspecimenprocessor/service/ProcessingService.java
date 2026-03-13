@@ -326,7 +326,7 @@ public class ProcessingService {
   private SpecimenProcessResult processSpecimens(
       SpecimenPreprocessResult specimenPreprocessResult,
       Map<String, PidProcessResult> pidProcessResults) {
-    var equalSpecimens = new HashMap<DigitalSpecimenRecord, JsonNode>();
+    var equalSpecimens = new HashMap<DigitalSpecimenRecord, DigitalSpecimenEvent>();
     var updatedSpecimens = new ArrayList<DigitalSpecimenRecord>();
     var newSpecimens = new ArrayList<DigitalSpecimenRecord>();
     if (!specimenPreprocessResult.equalSpecimens().isEmpty()) {
@@ -445,7 +445,7 @@ public class ProcessingService {
       Map<String, DigitalSpecimenRecord> currentSpecimens,
       Map<String, DigitalMediaRecord> currentMedia,
       Map<String, List<Annotation>> acceptedAnnotations) {
-    var equalSpecimens = new HashMap<DigitalSpecimenRecord, JsonNode>();
+    var equalSpecimens = new HashMap<DigitalSpecimenRecord, DigitalSpecimenEvent>();
     var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
     var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
     for (DigitalSpecimenEvent event : events) {
@@ -464,8 +464,7 @@ public class ProcessingService {
               event.digitalSpecimenWrapper(), processedMediaRelationships)) {
             log.debug("Received digital specimen is equal to digital specimen: {}",
                 currentDigitalSpecimen.id());
-            equalSpecimens.put(currentDigitalSpecimen, event.digitalSpecimenWrapper()
-                .originalAttributes());
+            equalSpecimens.put(currentDigitalSpecimen, event);
           } else {
             log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
             var eventWithUpdatedEr = equalityService.setExistingEventDatesSpecimen(

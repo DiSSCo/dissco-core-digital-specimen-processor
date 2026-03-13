@@ -9,10 +9,10 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -66,7 +66,7 @@ class MasSchedulerTest {
         true,
         List.of());
     var specimenProcessResult = new SpecimenProcessResult(
-        Map.of(forcedRecord, ORIGINAL_DATA), List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
+        Map.of(forcedRecord, givenDigitalSpecimenEvent()), List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
     // When
     masSchedulerService.scheduleMasForSpecimen(specimenProcessResult);
@@ -84,7 +84,7 @@ class MasSchedulerTest {
   void testPublishSpecimenNotForced() throws Exception {
     // Given
     var specimenProcessResult = new SpecimenProcessResult(
-        Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), List.of(),
+        Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
         List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
     // When
@@ -144,7 +144,7 @@ class MasSchedulerTest {
   void testPublishSpecimenPublishingFails() throws Exception {
     // Given
     var specimenProcessResult = new SpecimenProcessResult(
-        Map.of(givenDigitalSpecimenRecord(), ORIGINAL_DATA), List.of(),
+        Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
         List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
     doThrow(JsonProcessingException.class).when(publisherService).publishMasJobRequest(any());
 
