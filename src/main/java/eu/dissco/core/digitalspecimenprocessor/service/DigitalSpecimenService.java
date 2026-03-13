@@ -24,7 +24,6 @@ import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
-import io.github.dissco.core.annotationlogic.schema.Annotation;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
@@ -56,10 +55,8 @@ public class DigitalSpecimenService {
   private final MidsService midsService;
   private final ObjectMapper mapper;
   private final DigitalMediaService digitalMediaService;
-  private final AnnotationService annotationService;
 
-  public void updateEqualSpecimen(Map<DigitalSpecimenRecord, JsonNode> equalDigitalSpecimenMap,
-      Map<String, List<Annotation>> acceptedAnnotations) {
+  public void updateEqualSpecimen(Map<DigitalSpecimenRecord, JsonNode> equalDigitalSpecimenMap) {
     var idMap = equalDigitalSpecimenMap.entrySet().stream()
         .collect(toMap(
             entry ->
@@ -67,7 +64,6 @@ public class DigitalSpecimenService {
             Entry::getValue
         ));
     repository.updateLastCheckedAndOriginalData(idMap);
-    annotationService.markAnnotationsAsMerged(equalDigitalSpecimenMap, acceptedAnnotations);
     log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
         equalDigitalSpecimenMap.size());
   }
