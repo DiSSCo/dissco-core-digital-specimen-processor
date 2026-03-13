@@ -5,18 +5,27 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.jooq.Record1;
 import org.junit.jupiter.api.AfterEach;
@@ -92,22 +101,70 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdateLastChecked() {
+  void testUpdateLastCheckedAndOriginalData() throws Exception {
     // Given
     repository.createDigitalSpecimenRecord(
         Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
+    var expectedOriginalData = MAPPER.createObjectNode()
+        .put("new field", "new data");
+    var updatedEvent = new DigitalSpecimenEvent(
+        Set.of(),
+        new DigitalSpecimenWrapper(
+            PHYSICAL_SPECIMEN_ID,
+            TYPE_PID,
+            givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false),
+            expectedOriginalData
+        ),
+        List.of(),
+        false,
+        Boolean.TRUE);
 
     // When
-    repository.updateLastChecked(List.of(HANDLE));
-    var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED)
+    repository.updateLastCheckedAndOriginalData(Map.of(HANDLE, updatedEvent));
+    var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED, DIGITAL_SPECIMEN.ORIGINAL_DATA)
         .from(DIGITAL_SPECIMEN)
-        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE)).fetchOne(Record1::value1);
+        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+        .fetchOne();
 
     // Then
-    assertThat(result).isAfter(UPDATED_TIMESTAMP);
+    assertThat(result.get(DIGITAL_SPECIMEN.LAST_CHECKED)).isAfter(UPDATED_TIMESTAMP);
+    assertThat(MAPPER.readValue(result.get(DIGITAL_SPECIMEN.ORIGINAL_DATA).data(),
+        JsonNode.class)).isEqualTo(expectedOriginalData);
+  }
+
+  @Test
+  void testUpdateLastCheckedOnly() throws Exception {
+    // Given
+    repository.createDigitalSpecimenRecord(
+        Set.of(
+            givenDigitalSpecimenRecord(),
+            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
+            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
+    var updatedEvent = new DigitalSpecimenEvent(
+        Set.of(),
+        new DigitalSpecimenWrapper(
+            PHYSICAL_SPECIMEN_ID,
+            TYPE_PID,
+            givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false),
+            MAPPER.createObjectNode()),
+        List.of(),
+        false,
+        Boolean.FALSE);
+
+    // When
+    repository.updateLastCheckedAndOriginalData(Map.of(HANDLE, updatedEvent));
+    var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED, DIGITAL_SPECIMEN.ORIGINAL_DATA)
+        .from(DIGITAL_SPECIMEN)
+        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+        .fetchOne();
+
+    // Then
+    assertThat(result.get(DIGITAL_SPECIMEN.LAST_CHECKED)).isAfter(UPDATED_TIMESTAMP);
+    assertThat(MAPPER.readValue(result.get(DIGITAL_SPECIMEN.ORIGINAL_DATA).data(),
+        JsonNode.class)).isEqualTo(ORIGINAL_DATA);
   }
 
 

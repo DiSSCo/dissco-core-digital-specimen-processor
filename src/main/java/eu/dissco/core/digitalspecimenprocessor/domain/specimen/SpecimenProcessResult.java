@@ -3,14 +3,15 @@ package eu.dissco.core.digitalspecimenprocessor.domain.specimen;
 import static java.util.Collections.emptyList;
 
 import java.util.List;
+import java.util.Map;
 
 public record SpecimenProcessResult(
-    List<DigitalSpecimenRecord> equalDigitalSpecimens,
+    Map<DigitalSpecimenRecord, DigitalSpecimenEvent> equalDigitalSpecimens,
     List<DigitalSpecimenRecord> updatedDigitalSpecimens,
     List<DigitalSpecimenRecord> newDigitalSpecimens
 ) {
 
   public SpecimenProcessResult() {
-    this(emptyList(), emptyList(), emptyList());
+    this(Map.of(), emptyList(), emptyList());
   }
 }

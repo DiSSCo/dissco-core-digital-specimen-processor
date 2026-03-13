@@ -789,5 +789,4 @@ public class TestUtils {
     return new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
   }
 
-
 }

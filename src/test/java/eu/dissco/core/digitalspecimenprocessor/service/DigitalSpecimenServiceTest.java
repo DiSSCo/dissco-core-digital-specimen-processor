@@ -110,7 +110,7 @@ class DigitalSpecimenServiceTest {
   }
 
   @AfterAll
-  static void teardown(){
+  static void teardown() {
     mockedInstant.close();
     mockedClock.close();
   }
@@ -120,11 +120,12 @@ class DigitalSpecimenServiceTest {
     // Given
 
     // When
-    digitalSpecimenService.updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
+    digitalSpecimenService.updateEqualSpecimen(
+        Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
 
     // Then
-    then(repository).should().updateLastChecked(List.of(HANDLE));
-
+    then(repository).should()
+        .updateLastCheckedAndOriginalData(Map.of(HANDLE, givenDigitalSpecimenEvent()));
   }
 
   @Test
@@ -307,16 +308,16 @@ class DigitalSpecimenServiceTest {
         givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, true),
         givenDigitalSpecimenEvent(false),
         new MediaRelationshipProcessResult(
-        List.of(new EntityRelationship()
-            .withType("ods:EntityRelationship")
-            .withDwcRelationshipOfResource("hasDigitalSpecimen")
-            .withDwcRelationshipEstablishedDate(Date.from(CREATED))
-            .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
-            .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
-            .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
-                PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
-        List.of(),
-        List.of()));
+            List.of(new EntityRelationship()
+                .withType("ods:EntityRelationship")
+                .withDwcRelationshipOfResource("hasDigitalSpecimen")
+                .withDwcRelationshipEstablishedDate(Date.from(CREATED))
+                .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
+                .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
+                .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
+                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
+            List.of(),
+            List.of()));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     var expectedRecord = givenDigitalSpecimenRecord(2, false);
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
@@ -410,7 +411,8 @@ class DigitalSpecimenServiceTest {
     given(midsService.calculateMids(any())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
-    doThrow(JsonProcessingException.class).when(publisherService).publishUpdateEventSpecimen(expectedRecord, givenJsonPatchSpecimen());
+    doThrow(JsonProcessingException.class).when(publisherService)
+        .publishUpdateEventSpecimen(expectedRecord, givenJsonPatchSpecimen());
 
     // When
     var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
@@ -444,7 +446,8 @@ class DigitalSpecimenServiceTest {
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
     doThrow(PidException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(publisherService).deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
+    doThrow(JsonProcessingException.class).when(publisherService)
+        .deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
 
     // When
     var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);

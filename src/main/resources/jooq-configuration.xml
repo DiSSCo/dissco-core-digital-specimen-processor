@@ -13,7 +13,8 @@
     <database>
       <name>org.jooq.meta.postgres.PostgresDatabase</name>
       <inputSchema>public</inputSchema>
-      <includes>digital_specimen | translator_type | digital_media_object | mjr_target_type
+      <includes>digital_specimen | translator_type | digital_media_object | mjr_target_type |
+        annotation | annotation_status_enum
       </includes>
       <forcedTypes>
         <forcedType>

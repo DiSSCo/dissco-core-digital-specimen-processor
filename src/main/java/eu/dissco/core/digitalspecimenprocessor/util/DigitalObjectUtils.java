@@ -18,6 +18,7 @@ import java.util.List;
 public class DigitalObjectUtils {
 
   public static final String DOI_PROXY = "https://doi.org/";
+  public static final String HANDLE_PROXY = "https://hdl.handle.net/";
   public static final String DLQ_FAILED = "Fatal exception, unable to dead letter queue: {}";
   public static final ApplicationProperties applicationProperties = new ApplicationProperties();
 

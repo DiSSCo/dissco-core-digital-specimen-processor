@@ -4,6 +4,7 @@
 package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
 
+import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.Annotation;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalMediaObject;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
 
@@ -11,8 +12,13 @@ import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpeci
 /**
  * Convenience access to all tables in public.
  */
-@SuppressWarnings({"all", "unchecked", "rawtypes", "this-escape"})
+@SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Tables {
+
+    /**
+     * The table <code>public.annotation</code>.
+     */
+    public static final Annotation ANNOTATION = Annotation.ANNOTATION;
 
     /**
      * The table <code>public.digital_media_object</code>.

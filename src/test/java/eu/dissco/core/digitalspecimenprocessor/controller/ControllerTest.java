@@ -13,6 +13,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException
 import eu.dissco.core.digitalspecimenprocessor.service.ProcessingService;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +40,7 @@ class ControllerTest {
     var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
     given(processingService.handleMessages(
         List.of(digitalSpecimenEvent))).willReturn(
-        new SpecimenProcessResult(List.of(), List.of(), List.of(givenDigitalSpecimenRecord())));
+        new SpecimenProcessResult(Map.of(), List.of(), List.of(givenDigitalSpecimenRecord())));
 
     // When
     var result = controller.upsertDigitalSpecimen(digitalSpecimenEvent);
@@ -69,7 +70,7 @@ class ControllerTest {
     var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
     given(processingService.handleMessages(
         List.of(digitalSpecimenEvent))).willReturn(
-        new SpecimenProcessResult(List.of(), List.of(), List.of()));
+        new SpecimenProcessResult(Map.of(), List.of(), List.of()));
 
     // When / Then
     assertThrows(NoChangesFoundException.class,

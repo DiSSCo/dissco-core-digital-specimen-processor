@@ -16,6 +16,7 @@
   <description>Processing service for digital specimen</description>
   <properties>
     <java.version>21</java.version>
+    <dissco-annotation-logic.version>0.1.19</dissco-annotation-logic.version>
     <elasticsearch.version>9.2.0</elasticsearch.version>
     <jakarta.json.version>2.1.3</jakarta.json.version>
     <json-patch.version>1.13</json-patch.version>
@@ -108,6 +109,11 @@
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-jsr310</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.dissco</groupId>
+      <artifactId>annotation-logic</artifactId>
+      <version>${dissco-annotation-logic.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
