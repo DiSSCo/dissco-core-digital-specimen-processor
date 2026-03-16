@@ -59,6 +59,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.exception.AnnotationProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
@@ -112,6 +113,8 @@ class ProcessingServiceTest {
   private DigitalSpecimenService digitalSpecimenService;
   @Mock
   private MasSchedulerService masSchedulerService;
+  @Mock
+  AnnotationService annotationService;
 
   private MockedStatic<Instant> mockedInstant;
   private MockedStatic<Clock> mockedClock;
@@ -122,7 +125,7 @@ class ProcessingServiceTest {
     service = new ProcessingService(MAPPER, specimenRepository, mediaRepository,
         digitalSpecimenService, digitalMediaService, entityRelationshipService, equalityService,
         publisherService, fdoRecordService, handleComponent, new ApplicationProperties(),
-        masSchedulerService);
+        masSchedulerService, annotationService);
     Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
     Instant instant = Instant.now(clock);
     mockedInstant = mockStatic(Instant.class);
@@ -147,16 +150,41 @@ class ProcessingServiceTest {
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
         anyMap())).willReturn(givenEmptyMediaProcessResult());
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of()));
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
+            List.of()));
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
+    then(handleComponent).shouldHaveNoInteractions();
+    then(digitalMediaService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void testAnnotationApplicationFailed() throws Exception {
+    // Given
+    given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
+        List.of(givenDigitalSpecimenRecord()));
+    given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
+        anyMap())).willReturn(givenEmptyMediaProcessResult());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willThrow(new AnnotationProcessingException());
+
+    // When
+    var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
+
+    // Then
+    assertThat(result).isEqualTo(
+        new SpecimenProcessResult(Map.of(), List.of(),
+            List.of()));
+    then(publisherService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
+    then(digitalSpecimenService).shouldHaveNoInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
   }
@@ -168,7 +196,13 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenRecord()));
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
         anyMap())).willReturn(givenEmptyMediaProcessResult());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent());
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent());
 
     // When
     var result = service.handleMessages(
@@ -176,9 +210,10 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(List.of(givenDigitalSpecimenRecord()), List.of(), List.of()));
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
+            List.of()));
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord()));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(handleComponent).shouldHaveNoInteractions();
     then(digitalMediaService).shouldHaveNoInteractions();
@@ -221,7 +256,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(new SpecimenProcessResult(List.of(), List.of(), List.of()));
+    assertThat(result).isEqualTo(new SpecimenProcessResult(Map.of(), List.of(), List.of()));
     then(digitalSpecimenService).shouldHaveNoInteractions();
     then(equalityService).shouldHaveNoInteractions();
     then(handleComponent).shouldHaveNoMoreInteractions();
@@ -237,13 +272,15 @@ class ProcessingServiceTest {
         givenDigitalSpecimenEvent());
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
         any())).willReturn(givenEmptyMediaProcessResult());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent());
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(new SpecimenProcessResult(List.of(), List.of(), List.of()));
+    assertThat(result).isEqualTo(new SpecimenProcessResult(Map.of(), List.of(), List.of()));
     then(digitalSpecimenService).should()
         .updateExistingDigitalSpecimen(
             List.of(givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult())),
@@ -264,7 +301,7 @@ class ProcessingServiceTest {
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
 
     // Then
-    assertThat(result).isEqualTo(new SpecimenProcessResult(List.of(), List.of(), List.of()));
+    assertThat(result).isEqualTo(new SpecimenProcessResult(Map.of(), List.of(), List.of()));
     then(digitalMediaService).shouldHaveNoInteractions();
     then(digitalSpecimenService).shouldHaveNoInteractions();
   }
@@ -282,13 +319,15 @@ class ProcessingServiceTest {
         Set.of());
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(true);
     given(equalityService.mediaAreEqual(any(), any(), any())).willReturn(true);
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent(true));
 
     // When
     service.handleMessages(List.of(givenDigitalSpecimenEvent(true)));
 
     // Then
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(List.of(givenDigitalSpecimenRecord(1, true)));
+        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(1, true), givenDigitalSpecimenEvent(true)));
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
@@ -431,6 +470,8 @@ class ProcessingServiceTest {
         List.of(givenUnequalDigitalMediaRecord()));
     given(equalityService.setExistingEventDatesSpecimen(any(), any(), any())).willReturn(
         givenDigitalSpecimenEvent(true));
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent(true));
     given(equalityService.setExistingEventDatesMedia(any(), any())).willReturn(
         givenDigitalMediaEvent());
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
@@ -459,6 +500,8 @@ class ProcessingServiceTest {
         List.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID,
             false)));
     given(equalityService.specimensAreEqual(any(), any(), any())).willReturn(false);
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent());
     var pidMapSpecimen = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     var digitalSpecimen = givenDigitalSpecimenWrapper(false, false);
     digitalSpecimen.attributes()
@@ -512,6 +555,8 @@ class ProcessingServiceTest {
 
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(any(), any(),
         any())).willReturn(givenEmptyMediaProcessResult());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willReturn(
+        givenDigitalSpecimenEvent(true));
     var pidMapSpecimen = Map.of(
         PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
 

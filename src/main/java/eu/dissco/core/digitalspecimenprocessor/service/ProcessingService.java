@@ -20,6 +20,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRe
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenPreprocessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.exception.AnnotationProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
 import eu.dissco.core.digitalspecimenprocessor.exception.JsonMappingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
@@ -30,6 +31,7 @@ import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenReposit
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import io.github.dissco.core.annotationlogic.schema.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,6 +68,7 @@ public class ProcessingService {
   private final HandleComponent handleComponent;
   private final ApplicationProperties applicationProperties;
   private final MasSchedulerService masSchedulerService;
+  private final AnnotationService annotationService;
 
   private static Map<String, PidProcessResult> updateMediaPidsWithResults(
       SpecimenProcessResult specimenResult, SpecimenPreprocessResult specimenPreprocessResult,
@@ -110,7 +113,7 @@ public class ProcessingService {
   private static Map<String, String> concatSpecimenPids(
       SpecimenPreprocessResult specimenPreprocessResult) {
     var existingSpecimenPids = Stream.concat(
-        specimenPreprocessResult.equalSpecimens().stream(),
+        specimenPreprocessResult.equalSpecimens().keySet().stream(),
         specimenPreprocessResult.changedSpecimens().stream()
             .map(UpdatedDigitalSpecimenTuple::currentSpecimen)
     ).collect(toMap(
@@ -177,10 +180,11 @@ public class ProcessingService {
       var uniqueBatchMedia = getUniqueDigitalMediaEvents(uniqueBatchSpecimens);
       var existingSpecimens = getCurrentSpecimen(uniqueBatchSpecimens);
       var existingMedia = getCurrentMedia(uniqueBatchMedia);
+      var annotationsForSpecimens = getAcceptedAnnotationsForSpecimens(existingSpecimens);
       log.info("Retrieved {} existing specimen, {} existing media", existingSpecimens.size(),
           existingMedia.size());
       var specimenPreprocessResult = preprocessSpecimens(uniqueBatchSpecimens, existingSpecimens,
-          existingMedia);
+          existingMedia, annotationsForSpecimens);
       var pids = processPids(specimenPreprocessResult, existingMedia, uniqueBatchSpecimens,
           uniqueBatchMedia);
       var mediaPreprocessResult = preprocessMedia(uniqueBatchMedia, existingMedia, pids.getRight());
@@ -201,7 +205,7 @@ public class ProcessingService {
       return specimenResults;
     } catch (DisscoRepositoryException e) {
       log.error("Unable to access database", e);
-      return new SpecimenProcessResult(List.of(), List.of(), List.of());
+      return new SpecimenProcessResult(Map.of(), List.of(), List.of());
     }
   }
 
@@ -322,12 +326,12 @@ public class ProcessingService {
   private SpecimenProcessResult processSpecimens(
       SpecimenPreprocessResult specimenPreprocessResult,
       Map<String, PidProcessResult> pidProcessResults) {
-    var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
+    var equalSpecimens = new HashMap<DigitalSpecimenRecord, DigitalSpecimenEvent>();
     var updatedSpecimens = new ArrayList<DigitalSpecimenRecord>();
     var newSpecimens = new ArrayList<DigitalSpecimenRecord>();
     if (!specimenPreprocessResult.equalSpecimens().isEmpty()) {
       digitalSpecimenService.updateEqualSpecimen(specimenPreprocessResult.equalSpecimens());
-      equalSpecimens = new ArrayList<>(specimenPreprocessResult.equalSpecimens());
+      equalSpecimens = new HashMap<>(specimenPreprocessResult.equalSpecimens());
     }
     if (!specimenPreprocessResult.newSpecimens().isEmpty()) {
       if (!specimenPreprocessResult.newSpecimenPids()
@@ -439,45 +443,73 @@ public class ProcessingService {
 
   private SpecimenPreprocessResult preprocessSpecimens(Set<DigitalSpecimenEvent> events,
       Map<String, DigitalSpecimenRecord> currentSpecimens,
-      Map<String, DigitalMediaRecord> currentMedia) {
-    var equalSpecimens = new ArrayList<DigitalSpecimenRecord>();
+      Map<String, DigitalMediaRecord> currentMedia,
+      Map<String, List<Annotation>> acceptedAnnotations) {
+    var equalSpecimens = new HashMap<DigitalSpecimenRecord, DigitalSpecimenEvent>();
     var changedSpecimens = new ArrayList<UpdatedDigitalSpecimenTuple>();
     var newSpecimens = new ArrayList<DigitalSpecimenEvent>();
     for (DigitalSpecimenEvent event : events) {
-      var digitalSpecimenWrapper = event.digitalSpecimenWrapper();
-      log.debug("ds: {}", digitalSpecimenWrapper);
-      if (!currentSpecimens.containsKey(digitalSpecimenWrapper.physicalSpecimenID())) {
+      log.debug("ds: {}", event.digitalSpecimenWrapper());
+      if (!currentSpecimens.containsKey(event.digitalSpecimenWrapper().physicalSpecimenID())) {
         log.debug("Specimen with id: {} is completely new",
-            digitalSpecimenWrapper.physicalSpecimenID());
+            event.digitalSpecimenWrapper().physicalSpecimenID());
         newSpecimens.add(event);
       } else {
         var currentDigitalSpecimen = currentSpecimens.get(
-            digitalSpecimenWrapper.physicalSpecimenID());
-        MediaRelationshipProcessResult processedMediaRelationships;
-        if (event.isDataFromSourceSystem().booleanValue()) {
-          processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
-              currentSpecimens, event, currentMedia);
-        } else {
-          processedMediaRelationships = new MediaRelationshipProcessResult();
-        }
-        if (equalityService.specimensAreEqual(currentDigitalSpecimen,
-            digitalSpecimenWrapper, processedMediaRelationships)) {
-          log.debug("Received digital specimen is equal to digital specimen: {}",
-              currentDigitalSpecimen.id());
-          equalSpecimens.add(currentDigitalSpecimen);
-        } else {
-          log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
-          var eventWithUpdatedEr = equalityService.setExistingEventDatesSpecimen(
-              currentDigitalSpecimen.digitalSpecimenWrapper(), event, processedMediaRelationships);
-          changedSpecimens.add(
-              new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, eventWithUpdatedEr,
-                  processedMediaRelationships));
+            event.digitalSpecimenWrapper().physicalSpecimenID());
+        var processedMediaRelationships = getMediaRelationships(event, currentSpecimens, currentMedia);
+        event = applyAcceptedAnnotationsToEvent(event, currentDigitalSpecimen, acceptedAnnotations);
+        if (event != null) {
+          if (equalityService.specimensAreEqual(currentDigitalSpecimen,
+              event.digitalSpecimenWrapper(), processedMediaRelationships)) {
+            log.debug("Received digital specimen is equal to digital specimen: {}",
+                currentDigitalSpecimen.id());
+            equalSpecimens.put(currentDigitalSpecimen, event);
+          } else {
+            log.debug("Specimen with id: {} has received an update", currentDigitalSpecimen.id());
+            var eventWithUpdatedEr = equalityService.setExistingEventDatesSpecimen(
+                currentDigitalSpecimen.digitalSpecimenWrapper(), event,
+                processedMediaRelationships);
+            changedSpecimens.add(
+                new UpdatedDigitalSpecimenTuple(currentDigitalSpecimen, eventWithUpdatedEr,
+                    processedMediaRelationships));
+          }
         }
       }
     }
     var newSpecimenPids = createNewSpecimenPids(newSpecimens);
     return new SpecimenPreprocessResult(equalSpecimens, changedSpecimens, newSpecimens,
         newSpecimenPids);
+  }
+
+  private DigitalSpecimenEvent applyAcceptedAnnotationsToEvent(DigitalSpecimenEvent event,
+      DigitalSpecimenRecord currentDigitalSpecimen,
+      Map<String, List<Annotation>> acceptedAnnotations) {
+    try {
+      return annotationService.applyAcceptedAnnotations(event,
+          currentDigitalSpecimen, acceptedAnnotations);
+    } catch (AnnotationProcessingException e) {
+      log.info("Failed to apply annotations to specimen {}. Moving to DLQ",
+          currentDigitalSpecimen.id());
+      try {
+        publisherService.deadLetterEventSpecimen(event);
+      } catch (JsonProcessingException ex) {
+        log.error("Critical error. Unable to DLQ specimen {}", currentDigitalSpecimen.id());
+      }
+      return null;
+    }
+  }
+
+  private MediaRelationshipProcessResult getMediaRelationships(DigitalSpecimenEvent event,
+      Map<String, DigitalSpecimenRecord> currentSpecimens, Map<String, DigitalMediaRecord> currentMedia) {
+    MediaRelationshipProcessResult processedMediaRelationships;
+    if (Boolean.TRUE.equals(event.isDataFromSourceSystem())) {
+      processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
+          currentSpecimens, event, currentMedia);
+    } else {
+      processedMediaRelationships = new MediaRelationshipProcessResult();
+    }
+    return processedMediaRelationships;
   }
 
   private Map<String, String> createNewSpecimenPids(List<DigitalSpecimenEvent> events) {
@@ -608,6 +640,12 @@ public class ProcessingService {
             toMap(
                 specimenRecord -> specimenRecord.digitalSpecimenWrapper().physicalSpecimenID(),
                 Function.identity()));
+  }
+
+  private Map<String, List<Annotation>> getAcceptedAnnotationsForSpecimens(
+      Map<String, DigitalSpecimenRecord> digitalSpecimenRecords) {
+    return annotationService.getAnnotationsForSpecimens(
+        new HashSet<>(digitalSpecimenRecords.values()));
   }
 
   private Map<String, DigitalMediaRecord> getCurrentMedia(

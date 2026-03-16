@@ -5,6 +5,7 @@ import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGIT
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingException;
@@ -12,6 +13,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryExcepti
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -123,11 +125,20 @@ public class DigitalSpecimenRepository {
             .toString().replace("\\u0000", ""));
   }
 
-  public int updateLastChecked(List<String> currentDigitalSpecimen) {
-    var query = context.update(DIGITAL_SPECIMEN)
-        .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
-        .where(DIGITAL_SPECIMEN.ID.in(currentDigitalSpecimen));
-    return query.execute();
+  public void updateLastCheckedAndOriginalData(Map<String, DigitalSpecimenEvent> specimenMap) {
+    var queries = specimenMap.entrySet().stream()
+        .map(entry -> {
+          var query = context.update(DIGITAL_SPECIMEN)
+              .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now());
+          if (Boolean.TRUE.equals(entry.getValue().isDataFromSourceSystem())) {
+            query = query.set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
+                JSONB.valueOf(
+                    entry.getValue().digitalSpecimenWrapper().originalAttributes().toString()));
+          }
+          return query.where(DIGITAL_SPECIMEN.ID.in(entry.getKey()));
+        })
+        .toList();
+    context.batch(queries).execute();
   }
 
   public List<DigitalSpecimenRecord> getDigitalSpecimens(List<String> specimenList)
