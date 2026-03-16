@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.AnnotationStatusEnum;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoJsonBMappingException;
 import io.github.dissco.core.annotationlogic.schema.Annotation;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,14 +31,6 @@ public class AnnotationRepository {
         .where(ANNOTATION.TARGET_ID.in(targetIdsWithProxy))
         .and(ANNOTATION.ANNOTATION_STATUS.eq(AnnotationStatusEnum.ACCEPTED))
         .fetchGroups(AnnotationRepository::stripProxyFromTargetId, this::mapToAnnotation);
-  }
-
-  public void markAnnotationsAsMerged(Set<String> annotationIds){
-    context.update(ANNOTATION)
-        .set(ANNOTATION.LAST_CHECKED, Instant.now())
-        .set(ANNOTATION.ANNOTATION_STATUS, AnnotationStatusEnum.MERGED)
-        .where(ANNOTATION.ID.in(annotationIds))
-        .execute();
   }
 
   private static String stripProxyFromTargetId(Record dbRecord){
