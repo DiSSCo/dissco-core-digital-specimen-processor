@@ -1,7 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.ANNOTATION;
-import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.ANNOTATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.ANNOTATION_ID_2;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.ANNOTATION_ID_3;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotation;
@@ -69,22 +68,6 @@ class AnnotationRepositoryIT extends BaseRepositoryIT {
     for (var entry : result.entrySet()){
       assertThat(entry.getValue()).hasSameElementsAs(expected.get(entry.getKey()));
     }
-  }
-
-  @Test
-  void testMarkAnnotationsAsMerged() throws Exception {
-    // Given
-    postAnnotations(Map.of(givenAnnotation(), AnnotationStatusEnum.ACCEPTED));
-
-    // When
-    annotationRepository.markAnnotationsAsMerged(Set.of(ANNOTATION_ID));
-    var result = context.select(ANNOTATION.ANNOTATION_STATUS)
-        .from(ANNOTATION)
-        .where(ANNOTATION.ID.eq(ANNOTATION_ID))
-        .fetchSingle(ANNOTATION.ANNOTATION_STATUS);
-
-    // Then
-    assertThat(result).isEqualTo(AnnotationStatusEnum.MERGED);
   }
 
   private void postAnnotations(Map<Annotation, AnnotationStatusEnum> annotations) throws JsonProcessingException {
