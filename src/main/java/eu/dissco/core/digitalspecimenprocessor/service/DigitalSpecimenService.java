@@ -121,7 +121,7 @@ public class DigitalSpecimenService {
         pidMap);
     log.info("Persisting {} updated record to the database", digitalSpecimenRecords.size());
     try {
-      repository.createDigitalSpecimenRecord(
+      repository.updateDigitalSpecimenRecord(
           digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
               .collect(Collectors.toSet()));
     } catch (DataAccessException e) {

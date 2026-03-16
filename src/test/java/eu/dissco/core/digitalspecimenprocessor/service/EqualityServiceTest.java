@@ -151,7 +151,7 @@ class EqualityServiceTest {
     var currentDigitalSpecimen = givenDigitalSpecimenRecord();
     var digitalSpecimen = givenDigitalSpecimenWrapper();
     var mediaProcessResult = new MediaRelationshipProcessResult(List.of(),
-        List.of(new DigitalMediaEvent(null, null, false)), List.of());
+        List.of(new DigitalMediaEvent(null, null, false, true)), List.of());
 
     // When
     var result = equalityService.specimensAreEqual(currentDigitalSpecimen, digitalSpecimen,
@@ -227,10 +227,10 @@ class EqualityServiceTest {
     );
     var expected = new DigitalMediaEvent(
         Set.of(MEDIA_MAS),
-        expectedWrapper, false);
+        expectedWrapper, false, true);
     var event = new DigitalMediaEvent(
         Set.of(MEDIA_MAS),
-        changeTimestamps(expectedWrapper), false);
+        changeTimestamps(expectedWrapper), false, true);
     var currentRecord = new DigitalMediaRecord(
         MEDIA_PID,
         MEDIA_URL,
@@ -239,7 +239,7 @@ class EqualityServiceTest {
         Set.of(MEDIA_MAS),
         givenDigitalMedia(MEDIA_URL, false).withOdsHasEntityRelationships(
             List.of(entityRelationship)),
-        MAPPER.createObjectNode(), false
+        MAPPER.createObjectNode(), false, true
     );
 
     // When

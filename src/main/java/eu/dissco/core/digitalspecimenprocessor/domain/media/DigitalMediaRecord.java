@@ -12,7 +12,8 @@ public record DigitalMediaRecord(
     Set<String> masIds,
     DigitalMedia attributes,
     JsonNode originalAttributes,
-    Boolean forceMasSchedule
+    Boolean forceMasSchedule,
+    Boolean isDataFromSourceSystem
 ) {
 
 }

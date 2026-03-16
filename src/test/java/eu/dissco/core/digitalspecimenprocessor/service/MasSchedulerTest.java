@@ -121,7 +121,7 @@ class MasSchedulerTest {
     var forcedRecord = new DigitalMediaRecord(
         HANDLE, MEDIA_URL, 1, CREATED, Set.of(MEDIA_MAS),
         givenDigitalMedia(MEDIA_URL, false),
-        MAPPER.createObjectNode(), true);
+        MAPPER.createObjectNode(), true, true);
 
     var mediaProcessResult = new MediaProcessResult(
         List.of(forcedRecord), List.of(), List.of(givenDigitalMediaRecord(

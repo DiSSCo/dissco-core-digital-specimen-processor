@@ -294,7 +294,7 @@ class DigitalSpecimenServiceTest {
 
     // Then
     assertThat(result).isEqualTo(Set.of(expectedRecord));
-    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
     then(publisherService).should()
         .publishUpdateEventSpecimen(eq(expectedRecord), any());
     then(rollbackService).shouldHaveNoInteractions();
@@ -330,7 +330,7 @@ class DigitalSpecimenServiceTest {
 
     // Then
     assertThat(result).isEqualTo(Set.of(expectedRecord));
-    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
     then(digitalMediaService).should().tombstoneSpecimenRelations(List.of(tuple));
     then(publisherService).should()
         .publishUpdateEventSpecimen(eq(expectedRecord), any());
@@ -347,7 +347,7 @@ class DigitalSpecimenServiceTest {
     given(midsService.calculateMids(any())).willReturn(1);
     var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
     doThrow(DataAccessException.class).when(repository)
-        .createDigitalSpecimenRecord(Set.of(expectedRecord));
+        .updateDigitalSpecimenRecord(Set.of(expectedRecord));
 
     // When
     var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
@@ -374,7 +374,7 @@ class DigitalSpecimenServiceTest {
 
     // Then
     assertThat(result).isEmpty();
-    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
     then(publisherService).shouldHaveNoInteractions();
     then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, true);
   }
@@ -395,7 +395,7 @@ class DigitalSpecimenServiceTest {
 
     // Then
     assertThat(result).isEmpty();
-    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
     then(publisherService).shouldHaveNoInteractions();
     then(rollbackService).should()
         .handlePartiallyFailedElasticUpdateSpecimen(Set.of(updatedRecord), bulkResponse);
@@ -419,7 +419,7 @@ class DigitalSpecimenServiceTest {
 
     // Then
     assertThat(result).isEmpty();
-    then(repository).should().createDigitalSpecimenRecord(Set.of(expectedRecord));
+    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
     then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), true, true);
   }
 

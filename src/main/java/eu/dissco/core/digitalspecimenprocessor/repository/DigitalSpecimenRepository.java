@@ -39,8 +39,13 @@ public class DigitalSpecimenRepository {
         mapToDigitalSpecimen(dbRecord.get(DIGITAL_SPECIMEN.DATA)),
         mapToJson(dbRecord.get(DIGITAL_SPECIMEN.ORIGINAL_DATA)));
     return new DigitalSpecimenRecord(dbRecord.get(DIGITAL_SPECIMEN.ID),
-        dbRecord.get(DIGITAL_SPECIMEN.MIDSLEVEL), dbRecord.get(DIGITAL_SPECIMEN.VERSION),
-        dbRecord.get(DIGITAL_SPECIMEN.CREATED), digitalSpecimenWrapper, null, null, null,
+        dbRecord.get(DIGITAL_SPECIMEN.MIDSLEVEL),
+        dbRecord.get(DIGITAL_SPECIMEN.VERSION),
+        dbRecord.get(DIGITAL_SPECIMEN.CREATED),
+        digitalSpecimenWrapper,
+        null,
+        null,
+        null,
         List.of());
   }
 
@@ -64,11 +69,17 @@ public class DigitalSpecimenRepository {
 
   public int[] createDigitalSpecimenRecord(
       Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    var queries = digitalSpecimenRecords.stream().map(this::specimenToQuery).toList();
+    var queries = digitalSpecimenRecords.stream().map(this::createSpecimenQuery).toList();
     return context.batch(queries).execute();
   }
 
-  private Query specimenToQuery(DigitalSpecimenRecord digitalSpecimenRecord) {
+  public int[] updateDigitalSpecimenRecord(
+      Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
+    var queries = digitalSpecimenRecords.stream().map(this::updateSpecimenQuery).toList();
+    return context.batch(queries).execute();
+  }
+
+  private Query createSpecimenQuery(DigitalSpecimenRecord digitalSpecimenRecord) {
     return context.insertInto(DIGITAL_SPECIMEN)
         .set(DIGITAL_SPECIMEN.ID, digitalSpecimenRecord.id())
         .set(DIGITAL_SPECIMEN.TYPE, digitalSpecimenRecord.digitalSpecimenWrapper().type())
@@ -92,8 +103,11 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.DATA, mapToJsonB(digitalSpecimenRecord))
         .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
             JSONB.valueOf(
-                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()))
-        .onConflict(DIGITAL_SPECIMEN.ID).doUpdate()
+                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
+  }
+
+  private Query updateSpecimenQuery(DigitalSpecimenRecord digitalSpecimenRecord) {
+    var query = context.update(DIGITAL_SPECIMEN)
         .set(DIGITAL_SPECIMEN.TYPE, digitalSpecimenRecord.digitalSpecimenWrapper().type())
         .set(DIGITAL_SPECIMEN.VERSION, digitalSpecimenRecord.version())
         .set(DIGITAL_SPECIMEN.MIDSLEVEL, (short) digitalSpecimenRecord.midsLevel())
@@ -113,10 +127,13 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.MODIFIED, Instant.now())
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,
-            mapToJsonB(digitalSpecimenRecord))
-        .set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
-            JSONB.valueOf(
-                digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
+            mapToJsonB(digitalSpecimenRecord));
+    if (digitalSpecimenRecord.isDataFromSourceSystem()) {
+      query = query.set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
+          JSONB.valueOf(
+              digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));
+    }
+    return query.where(DIGITAL_SPECIMEN.ID.eq(digitalSpecimenRecord.id()));
   }
 
   private JSONB mapToJsonB(DigitalSpecimenRecord digitalSpecimenRecord) {

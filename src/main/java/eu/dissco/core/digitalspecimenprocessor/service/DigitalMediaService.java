@@ -110,7 +110,9 @@ public class DigitalMediaService {
         doi,
         accessUri, 1, Instant.now(), event.masList(),
         event.digitalMediaWrapper().attributes(),
-        event.digitalMediaWrapper().originalAttributes(), event.forceMasSchedule());
+        event.digitalMediaWrapper().originalAttributes(),
+        event.forceMasSchedule(),
+        event.isDataFromSourceSystem());
   }
 
   private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
@@ -213,7 +215,7 @@ public class DigitalMediaService {
     }
     log.info("Persisting to db");
     try {
-      repository.createDigitalMediaRecord(
+      repository.updateDigitalMediaRecord(
           digitalMediaRecords.stream().map(UpdatedDigitalMediaRecord::digitalMediaRecord)
               .collect(toSet()));
     } catch (DataAccessException e) {
@@ -267,7 +269,8 @@ public class DigitalMediaService {
                   tuple.digitalMediaEvent().masList(),
                   attributes,
                   tuple.digitalMediaEvent().digitalMediaWrapper().originalAttributes(),
-                  tuple.digitalMediaEvent().forceMasSchedule()),
+                  tuple.digitalMediaEvent().forceMasSchedule(),
+                  tuple.digitalMediaEvent().isDataFromSourceSystem()),
               tuple.digitalMediaEvent().masList(),
               tuple.currentDigitalMediaRecord(),
               createJsonPatch(tuple.currentDigitalMediaRecord().attributes(),

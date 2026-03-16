@@ -242,7 +242,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(specimenRepository).should()
-        .createDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
+        .updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
     then(handleComponent).shouldHaveNoInteractions();
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
   }
@@ -259,7 +259,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
     then(specimenRepository).should()
-        .createDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
+        .updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
     then(handleComponent).shouldHaveNoInteractions();
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
   }
@@ -276,7 +276,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
     then(specimenRepository).should()
-        .createDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
+        .updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
     then(handleComponent).should().rollbackHandleUpdate(any());
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
   }
@@ -294,7 +294,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
     then(specimenRepository).should()
-        .createDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
+        .updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
   }
 
@@ -311,7 +311,7 @@ class RollbackServiceTest {
 
     // Then
     then(specimenRepository).should()
-        .createDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
+        .updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
     then(handleComponent).shouldHaveNoInteractions();
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
   }
@@ -329,7 +329,7 @@ class RollbackServiceTest {
     // Then
     then(elasticSearchRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
     then(specimenRepository).should()
-        .createDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
+        .updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
     then(handleComponent).shouldHaveNoInteractions();
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
   }
@@ -359,7 +359,7 @@ class RollbackServiceTest {
         Set.of(givenUpdatedDigitalMediaRecord()), false, true);
 
     // Then
-    then(mediaRepository).should().createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+    then(mediaRepository).should().updateDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
     then(elasticSearchRepository).shouldHaveNoInteractions();
     then(handleComponent).shouldHaveNoInteractions();
   }
@@ -374,7 +374,7 @@ class RollbackServiceTest {
         Set.of(givenUpdatedDigitalMediaRecord()), true, true);
 
     // Then
-    then(mediaRepository).should().createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+    then(mediaRepository).should().updateDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
     then(elasticSearchRepository).should().rollbackVersion(givenDigitalMediaRecord());
     then(handleComponent).shouldHaveNoInteractions();
   }
@@ -390,7 +390,7 @@ class RollbackServiceTest {
         Set.of(givenUpdatedDigitalMediaRecord()), true, true);
 
     // Then
-    then(mediaRepository).should().createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+    then(mediaRepository).should().updateDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
     then(handleComponent).shouldHaveNoInteractions();
   }
 
@@ -405,7 +405,7 @@ class RollbackServiceTest {
         Set.of(givenUpdatedDigitalMediaRecord()), true, true);
 
     // Then
-    then(mediaRepository).should().createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+    then(mediaRepository).should().updateDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
     then(elasticSearchRepository).should().rollbackVersion(givenDigitalMediaRecord());
     then(handleComponent).shouldHaveNoInteractions();
   }
@@ -420,7 +420,7 @@ class RollbackServiceTest {
         Set.of(givenUpdatedDigitalMediaRecord()), true, true);
 
     // Then
-    then(mediaRepository).should().createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+    then(mediaRepository).should().updateDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
     then(elasticSearchRepository).should().rollbackVersion(givenDigitalMediaRecord());
     then(handleComponent).should().rollbackHandleUpdate(any());
   }
@@ -544,7 +544,7 @@ class RollbackServiceTest {
     then(rabbitMqService).should(times(1)).deadLetterEventSpecimen(any());
     then(rabbitMqService).shouldHaveNoMoreInteractions();
     then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(specimenRepository).should().createDigitalSpecimenRecord(Set.of(failedRecord.currentDigitalSpecimen()));
+    then(specimenRepository).should().updateDigitalSpecimenRecord(Set.of(failedRecord.currentDigitalSpecimen()));
     then(handleComponent).should().rollbackHandleUpdate(any());
   }
 
@@ -572,7 +572,7 @@ class RollbackServiceTest {
     assertThat(result).isEmpty();
     then(rabbitMqService).should(times(2)).deadLetterEventSpecimen(any());
     then(rabbitMqService).shouldHaveNoMoreInteractions();
-    then(specimenRepository).should(times(2)).createDigitalSpecimenRecord(any());
+    then(specimenRepository).should(times(2)).updateDigitalSpecimenRecord(any());
     then(elasticSearchRepository).should().rollbackVersion(successfulRecord.currentDigitalSpecimen());
     then(handleComponent).shouldHaveNoInteractions();
   }
@@ -595,7 +595,7 @@ class RollbackServiceTest {
     then(rabbitMqService).should(times(1)).deadLetterEventMedia(any());
     then(rabbitMqService).shouldHaveNoMoreInteractions();
     then(elasticSearchRepository).shouldHaveNoInteractions();
-    then(mediaRepository).should().createDigitalMediaRecord(Set.of(failedRecord.currentDigitalMediaRecord()));
+    then(mediaRepository).should().updateDigitalMediaRecord(Set.of(failedRecord.currentDigitalMediaRecord()));
     then(handleComponent).should().rollbackHandleUpdate(any());
   }
 
@@ -616,7 +616,7 @@ class RollbackServiceTest {
     assertThat(result).isEmpty();
     then(rabbitMqService).should(times(2)).deadLetterEventMedia(any());
     then(elasticSearchRepository).should().rollbackVersion(successfulRecord.currentDigitalMediaRecord());
-    then(mediaRepository).should(times(2)).createDigitalMediaRecord(any());
+    then(mediaRepository).should(times(2)).updateDigitalMediaRecord(any());
     then(handleComponent).should().rollbackHandleUpdate(any());
   }
 

@@ -668,7 +668,8 @@ public class ProcessingService {
                 dbRecord.accessURI(),
                 dbRecord.version(), dbRecord.created(), event.masList(), dbRecord.attributes(),
                 dbRecord.originalAttributes(),
-                event.forceMasSchedule());
+                event.forceMasSchedule(),
+                event.isDataFromSourceSystem());
           })
           .collect(toMap(
               DigitalMediaRecord::accessURI,
@@ -784,8 +785,12 @@ public class ProcessingService {
     updatedDigitalMediaAttributes.setOdsHasEntityRelationships(
         removeRelationship(event, updatedDigitalMediaAttributes));
     return new DigitalMediaEvent(Collections.emptySet(),
-        new DigitalMediaWrapper(updatedDigitalMediaAttributes.getOdsFdoType(),
-            updatedDigitalMediaAttributes, objectMapper.createObjectNode()), false);
+        new DigitalMediaWrapper(
+            updatedDigitalMediaAttributes.getOdsFdoType(),
+            updatedDigitalMediaAttributes,
+            null),
+        false,
+        false);
   }
 
   private DigitalMedia deepCopy(DigitalMedia currentDigitalMedia)

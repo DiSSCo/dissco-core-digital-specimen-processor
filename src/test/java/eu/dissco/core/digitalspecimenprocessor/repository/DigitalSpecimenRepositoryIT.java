@@ -93,7 +93,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
             givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
 
     // When
-    var result = repository.createDigitalSpecimenRecord(
+    var result = repository.updateDigitalSpecimenRecord(
         Set.of(givenDigitalSpecimenRecord(2, false)));
 
     // Then
@@ -178,7 +178,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
     // When
     repository.createDigitalSpecimenRecord(records);
-    repository.createDigitalSpecimenRecord(upsertRecord);
+    repository.updateDigitalSpecimenRecord(upsertRecord);
 
     // Then
     var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)

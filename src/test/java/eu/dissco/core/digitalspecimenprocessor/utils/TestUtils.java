@@ -277,9 +277,13 @@ public class TestUtils {
 
   public static DigitalMediaRecord givenDigitalMediaRecord(String pid, String uri, int version) {
     return new DigitalMediaRecord(
-        pid, uri, version, CREATED, Set.of(MEDIA_MAS),
+        pid, uri, version,
+        CREATED,
+        Set.of(MEDIA_MAS),
         givenDigitalMedia(uri, true),
-        MAPPER.createObjectNode(), false);
+        MAPPER.createObjectNode(),
+        false,
+        true);
   }
 
   public static DigitalMediaWrapper givenDigitalMediaWrapper() {
@@ -315,7 +319,7 @@ public class TestUtils {
             .withOdsHasEntityRelationships(
                 List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
                     EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
-        MAPPER.createObjectNode(), null);
+        MAPPER.createObjectNode(), null, null);
   }
 
   public static DigitalMedia givenDigitalMediaWithRelationship() {
@@ -339,7 +343,8 @@ public class TestUtils {
             FdoType.MEDIA.getPid(),
             givenUnequalDigitalMedia(url, addSpecimenEr),
             MAPPER.createObjectNode()),
-        false);
+        false,
+        true);
   }
 
   public static DigitalMediaRecord givenUnequalDigitalMediaRecord() {
@@ -354,7 +359,7 @@ public class TestUtils {
       int version) {
     var media = givenUnequalDigitalMedia(url, true);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, MAPPER.createObjectNode(), false);
+        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, MAPPER.createObjectNode(), false, true);
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url, boolean addSpecimenEr) {
@@ -425,14 +430,14 @@ public class TestUtils {
   public static DigitalMediaEvent givenDigitalMediaEventWithSpecimenEr() {
     return new DigitalMediaEvent(
         Set.of(MEDIA_MAS),
-        givenDigitalMediaWrapper(MEDIA_URL, true), false);
+        givenDigitalMediaWrapper(MEDIA_URL, true), false, true);
 
   }
 
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
         Set.of(MEDIA_MAS),
-        givenDigitalMediaWrapper(mediaUrl, false), false);
+        givenDigitalMediaWrapper(mediaUrl, false), false, true);
   }
 
   public static DigitalMediaEvent givenDigitalMediaEvent() {
@@ -465,7 +470,7 @@ public class TestUtils {
             "StillImage",
             digitalMedia,
             MAPPER.createObjectNode()
-        ), false);
+        ), false, true);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper() {

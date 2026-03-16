@@ -704,7 +704,8 @@ class ProcessingServiceTest {
                 givenDigitalMedia(MEDIA_URL, false).withAcCaptureDevice("a camera"),
                 MAPPER.createObjectNode()
             ),
-            false
+            false,
+            true
         );
     var events = new ArrayList<DigitalMediaEvent>();
     events.add(givenDigitalMediaEvent());
@@ -776,8 +777,11 @@ class ProcessingServiceTest {
     var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
     given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID))).willReturn(
         List.of(givenDigitalMediaRecord()));
-    var digitalMediaEvent = new DigitalMediaEvent(Set.of(), givenDigitalMediaWrapper(),
-        false);
+    var digitalMediaEvent = new DigitalMediaEvent(Set.of(), new DigitalMediaWrapper(
+        FdoType.MEDIA.getPid(),
+        givenDigitalMedia(MEDIA_URL, false),
+        null),
+        false, false);
     digitalMediaEvent.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(List.of());
     var updatedMediaTuple = new UpdatedDigitalMediaTuple(
         givenDigitalMediaRecord(),

@@ -181,7 +181,8 @@ class FdoRecordServiceTest {
                 .withDctermsRights(fieldValue),
             MAPPER.createObjectNode()
         ),
-        false);
+        false,
+        true);
     var expected = List.of(MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
             .put("type", TYPE_MEDIA)
@@ -210,7 +211,8 @@ class FdoRecordServiceTest {
                 .withOdsHasAgents(rightHolders),
             MAPPER.createObjectNode()
         ),
-        false);
+        false,
+        true);
     var attributes = (ObjectNode) givenHandleMediaRequestAttributes();
     if (expectedName != null) {
       attributes.put(RIGHTS_HOLDER.getAttribute(), expectedName);
