@@ -19,7 +19,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
@@ -158,7 +157,8 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()),
+            List.of(),
             List.of()));
     then(digitalSpecimenService).should()
         .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
@@ -174,7 +174,8 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenRecord()));
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
         anyMap())).willReturn(givenEmptyMediaProcessResult());
-    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willThrow(new AnnotationProcessingException());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willThrow(
+        new AnnotationProcessingException());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -210,7 +211,8 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()),
+            List.of(),
             List.of()));
     then(digitalSpecimenService).should()
         .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
@@ -327,7 +329,8 @@ class ProcessingServiceTest {
 
     // Then
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(1, true), givenDigitalSpecimenEvent(true)));
+        .updateEqualSpecimen(
+            Map.of(givenDigitalSpecimenRecord(1, true), givenDigitalSpecimenEvent(true)));
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();

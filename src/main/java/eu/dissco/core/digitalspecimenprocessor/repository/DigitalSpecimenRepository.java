@@ -128,7 +128,7 @@ public class DigitalSpecimenRepository {
         .set(DIGITAL_SPECIMEN.LAST_CHECKED, Instant.now())
         .set(DIGITAL_SPECIMEN.DATA,
             mapToJsonB(digitalSpecimenRecord));
-    if (digitalSpecimenRecord.isDataFromSourceSystem()) {
+    if (Boolean.TRUE.equals(digitalSpecimenRecord.isDataFromSourceSystem())) {
       query = query.set(DIGITAL_SPECIMEN.ORIGINAL_DATA,
           JSONB.valueOf(
               digitalSpecimenRecord.digitalSpecimenWrapper().originalAttributes().toString()));

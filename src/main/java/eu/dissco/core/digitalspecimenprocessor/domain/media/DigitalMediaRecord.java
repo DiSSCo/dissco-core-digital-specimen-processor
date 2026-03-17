@@ -8,7 +8,8 @@ import java.util.Set;
 public record DigitalMediaRecord(
     String id,
     String accessURI,
-    int version, Instant created,
+    int version,
+    Instant created,
     Set<String> masIds,
     DigitalMedia attributes,
     JsonNode originalAttributes,

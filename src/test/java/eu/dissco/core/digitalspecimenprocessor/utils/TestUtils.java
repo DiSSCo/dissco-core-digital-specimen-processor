@@ -89,6 +89,7 @@ public class TestUtils {
   public static final String DATASET_ID = null;
   public static final String PHYSICAL_SPECIMEN_COLLECTION = null;
   public static final String SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64W";
+  public static final String ANOTHER_SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64X";
   public static final String SOURCE_SYSTEM_NAME = "A very nice source system";
   public static final JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
   public static final OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
@@ -97,6 +98,8 @@ public class TestUtils {
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
   public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
   public static final String MEDIA_MAS = "https://hdl.handle.net/20.5000.1025/5E3-P4R-AQC";
+  public static final JsonNode ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode().put("data", "somedata");
+  public static final JsonNode UPDATED_ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode().put("data", "updated data");
 
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
@@ -281,7 +284,7 @@ public class TestUtils {
         CREATED,
         Set.of(MEDIA_MAS),
         givenDigitalMedia(uri, true),
-        MAPPER.createObjectNode(),
+        ORIGINAL_DATA_MEDIA,
         false,
         true);
   }
@@ -294,7 +297,7 @@ public class TestUtils {
     return new DigitalMediaWrapper(
         FdoType.MEDIA.getPid(),
         givenDigitalMedia(url, addSpecimenEr),
-        MAPPER.createObjectNode()
+        ORIGINAL_DATA_MEDIA
     );
   }
 
@@ -319,7 +322,7 @@ public class TestUtils {
             .withOdsHasEntityRelationships(
                 List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
                     EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
-        MAPPER.createObjectNode(), null, null);
+        ORIGINAL_DATA_MEDIA, null, null);
   }
 
   public static DigitalMedia givenDigitalMediaWithRelationship() {
@@ -342,7 +345,7 @@ public class TestUtils {
         new DigitalMediaWrapper(
             FdoType.MEDIA.getPid(),
             givenUnequalDigitalMedia(url, addSpecimenEr),
-            MAPPER.createObjectNode()),
+            UPDATED_ORIGINAL_DATA_MEDIA),
         false,
         true);
   }
@@ -359,7 +362,7 @@ public class TestUtils {
       int version) {
     var media = givenUnequalDigitalMedia(url, true);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, MAPPER.createObjectNode(), false, true);
+        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, UPDATED_ORIGINAL_DATA_MEDIA, false, true);
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url, boolean addSpecimenEr) {
@@ -370,6 +373,7 @@ public class TestUtils {
     return new DigitalMedia()
         .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(url)
+        .withOdsSourceSystemID(ANOTHER_SOURCE_SYSTEM_ID)
         .withOdsOrganisationName(ANOTHER_ORGANISATION)
         .withOdsHasEntityRelationships(ers);
   }
@@ -719,6 +723,9 @@ public class TestUtils {
         [ {
           "op" : "remove",
           "path" : "/ods:organisationName"
+        }, {
+          "op" : "remove",
+          "path" : "/ods:sourceSystemID"
         }, {
           "op" : "add",
           "path" : "/ods:organisationID",

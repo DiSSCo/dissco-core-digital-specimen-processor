@@ -169,16 +169,16 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
 
   @Test
-  void testUpsertSpecimens() {
+  void testUpdateSpecimens() {
     // Given
     var records = Set.of(
         givenDigitalSpecimenRecord(),
         givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false));
-    var upsertRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2", false));
+    var updatedRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2", false));
 
     // When
     repository.createDigitalSpecimenRecord(records);
-    repository.updateDigitalSpecimenRecord(upsertRecord);
+    repository.updateDigitalSpecimenRecord(updatedRecord);
 
     // Then
     var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
