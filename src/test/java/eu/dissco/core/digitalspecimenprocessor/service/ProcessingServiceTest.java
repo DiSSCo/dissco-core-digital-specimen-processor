@@ -11,6 +11,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
@@ -370,7 +371,7 @@ class ProcessingServiceTest {
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
-            true),
+            true, ORIGINAL_DATA),
         List.of(givenDigitalMediaEvent()),
         false, true);
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
@@ -418,13 +419,13 @@ class ProcessingServiceTest {
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
-            true),
+            true, ORIGINAL_DATA),
         List.of(givenDigitalMediaEvent()),
         false, true);
     var event3 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
-            true),
+            true, ORIGINAL_DATA),
         List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
         false, true);
     given(specimenRepository.getDigitalSpecimens(

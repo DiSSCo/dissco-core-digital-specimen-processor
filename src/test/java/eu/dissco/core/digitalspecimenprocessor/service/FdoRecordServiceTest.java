@@ -479,7 +479,7 @@ class FdoRecordServiceTest {
   void testPhysicalSpecimenIdsDifferent() {
     // Given
     var currentSpecimen = givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
-        ORGANISATION_ID, false, false);
+        ORGANISATION_ID, false, false, ORIGINAL_DATA);
 
     // When/then
     assertThat(fdoRecordService.handleNeedsUpdateSpecimen(currentSpecimen,
