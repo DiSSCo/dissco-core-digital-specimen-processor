@@ -5,3 +5,11 @@ GHSA-72hv-8253-57qq
 # March 10, 2026
 # Jackson issue - wait for spring boot to update
 CVE-2026-29062
+
+# March 13, 2026
+# Issue with libpng, alpine image needs to update
+CVE-2026-25646
+
+# March 13, 2026
+# Issue with zlib, alpine image needs to update
+CVE-2026-22184
