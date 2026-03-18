@@ -1,5 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.utils;
 
+import static eu.dissco.core.digitalspecimenprocessor.configuration.ApplicationConfiguration.DATE_STRING;
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.SOURCE_SYSTEM;
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.MEDIA_HOST;
@@ -14,10 +15,8 @@ import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_S
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.annotation.JsonSetter.Value;
+import com.fasterxml.jackson.annotation.Nulls;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
@@ -51,7 +50,9 @@ import eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType;
 import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import java.net.URI;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -59,10 +60,26 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 public class TestUtils {
 
-  public static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
+  public static final JsonMapper MAPPER = JsonMapper.builder()
+      .findAndAddModules()
+      .defaultDateFormat(new SimpleDateFormat(DATE_STRING))
+      .defaultTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC))
+      .enable(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT)
+      .withConfigOverride(List.class, cfg ->
+          cfg.setNullHandling(Value.forValueNulls(Nulls.AS_EMPTY)))
+      .withConfigOverride(Map.class, cfg ->
+          cfg.setNullHandling(Value.forValueNulls(Nulls.AS_EMPTY)))
+      .withConfigOverride(Set.class, cfg ->
+          cfg.setNullHandling(Value.forValueNulls(Nulls.AS_EMPTY)))
+      .build();
   public static final String HANDLE = "20.5000.1025/V1Z-176-LL4";
   public static final String DOI_PREFIX = "https://doi.org/";
   public static final String HANDLE_PREFIX = "https://hdl.handle.net/";
@@ -92,56 +109,55 @@ public class TestUtils {
   public static final String ANOTHER_SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64X";
   public static final String SOURCE_SYSTEM_NAME = "A very nice source system";
   public static final JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
-  public static final JsonNode UPDATED_ORIGINAL_DATA = MAPPER.createObjectNode().put("data", "updated data");
+  public static final JsonNode UPDATED_ORIGINAL_DATA = MAPPER.createObjectNode()
+      .put("data", "updated data");
   public static final OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
   public static final String MEDIA_URL = "https://an-image.org";
   public static final String MEDIA_URL_ALT = MEDIA_URL + "/2";
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
   public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
   public static final String MEDIA_MAS = "https://hdl.handle.net/20.5000.1025/5E3-P4R-AQC";
-  public static final JsonNode ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode().put("data", "somedata");
-  public static final JsonNode UPDATED_ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode().put("data", "updated data");
+  public static final JsonNode ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode()
+      .put("data", "somedata");
+  public static final JsonNode UPDATED_ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode()
+      .put("data", "updated data");
 
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
 
   public static JsonNode generateSpecimenOriginalData() {
-    try {
-      return MAPPER.readTree(
-          """
-              {"abcd:unitID": "152-4972",
-                "abcd:sourceID": "GIT",
-                "abcd:unitGUID": "https://geocollections.info/specimen/23646",
-                "abcd:recordURI": "https://geocollections.info/specimen/23646",
-                "abcd:recordBasis": "FossilSpecimen",
-                "abcd:unitIDNumeric": 23646,
-                "abcd:dateLastEdited": "2004-06-09T10:17:54.000+00:00",
-                "abcd:kindOfUnit/0/value": "",
-                "abcd:sourceInstitutionID": "Department of Geology, TalTech",
-                "abcd:kindOfUnit/0/language": "en",
-                "abcd:gathering/country/name/value": "Estonia",
-                "abcd:gathering/localityText/value": "Laeva 297 borehole",
-                "abcd:gathering/country/iso3166Code": "EE",
-                "abcd:gathering/localityText/language": "en",
-                "abcd:gathering/altitude/measurementOrFactText/value": "39.9",
-                "abcd:identifications/identification/0/preferredFlag": true,
-                "abcd:gathering/depth/measurementOrFactAtomised/lowerValue/value": "165",
-                "abcd:gathering/depth/measurementOrFactAtomised/unitOfMeasurement": "m",
-                "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/spatialDatum": "WGS84",
-                "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/0/term": "Pirgu Stage",
-                "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/1/term": "Katian",
-                "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/latitudeDecimal": 58.489269,
-                "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/longitudeDecimal": 26.385719,
-                "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/0/language": "en",
-                "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/1/language": "en",
-                "abcd:identifications/identification/0/result/taxonIdentified/scientificName/fullScientificNameString": "Biota",
-                "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronostratigraphicName": "Pirgu Stage",
-                "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronoStratigraphicDivision": "Stage"
-              }"""
-      );
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    return MAPPER.readTree(
+        """
+            {"abcd:unitID": "152-4972",
+              "abcd:sourceID": "GIT",
+              "abcd:unitGUID": "https://geocollections.info/specimen/23646",
+              "abcd:recordURI": "https://geocollections.info/specimen/23646",
+              "abcd:recordBasis": "FossilSpecimen",
+              "abcd:unitIDNumeric": 23646,
+              "abcd:dateLastEdited": "2004-06-09T10:17:54.000+00:00",
+              "abcd:kindOfUnit/0/value": "",
+              "abcd:sourceInstitutionID": "Department of Geology, TalTech",
+              "abcd:kindOfUnit/0/language": "en",
+              "abcd:gathering/country/name/value": "Estonia",
+              "abcd:gathering/localityText/value": "Laeva 297 borehole",
+              "abcd:gathering/country/iso3166Code": "EE",
+              "abcd:gathering/localityText/language": "en",
+              "abcd:gathering/altitude/measurementOrFactText/value": "39.9",
+              "abcd:identifications/identification/0/preferredFlag": true,
+              "abcd:gathering/depth/measurementOrFactAtomised/lowerValue/value": "165",
+              "abcd:gathering/depth/measurementOrFactAtomised/unitOfMeasurement": "m",
+              "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/spatialDatum": "WGS84",
+              "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/0/term": "Pirgu Stage",
+              "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/1/term": "Katian",
+              "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/latitudeDecimal": 58.489269,
+              "abcd:gathering/siteCoordinateSets/siteCoordinates/0/coordinatesLatLong/longitudeDecimal": 26.385719,
+              "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/0/language": "en",
+              "abcd:gathering/stratigraphy/chronostratigraphicTerms/chronostratigraphicTerm/1/language": "en",
+              "abcd:identifications/identification/0/result/taxonIdentified/scientificName/fullScientificNameString": "Biota",
+              "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronostratigraphicName": "Pirgu Stage",
+              "abcd-efg:earthScienceSpecimen/unitStratigraphicDetermination/chronostratigraphicAttributions/chronostratigraphicAttribution/0/chronoStratigraphicDivision": "Stage"
+            }"""
+    );
   }
 
   public static DigitalSpecimenRecord givenDigitalSpecimenRecord(String handle) {
@@ -363,7 +379,8 @@ public class TestUtils {
       int version) {
     var media = givenUnequalDigitalMedia(url, true);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, UPDATED_ORIGINAL_DATA_MEDIA, false, true);
+        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, UPDATED_ORIGINAL_DATA_MEDIA, false,
+        true);
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url, boolean addSpecimenEr) {
@@ -493,7 +510,8 @@ public class TestUtils {
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper(String physicalSpecimenId,
-      String specimenName, String organisation, boolean entityRelationship, boolean hasMedia, JsonNode originalData) {
+      String specimenName, String organisation, boolean entityRelationship, boolean hasMedia,
+      JsonNode originalData) {
     return new DigitalSpecimenWrapper(
         physicalSpecimenId,
         TYPE_PID,
@@ -515,16 +533,16 @@ public class TestUtils {
     return givenHandleResponse(List.of(PHYSICAL_SPECIMEN_ID), List.of(HANDLE));
   }
 
-  public static Map<String, String> givenHandleResponseMedia() {
+  public static Map<String, String> givenPidResponseMedia() {
     return givenHandleResponse(List.of(MEDIA_URL), List.of(MEDIA_PID));
   }
 
   public static Map<String, String> givenHandleResponse(List<String> localIds,
-      List<String> handles) {
-    assert (localIds.size() == handles.size());
+      List<String> pids) {
+    assert (localIds.size() == pids.size());
     Map<String, String> pidMap = new HashMap<>();
     for (int i = 0; i < localIds.size(); i++) {
-      pidMap.put(localIds.get(i), handles.get(i));
+      pidMap.put(localIds.get(i), pids.get(i));
     }
     return pidMap;
   }
@@ -539,11 +557,11 @@ public class TestUtils {
     return response;
   }
 
-  public static JsonNode givenUpdateHandleRequest() throws Exception {
+  public static JsonNode givenUpdateHandleRequest() {
     return givenUpdateHandleRequest(null);
   }
 
-  public static JsonNode givenUpdateHandleRequest(Boolean markedAsType) throws Exception {
+  public static JsonNode givenUpdateHandleRequest(Boolean markedAsType) {
     var attributes = givenHandleAttributes(markedAsType);
     return MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
@@ -572,11 +590,11 @@ public class TestUtils {
   }
 
 
-  public static JsonNode givenHandleRequest() throws Exception {
-    return givenHandleRequest(null);
+  public static JsonNode givenPidRequest() {
+    return givenPidRequest(null);
   }
 
-  public static JsonNode givenHandleRequest(Boolean markedAsType) throws Exception {
+  public static JsonNode givenPidRequest(Boolean markedAsType) {
     var attributes = (ObjectNode) givenHandleAttributes(markedAsType);
     return MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
@@ -584,7 +602,7 @@ public class TestUtils {
             .set("attributes", attributes));
   }
 
-  public static JsonNode givenHandleAttributes(Boolean markedAsType) throws Exception {
+  public static JsonNode givenHandleAttributes(Boolean markedAsType) {
     var attributes = (ObjectNode) MAPPER.readTree("""
         {
           "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
@@ -602,7 +620,7 @@ public class TestUtils {
     return attributes;
   }
 
-  public static JsonNode givenHandleRequestMin() throws Exception {
+  public static JsonNode givenHandleRequestMin() {
     return MAPPER.readTree("""
         {
           "data": {
@@ -618,13 +636,12 @@ public class TestUtils {
         """);
   }
 
-  public static UpdatedDigitalSpecimenRecord givenUpdatedDigitalSpecimenRecord(boolean hasMedia)
-      throws JsonProcessingException {
+  public static UpdatedDigitalSpecimenRecord givenUpdatedDigitalSpecimenRecord(boolean hasMedia) {
     return givenUpdatedDigitalSpecimenRecord(givenUnequalDigitalSpecimenRecord(), hasMedia);
   }
 
   public static UpdatedDigitalSpecimenRecord givenUpdatedDigitalSpecimenRecord(
-      DigitalSpecimenRecord currentRecord, boolean hasMedia) throws JsonProcessingException {
+      DigitalSpecimenRecord currentRecord, boolean hasMedia) {
     if (hasMedia) {
       return new UpdatedDigitalSpecimenRecord(
           givenDigitalSpecimenRecord(2, true),
@@ -689,8 +706,7 @@ public class TestUtils {
             SCHEMA_SOFTWARE_APPLICATION), annotation);
   }
 
-  public static AnnotationProcessingRequest givenNewAcceptedAnnotation()
-      throws JsonProcessingException {
+  public static AnnotationProcessingRequest givenNewAcceptedAnnotation() {
     return new AnnotationProcessingRequest()
         .withOaMotivation(OaMotivation.ODS_ADDING)
         .withOaMotivatedBy("New information received from Source System with id: "
@@ -714,24 +730,28 @@ public class TestUtils {
 
   }
 
-  public static JsonNode givenJsonPatchSpecimen() throws JsonProcessingException {
+  public static JsonNode givenJsonPatchSpecimen() {
     return MAPPER.readTree(
         "[{\"op\":\"replace\",\"path\":\"/ods:specimenName\",\"value\":\"Biota\"}]");
   }
 
-  public static JsonNode givenJsonPatchMedia() throws JsonProcessingException {
+  public static JsonNode givenJsonPatchMedia() {
     return MAPPER.readTree("""
-        [ {
-          "op" : "remove",
-          "path" : "/ods:organisationName"
-        }, {
-          "op" : "remove",
-          "path" : "/ods:sourceSystemID"
-        }, {
-          "op" : "add",
-          "path" : "/ods:organisationID",
-          "value" : "https://ror.org/0443cwa12"
-        } ]
+        [
+          {
+            "op": "remove",
+            "path": "/ods:sourceSystemID"
+          },
+          {
+            "op": "remove",
+            "path": "/ods:organisationName"
+          },
+          {
+            "op": "add",
+            "path": "/ods:organisationID",
+            "value": "https://ror.org/0443cwa12"
+          }
+        ]
         """);
   }
 
@@ -767,7 +787,7 @@ public class TestUtils {
     );
   }
 
-  public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord() throws Exception {
+  public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord() {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(2),
         Set.of(MEDIA_MAS),
@@ -776,8 +796,7 @@ public class TestUtils {
     );
   }
 
-  public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord(String pid, String uri)
-      throws Exception {
+  public static UpdatedDigitalMediaRecord givenUpdatedDigitalMediaRecord(String pid, String uri) {
     return new UpdatedDigitalMediaRecord(
         givenDigitalMediaRecord(pid, uri, 2),
         Set

@@ -1,9 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.media;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import java.time.Instant;
 import java.util.Set;
+import tools.jackson.databind.JsonNode;
 
 public record DigitalMediaRecord(
     String id,

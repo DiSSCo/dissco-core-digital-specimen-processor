@@ -26,12 +26,11 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleResponse;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleResponseMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenHandleResponseSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidResponseMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalMediaTuple;
@@ -48,7 +47,6 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -67,7 +65,8 @@ import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
-import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
+import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
@@ -102,7 +101,7 @@ class ProcessingServiceTest {
   @Mock
   private RabbitMqPublisherService publisherService;
   @Mock
-  private HandleComponent handleComponent;
+  private PidComponent handleComponent;
   @Mock
   private DigitalMediaService digitalMediaService;
   @Mock
@@ -227,9 +226,9 @@ class ProcessingServiceTest {
   void testNewSpecimenNoMedia() throws Exception {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
-    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+    given(handleComponent.postPid(any(), eq(true))).willReturn(
         givenHandleResponseSpecimen());
-    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
+    given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
         Set.of(givenDigitalSpecimenRecord()));
@@ -252,8 +251,8 @@ class ProcessingServiceTest {
   void testNewSpecimenNoMediaPidFails() throws Exception {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
-    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
-    given(handleComponent.postHandle(any(), eq(true))).willThrow(PidException.class);
+    given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
+    given(handleComponent.postPid(any(), eq(true))).willThrow(PidException.class);
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -339,7 +338,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testEqualSpecimenWithSingleSpecimenDuplicateMedia() throws JsonProcessingException {
+  void testEqualSpecimenWithSingleSpecimenDuplicateMedia()  {
     // Given
     var event = new DigitalSpecimenEvent(
         Set.of(MAS),
@@ -377,11 +376,12 @@ class ProcessingServiceTest {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
-    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+    given(handleComponent.postPid(any(), eq(true))).willReturn(
         givenHandleResponseSpecimen());
-    given(handleComponent.postHandle(any(), eq(false))).willReturn(givenHandleResponseMedia());
-    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
-    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(givenHandleRequest()));
+    given(handleComponent.postPid(any(), eq(false))).willReturn(givenPidResponseMedia());
+    given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
+    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(
+        TestUtils.givenPidRequest()));
     given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
         Set.of(givenDigitalSpecimenRecord()));
     given(digitalMediaService.createNewDigitalMedia(any(), any())).willReturn(
@@ -433,15 +433,15 @@ class ProcessingServiceTest {
         List.of());
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL, MEDIA_URL_ALT))).willReturn(
         List.of());
-    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+    given(handleComponent.postPid(any(), eq(true))).willReturn(
         givenHandleResponse(List.of(PHYSICAL_SPECIMEN_ID, PHYSICAL_SPECIMEN_ID_ALT),
             List.of(HANDLE, SECOND_HANDLE)));
-    given(handleComponent.postHandle(any(), eq(false))).willReturn(
+    given(handleComponent.postPid(any(), eq(false))).willReturn(
         givenHandleResponse(List.of(MEDIA_URL, MEDIA_URL_ALT), List.of(MEDIA_PID, MEDIA_PID_ALT)));
-    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(
-        List.of(givenHandleRequest(), givenHandleRequest()));
+    given(fdoRecordService.buildPostPidRequest(any())).willReturn(
+        List.of(TestUtils.givenPidRequest(), TestUtils.givenPidRequest()));
     given(fdoRecordService.buildPostRequestMedia(any())).willReturn(
-        List.of(givenHandleRequest(), givenHandleRequest()));
+        List.of(TestUtils.givenPidRequest(), TestUtils.givenPidRequest()));
     given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
         Set.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenRecord(SECOND_HANDLE)));
     given(digitalMediaService.createNewDigitalMedia(any(), any())).willReturn(
@@ -582,11 +582,12 @@ class ProcessingServiceTest {
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
         List.of());
     given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
-    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+    given(handleComponent.postPid(any(), eq(true))).willReturn(
         givenHandleResponseSpecimen());
-    given(handleComponent.postHandle(any(), eq(false))).willReturn(givenHandleResponseMedia());
-    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
-    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(givenHandleRequest()));
+    given(handleComponent.postPid(any(), eq(false))).willReturn(givenPidResponseMedia());
+    given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
+    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(
+        TestUtils.givenPidRequest()));
     given(digitalSpecimenService.createNewDigitalSpecimen(any(), any())).willReturn(
         Set.of(givenDigitalSpecimenRecord()));
     given(digitalMediaService.createNewDigitalMedia(any(), any())).willReturn(
@@ -614,7 +615,7 @@ class ProcessingServiceTest {
   @Test
   void testHandleMessagesMediaNew() throws Exception {
     // Given
-    given(handleComponent.postHandle(any(), eq(false))).willReturn(Map.of(MEDIA_URL, MEDIA_PID));
+    given(handleComponent.postPid(any(), eq(false))).willReturn(Map.of(MEDIA_URL, MEDIA_PID));
     var events = List.of(givenDigitalMediaEvent());
     given(digitalMediaService.createNewDigitalMedia(events,
         Map.of(MEDIA_URL, new PidProcessResult(MEDIA_PID, Set.of()))))
@@ -698,7 +699,7 @@ class ProcessingServiceTest {
   }
 
   @Test
-  void testHandleMessagesMediaEqualDuplicatesWithChanges() throws Exception {
+  void testHandleMessagesMediaEqualDuplicatesWithChanges() {
     // Given
     var secondEvent =
         new DigitalMediaEvent(
@@ -754,10 +755,11 @@ class ProcessingServiceTest {
     given(specimenRepository.getDigitalSpecimens(any())).willReturn(
         List.of());
     given(mediaRepository.getExistingDigitalMedia(any())).willReturn(List.of());
-    given(handleComponent.postHandle(any(), eq(true))).willReturn(
+    given(handleComponent.postPid(any(), eq(true))).willReturn(
         givenHandleResponseSpecimen());
-    given(fdoRecordService.buildPostHandleRequest(any())).willReturn(List.of(givenHandleRequest()));
-    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(givenHandleRequest()));
+    given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
+    given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(
+        TestUtils.givenPidRequest()));
     var mediaEvents = new ArrayList<DigitalMediaEvent>();
     IntStream.rangeClosed(0, 2002)
         .forEach(i -> mediaEvents.add(givenDigitalMediaEvent(UUID.randomUUID().toString())));
@@ -771,11 +773,11 @@ class ProcessingServiceTest {
     service.handleMessages(specimenEvents);
 
     // Then
-    then(handleComponent).should(times(4)).postHandle(any(), anyBoolean());
+    then(handleComponent).should(times(4)).postPid(any(), anyBoolean());
   }
 
   @Test
-  void testHandleMessageMediaRelationshipTombstone() throws JsonProcessingException {
+  void testHandleMessageMediaRelationshipTombstone()  {
     // Given
     var event = givenDigitalMediaTombstoneEvent();
     var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);

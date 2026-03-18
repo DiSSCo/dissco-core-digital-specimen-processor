@@ -6,7 +6,4 @@ public class DisscoRepositoryException extends Exception{
     super(message);
   }
 
-  public DisscoRepositoryException(String message, Throwable cause) {
-    super(message, cause);
-  }
 }

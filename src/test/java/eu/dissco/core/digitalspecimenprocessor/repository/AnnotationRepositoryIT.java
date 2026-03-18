@@ -12,7 +12,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.AnnotationStatusEnum;
 import io.github.dissco.core.annotationlogic.schema.Annotation;
 import io.github.dissco.core.annotationlogic.schema.Annotation.OaMotivation;
@@ -41,7 +40,7 @@ class AnnotationRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testGetAcceptedAnnotations() throws Exception{
+  void testGetAcceptedAnnotations() {
     // Given
     var annotation1 = givenAnnotation();
     var annotation2 = givenAnnotation(OaMotivation.OA_EDITING, true, HANDLE_PREFIX + ANNOTATION_ID_2, DOI_PREFIX + HANDLE);
@@ -70,7 +69,7 @@ class AnnotationRepositoryIT extends BaseRepositoryIT {
     }
   }
 
-  private void postAnnotations(Map<Annotation, AnnotationStatusEnum> annotations) throws JsonProcessingException {
+  private void postAnnotations(Map<Annotation, AnnotationStatusEnum> annotations)  {
     List<Query> queryList = new ArrayList<>();
     for (var entry : annotations.entrySet()) {
       var annotation = entry.getKey();

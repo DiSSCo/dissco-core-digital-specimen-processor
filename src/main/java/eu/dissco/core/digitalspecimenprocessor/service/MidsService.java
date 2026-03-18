@@ -86,8 +86,8 @@ public class MidsService {
 
   private boolean geographicalValuesComply(DigitalSpecimen attributes) {
     if (attributes.getOdsHasEvents() != null
-        && attributes.getOdsHasEvents().get(0).getOdsHasLocation() != null) {
-      var location = attributes.getOdsHasEvents().get(0).getOdsHasLocation();
+        && attributes.getOdsHasEvents().getFirst().getOdsHasLocation() != null) {
+      var location = attributes.getOdsHasEvents().getFirst().getOdsHasLocation();
       if (isValid(location.getDwcLocationID())) {
         return true;
       } else if (location.getOdsHasGeoreference() != null) {
@@ -125,11 +125,11 @@ public class MidsService {
         && qualitativeLocationIsValid(attributes)
         && quantitativeLocationIsValid(attributes)
         && (eventIsPresent(attributes)
-        && hasValue(attributes.getOdsHasEvents().get(0).getDwcEventDate(),
-        attributes.getOdsHasEvents().get(0).getDwcVerbatimEventDate(),
-        convertInteger(attributes.getOdsHasEvents().get(0).getDwcYear())))
+        && hasValue(attributes.getOdsHasEvents().getFirst().getDwcEventDate(),
+        attributes.getOdsHasEvents().getFirst().getDwcVerbatimEventDate(),
+        convertInteger(attributes.getOdsHasEvents().getFirst().getDwcYear())))
         && (eventIsPresent(attributes) && hasValue(
-        attributes.getOdsHasEvents().get(0).getDwcFieldNumber())
+        attributes.getOdsHasEvents().getFirst().getDwcFieldNumber())
         && hasAgentWithRole(COLLECTOR,
         attributes.getOdsHasEvents().stream().map(Event::getOdsHasAgents).flatMap(List::stream)
             .toList(), false));
@@ -167,7 +167,6 @@ public class MidsService {
     return false;
   }
 
-
   private boolean compliesToMidsTwoPaleoBio(DigitalSpecimen attributes) {
     return attributes.getOdsIsMarkedAsType() != null
         && stratigraphyIsValid(attributes)
@@ -177,9 +176,9 @@ public class MidsService {
 
   private boolean quantitativeLocationIsValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation().getOdsHasGeoreference()
+        && digitalSpecimen.getOdsHasEvents().getFirst().getOdsHasLocation().getOdsHasGeoreference()
         != null) {
-      var location = digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation();
+      var location = digitalSpecimen.getOdsHasEvents().getFirst().getOdsHasLocation();
       var geoReference = location.getOdsHasGeoreference();
       return hasValue(location.getDwcLocationID(), geoReference.getDwcFootprintWKT()) || (
           geoReference.getDwcDecimalLatitude() != null
@@ -190,18 +189,18 @@ public class MidsService {
 
   private boolean eventIsPresent(DigitalSpecimen attributes) {
     return attributes.getOdsHasEvents() != null && !attributes.getOdsHasEvents().isEmpty()
-        && attributes.getOdsHasEvents().get(0) != null;
+        && attributes.getOdsHasEvents().getFirst() != null;
   }
 
   private boolean locationIsPresent(DigitalSpecimen digitalSpecimen) {
     return eventIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation() != null;
+        && digitalSpecimen.getOdsHasEvents().getFirst().getOdsHasLocation() != null;
   }
 
   private boolean qualitativeLocationIsValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)) {
       var isValidValue = false;
-      var location = digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation();
+      var location = digitalSpecimen.getOdsHasEvents().getFirst().getOdsHasLocation();
       isValidValue = hasValue(
           location.getDwcContinent(),
           location.getDwcCountry(),
@@ -230,9 +229,9 @@ public class MidsService {
 
   private boolean stratigraphyIsValid(DigitalSpecimen digitalSpecimen) {
     if (locationIsPresent(digitalSpecimen)
-        && digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation().getOdsHasGeologicalContext()
+        && digitalSpecimen.getOdsHasEvents().getFirst().getOdsHasLocation().getOdsHasGeologicalContext()
         != null) {
-      var geologicalContext = digitalSpecimen.getOdsHasEvents().get(0).getOdsHasLocation()
+      var geologicalContext = digitalSpecimen.getOdsHasEvents().getFirst().getOdsHasLocation()
           .getOdsHasGeologicalContext();
       return hasValue(geologicalContext.getDwcBed(),
           geologicalContext.getDwcMember(),

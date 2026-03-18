@@ -19,7 +19,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenRecord;
@@ -30,11 +29,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 
 import co.elastic.clients.elasticsearch.core.BulkResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
@@ -42,7 +39,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
-import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Clock;
@@ -76,7 +73,7 @@ class DigitalSpecimenServiceTest {
   @Mock
   private RabbitMqPublisherService publisherService;
   @Mock
-  private HandleComponent handleComponent;
+  private PidComponent handleComponent;
   @Mock
   private AnnotationPublisherService annotationPublisherService;
   @Mock
@@ -231,34 +228,6 @@ class DigitalSpecimenServiceTest {
   }
 
   @Test
-  void testNewSpecimenAnnotationPublicationFails() throws Exception {
-    // Given
-    var failedRecord = givenDigitalSpecimenRecord();
-    var expectedRecord = givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false);
-    var events = List.of(givenDigitalSpecimenEvent(),
-        givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false, true));
-    var records = Set.of(expectedRecord, failedRecord);
-    var pidMap = Map.of(
-        PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false),
-        PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of())
-    );
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
-    lenient().doThrow(JsonProcessingException.class).when(publisherService)
-        .publishCreateEventSpecimen(failedRecord);
-
-    // When
-    var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
-
-    // Then
-    assertThat(results).isEqualTo(Set.of(expectedRecord));
-    then(rollbackService).should()
-        .rollbackNewSpecimens(Set.of(failedRecord), true, true);
-    then(publisherService).should().publishCreateEventSpecimen(expectedRecord);
-  }
-
-  @Test
   void testNewSpecimenWithMedia() throws Exception {
     // Given
     var events = List.of(givenDigitalSpecimenEvent(true));
@@ -284,7 +253,7 @@ class DigitalSpecimenServiceTest {
     var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
+    given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(midsService.calculateMids(any())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
@@ -298,7 +267,7 @@ class DigitalSpecimenServiceTest {
     then(publisherService).should()
         .publishUpdateEventSpecimen(eq(expectedRecord), any());
     then(rollbackService).shouldHaveNoInteractions();
-    then(handleComponent).should().updateHandle(any());
+    then(handleComponent).should().updatePid(any());
   }
 
   @Test
@@ -320,7 +289,7 @@ class DigitalSpecimenServiceTest {
             List.of()));
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
     var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
+    given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
     given(midsService.calculateMids(any())).willReturn(1);
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
@@ -335,11 +304,11 @@ class DigitalSpecimenServiceTest {
     then(publisherService).should()
         .publishUpdateEventSpecimen(eq(expectedRecord), any());
     then(rollbackService).shouldHaveNoInteractions();
-    then(handleComponent).should().updateHandle(any());
+    then(handleComponent).should().updatePid(any());
   }
 
   @Test
-  void testUpdatedSpecimenDatabaseFails() throws JsonProcessingException {
+  void testUpdatedSpecimenDatabaseFails()  {
     // Given
     var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
@@ -402,52 +371,12 @@ class DigitalSpecimenServiceTest {
   }
 
   @Test
-  void testUpdatedSpecimenPublishingFails() throws Exception {
-    // Given
-    var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
-    var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
-    doThrow(JsonProcessingException.class).when(publisherService)
-        .publishUpdateEventSpecimen(expectedRecord, givenJsonPatchSpecimen());
-
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
-
-    // Then
-    assertThat(result).isEmpty();
-    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
-    then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), true, true);
-  }
-
-  @Test
   void testUpdatedSpecimenPidFails() throws Exception {
     // Given
     var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
     var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(PidException.class).when(handleComponent).updateHandle(any());
-
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
-
-    // Then
-    assertThat(result).isEmpty();
-    then(publisherService).should().deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
-  }
-
-  @Test
-  void testUpdatedSpecimenPidFailsDlqFails() throws Exception {
-    // Given
-    var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    given(fdoRecordService.handleNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(PidException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(publisherService)
-        .deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
+    given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
+    doThrow(PidException.class).when(handleComponent).updatePid(any());
 
     // When
     var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);

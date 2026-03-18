@@ -24,7 +24,7 @@ public class ApplicationProperties {
   private String createUpdateTombstoneEventType = "https://doi.org/21.T11148/d7570227982f70256af3";
 
   @Positive
-  private Integer maxHandles = 1000;
+  private Integer maxPids = 1000;
 
   @Positive
   private Integer maxMedia = 10000;

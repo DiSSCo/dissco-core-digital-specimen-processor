@@ -12,7 +12,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenMasJo
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenNewAcceptedAnnotation;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
@@ -28,8 +27,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.rabbitmq.RabbitMQContainer;
 
 @Testcontainers
 @ExtendWith(MockitoExtension.class)
@@ -101,7 +100,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testPublishCreateEvent() throws JsonProcessingException {
+  void testPublishCreateEvent()  {
     // Given
 
     // When
@@ -113,7 +112,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testPublishUpdateEvent() throws JsonProcessingException {
+  void testPublishUpdateEvent()  {
     // Given
 
     // When
@@ -126,7 +125,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testRepublishEvent() throws JsonProcessingException {
+  void testRepublishEvent()  {
     // Given
     var message = givenDigitalSpecimenEvent();
 
@@ -141,7 +140,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testPublishMasJob() throws JsonProcessingException {
+  void testPublishMasJob()  {
     // Given
 
     // When
@@ -154,7 +153,7 @@ class RabbitMqPublisherServiceTest {
 
 
   @Test
-  void testRepublishEventMedia() throws JsonProcessingException {
+  void testRepublishEventMedia()  {
     // Given
     var message = givenDigitalMediaEvent();
 
@@ -169,7 +168,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testDeadLetterEvent() throws JsonProcessingException {
+  void testDeadLetterEvent()  {
     // Given
     var message = givenDigitalSpecimenEvent();
 
@@ -184,7 +183,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testPublishDigitalMediaObjectEvent() throws JsonProcessingException {
+  void testPublishDigitalMediaObjectEvent()  {
     // Given
     var message = givenDigitalMediaEventWithRelationship();
 
@@ -199,7 +198,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testPublishAcceptedAnnotation() throws JsonProcessingException {
+  void testPublishAcceptedAnnotation()  {
     // Given
     var message = givenAutoAcceptedAnnotation(givenNewAcceptedAnnotation());
 
@@ -214,7 +213,7 @@ class RabbitMqPublisherServiceTest {
   }
 
   @Test
-  void testPublishDigitalMediaRelationTombstone() throws JsonProcessingException {
+  void testPublishDigitalMediaRelationTombstone()  {
     // Given
     var message = givenDigitalMediaTombstoneEvent();
 
@@ -228,7 +227,7 @@ class RabbitMqPublisherServiceTest {
         message);
   }
   @Test
-  void testDeadLetterRawDigitalMediaRelationTombstone() throws JsonProcessingException {
+  void testDeadLetterRawDigitalMediaRelationTombstone()  {
     // Given
     var message = MAPPER.writeValueAsString(givenDigitalMediaTombstoneEvent());
 

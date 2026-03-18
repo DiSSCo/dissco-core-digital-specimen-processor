@@ -1,16 +1,11 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.getIdForUri;
 import static java.util.stream.Collectors.toSet;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.fge.jsonpatch.diff.JsonDiff;
+import com.flipkart.zjsonpatch.Jackson3JsonDiff;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
@@ -24,7 +19,7 @@ import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepositor
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
-import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,6 +34,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.exception.DataAccessException;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @Service
 @Slf4j
@@ -47,8 +46,8 @@ public class DigitalMediaService {
 
   private final DigitalMediaRepository repository;
   private final FdoRecordService fdoRecordService;
-  private final HandleComponent handleComponent;
-  private final ObjectMapper mapper;
+  private final PidComponent handleComponent;
+  private final JsonMapper mapper;
   private final RollbackService rollbackService;
   private final ElasticSearchRepository elasticRepository;
   private final AnnotationPublisherService annotationPublisherService;
@@ -115,9 +114,9 @@ public class DigitalMediaService {
         event.isDataFromSourceSystem());
   }
 
-  private boolean updateHandles(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
+  private boolean updatePids(List<UpdatedDigitalMediaTuple> updatedDigitalMediaTuples) {
     var digitalMediasToUpdate = updatedDigitalMediaTuples.stream()
-        .filter(tuple -> fdoRecordService.handleNeedsUpdateMedia(
+        .filter(tuple -> fdoRecordService.pidNeedsUpdateMedia(
             tuple.currentDigitalMediaRecord().attributes(),
             tuple.digitalMediaEvent().digitalMediaWrapper().attributes()))
         .toList();
@@ -125,8 +124,8 @@ public class DigitalMediaService {
     if (!digitalMediasToUpdate.isEmpty()) {
       try {
         log.info("Updating {} handle records", digitalMediasToUpdate.size());
-        var requests = fdoRecordService.buildUpdateHandleRequestMedia(digitalMediasToUpdate);
-        handleComponent.updateHandle(requests);
+        var requests = fdoRecordService.buildUpdatePidRequestMedia(digitalMediasToUpdate);
+        handleComponent.updatePid(requests);
       } catch (PidException e) {
         log.error("Unable to update Handle record. Not proceeding with update.", e);
         updatedDigitalMediaTuples.stream().map(tuple -> {
@@ -136,13 +135,7 @@ public class DigitalMediaService {
           attributes.setOdsVersion(tuple.currentDigitalMediaRecord().version() + 1);
           attributes.setDctermsCreated(Date.from(tuple.currentDigitalMediaRecord().created()));
           return tuple.digitalMediaEvent();
-        }).forEach(event -> {
-          try {
-            publisherService.deadLetterEventMedia(event);
-          } catch (JsonProcessingException ex) {
-            log.error(DLQ_FAILED, updatedDigitalMediaTuples, ex);
-          }
-        });
+        }).forEach(publisherService::deadLetterEventMedia);
         return false;
       }
     }
@@ -173,7 +166,7 @@ public class DigitalMediaService {
       publisherService.publishUpdateEventMedia(digitalMediaRecord.digitalMediaRecord(),
           digitalMediaRecord.jsonPatch());
       return true;
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.error("Rolling back, failed to publish update event", e);
       return false;
     }
@@ -197,7 +190,7 @@ public class DigitalMediaService {
   private boolean publishEvents(DigitalMediaRecord digitalMediaRecord) {
     try {
       publisherService.publishCreateEventMedia(digitalMediaRecord);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.error("Rolling back, failed to publish Create event", e);
       return false;
     }
@@ -209,8 +202,8 @@ public class DigitalMediaService {
       boolean takeOverSpecimenRelationship) {
     var digitalMediaRecords = getUpdatedDigitalMediaRecords(updatedDigitalMediaTuples,
         takeOverSpecimenRelationship);
-    var successfullyUpdatedHandles = updateHandles(updatedDigitalMediaTuples);
-    if (!successfullyUpdatedHandles) {
+    var successfullyUpdatedPids = updatePids(updatedDigitalMediaTuples);
+    if (!successfullyUpdatedPids) {
       return Set.of();
     }
     log.info("Persisting to db");
@@ -310,7 +303,7 @@ public class DigitalMediaService {
     var jsonMedia = (ObjectNode) mapper.valueToTree(digitalMedia);
     jsonCurrentMedia.set("dcterms:modified", null);
     jsonMedia.set("dcterms:modified", null);
-    return JsonDiff.asJson(jsonCurrentMedia, jsonMedia);
+    return Jackson3JsonDiff.asJson(jsonCurrentMedia, jsonMedia);
   }
 
   public void tombstoneSpecimenRelations(
@@ -321,15 +314,7 @@ public class DigitalMediaService {
               EntityRelationship::getOdsRelatedResourceURI)
           .map(uri -> new DigitalMediaRelationshipTombstoneEvent(
               updatedDigitalSpecimenTuple.currentSpecimen().id(), getIdForUri(uri))).forEach(
-              event -> {
-                try {
-                  publisherService.publishDigitalMediaRelationTombstone(event);
-                } catch (JsonProcessingException e) {
-                  log.error("Failed to publish media relation tombstone event for event: {}",
-                      event, e);
-                }
-              }
-          );
+              publisherService::publishDigitalMediaRelationTombstone);
     }
   }
 }

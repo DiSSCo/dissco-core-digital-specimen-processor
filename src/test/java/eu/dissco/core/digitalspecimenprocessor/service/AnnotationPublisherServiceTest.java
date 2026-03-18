@@ -20,8 +20,6 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
@@ -50,6 +48,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.JsonNode;
 
 @ExtendWith(MockitoExtension.class)
 class AnnotationPublisherServiceTest {
@@ -63,7 +62,7 @@ class AnnotationPublisherServiceTest {
   private MockedStatic<Clock> mockedClock;
   private AnnotationPublisherService service;
 
-  public static Stream<Arguments> provideUpdateAnnotations() throws JsonProcessingException {
+  public static Stream<Arguments> provideUpdateAnnotations()  {
     var classObject = MAPPER.readValue(
         """
             [{
@@ -209,7 +208,7 @@ class AnnotationPublisherServiceTest {
   }
 
   @Test
-  void testPublishAnnotationNewSpecimen() throws JsonProcessingException {
+  void testPublishAnnotationNewSpecimen()  {
     // Given
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
@@ -225,7 +224,7 @@ class AnnotationPublisherServiceTest {
   @ParameterizedTest
   @MethodSource("provideUpdateAnnotations")
   void testPublishAnnotationUpdatedSpecimen(JsonNode jsonPatch,
-      List<AnnotationProcessingRequest> expectedAnnotations) throws JsonProcessingException {
+      List<AnnotationProcessingRequest> expectedAnnotations)  {
 
     // Given
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
@@ -244,7 +243,7 @@ class AnnotationPublisherServiceTest {
   }
 
   @Test
-  void testPublishAnnotationUpdatedSpecimenMultiple() throws JsonProcessingException {
+  void testPublishAnnotationUpdatedSpecimenMultiple()  {
     // Given
     given(applicationProperties.getPid()).willReturn(APP_HANDLE);
     given(applicationProperties.getName()).willReturn(APP_NAME);
@@ -261,7 +260,7 @@ class AnnotationPublisherServiceTest {
   }
 
   @Test
-  void testInvalidCopy() throws JsonProcessingException {
+  void testInvalidCopy()  {
     // Given
     var jsonPatch = MAPPER.readTree(
         """
@@ -281,7 +280,7 @@ class AnnotationPublisherServiceTest {
     then(rabbitMQService).shouldHaveNoInteractions();
   }
 
-  private JsonNode givenLargeJsonPatch() throws JsonProcessingException {
+  private JsonNode givenLargeJsonPatch()  {
     return MAPPER.readTree(
         """
             [

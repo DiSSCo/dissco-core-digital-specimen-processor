@@ -34,13 +34,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
@@ -52,7 +49,7 @@ import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
-import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
@@ -83,9 +80,7 @@ class DigitalMediaServiceTest {
   @Mock
   private FdoRecordService fdoRecordService;
   @Mock
-  private HandleComponent handleComponent;
-  @Mock
-  private ObjectMapper mapper;
+  private PidComponent handleComponent;
   @Mock
   private RollbackService rollbackService;
   @Mock
@@ -224,29 +219,6 @@ class DigitalMediaServiceTest {
   }
 
   @Test
-  void testCreateNewMediaPublishingFails() throws Exception {
-    // Given
-    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT,
-        new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
-    var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent(MEDIA_URL_ALT,
-        false));
-    var records = Set.of(givenDigitalMediaRecord(),
-        givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
-    lenient().doThrow(JsonProcessingException.class).when(publisherService)
-        .publishCreateEventMedia(givenDigitalMediaRecord());
-
-    // When
-    var result = mediaService.createNewDigitalMedia(events, pidMap);
-
-    // Then
-    assertThat(result).isEqualTo(
-        Set.of(givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION)));
-    then(rollbackService).should().rollbackNewMedias(Set.of(givenDigitalMediaRecord()), true, true);
-  }
-
-  @Test
   void testUpdateExistingMedia() throws Exception {
     // Given
     var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
@@ -270,7 +242,7 @@ class DigitalMediaServiceTest {
     // Given
     var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
     var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
-    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
+    given(fdoRecordService.pidNeedsUpdateMedia(any(), any())).willReturn(true);
     given(bulkResponse.errors()).willReturn(false);
     given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
 
@@ -279,7 +251,7 @@ class DigitalMediaServiceTest {
 
     // Then
     assertThat(result).isEqualTo(records);
-    then(handleComponent).should().updateHandle(any());
+    then(handleComponent).should().updatePid(any());
     then(annotationPublisherService).should().publishAnnotationUpdatedMedia(any());
     then(publisherService).should()
         .publishUpdateEventMedia(eq(givenDigitalMediaRecord(VERSION + 1)), any());
@@ -289,15 +261,15 @@ class DigitalMediaServiceTest {
   void testUpdateExistingMediaUpdateHandleFailed() throws Exception {
     // Given
     var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
-    doThrow(PidException.class).when(handleComponent).updateHandle(any());
+    given(fdoRecordService.pidNeedsUpdateMedia(any(), any())).willReturn(true);
+    doThrow(PidException.class).when(handleComponent).updatePid(any());
 
     // When
     var result = mediaService.updateExistingDigitalMedia(tuples, true);
 
     // Then
     assertThat(result).isEmpty();
-    then(handleComponent).should().updateHandle(any());
+    then(handleComponent).should().updatePid(any());
     then(publisherService).should().deadLetterEventMedia(digitalMediaEventCaptor.capture());
     then(annotationPublisherService).shouldHaveNoInteractions();
     var mediaEvent = digitalMediaEventCaptor.getValue();
@@ -307,22 +279,6 @@ class DigitalMediaServiceTest {
     assertThat(mediaEvent.digitalMediaWrapper().attributes().getDctermsCreated()).isEqualTo(
         CREATED);
     assertThat(mediaEvent.digitalMediaWrapper().attributes().getOdsVersion()).isEqualTo(2);
-  }
-
-  @Test
-  void testUpdateExistingMediaUpdateHandleFailedDlqFailed() throws Exception {
-    // Given
-    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    given(fdoRecordService.handleNeedsUpdateMedia(any(), any())).willReturn(true);
-    doThrow(PidException.class).when(handleComponent).updateHandle(any());
-    doThrow(JsonProcessingException.class).when(publisherService).deadLetterEventMedia(any());
-
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
-
-    // Then
-    assertThat(result).isEmpty();
-    then(handleComponent).should().updateHandle(any());
   }
 
   @Test
@@ -385,24 +341,6 @@ class DigitalMediaServiceTest {
   }
 
   @Test
-  void testUpdateExistingMediaPublishingFailed() throws Exception {
-    // Given
-    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
-    doThrow(JsonProcessingException.class).when(publisherService)
-        .publishUpdateEventMedia(any(), any());
-
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
-
-    // Then
-    assertThat(result).isEmpty();
-    then(rollbackService).should().rollbackUpdatedMedias(any(), eq(true), eq(true));
-  }
-
-  @Test
   void testUpdateExistingMediaDatabaseFailed() {
     // Given
     var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
@@ -417,7 +355,7 @@ class DigitalMediaServiceTest {
   }
 
   @Test
-  void testTombstoneSpecimenRelations() throws JsonProcessingException {
+  void testTombstoneSpecimenRelations()  {
     // Given
     var tuple = new UpdatedDigitalSpecimenTuple(
         givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),

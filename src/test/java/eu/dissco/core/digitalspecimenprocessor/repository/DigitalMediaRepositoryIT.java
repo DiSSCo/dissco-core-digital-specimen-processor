@@ -13,7 +13,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequ
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import java.time.Instant;
 import java.util.List;
@@ -56,7 +55,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdatedDigitalMediaRecord() throws JsonProcessingException {
+  void testUpdatedDigitalMediaRecord()  {
     // Given
     mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
     var updatedMediaRecord = givenUnequalDigitalMediaRecord();
@@ -76,7 +75,7 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdatedDigitalMediaRecordNotFromSourceSystem() throws JsonProcessingException {
+  void testUpdatedDigitalMediaRecordNotFromSourceSystem()  {
     // Given
     mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
     var updatedMediaRecord = new DigitalMediaRecord(

@@ -23,10 +23,6 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttribute
 import static eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes.TOPIC_ORIGIN;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoProfileAttributes;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
@@ -45,6 +41,10 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 @Slf4j
 @Service
@@ -56,7 +56,7 @@ public class FdoRecordService {
   private static final String ID = "id";
   private static final String DATA = "data";
   private static final String URL_PATTERN = "http(s)?://.+";
-  private final ObjectMapper mapper;
+    private final JsonMapper mapper;
   private final FdoProperties fdoProperties;
 
   private static boolean isEqualString(String currentValue, String newValue) {
@@ -96,8 +96,8 @@ public class FdoRecordService {
     }
   }
 
-  public List<JsonNode> buildPostHandleRequest(List<DigitalSpecimenWrapper> digitalSpecimens) {
-    return digitalSpecimens.stream().map(this::buildSinglePostHandleRequest).toList();
+  public List<JsonNode> buildPostPidRequest(List<DigitalSpecimenWrapper> digitalSpecimens) {
+    return digitalSpecimens.stream().map(this::buildSinglePostPidRequest).toList();
   }
 
   public List<JsonNode> buildPostRequestMedia(List<DigitalMediaEvent> digitalMediaList) {
@@ -127,12 +127,12 @@ public class FdoRecordService {
     return attributes;
   }
 
-  public List<JsonNode> buildUpdateHandleRequest(
+  public List<JsonNode> buildUpdatePidRequest(
       List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
-    return digitalSpecimens.stream().map(this::buildSingleUpdateHandleRequest).toList();
+    return digitalSpecimens.stream().map(this::buildSingleUpdatePidRequest).toList();
   }
 
-  public List<JsonNode> buildUpdateHandleRequestMedia(
+  public List<JsonNode> buildUpdatePidRequestMedia(
       List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
     return digitalMediaTuples.stream()
         .map(media -> buildSingleUpdateRequestMedia(media.digitalMediaEvent(),
@@ -151,12 +151,11 @@ public class FdoRecordService {
     return digitalMediaRecords.stream().map(this::buildSingleRollbackUpdateRequestMedia).toList();
   }
 
-
   public List<String> buildRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
     return digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
   }
 
-  private JsonNode buildSinglePostHandleRequest(DigitalSpecimenWrapper specimen) {
+  private JsonNode buildSinglePostPidRequest(DigitalSpecimenWrapper specimen) {
     return mapper.createObjectNode()
         .set(DATA, mapper.createObjectNode()
             .put(TYPE, fdoProperties.getSpecimenFdoType())
@@ -172,7 +171,7 @@ public class FdoRecordService {
                 generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
   }
 
-  private JsonNode buildSingleUpdateHandleRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
+  private JsonNode buildSingleUpdatePidRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
     var request = mapper.createObjectNode();
     var data = mapper.createObjectNode();
     data.put(ID, specimenTuple.currentSpecimen().id().replace(DOI_PROXY, ""));
@@ -276,7 +275,7 @@ public class FdoRecordService {
     return mapper.convertValue(otherSpecimenIds, ArrayNode.class);
   }
 
-  public boolean handleNeedsUpdateSpecimen(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+  public boolean pidNeedsUpdateSpecimen(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
       DigitalSpecimenWrapper digitalSpecimenWrapper) {
     var currentAttributes = currentDigitalSpecimenWrapper.attributes();
     var attributes = digitalSpecimenWrapper.attributes();
@@ -302,7 +301,7 @@ public class FdoRecordService {
         && !currentAttributes.getOdsIsMarkedAsType().equals(attributes.getOdsIsMarkedAsType()));
   }
 
-  public boolean handleNeedsUpdateMedia(DigitalMedia currentMediaObject,
+  public boolean pidNeedsUpdateMedia(DigitalMedia currentMediaObject,
       DigitalMedia mediaObject) {
     return (
         (currentMediaObject.getDctermsRights() != null

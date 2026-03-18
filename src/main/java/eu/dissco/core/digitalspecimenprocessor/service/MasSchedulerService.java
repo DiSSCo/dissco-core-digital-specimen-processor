@@ -2,7 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
@@ -15,6 +14,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
 
 @Service
 @RequiredArgsConstructor
@@ -74,8 +74,8 @@ public class MasSchedulerService {
     );
     try {
       publisherService.publishMasJobRequest(masJobRequest);
-    } catch (JsonProcessingException e) {
-      log.error("Unable to publish mas job request {}", masJobRequest);
+    } catch (JacksonException e) {
+      log.error("Unable to publish mas job request {}", masJobRequest, e);
     }
   }
 
