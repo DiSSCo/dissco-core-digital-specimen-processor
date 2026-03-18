@@ -21,6 +21,7 @@ import eu.dissco.core.digitalspecimenprocessor.property.ElasticSearchProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Set;
 import org.apache.hc.core5.http.Header;
@@ -44,7 +45,7 @@ class ElasticSearchRepositoryIT {
   private static final String ELASTICSEARCH_USERNAME = "elastic";
   private static final String ELASTICSEARCH_PASSWORD = "s3cret";
   private static final ElasticsearchContainer container = new ElasticsearchContainer(
-      ELASTIC_IMAGE).withPassword(ELASTICSEARCH_PASSWORD);
+      ELASTIC_IMAGE).withPassword(ELASTICSEARCH_PASSWORD).withStartupTimeout(Duration.ofMinutes(2));
   private static ElasticsearchClient client;
   private static Rest5Client restClient;
   private final ElasticSearchProperties esProperties = new ElasticSearchProperties();
