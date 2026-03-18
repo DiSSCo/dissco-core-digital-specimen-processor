@@ -1,6 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGITAL_SPECIMEN;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_ORGANISATION;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
@@ -12,12 +14,15 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HAN
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.THIRD_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED_ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -84,7 +89,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdateVersionSpecimens() {
+  void testUpdateVersionSpecimens() throws JsonProcessingException {
     // Given
     repository.createDigitalSpecimenRecord(
         Set.of(
@@ -93,11 +98,40 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
             givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
 
     // When
-    var result = repository.createDigitalSpecimenRecord(
-        Set.of(givenDigitalSpecimenRecord(2, false)));
+    var successfulRecord = repository.updateDigitalSpecimenRecord(
+        Set.of(givenUnequalDigitalSpecimenRecord()));
 
     // Then
-    assertThat(result).isEqualTo(new int[]{1});
+    var resultOriginalData = context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
+        .from(DIGITAL_SPECIMEN)
+        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+        .fetchOne(DIGITAL_SPECIMEN.ORIGINAL_DATA).data();
+    assertThat(successfulRecord).isEqualTo(new int[]{1});
+    assertThat(MAPPER.readTree(resultOriginalData)).isEqualTo(UPDATED_ORIGINAL_DATA);
+  }
+
+  @Test
+  void testUpdateVersionSpecimensNotFromSourceSystem() throws JsonProcessingException {
+    // Given
+    repository.createDigitalSpecimenRecord(
+        Set.of(
+            givenDigitalSpecimenRecord(),
+            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
+            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
+
+    // When
+    var successfulRecord = repository.updateDigitalSpecimenRecord(
+        Set.of(
+            givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION,
+                false, false)));
+
+    // Then
+    var resultOriginalData = context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
+        .from(DIGITAL_SPECIMEN)
+        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+        .fetchOne(DIGITAL_SPECIMEN.ORIGINAL_DATA).data();
+    assertThat(successfulRecord).isEqualTo(new int[]{1});
+    assertThat(MAPPER.readTree(resultOriginalData)).isEqualTo(ORIGINAL_DATA);
   }
 
   @Test
@@ -169,16 +203,16 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
 
   @Test
-  void testUpsertSpecimens() {
+  void testUpdateSpecimens() {
     // Given
     var records = Set.of(
         givenDigitalSpecimenRecord(),
         givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false));
-    var upsertRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2", false));
+    var updatedRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2", false));
 
     // When
     repository.createDigitalSpecimenRecord(records);
-    repository.createDigitalSpecimenRecord(upsertRecord);
+    repository.updateDigitalSpecimenRecord(updatedRecord);
 
     // Then
     var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)

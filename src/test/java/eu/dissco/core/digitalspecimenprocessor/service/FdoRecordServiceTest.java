@@ -181,7 +181,8 @@ class FdoRecordServiceTest {
                 .withDctermsRights(fieldValue),
             MAPPER.createObjectNode()
         ),
-        false);
+        false,
+        true);
     var expected = List.of(MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
             .put("type", TYPE_MEDIA)
@@ -210,7 +211,8 @@ class FdoRecordServiceTest {
                 .withOdsHasAgents(rightHolders),
             MAPPER.createObjectNode()
         ),
-        false);
+        false,
+        true);
     var attributes = (ObjectNode) givenHandleMediaRequestAttributes();
     if (expectedName != null) {
       attributes.put(RIGHTS_HOLDER.getAttribute(), expectedName);
@@ -477,7 +479,7 @@ class FdoRecordServiceTest {
   void testPhysicalSpecimenIdsDifferent() {
     // Given
     var currentSpecimen = givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
-        ORGANISATION_ID, false, false);
+        ORGANISATION_ID, false, false, ORIGINAL_DATA);
 
     // When/then
     assertThat(fdoRecordService.handleNeedsUpdateSpecimen(currentSpecimen,

@@ -11,6 +11,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
@@ -19,7 +20,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaWrapper;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
@@ -158,7 +158,8 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()),
+            List.of(),
             List.of()));
     then(digitalSpecimenService).should()
         .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
@@ -174,7 +175,8 @@ class ProcessingServiceTest {
         List.of(givenDigitalSpecimenRecord()));
     given(entityRelationshipService.processMediaRelationshipsForSpecimen(anyMap(), any(),
         anyMap())).willReturn(givenEmptyMediaProcessResult());
-    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willThrow(new AnnotationProcessingException());
+    given(annotationService.applyAcceptedAnnotations(any(), any(), any())).willThrow(
+        new AnnotationProcessingException());
 
     // When
     var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -210,7 +212,8 @@ class ProcessingServiceTest {
 
     // Then
     assertThat(result).isEqualTo(
-        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
+        new SpecimenProcessResult(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()),
+            List.of(),
             List.of()));
     then(digitalSpecimenService).should()
         .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
@@ -327,7 +330,8 @@ class ProcessingServiceTest {
 
     // Then
     then(digitalSpecimenService).should()
-        .updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(1, true), givenDigitalSpecimenEvent(true)));
+        .updateEqualSpecimen(
+            Map.of(givenDigitalSpecimenRecord(1, true), givenDigitalSpecimenEvent(true)));
     then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
     then(digitalSpecimenService).shouldHaveNoMoreInteractions();
     then(digitalMediaService).shouldHaveNoMoreInteractions();
@@ -367,7 +371,7 @@ class ProcessingServiceTest {
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
-            true),
+            true, ORIGINAL_DATA),
         List.of(givenDigitalMediaEvent()),
         false, true);
     given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(
@@ -415,13 +419,13 @@ class ProcessingServiceTest {
     var event2 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
-            true),
+            true, ORIGINAL_DATA),
         List.of(givenDigitalMediaEvent()),
         false, true);
     var event3 = new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID_ALT, SPECIMEN_NAME, ORGANISATION_ID, false,
-            true),
+            true, ORIGINAL_DATA),
         List.of(givenDigitalMediaEvent(MEDIA_URL_ALT)),
         false, true);
     given(specimenRepository.getDigitalSpecimens(
@@ -704,7 +708,8 @@ class ProcessingServiceTest {
                 givenDigitalMedia(MEDIA_URL, false).withAcCaptureDevice("a camera"),
                 MAPPER.createObjectNode()
             ),
-            false
+            false,
+            true
         );
     var events = new ArrayList<DigitalMediaEvent>();
     events.add(givenDigitalMediaEvent());
@@ -776,8 +781,11 @@ class ProcessingServiceTest {
     var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
     given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID))).willReturn(
         List.of(givenDigitalMediaRecord()));
-    var digitalMediaEvent = new DigitalMediaEvent(Set.of(), givenDigitalMediaWrapper(),
-        false);
+    var digitalMediaEvent = new DigitalMediaEvent(Set.of(), new DigitalMediaWrapper(
+        FdoType.MEDIA.getPid(),
+        givenDigitalMedia(MEDIA_URL, false),
+        null),
+        false, false);
     digitalMediaEvent.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(List.of());
     var updatedMediaTuple = new UpdatedDigitalMediaTuple(
         givenDigitalMediaRecord(),

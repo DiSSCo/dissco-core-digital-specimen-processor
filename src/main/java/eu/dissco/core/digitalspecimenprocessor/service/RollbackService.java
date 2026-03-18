@@ -80,7 +80,7 @@ public class RollbackService {
   private void rollBackToEarlierDatabaseVersionSpecimen(
       DigitalSpecimenRecord currentDigitalSpecimen) {
     try {
-      specimenRepository.createDigitalSpecimenRecord(Set.of(currentDigitalSpecimen));
+      specimenRepository.updateDigitalSpecimenRecord(Set.of(currentDigitalSpecimen));
     } catch (DataAccessException e) {
       log.error("Unable to rollback specimen {} to previous version", currentDigitalSpecimen.id());
     }
@@ -88,7 +88,7 @@ public class RollbackService {
 
   private void rollBackToEarlierDatabaseVersionMedia(DigitalMediaRecord currentDigitalMedia) {
     try {
-      mediaRepository.createDigitalMediaRecord(Set.of(currentDigitalMedia));
+      mediaRepository.updateDigitalMediaRecord(Set.of(currentDigitalMedia));
     } catch (DataAccessException e) {
       log.error("Unable to rollback media {} to previous version", currentDigitalMedia.id());
     }
@@ -190,7 +190,8 @@ public class RollbackService {
             digitalMediaRecord.attributes(),
             digitalMediaRecord.originalAttributes()
         ),
-        digitalMediaRecord.forceMasSchedule()
+        digitalMediaRecord.forceMasSchedule(),
+        digitalMediaRecord.isDataFromSourceSystem()
     );
   }
 

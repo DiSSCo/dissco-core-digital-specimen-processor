@@ -89,14 +89,18 @@ public class TestUtils {
   public static final String DATASET_ID = null;
   public static final String PHYSICAL_SPECIMEN_COLLECTION = null;
   public static final String SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64W";
+  public static final String ANOTHER_SOURCE_SYSTEM_ID = "https://hdl.handle.net/TEST/57Z-6PC-64X";
   public static final String SOURCE_SYSTEM_NAME = "A very nice source system";
   public static final JsonNode ORIGINAL_DATA = generateSpecimenOriginalData();
+  public static final JsonNode UPDATED_ORIGINAL_DATA = MAPPER.createObjectNode().put("data", "updated data");
   public static final OdsTopicDiscipline TOPIC_DISCIPLINE = OdsTopicDiscipline.BOTANY;
   public static final String MEDIA_URL = "https://an-image.org";
   public static final String MEDIA_URL_ALT = MEDIA_URL + "/2";
   public static final String MEDIA_PID = "20.5000.1025/ZZZ-ZZZ-ZZZ";
   public static final String MEDIA_PID_ALT = "20.5000.1025/AAA-AAA-AAA";
   public static final String MEDIA_MAS = "https://hdl.handle.net/20.5000.1025/5E3-P4R-AQC";
+  public static final JsonNode ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode().put("data", "somedata");
+  public static final JsonNode UPDATED_ORIGINAL_DATA_MEDIA = MAPPER.createObjectNode().put("data", "updated data");
 
 
   public static final String SPECIMEN_BASE_URL = "https://doi.org/";
@@ -227,7 +231,7 @@ public class TestUtils {
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(physicalSpecimenId, specimenName, organisation, false,
-            hasMedia),
+            hasMedia, UPDATED_ORIGINAL_DATA),
         Set.of(MAS),
         false,
         isDataFromSourceSystem,
@@ -243,7 +247,7 @@ public class TestUtils {
         VERSION,
         CREATED,
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
-            hasMedia), Set.of(MAS), false, true,
+            hasMedia, ORIGINAL_DATA), Set.of(MAS), false, true,
         mediaEvents);
   }
 
@@ -257,7 +261,7 @@ public class TestUtils {
     return new DigitalSpecimenEvent(
         Set.of(MAS),
         givenDigitalSpecimenWrapper(physicalSpecimenId, SPECIMEN_NAME, ORGANISATION_ID, false,
-            hasMedia),
+            hasMedia, ORIGINAL_DATA),
         mediaEvents,
         false,
         isDataFromSourceSystem);
@@ -277,9 +281,13 @@ public class TestUtils {
 
   public static DigitalMediaRecord givenDigitalMediaRecord(String pid, String uri, int version) {
     return new DigitalMediaRecord(
-        pid, uri, version, CREATED, Set.of(MEDIA_MAS),
+        pid, uri, version,
+        CREATED,
+        Set.of(MEDIA_MAS),
         givenDigitalMedia(uri, true),
-        MAPPER.createObjectNode(), false);
+        ORIGINAL_DATA_MEDIA,
+        false,
+        true);
   }
 
   public static DigitalMediaWrapper givenDigitalMediaWrapper() {
@@ -290,7 +298,7 @@ public class TestUtils {
     return new DigitalMediaWrapper(
         FdoType.MEDIA.getPid(),
         givenDigitalMedia(url, addSpecimenEr),
-        MAPPER.createObjectNode()
+        ORIGINAL_DATA_MEDIA
     );
   }
 
@@ -315,7 +323,7 @@ public class TestUtils {
             .withOdsHasEntityRelationships(
                 List.of(givenEntityRelationship(), givenEntityRelationship(HANDLE,
                     EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
-        MAPPER.createObjectNode(), null);
+        ORIGINAL_DATA_MEDIA, null, null);
   }
 
   public static DigitalMedia givenDigitalMediaWithRelationship() {
@@ -338,8 +346,9 @@ public class TestUtils {
         new DigitalMediaWrapper(
             FdoType.MEDIA.getPid(),
             givenUnequalDigitalMedia(url, addSpecimenEr),
-            MAPPER.createObjectNode()),
-        false);
+            UPDATED_ORIGINAL_DATA_MEDIA),
+        false,
+        true);
   }
 
   public static DigitalMediaRecord givenUnequalDigitalMediaRecord() {
@@ -354,7 +363,7 @@ public class TestUtils {
       int version) {
     var media = givenUnequalDigitalMedia(url, true);
     return new DigitalMediaRecord(
-        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, MAPPER.createObjectNode(), false);
+        pid, url, version, CREATED, Set.of(MEDIA_MAS), media, UPDATED_ORIGINAL_DATA_MEDIA, false, true);
   }
 
   public static DigitalMedia givenUnequalDigitalMedia(String url, boolean addSpecimenEr) {
@@ -365,6 +374,7 @@ public class TestUtils {
     return new DigitalMedia()
         .withOdsFdoType(FdoType.MEDIA.getPid())
         .withAcAccessURI(url)
+        .withOdsSourceSystemID(ANOTHER_SOURCE_SYSTEM_ID)
         .withOdsOrganisationName(ANOTHER_ORGANISATION)
         .withOdsHasEntityRelationships(ers);
   }
@@ -425,14 +435,14 @@ public class TestUtils {
   public static DigitalMediaEvent givenDigitalMediaEventWithSpecimenEr() {
     return new DigitalMediaEvent(
         Set.of(MEDIA_MAS),
-        givenDigitalMediaWrapper(MEDIA_URL, true), false);
+        givenDigitalMediaWrapper(MEDIA_URL, true), false, true);
 
   }
 
   public static DigitalMediaEvent givenDigitalMediaEvent(String mediaUrl) {
     return new DigitalMediaEvent(
         Set.of(MEDIA_MAS),
-        givenDigitalMediaWrapper(mediaUrl, false), false);
+        givenDigitalMediaWrapper(mediaUrl, false), false, true);
   }
 
   public static DigitalMediaEvent givenDigitalMediaEvent() {
@@ -465,7 +475,7 @@ public class TestUtils {
             "StillImage",
             digitalMedia,
             MAPPER.createObjectNode()
-        ), false);
+        ), false, true);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper() {
@@ -479,16 +489,16 @@ public class TestUtils {
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper(boolean entityRelationship,
       boolean hasMedia) {
     return givenDigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, ORGANISATION_ID,
-        entityRelationship, hasMedia);
+        entityRelationship, hasMedia, ORIGINAL_DATA);
   }
 
   public static DigitalSpecimenWrapper givenDigitalSpecimenWrapper(String physicalSpecimenId,
-      String specimenName, String organisation, boolean entityRelationship, boolean hasMedia) {
+      String specimenName, String organisation, boolean entityRelationship, boolean hasMedia, JsonNode originalData) {
     return new DigitalSpecimenWrapper(
         physicalSpecimenId,
         TYPE_PID,
         givenAttributes(specimenName, organisation, true, entityRelationship, hasMedia),
-        ORIGINAL_DATA
+        originalData
     );
   }
 
@@ -714,6 +724,9 @@ public class TestUtils {
         [ {
           "op" : "remove",
           "path" : "/ods:organisationName"
+        }, {
+          "op" : "remove",
+          "path" : "/ods:sourceSystemID"
         }, {
           "op" : "add",
           "path" : "/ods:organisationID",

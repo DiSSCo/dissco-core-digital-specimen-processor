@@ -407,7 +407,7 @@ class DigitalMediaServiceTest {
     // Given
     var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
     var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
-    doThrow(DataAccessException.class).when(repository).createDigitalMediaRecord(records);
+    doThrow(DataAccessException.class).when(repository).updateDigitalMediaRecord(records);
 
     // When
     var result = mediaService.updateExistingDigitalMedia(tuples, true);

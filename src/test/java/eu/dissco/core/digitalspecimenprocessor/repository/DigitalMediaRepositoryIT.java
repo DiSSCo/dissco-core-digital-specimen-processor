@@ -1,13 +1,21 @@
 package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGITAL_MEDIA_OBJECT;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SOURCE_SYSTEM_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA_MEDIA;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.UPDATED_ORIGINAL_DATA_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecordNoMas;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMedia;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.jooq.Record1;
@@ -45,6 +53,48 @@ class DigitalMediaRepositoryIT extends BaseRepositoryIT {
 
     // Then
     assertThat(result).isEqualTo(MEDIA_URL);
+  }
+
+  @Test
+  void testUpdatedDigitalMediaRecord() throws JsonProcessingException {
+    // Given
+    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+    var updatedMediaRecord = givenUnequalDigitalMediaRecord();
+
+    // When
+    mediaRepository.updateDigitalMediaRecord(Set.of(updatedMediaRecord));
+    var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+        .from(DIGITAL_MEDIA_OBJECT)
+        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+        .fetchOne();
+    var sourceSystemId = dbRecord.get(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID);
+    var originalData = MAPPER.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data());
+
+    // Then
+    assertThat(sourceSystemId).isEqualTo(ANOTHER_SOURCE_SYSTEM_ID);
+    assertThat(originalData).isEqualTo(UPDATED_ORIGINAL_DATA_MEDIA);
+  }
+
+  @Test
+  void testUpdatedDigitalMediaRecordNotFromSourceSystem() throws JsonProcessingException {
+    // Given
+    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+    var updatedMediaRecord = new DigitalMediaRecord(
+        MEDIA_PID, MEDIA_URL, 1, Instant.now(), null, givenUnequalDigitalMedia(MEDIA_URL, true),
+        null, false, false);
+
+    // When
+    mediaRepository.updateDigitalMediaRecord(Set.of(updatedMediaRecord));
+    var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+        .from(DIGITAL_MEDIA_OBJECT)
+        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+        .fetchOne();
+    var sourceSystemId = dbRecord.get(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID);
+    var originalData = MAPPER.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data());
+
+    // Then
+    assertThat(sourceSystemId).isEqualTo(ANOTHER_SOURCE_SYSTEM_ID);
+    assertThat(originalData).isEqualTo(ORIGINAL_DATA_MEDIA);
   }
 
   @Test

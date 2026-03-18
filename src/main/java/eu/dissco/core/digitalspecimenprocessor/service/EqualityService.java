@@ -97,7 +97,8 @@ public class EqualityService {
             digitalMediaEvent.digitalMediaWrapper().type(),
             digitalMedia,
             digitalMediaEvent.digitalMediaWrapper().originalAttributes()),
-        digitalMediaEvent.forceMasSchedule());
+        digitalMediaEvent.forceMasSchedule(),
+        digitalMediaEvent.isDataFromSourceSystem());
   }
 
   private void setEntityRelationshipDates(List<EntityRelationship> currentEntityRelationships,
