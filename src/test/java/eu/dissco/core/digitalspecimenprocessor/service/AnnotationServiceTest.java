@@ -40,82 +40,77 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AnnotationServiceTest {
 
-  private AnnotationService annotationService;
-  @Mock
-  AnnotationRepository annotationRepository;
-  @Mock
-  AnnotationValidator annotationValidator;
-  @Mock
-  AnnotationProperties annotationProperties;
+	private AnnotationService annotationService;
 
-  @BeforeEach
-  void setup() {
-    annotationService = new AnnotationService(annotationRepository, annotationValidator, MAPPER,
-        annotationProperties);
-  }
+	@Mock
+	AnnotationRepository annotationRepository;
 
-  @Test
-  void testGetAnnotationsForSpecimens() {
-    // Given
-    given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
+	@Mock
+	AnnotationValidator annotationValidator;
 
-    // When
-    annotationService.getAnnotationsForSpecimens(Set.of(givenDigitalSpecimenRecord()));
+	@Mock
+	AnnotationProperties annotationProperties;
 
-    // Then
-    then(annotationRepository).should()
-        .getAcceptedAnnotationsForObject(Set.of(DOI_PREFIX + HANDLE));
-  }
+	@BeforeEach
+	void setup() {
+		annotationService = new AnnotationService(annotationRepository, annotationValidator, MAPPER,
+				annotationProperties);
+	}
 
-  @Test
-  void testGetAnnotationsForSpecimensNoRecords() {
-    // Given
-    given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
+	@Test
+	void testGetAnnotationsForSpecimens() {
+		// Given
+		given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
 
-    // When
-    annotationService.getAnnotationsForSpecimens(Set.of());
+		// When
+		annotationService.getAnnotationsForSpecimens(Set.of(givenDigitalSpecimenRecord()));
 
-    // Then
-    then(annotationRepository).shouldHaveNoInteractions();
-  }
+		// Then
+		then(annotationRepository).should().getAcceptedAnnotationsForObject(Set.of(DOI_PREFIX + HANDLE));
+	}
 
+	@Test
+	void testGetAnnotationsForSpecimensNoRecords() {
+		// Given
+		given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
 
-  @Test
-  void testApplyAcceptedAnnotations() throws Exception {
-    // Given
-    given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
-    var annotatedSpecimen = givenAnnotatedSpecimen();
-    var expected = new DigitalSpecimenWrapper(
-        PHYSICAL_SPECIMEN_ID,
-        TYPE_PID,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false)
-            .withDwcOrganismRemarks(NEW_VALUE),
-        ORIGINAL_DATA
-    );
-    given(annotationValidator.applyAnnotation(any(DigitalSpecimen.class),
-        eq(givenAnnotation()))).willReturn(
-        annotatedSpecimen);
+		// When
+		annotationService.getAnnotationsForSpecimens(Set.of());
 
-    // When
-    var result = annotationService.applyAcceptedAnnotations(givenDigitalSpecimenEvent(),
-        givenDigitalSpecimenRecord(),
-        Map.of(HANDLE, List.of(givenAnnotation())));
+		// Then
+		then(annotationRepository).shouldHaveNoInteractions();
+	}
 
-    // Then
-    assertThat(result.digitalSpecimenWrapper()).isEqualTo(expected);
-  }
+	@Test
+	void testApplyAcceptedAnnotations() throws Exception {
+		// Given
+		given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
+		var annotatedSpecimen = givenAnnotatedSpecimen();
+		var expected = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+				givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false).withDwcOrganismRemarks(NEW_VALUE),
+				ORIGINAL_DATA);
+		given(annotationValidator.applyAnnotation(any(DigitalSpecimen.class), eq(givenAnnotation())))
+			.willReturn(annotatedSpecimen);
 
-  @Test
-  void testApplyAcceptedAnnotationsFails() throws Exception {
-    // Given
-    given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
-    given(annotationValidator.applyAnnotation(any(DigitalSpecimen.class), eq(givenAnnotation())))
-        .willThrow(InvalidAnnotationException.class);
+		// When
+		var result = annotationService.applyAcceptedAnnotations(givenDigitalSpecimenEvent(),
+				givenDigitalSpecimenRecord(), Map.of(HANDLE, List.of(givenAnnotation())));
 
-    // When / Then
-    assertThrows(AnnotationProcessingException.class, () -> annotationService.applyAcceptedAnnotations(givenDigitalSpecimenEvent(),
-        givenDigitalSpecimenRecord(),
-        Map.of(HANDLE, List.of(givenAnnotation()))));
-  }
+		// Then
+		assertThat(result.digitalSpecimenWrapper()).isEqualTo(expected);
+	}
+
+	@Test
+	void testApplyAcceptedAnnotationsFails() throws Exception {
+		// Given
+		given(annotationProperties.isApplyAcceptedAnnotations()).willReturn(true);
+		given(annotationValidator.applyAnnotation(any(DigitalSpecimen.class), eq(givenAnnotation())))
+			.willThrow(InvalidAnnotationException.class);
+
+		// When / Then
+		assertThrows(AnnotationProcessingException.class,
+				() -> annotationService.applyAcceptedAnnotations(givenDigitalSpecimenEvent(),
+						givenDigitalSpecimenRecord(), Map.of(HANDLE, List.of(givenAnnotation()))));
+	}
 
 }

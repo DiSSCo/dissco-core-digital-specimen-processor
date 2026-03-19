@@ -18,21 +18,18 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class ElasticSearchConfiguration {
 
-    private final JsonMapper mapper;
-  private final ElasticSearchProperties properties;
+	private final JsonMapper mapper;
 
-  @Bean
-  public ElasticsearchClient elasticsearchClient() {
-    var creds = Base64.getEncoder()
-        .encodeToString((properties.getUsername() + ":" + properties.getPassword()).getBytes());
-    var restClient = Rest5Client
-        .builder(new HttpHost(properties.getHostname(), properties.getPort()))
-        .setDefaultHeaders(new Header[]{
-            new BasicHeader("Authorization", "Basic " + creds)
-        });
-    var transport = new Rest5ClientTransport(restClient.build(),
-        new Jackson3JsonpMapper(mapper));
-    return new ElasticsearchClient(transport);
-  }
+	private final ElasticSearchProperties properties;
+
+	@Bean
+	public ElasticsearchClient elasticsearchClient() {
+		var creds = Base64.getEncoder()
+			.encodeToString((properties.getUsername() + ":" + properties.getPassword()).getBytes());
+		var restClient = Rest5Client.builder(new HttpHost(properties.getHostname(), properties.getPort()))
+			.setDefaultHeaders(new Header[] { new BasicHeader("Authorization", "Basic " + creds) });
+		var transport = new Rest5ClientTransport(restClient.build(), new Jackson3JsonpMapper(mapper));
+		return new ElasticsearchClient(transport);
+	}
 
 }

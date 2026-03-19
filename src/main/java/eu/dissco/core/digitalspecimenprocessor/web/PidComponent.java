@@ -19,48 +19,47 @@ import tools.jackson.databind.JsonNode;
 @Slf4j
 public class PidComponent {
 
-  private final PidClient pidClient;
+	private final PidClient pidClient;
 
-  private static final String UNEXPECTED_MSG = "Unexpected response from PID API";
-  private static final String UNEXPECTED_LOG = "Unexpected response from PID API. Error: {}. Response: {}";
+	private static final String UNEXPECTED_MSG = "Unexpected response from PID API";
 
-  public Map<String, String> postPid(List<JsonNode> request, boolean isSpecimen)
-      throws PidException {
-    var responseJsonNode = pidClient.postPids(request);
-    var localAttribute = isSpecimen ? NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID : PRIMARY_MEDIA_ID;
-    return getPidName(responseJsonNode, localAttribute);
-  }
+	private static final String UNEXPECTED_LOG = "Unexpected response from PID API. Error: {}. Response: {}";
 
-  public void updatePid(List<JsonNode> request)
-      throws PidException {
-    pidClient.updatePids(request);
-  }
+	public Map<String, String> postPid(List<JsonNode> request, boolean isSpecimen) throws PidException {
+		var responseJsonNode = pidClient.postPids(request);
+		var localAttribute = isSpecimen ? NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID : PRIMARY_MEDIA_ID;
+		return getPidName(responseJsonNode, localAttribute);
+	}
 
-  public void rollbackPidUpdate(List<JsonNode> request)
-      throws PidException {
-    log.info("Rolling back PID update");
-    pidClient.rollbackPidsUpdate(request);
-  }
+	public void updatePid(List<JsonNode> request) throws PidException {
+		pidClient.updatePids(request);
+	}
 
-  private HashMap<String, String> getPidName(JsonNode pidResponse,
-      FdoProfileAttributes localAttribute)
-      throws PidException {
-    try {
-      var dataNode = pidResponse.get("data");
-      HashMap<String, String> pids = new HashMap<>();
-      if (!dataNode.isArray()) {
-        log.error(UNEXPECTED_LOG, "Data is not an array", pidResponse);
-        throw new PidException(UNEXPECTED_MSG);
-      }
-      for (var node : dataNode) {
-        var doi = node.get("id");
-        var localId = node.get("attributes").get(localAttribute.getAttribute());
-        pids.put(localId.asString(), doi.asString());
-      }
-      return pids;
-    } catch (NullPointerException _) {
-      log.error(UNEXPECTED_LOG, "Unexpected null", pidResponse);
-      throw new PidException(UNEXPECTED_MSG);
-    }
-  }
+	public void rollbackPidUpdate(List<JsonNode> request) throws PidException {
+		log.info("Rolling back PID update");
+		pidClient.rollbackPidsUpdate(request);
+	}
+
+	private HashMap<String, String> getPidName(JsonNode pidResponse, FdoProfileAttributes localAttribute)
+			throws PidException {
+		try {
+			var dataNode = pidResponse.get("data");
+			HashMap<String, String> pids = new HashMap<>();
+			if (!dataNode.isArray()) {
+				log.error(UNEXPECTED_LOG, "Data is not an array", pidResponse);
+				throw new PidException(UNEXPECTED_MSG);
+			}
+			for (var node : dataNode) {
+				var doi = node.get("id");
+				var localId = node.get("attributes").get(localAttribute.getAttribute());
+				pids.put(localId.asString(), doi.asString());
+			}
+			return pids;
+		}
+		catch (NullPointerException _) {
+			log.error(UNEXPECTED_LOG, "Unexpected null", pidResponse);
+			throw new PidException(UNEXPECTED_MSG);
+		}
+	}
+
 }

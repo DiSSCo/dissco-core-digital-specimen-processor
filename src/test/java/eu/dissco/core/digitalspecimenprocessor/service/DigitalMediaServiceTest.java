@@ -73,327 +73,312 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DigitalMediaServiceTest {
 
-  private static MockedStatic<Instant> mockedInstant;
-  private static MockedStatic<Clock> mockedClock;
-  @Mock
-  private DigitalMediaRepository repository;
-  @Mock
-  private FdoRecordService fdoRecordService;
-  @Mock
-  private PidComponent handleComponent;
-  @Mock
-  private RollbackService rollbackService;
-  @Mock
-  private ElasticSearchRepository elasticRepository;
-  @Mock
-  private AnnotationPublisherService annotationPublisherService;
-  @Mock
-  private RabbitMqPublisherService publisherService;
-  @Mock
-  private BulkResponse bulkResponse;
-  @Captor
-  private ArgumentCaptor<DigitalMediaEvent> digitalMediaEventCaptor;
-  private DigitalMediaService mediaService;
+	private static MockedStatic<Instant> mockedInstant;
 
-  @BeforeAll
-  static void init() {
-    Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
-    Instant instant = Instant.now(clock);
-    mockedInstant = mockStatic(Instant.class);
-    mockedInstant.when(Instant::now).thenReturn(instant);
-    mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
-    mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
-    mockedClock = mockStatic(Clock.class);
-    mockedClock.when(Clock::systemUTC).thenReturn(clock);
-  }
+	private static MockedStatic<Clock> mockedClock;
 
-  @AfterAll
-  static void teardown() {
-    mockedInstant.close();
-    mockedClock.close();
-  }
+	@Mock
+	private DigitalMediaRepository repository;
 
-  @BeforeEach
-  void setup() {
-    mediaService = new DigitalMediaService(repository, fdoRecordService, handleComponent, MAPPER,
-        rollbackService, elasticRepository, annotationPublisherService, publisherService);
-  }
+	@Mock
+	private FdoRecordService fdoRecordService;
 
-  @Test
-  void testUpdateEqualMedia() {
-    // Given
+	@Mock
+	private PidComponent handleComponent;
 
-    // When
-    mediaService.updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
+	@Mock
+	private RollbackService rollbackService;
 
-    // Then
-    then(repository).should().updateLastChecked(List.of(MEDIA_PID));
-  }
+	@Mock
+	private ElasticSearchRepository elasticRepository;
 
-  @Test
-  void testCreateNewMedia() throws Exception {
-    // Given
-    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
-    var events = List.of(givenDigitalMediaEvent());
-    var records = Set.of(givenDigitalMediaRecord());
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+	@Mock
+	private AnnotationPublisherService annotationPublisherService;
 
-    // When
-    var result = mediaService.createNewDigitalMedia(events, pidMap);
+	@Mock
+	private RabbitMqPublisherService publisherService;
 
-    // Then
-    assertThat(result).isEqualTo(records);
-    then(repository).should().createDigitalMediaRecord(records);
-    then(annotationPublisherService).should().publishAnnotationNewMedia(records);
-  }
+	@Mock
+	private BulkResponse bulkResponse;
 
-  @Test
-  void testCreateNewMediaNoPids() {
-    // Given
-    var pidMap = Map.of(MEDIA_URL_ALT, givenPidProcessResultMedia());
-    var events = List.of(givenDigitalMediaEvent());
+	@Captor
+	private ArgumentCaptor<DigitalMediaEvent> digitalMediaEventCaptor;
 
-    // When
-    var result = mediaService.createNewDigitalMedia(events, pidMap);
+	private DigitalMediaService mediaService;
 
-    // Then
-    assertThat(result).isEmpty();
-  }
+	@BeforeAll
+	static void init() {
+		Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
+		Instant instant = Instant.now(clock);
+		mockedInstant = mockStatic(Instant.class);
+		mockedInstant.when(Instant::now).thenReturn(instant);
+		mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
+		mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
+		mockedClock = mockStatic(Clock.class);
+		mockedClock.when(Clock::systemUTC).thenReturn(clock);
+	}
 
-  @Test
-  void testCreateNewMediaDatabaseException() {
-    // Given
-    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
-    var events = List.of(givenDigitalMediaEvent());
-    var records = Set.of(givenDigitalMediaRecord());
-    doThrow(DataAccessException.class).when(repository).createDigitalMediaRecord(records);
+	@AfterAll
+	static void teardown() {
+		mockedInstant.close();
+		mockedClock.close();
+	}
 
-    // When
-    var result = mediaService.createNewDigitalMedia(events, pidMap);
+	@BeforeEach
+	void setup() {
+		mediaService = new DigitalMediaService(repository, fdoRecordService, handleComponent, MAPPER, rollbackService,
+				elasticRepository, annotationPublisherService, publisherService);
+	}
 
-    // Then
-    assertThat(result).isEmpty();
-    then(rollbackService).should().rollbackNewMedias(records, false, false);
-  }
+	@Test
+	void testUpdateEqualMedia() {
+		// Given
 
-  @Test
-  void testCreateNewMediaElasticFailure() throws Exception {
-    // Given
-    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
-    var events = List.of(givenDigitalMediaEvent());
-    var records = Set.of(givenDigitalMediaRecord());
-    doThrow(ElasticsearchException.class).when(elasticRepository).indexDigitalMedia(records);
+		// When
+		mediaService.updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
 
-    // When
-    var result = mediaService.createNewDigitalMedia(events, pidMap);
+		// Then
+		then(repository).should().updateLastChecked(List.of(MEDIA_PID));
+	}
 
-    // Then
-    assertThat(result).isEmpty();
-    then(repository).should().createDigitalMediaRecord(records);
-    then(rollbackService).should().rollbackNewMedias(records, false, true);
-  }
+	@Test
+	void testCreateNewMedia() throws Exception {
+		// Given
+		var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+		var events = List.of(givenDigitalMediaEvent());
+		var records = Set.of(givenDigitalMediaRecord());
+		given(bulkResponse.errors()).willReturn(false);
+		given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
 
+		// When
+		var result = mediaService.createNewDigitalMedia(events, pidMap);
 
-  @Test
-  void testCreateNewMediaElasticPartialFailure() throws Exception {
-    // Given
-    var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT,
-        new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
-    var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent());
-    var successfulRecord = givenDigitalMediaRecord();
-    var records = Set.of(successfulRecord,
-        givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
-    given(bulkResponse.errors()).willReturn(true);
-    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
-    given(rollbackService.handlePartiallyFailedElasticInsertMedia(anySet(), any()))
-        .willReturn(Set.of(successfulRecord));
+		// Then
+		assertThat(result).isEqualTo(records);
+		then(repository).should().createDigitalMediaRecord(records);
+		then(annotationPublisherService).should().publishAnnotationNewMedia(records);
+	}
 
-    // When
-    var result = mediaService.createNewDigitalMedia(events, pidMap);
+	@Test
+	void testCreateNewMediaNoPids() {
+		// Given
+		var pidMap = Map.of(MEDIA_URL_ALT, givenPidProcessResultMedia());
+		var events = List.of(givenDigitalMediaEvent());
 
-    // Then
-    assertThat(result).isEqualTo(Set.of(successfulRecord));
-    then(repository).should().createDigitalMediaRecord(records);
-    then(publisherService).shouldHaveNoMoreInteractions();
-  }
+		// When
+		var result = mediaService.createNewDigitalMedia(events, pidMap);
 
-  @Test
-  void testUpdateExistingMedia() throws Exception {
-    // Given
-    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+		// Then
+		assertThat(result).isEmpty();
+	}
 
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
+	@Test
+	void testCreateNewMediaDatabaseException() {
+		// Given
+		var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+		var events = List.of(givenDigitalMediaEvent());
+		var records = Set.of(givenDigitalMediaRecord());
+		doThrow(DataAccessException.class).when(repository).createDigitalMediaRecord(records);
 
-    // Then
-    assertThat(result).isEqualTo(records);
-    then(handleComponent).shouldHaveNoInteractions();
-    then(annotationPublisherService).should().publishAnnotationUpdatedMedia(any());
-    then(publisherService).should()
-        .publishUpdateEventMedia(eq(givenDigitalMediaRecord(VERSION + 1)), any());
-  }
+		// When
+		var result = mediaService.createNewDigitalMedia(events, pidMap);
 
-  @Test
-  void testUpdateExistingMediaUpdateHandle() throws Exception {
-    // Given
-    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
-    given(fdoRecordService.pidNeedsUpdateMedia(any(), any())).willReturn(true);
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+		// Then
+		assertThat(result).isEmpty();
+		then(rollbackService).should().rollbackNewMedias(records, false, false);
+	}
 
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
+	@Test
+	void testCreateNewMediaElasticFailure() throws Exception {
+		// Given
+		var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia());
+		var events = List.of(givenDigitalMediaEvent());
+		var records = Set.of(givenDigitalMediaRecord());
+		doThrow(ElasticsearchException.class).when(elasticRepository).indexDigitalMedia(records);
 
-    // Then
-    assertThat(result).isEqualTo(records);
-    then(handleComponent).should().updatePid(any());
-    then(annotationPublisherService).should().publishAnnotationUpdatedMedia(any());
-    then(publisherService).should()
-        .publishUpdateEventMedia(eq(givenDigitalMediaRecord(VERSION + 1)), any());
-  }
+		// When
+		var result = mediaService.createNewDigitalMedia(events, pidMap);
 
-  @Test
-  void testUpdateExistingMediaUpdateHandleFailed() throws Exception {
-    // Given
-    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    given(fdoRecordService.pidNeedsUpdateMedia(any(), any())).willReturn(true);
-    doThrow(PidException.class).when(handleComponent).updatePid(any());
+		// Then
+		assertThat(result).isEmpty();
+		then(repository).should().createDigitalMediaRecord(records);
+		then(rollbackService).should().rollbackNewMedias(records, false, true);
+	}
 
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
+	@Test
+	void testCreateNewMediaElasticPartialFailure() throws Exception {
+		// Given
+		var pidMap = Map.of(MEDIA_URL, givenPidProcessResultMedia(), MEDIA_URL_ALT,
+				new PidProcessResult(MEDIA_PID_ALT, Set.of(HANDLE)));
+		var events = List.of(givenDigitalMediaEvent(), givenUnequalDigitalMediaEvent());
+		var successfulRecord = givenDigitalMediaRecord();
+		var records = Set.of(successfulRecord, givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION));
+		given(bulkResponse.errors()).willReturn(true);
+		given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+		given(rollbackService.handlePartiallyFailedElasticInsertMedia(anySet(), any()))
+			.willReturn(Set.of(successfulRecord));
 
-    // Then
-    assertThat(result).isEmpty();
-    then(handleComponent).should().updatePid(any());
-    then(publisherService).should().deadLetterEventMedia(digitalMediaEventCaptor.capture());
-    then(annotationPublisherService).shouldHaveNoInteractions();
-    var mediaEvent = digitalMediaEventCaptor.getValue();
-    assertThat(mediaEvent.digitalMediaWrapper().attributes().getId()).isEqualTo(MEDIA_PID);
-    assertThat(mediaEvent.digitalMediaWrapper().attributes().getDctermsIdentifier()).isEqualTo(
-        MEDIA_PID);
-    assertThat(mediaEvent.digitalMediaWrapper().attributes().getDctermsCreated()).isEqualTo(
-        CREATED);
-    assertThat(mediaEvent.digitalMediaWrapper().attributes().getOdsVersion()).isEqualTo(2);
-  }
+		// When
+		var result = mediaService.createNewDigitalMedia(events, pidMap);
 
-  @Test
-  void testUpdateExistingMediaElasticFailed() throws Exception {
-    // Given
-    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
-    var updatedRecord = Set.of(new UpdatedDigitalMediaRecord(
-        givenDigitalMediaRecord(VERSION + 1),
-        Set.of(MEDIA_MAS),
-        givenUnequalDigitalMediaRecord(),
-        givenJsonPatchMedia()
-    ));
-    doThrow(ElasticsearchException.class).when(elasticRepository).indexDigitalMedia(records);
+		// Then
+		assertThat(result).isEqualTo(Set.of(successfulRecord));
+		then(repository).should().createDigitalMediaRecord(records);
+		then(publisherService).shouldHaveNoMoreInteractions();
+	}
 
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
+	@Test
+	void testUpdateExistingMedia() throws Exception {
+		// Given
+		var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+		var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+		given(bulkResponse.errors()).willReturn(false);
+		given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
 
-    // Then
-    assertThat(result).isEmpty();
-    then(rollbackService).should().rollbackUpdatedMedias(updatedRecord, false, true);
-    then(annotationPublisherService).shouldHaveNoInteractions();
-  }
+		// When
+		var result = mediaService.updateExistingDigitalMedia(tuples, true);
 
-  @Test
-  void testUpdateExistingMediaElasticPartiallyFailed() throws Exception {
-    // Given
-    var successfulRecord = givenDigitalMediaRecord(2);
-    var records = Set.of(
-        successfulRecord,
-        givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION + 1));
-    given(bulkResponse.errors()).willReturn(true);
-    given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
-    var tuples = List.of(
-        givenUpdatedDigitalMediaTuple(false),
-        new UpdatedDigitalMediaTuple(
-            givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, 1),
-            givenUnequalDigitalMediaEvent(),
-            Set.of()
-        )
-    );
-    given(rollbackService.handlePartiallyFailedElasticUpdateMedia(any(), eq(bulkResponse)))
-        .willReturn(Set.of(
-            new UpdatedDigitalMediaRecord(
-                successfulRecord,
-                Set.of(MEDIA_MAS),
-                givenUnequalDigitalMediaRecord(),
-                givenJsonPatchMedia()
-            )
-        ));
+		// Then
+		assertThat(result).isEqualTo(records);
+		then(handleComponent).shouldHaveNoInteractions();
+		then(annotationPublisherService).should().publishAnnotationUpdatedMedia(any());
+		then(publisherService).should().publishUpdateEventMedia(eq(givenDigitalMediaRecord(VERSION + 1)), any());
+	}
 
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
+	@Test
+	void testUpdateExistingMediaUpdateHandle() throws Exception {
+		// Given
+		var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+		var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+		given(fdoRecordService.pidNeedsUpdateMedia(any(), any())).willReturn(true);
+		given(bulkResponse.errors()).willReturn(false);
+		given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
 
-    // Then
-    assertThat(result).isEqualTo(Set.of(successfulRecord));
-    then(handleComponent).shouldHaveNoInteractions();
-    then(publisherService).should()
-        .publishUpdateEventMedia(givenDigitalMediaRecord(VERSION + 1), givenJsonPatchMedia());
-  }
+		// When
+		var result = mediaService.updateExistingDigitalMedia(tuples, true);
 
-  @Test
-  void testUpdateExistingMediaDatabaseFailed() {
-    // Given
-    var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
-    var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
-    doThrow(DataAccessException.class).when(repository).updateDigitalMediaRecord(records);
+		// Then
+		assertThat(result).isEqualTo(records);
+		then(handleComponent).should().updatePid(any());
+		then(annotationPublisherService).should().publishAnnotationUpdatedMedia(any());
+		then(publisherService).should().publishUpdateEventMedia(eq(givenDigitalMediaRecord(VERSION + 1)), any());
+	}
 
-    // When
-    var result = mediaService.updateExistingDigitalMedia(tuples, true);
+	@Test
+	void testUpdateExistingMediaUpdateHandleFailed() throws Exception {
+		// Given
+		var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+		given(fdoRecordService.pidNeedsUpdateMedia(any(), any())).willReturn(true);
+		doThrow(PidException.class).when(handleComponent).updatePid(any());
 
-    // Then
-    assertThat(result).isEmpty();
-  }
+		// When
+		var result = mediaService.updateExistingDigitalMedia(tuples, true);
 
-  @Test
-  void testTombstoneSpecimenRelations()  {
-    // Given
-    var tuple = new UpdatedDigitalSpecimenTuple(
-        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
-        givenDigitalSpecimenEvent(true),
-        new MediaRelationshipProcessResult(
-            List.of(new EntityRelationship()
-                .withType("ods:EntityRelationship")
-                .withDwcRelationshipOfResource("hasDigitalMedia")
-                .withDwcRelationshipEstablishedDate(Date.from(CREATED))
-                .withDwcRelatedResourceID(DOI_PREFIX + MEDIA_PID)
-                .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
-                .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
-                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
-            List.of(),
-            List.of()));
-    var expected = new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
+		// Then
+		assertThat(result).isEmpty();
+		then(handleComponent).should().updatePid(any());
+		then(publisherService).should().deadLetterEventMedia(digitalMediaEventCaptor.capture());
+		then(annotationPublisherService).shouldHaveNoInteractions();
+		var mediaEvent = digitalMediaEventCaptor.getValue();
+		assertThat(mediaEvent.digitalMediaWrapper().attributes().getId()).isEqualTo(MEDIA_PID);
+		assertThat(mediaEvent.digitalMediaWrapper().attributes().getDctermsIdentifier()).isEqualTo(MEDIA_PID);
+		assertThat(mediaEvent.digitalMediaWrapper().attributes().getDctermsCreated()).isEqualTo(CREATED);
+		assertThat(mediaEvent.digitalMediaWrapper().attributes().getOdsVersion()).isEqualTo(2);
+	}
 
-    // When
-    mediaService.tombstoneSpecimenRelations(List.of(tuple));
+	@Test
+	void testUpdateExistingMediaElasticFailed() throws Exception {
+		// Given
+		var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+		var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+		var updatedRecord = Set.of(new UpdatedDigitalMediaRecord(givenDigitalMediaRecord(VERSION + 1),
+				Set.of(MEDIA_MAS), givenUnequalDigitalMediaRecord(), givenJsonPatchMedia()));
+		doThrow(ElasticsearchException.class).when(elasticRepository).indexDigitalMedia(records);
 
-    // Then
-    then(publisherService).should().publishDigitalMediaRelationTombstone(expected);
-  }
+		// When
+		var result = mediaService.updateExistingDigitalMedia(tuples, true);
 
-  @Test
-  void testNoTombstoneSpecimenRelations() {
-    // Given
-    var tuple = new UpdatedDigitalSpecimenTuple(
-        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
-        givenDigitalSpecimenEvent(true),
-        new MediaRelationshipProcessResult());
+		// Then
+		assertThat(result).isEmpty();
+		then(rollbackService).should().rollbackUpdatedMedias(updatedRecord, false, true);
+		then(annotationPublisherService).shouldHaveNoInteractions();
+	}
 
-    // When
-    mediaService.tombstoneSpecimenRelations(List.of(tuple));
+	@Test
+	void testUpdateExistingMediaElasticPartiallyFailed() throws Exception {
+		// Given
+		var successfulRecord = givenDigitalMediaRecord(2);
+		var records = Set.of(successfulRecord,
+				givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, VERSION + 1));
+		given(bulkResponse.errors()).willReturn(true);
+		given(elasticRepository.indexDigitalMedia(records)).willReturn(bulkResponse);
+		var tuples = List.of(givenUpdatedDigitalMediaTuple(false),
+				new UpdatedDigitalMediaTuple(givenUnequalDigitalMediaRecord(MEDIA_PID_ALT, MEDIA_URL_ALT, 1),
+						givenUnequalDigitalMediaEvent(), Set.of()));
+		given(rollbackService.handlePartiallyFailedElasticUpdateMedia(any(), eq(bulkResponse)))
+			.willReturn(Set.of(new UpdatedDigitalMediaRecord(successfulRecord, Set.of(MEDIA_MAS),
+					givenUnequalDigitalMediaRecord(), givenJsonPatchMedia())));
 
-    // Then
-    then(repository).shouldHaveNoInteractions();
-    then(publisherService).shouldHaveNoInteractions();
-  }
+		// When
+		var result = mediaService.updateExistingDigitalMedia(tuples, true);
+
+		// Then
+		assertThat(result).isEqualTo(Set.of(successfulRecord));
+		then(handleComponent).shouldHaveNoInteractions();
+		then(publisherService).should()
+			.publishUpdateEventMedia(givenDigitalMediaRecord(VERSION + 1), givenJsonPatchMedia());
+	}
+
+	@Test
+	void testUpdateExistingMediaDatabaseFailed() {
+		// Given
+		var tuples = List.of(givenUpdatedDigitalMediaTuple(false));
+		var records = Set.of(givenDigitalMediaRecord(VERSION + 1));
+		doThrow(DataAccessException.class).when(repository).updateDigitalMediaRecord(records);
+
+		// When
+		var result = mediaService.updateExistingDigitalMedia(tuples, true);
+
+		// Then
+		assertThat(result).isEmpty();
+	}
+
+	@Test
+	void testTombstoneSpecimenRelations() {
+		// Given
+		var tuple = new UpdatedDigitalSpecimenTuple(
+				givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
+				givenDigitalSpecimenEvent(true),
+				new MediaRelationshipProcessResult(List.of(new EntityRelationship().withType("ods:EntityRelationship")
+					.withDwcRelationshipOfResource("hasDigitalMedia")
+					.withDwcRelationshipEstablishedDate(Date.from(CREATED))
+					.withDwcRelatedResourceID(DOI_PREFIX + MEDIA_PID)
+					.withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
+					.withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE, DOI,
+							SCHEMA_SOFTWARE_APPLICATION)))),
+						List.of(), List.of()));
+		var expected = new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
+
+		// When
+		mediaService.tombstoneSpecimenRelations(List.of(tuple));
+
+		// Then
+		then(publisherService).should().publishDigitalMediaRelationTombstone(expected);
+	}
+
+	@Test
+	void testNoTombstoneSpecimenRelations() {
+		// Given
+		var tuple = new UpdatedDigitalSpecimenTuple(
+				givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
+				givenDigitalSpecimenEvent(true), new MediaRelationshipProcessResult());
+
+		// When
+		mediaService.tombstoneSpecimenRelations(List.of(tuple));
+
+		// Then
+		then(repository).shouldHaveNoInteractions();
+		then(publisherService).shouldHaveNoInteractions();
+	}
 
 }

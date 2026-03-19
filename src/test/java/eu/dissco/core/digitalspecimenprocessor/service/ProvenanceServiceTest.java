@@ -35,68 +35,63 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ProvenanceServiceTest {
 
-  @Mock
-  private ApplicationProperties properties;
+	@Mock
+	private ApplicationProperties properties;
 
-  private ProvenanceService service;
+	private ProvenanceService service;
 
-  private static List<Agent> givenExpectedAgents() {
-    return List.of(
-        createMachineAgent(SOURCE_SYSTEM_NAME, SOURCE_SYSTEM_ID, SOURCE_SYSTEM,
-            DctermsType.HANDLE, PROV_SOFTWARE_AGENT),
-        createMachineAgent(APP_NAME, APP_HANDLE, AgentRoleType.PROCESSING_SERVICE,
-            DctermsType.DOI, PROV_SOFTWARE_AGENT)
-    );
-  }
+	private static List<Agent> givenExpectedAgents() {
+		return List.of(
+				createMachineAgent(SOURCE_SYSTEM_NAME, SOURCE_SYSTEM_ID, SOURCE_SYSTEM, DctermsType.HANDLE,
+						PROV_SOFTWARE_AGENT),
+				createMachineAgent(APP_NAME, APP_HANDLE, AgentRoleType.PROCESSING_SERVICE, DctermsType.DOI,
+						PROV_SOFTWARE_AGENT));
+	}
 
-  @BeforeEach
-  void setup() {
-    this.service = new ProvenanceService(MAPPER, properties);
-  }
+	@BeforeEach
+	void setup() {
+		this.service = new ProvenanceService(MAPPER, properties);
+	}
 
-  @Test
-  void testGenerateCreateEventSpecimen() {
-    // Given
-    given(properties.getName()).willReturn(APP_NAME);
-    given(properties.getPid()).willReturn(APP_HANDLE);
-    var digitalSpecimen = new DigitalSpecimenRecord(HANDLE, 2, 1, CREATED,
-        givenDigitalSpecimenWrapper(true, false), Set.of(), false, true, List.of());
+	@Test
+	void testGenerateCreateEventSpecimen() {
+		// Given
+		given(properties.getName()).willReturn(APP_NAME);
+		given(properties.getPid()).willReturn(APP_HANDLE);
+		var digitalSpecimen = new DigitalSpecimenRecord(HANDLE, 2, 1, CREATED, givenDigitalSpecimenWrapper(true, false),
+				Set.of(), false, true, List.of());
 
-    // When
-    var event = service.generateCreateEventSpecimen(digitalSpecimen);
+		// When
+		var event = service.generateCreateEventSpecimen(digitalSpecimen);
 
-    // Then
-    assertThat(event.getDctermsIdentifier()).isEqualTo(
-        DOI_PREFIX + HANDLE + "/" + VERSION);
-    assertThat(event.getProvActivity().getOdsChangeValue()).isNull();
-    assertThat(event.getProvEntity().getProvValue()).isNotNull();
-    assertThat(event.getOdsHasAgents()).isEqualTo(givenExpectedAgents());
-  }
+		// Then
+		assertThat(event.getDctermsIdentifier()).isEqualTo(DOI_PREFIX + HANDLE + "/" + VERSION);
+		assertThat(event.getProvActivity().getOdsChangeValue()).isNull();
+		assertThat(event.getProvEntity().getProvValue()).isNotNull();
+		assertThat(event.getOdsHasAgents()).isEqualTo(givenExpectedAgents());
+	}
 
-  @Test
-  void testGenerateUpdateEventSpecimen()  {
-    // Given
-    given(properties.getName()).willReturn(APP_NAME);
-    given(properties.getPid()).willReturn(APP_HANDLE);
-    var anotherDigitalSpecimen = givenUnequalDigitalSpecimenRecord();
+	@Test
+	void testGenerateUpdateEventSpecimen() {
+		// Given
+		given(properties.getName()).willReturn(APP_NAME);
+		given(properties.getPid()).willReturn(APP_HANDLE);
+		var anotherDigitalSpecimen = givenUnequalDigitalSpecimenRecord();
 
-    // When
-    var event = service.generateUpdateEventSpecimen(anotherDigitalSpecimen, givenJsonPatchSpecimen());
+		// When
+		var event = service.generateUpdateEventSpecimen(anotherDigitalSpecimen, givenJsonPatchSpecimen());
 
-    // Then
-    assertThat(event.getDctermsIdentifier()).isEqualTo(
-        DOI_PREFIX + HANDLE + "/" + VERSION);
-    assertThat(event.getProvActivity().getOdsChangeValue()).hasSameElementsAs(givenChangeValue());
-    assertThat(event.getProvEntity().getProvValue()).isNotNull();
-    assertThat(event.getOdsHasAgents()).isEqualTo(givenExpectedAgents());
-  }
+		// Then
+		assertThat(event.getDctermsIdentifier()).isEqualTo(DOI_PREFIX + HANDLE + "/" + VERSION);
+		assertThat(event.getProvActivity().getOdsChangeValue()).hasSameElementsAs(givenChangeValue());
+		assertThat(event.getProvEntity().getProvValue()).isNotNull();
+		assertThat(event.getOdsHasAgents()).isEqualTo(givenExpectedAgents());
+	}
 
-  List<OdsChangeValue> givenChangeValue() {
-    return List.of(
-        new OdsChangeValue()
-            .withAdditionalProperty("op", "replace")
-            .withAdditionalProperty("path", "/ods:specimenName")
-            .withAdditionalProperty("value", "Biota")
-    );
-  }
+	List<OdsChangeValue> givenChangeValue() {
+		return List.of(new OdsChangeValue().withAdditionalProperty("op", "replace")
+			.withAdditionalProperty("path", "/ods:specimenName")
+			.withAdditionalProperty("value", "Biota"));
+	}
+
 }

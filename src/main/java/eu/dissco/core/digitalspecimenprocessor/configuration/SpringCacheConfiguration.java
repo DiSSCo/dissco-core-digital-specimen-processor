@@ -8,8 +8,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SpringCacheConfiguration {
 
-  @Bean
-  public CacheManager cacheManager() {
-    return new ConcurrentMapCacheManager("token-cache");
-  }
+	@Bean
+	public CacheManager cacheManager() {
+		return new ConcurrentMapCacheManager("token-cache");
+	}
+
 }

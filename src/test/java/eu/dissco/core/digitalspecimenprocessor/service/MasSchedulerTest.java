@@ -36,104 +36,88 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MasSchedulerTest {
 
-  private MasSchedulerService masSchedulerService;
+	private MasSchedulerService masSchedulerService;
 
-  @Mock
-  private RabbitMqPublisherService publisherService;
+	@Mock
+	private RabbitMqPublisherService publisherService;
 
-  @BeforeEach
-  void setup() {
-    masSchedulerService = new MasSchedulerService(
-        publisherService, new ApplicationProperties()
-    );
-  }
+	@BeforeEach
+	void setup() {
+		masSchedulerService = new MasSchedulerService(publisherService, new ApplicationProperties());
+	}
 
-  @Test
-  void testPublishSpecimenForced() {
-    // Given
-    var forcedRecord = new DigitalSpecimenRecord(
-        HANDLE,
-        1,
-        1,
-        CREATED,
-        givenDigitalSpecimenWrapper(),
-        Set.of(MAS),
-        true,
-        true,
-        List.of());
-    var specimenProcessResult = new SpecimenProcessResult(
-        Map.of(forcedRecord, givenDigitalSpecimenEvent()), List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
+	@Test
+	void testPublishSpecimenForced() {
+		// Given
+		var forcedRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, givenDigitalSpecimenWrapper(), Set.of(MAS),
+				true, true, List.of());
+		var specimenProcessResult = new SpecimenProcessResult(Map.of(forcedRecord, givenDigitalSpecimenEvent()),
+				List.of(), List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
-    // When
-    masSchedulerService.scheduleMasForSpecimen(specimenProcessResult);
+		// When
+		masSchedulerService.scheduleMasForSpecimen(specimenProcessResult);
 
-    // Then
-    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MAS, DOI_PREFIX + HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
-    ));
-    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
-    ));
-  }
+		// Then
+		then(publisherService).should()
+			.publishMasJobRequest(
+					new MasJobRequest(MAS, DOI_PREFIX + HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN));
+		then(publisherService).should()
+			.publishMasJobRequest(new MasJobRequest(MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE,
+					MjrTargetType.DIGITAL_SPECIMEN));
+	}
 
-  @Test
-  void testPublishSpecimenNotForced() {
-    // Given
-    var specimenProcessResult = new SpecimenProcessResult(
-        Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
-        List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
+	@Test
+	void testPublishSpecimenNotForced() {
+		// Given
+		var specimenProcessResult = new SpecimenProcessResult(
+				Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
+				List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
 
-    // When
-    masSchedulerService.scheduleMasForSpecimen(specimenProcessResult);
+		// When
+		masSchedulerService.scheduleMasForSpecimen(specimenProcessResult);
 
-    // Then
-    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.DIGITAL_SPECIMEN
-    ));
-    then(publisherService).shouldHaveNoMoreInteractions();
-  }
+		// Then
+		then(publisherService).should()
+			.publishMasJobRequest(new MasJobRequest(MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE,
+					MjrTargetType.DIGITAL_SPECIMEN));
+		then(publisherService).shouldHaveNoMoreInteractions();
+	}
 
-  @Test
-  void testPublishMediaNotForced() {
-    // Given
-    var mediaProcessResult = new MediaProcessResult(
-        List.of(givenDigitalMediaRecord()), List.of(), List.of(givenDigitalMediaRecord(
-        SECOND_HANDLE, MEDIA_URL_ALT, 1
-    )));
+	@Test
+	void testPublishMediaNotForced() {
+		// Given
+		var mediaProcessResult = new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(),
+				List.of(givenDigitalMediaRecord(SECOND_HANDLE, MEDIA_URL_ALT, 1)));
 
-    // When
-    masSchedulerService.scheduleMasForMedia(mediaProcessResult);
+		// When
+		masSchedulerService.scheduleMasForMedia(mediaProcessResult);
 
-    // Then
-    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MEDIA_MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
-    ));
-    then(publisherService).shouldHaveNoMoreInteractions();
-  }
+		// Then
+		then(publisherService).should()
+			.publishMasJobRequest(new MasJobRequest(MEDIA_MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE,
+					MjrTargetType.MEDIA_OBJECT));
+		then(publisherService).shouldHaveNoMoreInteractions();
+	}
 
-  @Test
-  void testPublishMediaForced() {
-    // Given
-    var forcedRecord = new DigitalMediaRecord(
-        HANDLE, MEDIA_URL, 1, CREATED, Set.of(MEDIA_MAS),
-        givenDigitalMedia(MEDIA_URL, false),
-        MAPPER.createObjectNode(), true, true);
+	@Test
+	void testPublishMediaForced() {
+		// Given
+		var forcedRecord = new DigitalMediaRecord(HANDLE, MEDIA_URL, 1, CREATED, Set.of(MEDIA_MAS),
+				givenDigitalMedia(MEDIA_URL, false), MAPPER.createObjectNode(), true, true);
 
-    var mediaProcessResult = new MediaProcessResult(
-        List.of(forcedRecord), List.of(), List.of(givenDigitalMediaRecord(
-        SECOND_HANDLE, MEDIA_URL, 1
-    )));
+		var mediaProcessResult = new MediaProcessResult(List.of(forcedRecord), List.of(),
+				List.of(givenDigitalMediaRecord(SECOND_HANDLE, MEDIA_URL, 1)));
 
-    // When
-    masSchedulerService.scheduleMasForMedia(mediaProcessResult);
+		// When
+		masSchedulerService.scheduleMasForMedia(mediaProcessResult);
 
-    // Then
-    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MEDIA_MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
-    ));
-    then(publisherService).should().publishMasJobRequest(new MasJobRequest(
-        MEDIA_MAS, DOI_PREFIX + HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT
-    ));
-  }
+		// Then
+		then(publisherService).should()
+			.publishMasJobRequest(new MasJobRequest(MEDIA_MAS, DOI_PREFIX + SECOND_HANDLE, false, APP_HANDLE,
+					MjrTargetType.MEDIA_OBJECT));
+		then(publisherService).should()
+			.publishMasJobRequest(
+					new MasJobRequest(MEDIA_MAS, DOI_PREFIX + HANDLE, false, APP_HANDLE, MjrTargetType.MEDIA_OBJECT));
+	}
 
 }

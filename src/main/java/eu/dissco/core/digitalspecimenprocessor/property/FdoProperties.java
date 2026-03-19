@@ -10,13 +10,13 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("fdo")
 public class FdoProperties {
 
-  @NotBlank
-  private String specimenFdoType = "https://doi.org/21.T11148/894b1e6cad57e921764e";
+	@NotBlank
+	private String specimenFdoType = "https://doi.org/21.T11148/894b1e6cad57e921764e";
 
-  @NotBlank
-  private String mediaFdoType = "https://doi.org/21.T11148/bbad8c4e101e8af01115";
+	@NotBlank
+	private String mediaFdoType = "https://doi.org/21.T11148/bbad8c4e101e8af01115";
 
-  @NotBlank
-  private String defaultMediaType = "image";
+	@NotBlank
+	private String defaultMediaType = "image";
 
 }

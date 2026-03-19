@@ -38,219 +38,185 @@ import tools.jackson.databind.JsonNode;
 
 class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
-  private static final Instant UPDATED_TIMESTAMP = Instant.parse("2022-11-02T13:05:24.00Z");
+	private static final Instant UPDATED_TIMESTAMP = Instant.parse("2022-11-02T13:05:24.00Z");
 
-  private DigitalSpecimenRepository repository;
+	private DigitalSpecimenRepository repository;
 
-  @BeforeEach
-  void setup() {
-    repository = new DigitalSpecimenRepository(context, MAPPER);
-  }
+	@BeforeEach
+	void setup() {
+		repository = new DigitalSpecimenRepository(context, MAPPER);
+	}
 
-  @AfterEach
-  void destroy() {
-    context.truncate(DIGITAL_SPECIMEN).execute();
-  }
+	@AfterEach
+	void destroy() {
+		context.truncate(DIGITAL_SPECIMEN).execute();
+	}
 
-  @Test
-  void testGetDigitalSpecimensEmpty() throws DisscoRepositoryException {
-    // Given
+	@Test
+	void testGetDigitalSpecimensEmpty() throws DisscoRepositoryException {
+		// Given
 
-    // When
-    var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
+		// When
+		var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
 
-    // Then
-    assertThat(result).isEmpty();
-  }
+		// Then
+		assertThat(result).isEmpty();
+	}
 
-  @Test
-  void testGetDigitalSpecimens() throws DisscoRepositoryException {
-    // Given
-    var expected = new DigitalSpecimenRecord(
-        HANDLE,
-        MIDS_LEVEL,
-        VERSION,
-        CREATED,
-        givenDigitalSpecimenWrapper(),
-        null, null, null,
-        List.of());
-    repository.createDigitalSpecimenRecord(
-        Set.of(
-            givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
-            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
+	@Test
+	void testGetDigitalSpecimens() throws DisscoRepositoryException {
+		// Given
+		var expected = new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED, givenDigitalSpecimenWrapper(),
+				null, null, null, List.of());
+		repository.createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord(),
+				givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
+				givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
 
-    // When
-    var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
+		// When
+		var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
 
-    // Then
-    assertThat(result.getFirst()).isEqualTo(expected);
-  }
+		// Then
+		assertThat(result.getFirst()).isEqualTo(expected);
+	}
 
-  @Test
-  void testUpdateVersionSpecimens()  {
-    // Given
-    repository.createDigitalSpecimenRecord(
-        Set.of(
-            givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
-            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
+	@Test
+	void testUpdateVersionSpecimens() {
+		// Given
+		repository.createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord(),
+				givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
+				givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
 
-    // When
-    var successfulRecord = repository.updateDigitalSpecimenRecord(
-        Set.of(givenUnequalDigitalSpecimenRecord()));
+		// When
+		var successfulRecord = repository.updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
 
-    // Then
-    var resultOriginalData = context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
-        .from(DIGITAL_SPECIMEN)
-        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
-        .fetchOne(DIGITAL_SPECIMEN.ORIGINAL_DATA).data();
-    assertThat(successfulRecord).isEqualTo(new int[]{1});
-    assertThat(MAPPER.readTree(resultOriginalData)).isEqualTo(UPDATED_ORIGINAL_DATA);
-  }
+		// Then
+		var resultOriginalData = context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
+			.from(DIGITAL_SPECIMEN)
+			.where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+			.fetchOne(DIGITAL_SPECIMEN.ORIGINAL_DATA)
+			.data();
+		assertThat(successfulRecord).isEqualTo(new int[] { 1 });
+		assertThat(MAPPER.readTree(resultOriginalData)).isEqualTo(UPDATED_ORIGINAL_DATA);
+	}
 
-  @Test
-  void testUpdateVersionSpecimensNotFromSourceSystem()  {
-    // Given
-    repository.createDigitalSpecimenRecord(
-        Set.of(
-            givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
-            givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
+	@Test
+	void testUpdateVersionSpecimensNotFromSourceSystem() {
+		// Given
+		repository.createDigitalSpecimenRecord(Set.of(givenDigitalSpecimenRecord(),
+				givenDigitalSpecimenRecord("20.5000.1025/XXX-XXX-XXX", "TEST_1", false),
+				givenDigitalSpecimenRecord("20.5000.1025/YYY-YYY-YYY", "TEST_2", false)));
 
-    // When
-    var successfulRecord = repository.updateDigitalSpecimenRecord(
-        Set.of(
-            givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION,
-                false, false)));
+		// When
+		var successfulRecord = repository.updateDigitalSpecimenRecord(Set
+			.of(givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ANOTHER_ORGANISATION, false, false)));
 
-    // Then
-    var resultOriginalData = context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
-        .from(DIGITAL_SPECIMEN)
-        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
-        .fetchOne(DIGITAL_SPECIMEN.ORIGINAL_DATA).data();
-    assertThat(successfulRecord).isEqualTo(new int[]{1});
-    assertThat(MAPPER.readTree(resultOriginalData)).isEqualTo(ORIGINAL_DATA);
-  }
+		// Then
+		var resultOriginalData = context.select(DIGITAL_SPECIMEN.ORIGINAL_DATA)
+			.from(DIGITAL_SPECIMEN)
+			.where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+			.fetchOne(DIGITAL_SPECIMEN.ORIGINAL_DATA)
+			.data();
+		assertThat(successfulRecord).isEqualTo(new int[] { 1 });
+		assertThat(MAPPER.readTree(resultOriginalData)).isEqualTo(ORIGINAL_DATA);
+	}
 
-  @Test
-  void testUpdateLastCheckedAndOriginalData() {
-    // Given
-    repository.createDigitalSpecimenRecord(
-        Set.of(
-            givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
-            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
-    var expectedOriginalData = (JsonNode) (MAPPER.createObjectNode()
-        .put("new field", "new data"));
-    var updatedEvent = new DigitalSpecimenEvent(
-        Set.of(),
-        new DigitalSpecimenWrapper(
-            PHYSICAL_SPECIMEN_ID,
-            TYPE_PID,
-            givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false),
-            expectedOriginalData
-        ),
-        List.of(),
-        false,
-        Boolean.TRUE);
+	@Test
+	void testUpdateLastCheckedAndOriginalData() {
+		// Given
+		repository.createDigitalSpecimenRecord(
+				Set.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
+						givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
+		var expectedOriginalData = (JsonNode) (MAPPER.createObjectNode().put("new field", "new data"));
+		var updatedEvent = new DigitalSpecimenEvent(Set.of(),
+				new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+						givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false), expectedOriginalData),
+				List.of(), false, Boolean.TRUE);
 
-    // When
-    repository.updateLastCheckedAndOriginalData(Map.of(HANDLE, updatedEvent));
-    var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED, DIGITAL_SPECIMEN.ORIGINAL_DATA)
-        .from(DIGITAL_SPECIMEN)
-        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
-        .fetchOne();
+		// When
+		repository.updateLastCheckedAndOriginalData(Map.of(HANDLE, updatedEvent));
+		var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED, DIGITAL_SPECIMEN.ORIGINAL_DATA)
+			.from(DIGITAL_SPECIMEN)
+			.where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+			.fetchOne();
 
-    // Then
-    assertThat(result.get(DIGITAL_SPECIMEN.LAST_CHECKED)).isAfter(UPDATED_TIMESTAMP);
-    assertThat(MAPPER.readValue(result.get(DIGITAL_SPECIMEN.ORIGINAL_DATA).data(),
-        JsonNode.class)).isEqualTo(expectedOriginalData);
-  }
+		// Then
+		assertThat(result.get(DIGITAL_SPECIMEN.LAST_CHECKED)).isAfter(UPDATED_TIMESTAMP);
+		assertThat(MAPPER.readValue(result.get(DIGITAL_SPECIMEN.ORIGINAL_DATA).data(), JsonNode.class))
+			.isEqualTo(expectedOriginalData);
+	}
 
-  @Test
-  void testUpdateLastCheckedOnly() {
-    // Given
-    repository.createDigitalSpecimenRecord(
-        Set.of(
-            givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
-            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
-    var updatedEvent = new DigitalSpecimenEvent(
-        Set.of(),
-        new DigitalSpecimenWrapper(
-            PHYSICAL_SPECIMEN_ID,
-            TYPE_PID,
-            givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false),
-            MAPPER.createObjectNode()),
-        List.of(),
-        false,
-        Boolean.FALSE);
+	@Test
+	void testUpdateLastCheckedOnly() {
+		// Given
+		repository.createDigitalSpecimenRecord(
+				Set.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
+						givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
+		var updatedEvent = new DigitalSpecimenEvent(Set.of(),
+				new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+						givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false), MAPPER.createObjectNode()),
+				List.of(), false, Boolean.FALSE);
 
-    // When
-    repository.updateLastCheckedAndOriginalData(Map.of(HANDLE, updatedEvent));
-    var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED, DIGITAL_SPECIMEN.ORIGINAL_DATA)
-        .from(DIGITAL_SPECIMEN)
-        .where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
-        .fetchOne();
+		// When
+		repository.updateLastCheckedAndOriginalData(Map.of(HANDLE, updatedEvent));
+		var result = context.select(DIGITAL_SPECIMEN.LAST_CHECKED, DIGITAL_SPECIMEN.ORIGINAL_DATA)
+			.from(DIGITAL_SPECIMEN)
+			.where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+			.fetchOne();
 
-    // Then
-    assertThat(result.get(DIGITAL_SPECIMEN.LAST_CHECKED)).isAfter(UPDATED_TIMESTAMP);
-    assertThat(MAPPER.readValue(result.get(DIGITAL_SPECIMEN.ORIGINAL_DATA).data(),
-        JsonNode.class)).isEqualTo(ORIGINAL_DATA);
-  }
+		// Then
+		assertThat(result.get(DIGITAL_SPECIMEN.LAST_CHECKED)).isAfter(UPDATED_TIMESTAMP);
+		assertThat(MAPPER.readValue(result.get(DIGITAL_SPECIMEN.ORIGINAL_DATA).data(), JsonNode.class))
+			.isEqualTo(ORIGINAL_DATA);
+	}
 
+	@Test
+	void testUpdateSpecimens() {
+		// Given
+		var records = Set.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false));
+		var updatedRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2", false));
 
-  @Test
-  void testUpdateSpecimens() {
-    // Given
-    var records = Set.of(
-        givenDigitalSpecimenRecord(),
-        givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false));
-    var updatedRecord = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_2", false));
+		// When
+		repository.createDigitalSpecimenRecord(records);
+		repository.updateDigitalSpecimenRecord(updatedRecord);
 
-    // When
-    repository.createDigitalSpecimenRecord(records);
-    repository.updateDigitalSpecimenRecord(updatedRecord);
+		// Then
+		var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
+			.from(DIGITAL_SPECIMEN)
+			.where(DIGITAL_SPECIMEN.ID.eq(SECOND_HANDLE))
+			.fetchOne(Record1::value1);
+		assertThat(result).isEqualTo("TEST_2");
+	}
 
-    // Then
-    var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
-        .from(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(SECOND_HANDLE))
-        .fetchOne(Record1::value1);
-    assertThat(result).isEqualTo("TEST_2");
-  }
+	@Test
+	void testCreateWithInvalidUnicode() {
+		// Given
+		var ds = givenDigitalSpecimenRecord();
+		ds.digitalSpecimenWrapper().attributes().setDwcCollectionCode("\u0000");
 
-  @Test
-  void testCreateWithInvalidUnicode() {
-    // Given
-    var ds = givenDigitalSpecimenRecord();
-    ds.digitalSpecimenWrapper().attributes().setDwcCollectionCode("\u0000");
+		// When
+		repository.createDigitalSpecimenRecord(Set.of(ds));
 
-    // When
-    repository.createDigitalSpecimenRecord(Set.of(ds));
+		// Then
+		var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
+			.from(DIGITAL_SPECIMEN)
+			.where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
+			.fetchOne(Record1::value1);
+		assertThat(result).isEqualTo(PHYSICAL_SPECIMEN_ID);
+	}
 
-    // Then
-    var result = context.select(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID)
-        .from(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(HANDLE))
-        .fetchOne(Record1::value1);
-    assertThat(result).isEqualTo(PHYSICAL_SPECIMEN_ID);
-  }
+	@Test
+	void testRollbackSpecimen() throws DisscoRepositoryException {
+		// Given
+		repository.createDigitalSpecimenRecord(
+				Set.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
+						givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
 
-  @Test
-  void testRollbackSpecimen() throws DisscoRepositoryException {
-    // Given
-    repository.createDigitalSpecimenRecord(
-        Set.of(
-            givenDigitalSpecimenRecord(),
-            givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
-            givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
+		// When
+		repository.rollbackSpecimen(HANDLE);
 
-    // When
-    repository.rollbackSpecimen(HANDLE);
-
-    // Then
-    var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
-    assertThat(result).isEmpty();
-  }
+		// Then
+		var result = repository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID));
+		assertThat(result).isEmpty();
+	}
 
 }

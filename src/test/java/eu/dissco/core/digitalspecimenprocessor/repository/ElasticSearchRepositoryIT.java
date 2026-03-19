@@ -39,145 +39,146 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 class ElasticSearchRepositoryIT {
 
-  private static final DockerImageName ELASTIC_IMAGE = DockerImageName.parse(
-      "docker.elastic.co/elasticsearch/elasticsearch").withTag("9.2.0");
-  private static final String INDEX = "digital-object";
-  private static final String ELASTICSEARCH_USERNAME = "elastic";
-  private static final String ELASTICSEARCH_PASSWORD = "s3cret";
-  private static final ElasticsearchContainer container = new ElasticsearchContainer(
-      ELASTIC_IMAGE).withPassword(ELASTICSEARCH_PASSWORD).withStartupTimeout(Duration.ofMinutes(2));
-  private static ElasticsearchClient client;
-  private static Rest5Client restClient;
-  private final ElasticSearchProperties esProperties = new ElasticSearchProperties();
-  private ElasticSearchRepository repository;
+	private static final DockerImageName ELASTIC_IMAGE = DockerImageName
+		.parse("docker.elastic.co/elasticsearch/elasticsearch")
+		.withTag("9.2.0");
 
-  @BeforeAll
-  static void initContainer() throws InterruptedException {
-    // Create the elasticsearch container.
-    container.start();
-    Thread.sleep(2500);
-    var creds = Base64.getEncoder()
-        .encodeToString((ELASTICSEARCH_USERNAME + ":" + ELASTICSEARCH_PASSWORD).getBytes());
+	private static final String INDEX = "digital-object";
 
-    restClient = Rest5Client.builder(
-            new HttpHost("https", "localhost", container.getMappedPort(9200)))
-        .setDefaultHeaders(new Header[]{new BasicHeader("Authorization", "Basic " + creds)})
-        .setSSLContext(container.createSslContextFromCa()).build();
+	private static final String ELASTICSEARCH_USERNAME = "elastic";
 
-    ElasticsearchTransport transport = new Rest5ClientTransport(restClient,
-        new Jackson3JsonpMapper(MAPPER));
+	private static final String ELASTICSEARCH_PASSWORD = "s3cret";
 
-    client = new ElasticsearchClient(transport);
-  }
+	private static final ElasticsearchContainer container = new ElasticsearchContainer(ELASTIC_IMAGE)
+		.withPassword(ELASTICSEARCH_PASSWORD)
+		.withStartupTimeout(Duration.ofMinutes(2));
 
-  @AfterAll
-  static void closeResources() throws Exception {
-    restClient.close();
-  }
+	private static ElasticsearchClient client;
 
-  @BeforeEach
-  void initRepository() {
-    esProperties.setMediaIndexName(INDEX);
-    esProperties.setSpecimenIndexName(INDEX);
-    repository = new ElasticSearchRepository(client, esProperties);
-  }
+	private static Rest5Client restClient;
 
-  @AfterEach
-  void clearIndex() throws IOException {
-    client.indices().delete(b -> b.index(INDEX));
+	private final ElasticSearchProperties esProperties = new ElasticSearchProperties();
 
-  }
+	private ElasticSearchRepository repository;
 
-  @Test
-  void testIndexDigitalMedia() throws IOException {
-    // Given
-    var expected = flattenToDigitalMedia(givenDigitalMediaRecord());
+	@BeforeAll
+	static void initContainer() throws InterruptedException {
+		// Create the elasticsearch container.
+		container.start();
+		Thread.sleep(2500);
+		var creds = Base64.getEncoder()
+			.encodeToString((ELASTICSEARCH_USERNAME + ":" + ELASTICSEARCH_PASSWORD).getBytes());
 
-    // When
-    var result = repository.indexDigitalMedia(Set.of(
-        givenDigitalMediaRecord()));
-    var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + MEDIA_PID),
-        DigitalMedia.class);
+		restClient = Rest5Client.builder(new HttpHost("https", "localhost", container.getMappedPort(9200)))
+			.setDefaultHeaders(new Header[] { new BasicHeader("Authorization", "Basic " + creds) })
+			.setSSLContext(container.createSslContextFromCa())
+			.build();
 
-    // Then
-    assertThat(result.errors()).isFalse();
-    assertThat(document.source()).isEqualTo(expected);
-    assertThat(result.items().getFirst().result()).isEqualTo("created");
-  }
+		ElasticsearchTransport transport = new Rest5ClientTransport(restClient, new Jackson3JsonpMapper(MAPPER));
 
-  @Test
-  void testIndexDigitalSpecimen() throws IOException {
-    // Given
-    var expected = flattenToDigitalSpecimen(givenDigitalSpecimenRecord());
+		client = new ElasticsearchClient(transport);
+	}
 
-    // When
-    var result = repository.indexDigitalSpecimen(Set.of(
-        givenDigitalSpecimenRecord()));
-    var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + HANDLE),
-        DigitalSpecimen.class);
+	@AfterAll
+	static void closeResources() throws Exception {
+		restClient.close();
+	}
 
-    // Then
-    assertThat(result.errors()).isFalse();
-    assertThat(document.source()).isEqualTo(expected);
-    assertThat(result.items().getFirst().result()).isEqualTo("created");
-  }
+	@BeforeEach
+	void initRepository() {
+		esProperties.setMediaIndexName(INDEX);
+		esProperties.setSpecimenIndexName(INDEX);
+		repository = new ElasticSearchRepository(client, esProperties);
+	}
 
-  @Test
-  void testRollbackSpecimen() throws IOException {
-    // Given
-    repository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()));
+	@AfterEach
+	void clearIndex() throws IOException {
+		client.indices().delete(b -> b.index(INDEX));
 
-    // When
-    repository.rollbackObject(HANDLE, true);
-    var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + HANDLE),
-        DigitalSpecimen.class);
+	}
 
-    // Then
-    assertThat(document.found()).isFalse();
-  }
+	@Test
+	void testIndexDigitalMedia() throws IOException {
+		// Given
+		var expected = flattenToDigitalMedia(givenDigitalMediaRecord());
 
-  @Test
-  void testRollbackMedia() throws IOException {
-    // Given
-    repository.indexDigitalMedia(Set.of(givenDigitalMediaRecord()));
+		// When
+		var result = repository.indexDigitalMedia(Set.of(givenDigitalMediaRecord()));
+		var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + MEDIA_PID), DigitalMedia.class);
 
-    // When
-    repository.rollbackObject(MEDIA_PID, false);
-    var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + MEDIA_PID),
-        DigitalMedia.class);
+		// Then
+		assertThat(result.errors()).isFalse();
+		assertThat(document.source()).isEqualTo(expected);
+		assertThat(result.items().getFirst().result()).isEqualTo("created");
+	}
 
-    // Then
-    assertThat(document.found()).isFalse();
-  }
+	@Test
+	void testIndexDigitalSpecimen() throws IOException {
+		// Given
+		var expected = flattenToDigitalSpecimen(givenDigitalSpecimenRecord());
 
-  @Test
-  void testRollbackVersionSpecimen() throws IOException {
-    // Given
-    repository.indexDigitalSpecimen(Set.of(givenUnequalDigitalSpecimenRecord()));
-    var expected = flattenToDigitalSpecimen(givenDigitalSpecimenRecord());
+		// When
+		var result = repository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()));
+		var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + HANDLE), DigitalSpecimen.class);
 
-    // When
-    repository.rollbackVersion(givenDigitalSpecimenRecord());
-    var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + HANDLE),
-        DigitalSpecimen.class);
+		// Then
+		assertThat(result.errors()).isFalse();
+		assertThat(document.source()).isEqualTo(expected);
+		assertThat(result.items().getFirst().result()).isEqualTo("created");
+	}
 
-    // Then
-    assertThat(document.source()).isEqualTo(expected);
-  }
+	@Test
+	void testRollbackSpecimen() throws IOException {
+		// Given
+		repository.indexDigitalSpecimen(Set.of(givenDigitalSpecimenRecord()));
 
-  @Test
-  void testRollbackVersionMedia() throws IOException {
-    // Given
-    repository.indexDigitalMedia(Set.of(givenUnequalDigitalMediaRecord()));
-    var expected = flattenToDigitalMedia(givenDigitalMediaRecord());
+		// When
+		repository.rollbackObject(HANDLE, true);
+		var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + HANDLE), DigitalSpecimen.class);
 
-    // When
-    repository.rollbackVersion(givenDigitalMediaRecord());
-    var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + MEDIA_PID),
-        DigitalMedia.class);
+		// Then
+		assertThat(document.found()).isFalse();
+	}
 
-    // Then
-    assertThat(document.source()).isEqualTo(expected);
-  }
+	@Test
+	void testRollbackMedia() throws IOException {
+		// Given
+		repository.indexDigitalMedia(Set.of(givenDigitalMediaRecord()));
+
+		// When
+		repository.rollbackObject(MEDIA_PID, false);
+		var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + MEDIA_PID), DigitalMedia.class);
+
+		// Then
+		assertThat(document.found()).isFalse();
+	}
+
+	@Test
+	void testRollbackVersionSpecimen() throws IOException {
+		// Given
+		repository.indexDigitalSpecimen(Set.of(givenUnequalDigitalSpecimenRecord()));
+		var expected = flattenToDigitalSpecimen(givenDigitalSpecimenRecord());
+
+		// When
+		repository.rollbackVersion(givenDigitalSpecimenRecord());
+		var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + HANDLE), DigitalSpecimen.class);
+
+		// Then
+		assertThat(document.source()).isEqualTo(expected);
+	}
+
+	@Test
+	void testRollbackVersionMedia() throws IOException {
+		// Given
+		repository.indexDigitalMedia(Set.of(givenUnequalDigitalMediaRecord()));
+		var expected = flattenToDigitalMedia(givenDigitalMediaRecord());
+
+		// When
+		repository.rollbackVersion(givenDigitalMediaRecord());
+		var document = client.get(g -> g.index(INDEX).id(DOI_PREFIX + MEDIA_PID), DigitalMedia.class);
+
+		// Then
+		assertThat(document.source()).isEqualTo(expected);
+	}
 
 }

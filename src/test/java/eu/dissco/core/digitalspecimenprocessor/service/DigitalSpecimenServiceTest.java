@@ -62,328 +62,327 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DigitalSpecimenServiceTest {
 
-  @Mock
-  private DigitalSpecimenRepository repository;
-  @Mock
-  private RollbackService rollbackService;
-  @Mock
-  private ElasticSearchRepository elasticRepository;
-  @Mock
-  private FdoRecordService fdoRecordService;
-  @Mock
-  private RabbitMqPublisherService publisherService;
-  @Mock
-  private PidComponent handleComponent;
-  @Mock
-  private AnnotationPublisherService annotationPublisherService;
-  @Mock
-  private MidsService midsService;
-  @Mock
-  private BulkResponse bulkResponse;
-  @Mock
-  private DigitalMediaService digitalMediaService;
-  private static MockedStatic<Instant> mockedInstant;
-  private static MockedStatic<Clock> mockedClock;
+	@Mock
+	private DigitalSpecimenRepository repository;
 
-  private DigitalSpecimenService digitalSpecimenService;
+	@Mock
+	private RollbackService rollbackService;
 
-  @BeforeEach
-  void setUp() {
-    digitalSpecimenService = new DigitalSpecimenService(repository, rollbackService,
-        elasticRepository, fdoRecordService, publisherService, handleComponent,
-        annotationPublisherService, midsService, MAPPER, digitalMediaService);
-  }
+	@Mock
+	private ElasticSearchRepository elasticRepository;
 
-  @BeforeAll
-  static void init() {
-    Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
-    Instant instant = Instant.now(clock);
-    mockedInstant = mockStatic(Instant.class);
-    mockedInstant.when(Instant::now).thenReturn(instant);
-    mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
-    mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
-    mockedClock = mockStatic(Clock.class);
-    mockedClock.when(Clock::systemUTC).thenReturn(clock);
-  }
+	@Mock
+	private FdoRecordService fdoRecordService;
 
-  @AfterAll
-  static void teardown() {
-    mockedInstant.close();
-    mockedClock.close();
-  }
+	@Mock
+	private RabbitMqPublisherService publisherService;
 
-  @Test
-  void testUpdateEqualSpecimen() {
-    // Given
+	@Mock
+	private PidComponent handleComponent;
 
-    // When
-    digitalSpecimenService.updateEqualSpecimen(
-        Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
+	@Mock
+	private AnnotationPublisherService annotationPublisherService;
 
-    // Then
-    then(repository).should()
-        .updateLastCheckedAndOriginalData(Map.of(HANDLE, givenDigitalSpecimenEvent()));
-  }
+	@Mock
+	private MidsService midsService;
 
-  @Test
-  void testNewSpecimen() throws Exception {
-    // Given
-    var events = List.of(givenDigitalSpecimenEvent());
-    var records = Set.of(givenDigitalSpecimenRecord());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
+	@Mock
+	private BulkResponse bulkResponse;
 
-    // When
-    var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
+	@Mock
+	private DigitalMediaService digitalMediaService;
 
-    // Then
-    assertThat(results).isEqualTo(records);
-    then(repository).should().createDigitalSpecimenRecord(records);
-    then(annotationPublisherService).should().publishAnnotationNewSpecimen(records);
-    then(rollbackService).shouldHaveNoInteractions();
-  }
+	private static MockedStatic<Instant> mockedInstant;
 
-  @Test
-  void testNewSpecimenHandleMatchingFails() {
-    // Given
-    var events = List.of(givenDigitalSpecimenEvent());
-    var pidMap = Map.of("physical_id_not_in_the_event_list", givenPidProcessResultSpecimen(false));
+	private static MockedStatic<Clock> mockedClock;
 
-    // When
-    var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
+	private DigitalSpecimenService digitalSpecimenService;
 
-    // Then
-    assertThat(results).isEmpty();
-    then(repository).shouldHaveNoInteractions();
-    then(elasticRepository).shouldHaveNoInteractions();
-    then(annotationPublisherService).shouldHaveNoInteractions();
-  }
+	@BeforeEach
+	void setUp() {
+		digitalSpecimenService = new DigitalSpecimenService(repository, rollbackService, elasticRepository,
+				fdoRecordService, publisherService, handleComponent, annotationPublisherService, midsService, MAPPER,
+				digitalMediaService);
+	}
 
-  @Test
-  void testNewSpecimenDatabaseFails() {
-    // Given
-    var events = List.of(givenDigitalSpecimenEvent());
-    var records = Set.of(givenDigitalSpecimenRecord());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(repository.createDigitalSpecimenRecord(records)).willThrow(DataAccessException.class);
+	@BeforeAll
+	static void init() {
+		Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
+		Instant instant = Instant.now(clock);
+		mockedInstant = mockStatic(Instant.class);
+		mockedInstant.when(Instant::now).thenReturn(instant);
+		mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
+		mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
+		mockedClock = mockStatic(Clock.class);
+		mockedClock.when(Clock::systemUTC).thenReturn(clock);
+	}
 
-    // When
-    var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
+	@AfterAll
+	static void teardown() {
+		mockedInstant.close();
+		mockedClock.close();
+	}
 
-    // Then
-    assertThat(results).isEmpty();
-    then(rollbackService).should().rollbackNewSpecimens(records, false, false);
-    then(repository).should().createDigitalSpecimenRecord(records);
-    then(annotationPublisherService).shouldHaveNoInteractions();
-    then(elasticRepository).shouldHaveNoInteractions();
-  }
+	@Test
+	void testUpdateEqualSpecimen() {
+		// Given
 
-  @Test
-  void testNewSpecimenElasticFails() throws Exception {
-    // Given
-    var events = List.of(givenDigitalSpecimenEvent());
-    var records = Set.of(givenDigitalSpecimenRecord());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(elasticRepository.indexDigitalSpecimen(records)).willThrow(IOException.class);
+		// When
+		digitalSpecimenService.updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
 
-    // When
-    var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
+		// Then
+		then(repository).should().updateLastCheckedAndOriginalData(Map.of(HANDLE, givenDigitalSpecimenEvent()));
+	}
 
-    // Then
-    assertThat(results).isEmpty();
-    then(rollbackService).should().rollbackNewSpecimens(records, false, true);
-    then(repository).should().createDigitalSpecimenRecord(records);
-    then(annotationPublisherService).shouldHaveNoInteractions();
-  }
+	@Test
+	void testNewSpecimen() throws Exception {
+		// Given
+		var events = List.of(givenDigitalSpecimenEvent());
+		var records = Set.of(givenDigitalSpecimenRecord());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(bulkResponse.errors()).willReturn(false);
+		given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
 
-  @Test
-  void testNewSpecimenElasticPartiallyFails() throws Exception {
-    // Given
-    var events = List.of(givenDigitalSpecimenEvent(),
-        givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false, true));
-    var records = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false),
-        givenDigitalSpecimenRecord());
-    var expected = Set.of(givenDigitalSpecimenRecord());
-    var pidMap = Map.of(
-        PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false),
-        PHYSICAL_SPECIMEN_ID_ALT, new PidProcessResult(SECOND_HANDLE, Set.of())
-    );
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(true);
-    given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
-    given(rollbackService.handlePartiallyFailedElasticInsertSpecimen(records, bulkResponse
-    )).willReturn(expected);
+		// When
+		var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
 
-    // When
-    var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
+		// Then
+		assertThat(results).isEqualTo(records);
+		then(repository).should().createDigitalSpecimenRecord(records);
+		then(annotationPublisherService).should().publishAnnotationNewSpecimen(records);
+		then(rollbackService).shouldHaveNoInteractions();
+	}
 
-    // Then
-    assertThat(results).isEqualTo(expected);
-    then(repository).should().createDigitalSpecimenRecord(records);
-    then(annotationPublisherService).should().publishAnnotationNewSpecimen(expected);
-  }
+	@Test
+	void testNewSpecimenHandleMatchingFails() {
+		// Given
+		var events = List.of(givenDigitalSpecimenEvent());
+		var pidMap = Map.of("physical_id_not_in_the_event_list", givenPidProcessResultSpecimen(false));
 
-  @Test
-  void testNewSpecimenWithMedia() throws Exception {
-    // Given
-    var events = List.of(givenDigitalSpecimenEvent(true));
-    var records = Set.of(givenDigitalSpecimenRecordWithMediaEr());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
+		// When
+		var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
 
-    // When
-    var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
+		// Then
+		assertThat(results).isEmpty();
+		then(repository).shouldHaveNoInteractions();
+		then(elasticRepository).shouldHaveNoInteractions();
+		then(annotationPublisherService).shouldHaveNoInteractions();
+	}
 
-    // Then
-    assertThat(results).isEqualTo(records);
-    then(repository).should().createDigitalSpecimenRecord(records);
-    then(annotationPublisherService).should().publishAnnotationNewSpecimen(records);
-    then(rollbackService).shouldHaveNoInteractions();
-  }
+	@Test
+	void testNewSpecimenDatabaseFails() {
+		// Given
+		var events = List.of(givenDigitalSpecimenEvent());
+		var records = Set.of(givenDigitalSpecimenRecord());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(repository.createDigitalSpecimenRecord(records)).willThrow(DataAccessException.class);
 
-  @Test
-  void testUpdatedSpecimen() throws Exception {
-    // Given
-    var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
+		// When
+		var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
 
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+		// Then
+		assertThat(results).isEmpty();
+		then(rollbackService).should().rollbackNewSpecimens(records, false, false);
+		then(repository).should().createDigitalSpecimenRecord(records);
+		then(annotationPublisherService).shouldHaveNoInteractions();
+		then(elasticRepository).shouldHaveNoInteractions();
+	}
 
-    // Then
-    assertThat(result).isEqualTo(Set.of(expectedRecord));
-    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
-    then(publisherService).should()
-        .publishUpdateEventSpecimen(eq(expectedRecord), any());
-    then(rollbackService).shouldHaveNoInteractions();
-    then(handleComponent).should().updatePid(any());
-  }
+	@Test
+	void testNewSpecimenElasticFails() throws Exception {
+		// Given
+		var events = List.of(givenDigitalSpecimenEvent());
+		var records = Set.of(givenDigitalSpecimenRecord());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(elasticRepository.indexDigitalSpecimen(records)).willThrow(IOException.class);
 
-  @Test
-  void testUpdatedSpecimenMediaERTombstone() throws Exception {
-    // Given
-    var tuple = new UpdatedDigitalSpecimenTuple(
-        givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, true),
-        givenDigitalSpecimenEvent(false),
-        new MediaRelationshipProcessResult(
-            List.of(new EntityRelationship()
-                .withType("ods:EntityRelationship")
-                .withDwcRelationshipOfResource("hasDigitalSpecimen")
-                .withDwcRelationshipEstablishedDate(Date.from(CREATED))
-                .withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
-                .withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
-                .withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE,
-                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))),
-            List.of(),
-            List.of()));
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(false);
-    given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
+		// When
+		var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
 
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+		// Then
+		assertThat(results).isEmpty();
+		then(rollbackService).should().rollbackNewSpecimens(records, false, true);
+		then(repository).should().createDigitalSpecimenRecord(records);
+		then(annotationPublisherService).shouldHaveNoInteractions();
+	}
 
-    // Then
-    assertThat(result).isEqualTo(Set.of(expectedRecord));
-    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
-    then(digitalMediaService).should().tombstoneSpecimenRelations(List.of(tuple));
-    then(publisherService).should()
-        .publishUpdateEventSpecimen(eq(expectedRecord), any());
-    then(rollbackService).shouldHaveNoInteractions();
-    then(handleComponent).should().updatePid(any());
-  }
+	@Test
+	void testNewSpecimenElasticPartiallyFails() throws Exception {
+		// Given
+		var events = List.of(givenDigitalSpecimenEvent(),
+				givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID_ALT, false, true));
+		var records = Set.of(givenDigitalSpecimenRecord(SECOND_HANDLE, PHYSICAL_SPECIMEN_ID_ALT, false),
+				givenDigitalSpecimenRecord());
+		var expected = Set.of(givenDigitalSpecimenRecord());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false), PHYSICAL_SPECIMEN_ID_ALT,
+				new PidProcessResult(SECOND_HANDLE, Set.of()));
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(bulkResponse.errors()).willReturn(true);
+		given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
+		given(rollbackService.handlePartiallyFailedElasticInsertSpecimen(records, bulkResponse)).willReturn(expected);
 
-  @Test
-  void testUpdatedSpecimenDatabaseFails()  {
-    // Given
-    var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(midsService.calculateMids(any())).willReturn(1);
-    var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
-    doThrow(DataAccessException.class).when(repository)
-        .updateDigitalSpecimenRecord(Set.of(expectedRecord));
+		// When
+		var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
 
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+		// Then
+		assertThat(results).isEqualTo(expected);
+		then(repository).should().createDigitalSpecimenRecord(records);
+		then(annotationPublisherService).should().publishAnnotationNewSpecimen(expected);
+	}
 
-    // Then
-    assertThat(result).isEmpty();
-    then(elasticRepository).shouldHaveNoInteractions();
-    then(publisherService).shouldHaveNoInteractions();
-    then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, false);
-  }
+	@Test
+	void testNewSpecimenWithMedia() throws Exception {
+		// Given
+		var events = List.of(givenDigitalSpecimenEvent(true));
+		var records = Set.of(givenDigitalSpecimenRecordWithMediaEr());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(true));
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(bulkResponse.errors()).willReturn(false);
+		given(elasticRepository.indexDigitalSpecimen(records)).willReturn(bulkResponse);
 
-  @Test
-  void testUpdatedSpecimenElasticFails() throws Exception {
-    // Given
-    var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
-    var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(midsService.calculateMids(any())).willReturn(1);
-    doThrow(IOException.class).when(elasticRepository).indexDigitalSpecimen(Set.of(expectedRecord));
+		// When
+		var results = digitalSpecimenService.createNewDigitalSpecimen(events, pidMap);
 
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+		// Then
+		assertThat(results).isEqualTo(records);
+		then(repository).should().createDigitalSpecimenRecord(records);
+		then(annotationPublisherService).should().publishAnnotationNewSpecimen(records);
+		then(rollbackService).shouldHaveNoInteractions();
+	}
 
-    // Then
-    assertThat(result).isEmpty();
-    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
-    then(publisherService).shouldHaveNoInteractions();
-    then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, true);
-  }
+	@Test
+	void testUpdatedSpecimen() throws Exception {
+		// Given
+		var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		var expectedRecord = givenDigitalSpecimenRecord(2, false);
+		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(bulkResponse.errors()).willReturn(false);
+		given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
 
-  @Test
-  void testUpdatedSpecimenElasticPartialFails() throws Exception {
-    // Given
-    var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
-    var expectedRecord = givenDigitalSpecimenRecord(2, false);
-    given(midsService.calculateMids(any())).willReturn(1);
-    given(bulkResponse.errors()).willReturn(true);
-    given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
+		// When
+		var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
 
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+		// Then
+		assertThat(result).isEqualTo(Set.of(expectedRecord));
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
+		then(publisherService).should().publishUpdateEventSpecimen(eq(expectedRecord), any());
+		then(rollbackService).shouldHaveNoInteractions();
+		then(handleComponent).should().updatePid(any());
+	}
 
-    // Then
-    assertThat(result).isEmpty();
-    then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
-    then(publisherService).shouldHaveNoInteractions();
-    then(rollbackService).should()
-        .handlePartiallyFailedElasticUpdateSpecimen(Set.of(updatedRecord), bulkResponse);
-  }
+	@Test
+	void testUpdatedSpecimenMediaERTombstone() throws Exception {
+		// Given
+		var tuple = new UpdatedDigitalSpecimenTuple(
+				givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, true),
+				givenDigitalSpecimenEvent(false),
+				new MediaRelationshipProcessResult(List.of(new EntityRelationship().withType("ods:EntityRelationship")
+					.withDwcRelationshipOfResource("hasDigitalSpecimen")
+					.withDwcRelationshipEstablishedDate(Date.from(CREATED))
+					.withDwcRelatedResourceID(DOI_PREFIX + HANDLE)
+					.withOdsRelatedResourceURI(URI.create(DOI_PREFIX + HANDLE))
+					.withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE, DOI,
+							SCHEMA_SOFTWARE_APPLICATION)))),
+						List.of(), List.of()));
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		var expectedRecord = givenDigitalSpecimenRecord(2, false);
+		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(bulkResponse.errors()).willReturn(false);
+		given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
 
-  @Test
-  void testUpdatedSpecimenPidFails() throws Exception {
-    // Given
-    var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
-    var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
-    given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
-    doThrow(PidException.class).when(handleComponent).updatePid(any());
+		// When
+		var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
 
-    // When
-    var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+		// Then
+		assertThat(result).isEqualTo(Set.of(expectedRecord));
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
+		then(digitalMediaService).should().tombstoneSpecimenRelations(List.of(tuple));
+		then(publisherService).should().publishUpdateEventSpecimen(eq(expectedRecord), any());
+		then(rollbackService).shouldHaveNoInteractions();
+		then(handleComponent).should().updatePid(any());
+	}
 
-    // Then
-    assertThat(result).isEmpty();
-    then(publisherService).should().deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
-  }
+	@Test
+	void testUpdatedSpecimenDatabaseFails() {
+		// Given
+		var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		var expectedRecord = givenDigitalSpecimenRecord(2, false);
+		given(midsService.calculateMids(any())).willReturn(1);
+		var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
+		doThrow(DataAccessException.class).when(repository).updateDigitalSpecimenRecord(Set.of(expectedRecord));
+
+		// When
+		var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+
+		// Then
+		assertThat(result).isEmpty();
+		then(elasticRepository).shouldHaveNoInteractions();
+		then(publisherService).shouldHaveNoInteractions();
+		then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, false);
+	}
+
+	@Test
+	void testUpdatedSpecimenElasticFails() throws Exception {
+		// Given
+		var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
+		var expectedRecord = givenDigitalSpecimenRecord(2, false);
+		given(midsService.calculateMids(any())).willReturn(1);
+		doThrow(IOException.class).when(elasticRepository).indexDigitalSpecimen(Set.of(expectedRecord));
+
+		// When
+		var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+
+		// Then
+		assertThat(result).isEmpty();
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
+		then(publisherService).shouldHaveNoInteractions();
+		then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, true);
+	}
+
+	@Test
+	void testUpdatedSpecimenElasticPartialFails() throws Exception {
+		// Given
+		var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		var updatedRecord = givenUpdatedDigitalSpecimenRecord(false);
+		var expectedRecord = givenDigitalSpecimenRecord(2, false);
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(bulkResponse.errors()).willReturn(true);
+		given(elasticRepository.indexDigitalSpecimen(Set.of(expectedRecord))).willReturn(bulkResponse);
+
+		// When
+		var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+
+		// Then
+		assertThat(result).isEmpty();
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
+		then(publisherService).shouldHaveNoInteractions();
+		then(rollbackService).should().handlePartiallyFailedElasticUpdateSpecimen(Set.of(updatedRecord), bulkResponse);
+	}
+
+	@Test
+	void testUpdatedSpecimenPidFails() throws Exception {
+		// Given
+		var tuple = givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult());
+		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
+		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
+		doThrow(PidException.class).when(handleComponent).updatePid(any());
+
+		// When
+		var result = digitalSpecimenService.updateExistingDigitalSpecimen(List.of(tuple), pidMap);
+
+		// Then
+		assertThat(result).isEmpty();
+		then(publisherService).should().deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
+	}
 
 }

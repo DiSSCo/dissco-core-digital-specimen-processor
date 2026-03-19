@@ -20,34 +20,40 @@ import tools.jackson.databind.json.JsonMapper;
 @AllArgsConstructor
 public class RabbitMqConsumerService {
 
-  private final JsonMapper mapper;
-  private final ProcessingService processingService;
+	private final JsonMapper mapper;
 
-  @RabbitListener(queues = {
-      "${rabbitmq.queue-name-specimen:digital-specimen-queue}"}, containerFactory = "consumerBatchContainerFactory")
-  public void getMessages(@Payload List<String> messages) {
-    var events = messages.stream()
-        .map(message -> mapper.readValue(message, DigitalSpecimenEvent.class))
-        .filter(Objects::nonNull).toList();
-    processingService.handleMessages(events);
-  }
+	private final ProcessingService processingService;
 
-  @RabbitListener(queues = {
-      "${rabbitmq.queue-name-media:digital-media-queue}"}, containerFactory = "consumerBatchContainerFactory")
-  public void getMessagesMedia(@Payload List<String> messages) {
-    var events = messages.stream()
-        .map(message -> mapper.readValue(message, DigitalMediaEvent.class))
-        .filter(Objects::nonNull).toList();
-    processingService.handleMessagesMedia(events);
-  }
+	@RabbitListener(queues = { "${rabbitmq.queue-name-specimen:digital-specimen-queue}" },
+			containerFactory = "consumerBatchContainerFactory")
+	public void getMessages(@Payload List<String> messages) {
+		var events = messages.stream()
+			.map(message -> mapper.readValue(message, DigitalSpecimenEvent.class))
+			.filter(Objects::nonNull)
+			.toList();
+		processingService.handleMessages(events);
+	}
 
-  @RabbitListener(queues = {
-      "${rabbitmq.queue-name-media-relationship-tombstone:digital-media-relationship-tombstone-queue}"}, containerFactory = "consumerBatchContainerFactory")
-  public void getMessagesDigitalMediaRelationshipTombstone(@Payload List<String> messages) {
-    var events = messages.stream()
-        .map(message -> mapper.readValue(message, DigitalMediaRelationshipTombstoneEvent.class))
-        .filter(Objects::nonNull).toList();
-    processingService.handleMessagesMediaRelationshipTombstone(events);
-  }
+	@RabbitListener(queues = { "${rabbitmq.queue-name-media:digital-media-queue}" },
+			containerFactory = "consumerBatchContainerFactory")
+	public void getMessagesMedia(@Payload List<String> messages) {
+		var events = messages.stream()
+			.map(message -> mapper.readValue(message, DigitalMediaEvent.class))
+			.filter(Objects::nonNull)
+			.toList();
+		processingService.handleMessagesMedia(events);
+	}
+
+	@RabbitListener(
+			queues = {
+					"${rabbitmq.queue-name-media-relationship-tombstone:digital-media-relationship-tombstone-queue}" },
+			containerFactory = "consumerBatchContainerFactory")
+	public void getMessagesDigitalMediaRelationshipTombstone(@Payload List<String> messages) {
+		var events = messages.stream()
+			.map(message -> mapper.readValue(message, DigitalMediaRelationshipTombstoneEvent.class))
+			.filter(Objects::nonNull)
+			.toList();
+		processingService.handleMessagesMediaRelationshipTombstone(events);
+	}
 
 }

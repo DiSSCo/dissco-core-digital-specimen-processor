@@ -44,304 +44,289 @@ import tools.jackson.databind.node.ObjectNode;
 @Slf4j
 public class DigitalSpecimenService {
 
-  private final DigitalSpecimenRepository repository;
-  private final RollbackService rollbackService;
-  private final ElasticSearchRepository elasticRepository;
-  private final FdoRecordService fdoRecordService;
-  private final RabbitMqPublisherService publisherService;
-  private final PidComponent pidComponent;
-  private final AnnotationPublisherService annotationPublisherService;
-  private final MidsService midsService;
-  private final JsonMapper mapper;
-  private final DigitalMediaService digitalMediaService;
+	private final DigitalSpecimenRepository repository;
 
-  public void updateEqualSpecimen(
-      Map<DigitalSpecimenRecord, DigitalSpecimenEvent> equalDigitalSpecimenMap) {
-    var idMap = equalDigitalSpecimenMap.entrySet().stream()
-        .collect(toMap(
-            entry ->
-                entry.getKey().id(),
-            Entry::getValue
-        ));
-    repository.updateLastCheckedAndOriginalData(idMap);
-    log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
-        equalDigitalSpecimenMap.size());
-  }
+	private final RollbackService rollbackService;
 
-  public Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events,
-      Map<String, PidProcessResult> pidMap) {
-    var digitalSpecimenRecords = events.stream()
-        .map(event -> mapToDigitalSpecimenRecord(event, pidMap))
-        .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
-    if (digitalSpecimenRecords.isEmpty()) {
-      return Collections.emptySet();
-    }
-    log.info("Inserting {} new specimen into the database",
-        digitalSpecimenRecords.size());
-    try {
-      repository.createDigitalSpecimenRecord(digitalSpecimenRecords);
-    } catch (DataAccessException e) {
-      log.error("Unable to insert new specimens into the database. Rolling back PIDs", e);
-      rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, false, false);
-      return Collections.emptySet();
-    }
-    try {
-      log.info("Inserting {} new specimen into the elastic search",
-          digitalSpecimenRecords.size());
-      var bulkResponse = elasticRepository.indexDigitalSpecimen(
-          digitalSpecimenRecords);
-      if (!bulkResponse.errors()) {
-        handleSuccessfulElasticInsert(digitalSpecimenRecords);
-      } else {
-        digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticInsertSpecimen(
-            digitalSpecimenRecords, bulkResponse);
-      }
-      log.info("Successfully created {} new digitalSpecimenRecord",
-          digitalSpecimenRecords.size());
-      annotationPublisherService.publishAnnotationNewSpecimen(
-          digitalSpecimenRecords);
-      return digitalSpecimenRecords;
-    } catch (IOException | ElasticsearchException e) {
-      log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, false, true);
-      return Collections.emptySet();
-    }
-  }
+	private final ElasticSearchRepository elasticRepository;
 
-  public Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples,
-      Map<String, PidProcessResult> pidMap) {
-    log.info("Persisting to PID Server");
-    var successfullyUpdatedPids = updatePids(updatedDigitalSpecimenTuples);
-    if (!successfullyUpdatedPids) {
-      return Set.of();
-    }
-    var digitalSpecimenRecords = getUpdatedDigitalSpecimenRecords(updatedDigitalSpecimenTuples,
-        pidMap);
-    log.info("Persisting {} updated record to the database", digitalSpecimenRecords.size());
-    try {
-      repository.updateDigitalSpecimenRecord(
-          digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
-              .collect(Collectors.toSet()));
-    } catch (DataAccessException e) {
-      log.error("Unable to update records into database. Rolling back updates", e);
-      rollbackService.rollbackUpdatedSpecimens(digitalSpecimenRecords, false, false);
-      return Collections.emptySet();
-    }
-    log.info("Persisting {} updated records to elastic", digitalSpecimenRecords.size());
-    try {
-      var bulkResponse = elasticRepository.indexDigitalSpecimen(
-          digitalSpecimenRecords.stream().map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
-              .collect(Collectors.toSet()));
-      if (!bulkResponse.errors()) {
-        handleSuccessfulElasticUpdate(digitalSpecimenRecords);
-      } else {
-        digitalSpecimenRecords = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(
-            digitalSpecimenRecords, bulkResponse);
-      }
-      var successfullyProcessedRecords = digitalSpecimenRecords.stream()
-          .map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord).collect(
-              Collectors.toSet());
-      log.info("Successfully updated {} digitalSpecimen records",
-          successfullyProcessedRecords.size());
-      annotationPublisherService.publishAnnotationUpdatedSpecimen(digitalSpecimenRecords);
-      digitalMediaService.tombstoneSpecimenRelations(updatedDigitalSpecimenTuples);
-      return successfullyProcessedRecords;
-    } catch (IOException | ElasticsearchException e) {
-      log.error("Rolling back, failed to insert records in elastic", e);
-      rollbackService.rollbackUpdatedSpecimens(digitalSpecimenRecords, false, true);
-      return Set.of();
-    }
-  }
+	private final FdoRecordService fdoRecordService;
 
-  /* Elastic */
+	private final RabbitMqPublisherService publisherService;
 
-  private void handleSuccessfulElasticInsert(
-      Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
-    Set<DigitalSpecimenRecord> rollbackRecords = new HashSet<>();
-    digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
-      if (!publishCreateSpecimenEvents(digitalSpecimenRecord)) {
-        rollbackRecords.add(digitalSpecimenRecord);
-      }
-    });
-    if (!rollbackRecords.isEmpty()) {
-      rollbackRecords.forEach(digitalSpecimenRecords::remove);
-      rollbackService.rollbackNewSpecimens(rollbackRecords, true, true);
-    }
-  }
+	private final PidComponent pidComponent;
 
-  private void handleSuccessfulElasticUpdate(
-      Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
-    log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
-    var failedRecords = new HashSet<UpdatedDigitalSpecimenRecord>();
-    for (var digitalSpecimenRecord : digitalSpecimenRecords) {
-      var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
-      if (!successfullyPublished) {
-        failedRecords.add(digitalSpecimenRecord);
-      }
-    }
-    if (!failedRecords.isEmpty()) {
-      rollbackService.rollbackUpdatedSpecimens(failedRecords, true, true);
-      failedRecords.forEach(digitalSpecimenRecords::remove);
-    }
-  }
+	private final AnnotationPublisherService annotationPublisherService;
 
-  /* Queue Publishing */
-  private boolean publishCreateSpecimenEvents(DigitalSpecimenRecord digitalSpecimenRecord) {
-    try {
-      publisherService.publishCreateEventSpecimen(digitalSpecimenRecord);
-    } catch (JacksonException e) {
-      log.error("Rolling back, failed to publish Create event", e);
-      return false;
-    }
-    return true;
-  }
+	private final MidsService midsService;
 
-  private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
-    try {
-      publisherService.publishUpdateEventSpecimen(
-          updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
-          updatedDigitalSpecimenRecord.jsonPatch());
-      return true;
-    } catch (JacksonException e) {
-      log.error("Failed to publish update event", e);
-      return false;
-    }
-  }
+	private final JsonMapper mapper;
 
-  /* Entity Relationship */
-  private DigitalSpecimenWrapper determineEntityRelationships(
-      DigitalSpecimenWrapper digitalSpecimenWrapper, Map<String, PidProcessResult> pidMap,
-      MediaRelationshipProcessResult mediaRelationshipProcessResult) {
-    var mediaPids = pidMap.get(digitalSpecimenWrapper.physicalSpecimenID()).doisOfRelatedObjects();
-    var existingMediaRelationshipPids = mediaRelationshipProcessResult.unchangedRelationships()
-        .stream()
-        .map(EntityRelationship::getDwcRelatedResourceID).toList();
-    var newEntityRelationships = mediaPids
-        .stream()
-        .filter(pid -> !existingMediaRelationshipPids.contains(pid))
-        .map(doi -> DigitalObjectUtils.buildEntityRelationship(HAS_MEDIA.getRelationshipName(),
-            doi));
-    var attributes = digitalSpecimenWrapper.attributes();
-    var allRelationships = Stream.concat(newEntityRelationships,
-            attributes.getOdsHasEntityRelationships().stream())
-        .toList();
-    allRelationships = removeTombstonedRelationships(mediaRelationshipProcessResult,
-        allRelationships);
-    if (allRelationships.stream().noneMatch(
-        er -> er.getDwcRelationshipOfResource().equals(HAS_MEDIA.getRelationshipName()))) {
-      attributes.setOdsIsKnownToContainMedia(Boolean.FALSE);
-    } else {
-      attributes.setOdsIsKnownToContainMedia(Boolean.TRUE);
-    }
-    attributes.setOdsHasEntityRelationships(allRelationships);
-    return new DigitalSpecimenWrapper(
-        digitalSpecimenWrapper.physicalSpecimenID(),
-        digitalSpecimenWrapper.type(),
-        attributes,
-        digitalSpecimenWrapper.originalAttributes());
-  }
+	private final DigitalMediaService digitalMediaService;
 
-  private List<EntityRelationship> removeTombstonedRelationships(
-      MediaRelationshipProcessResult mediaRelationshipProcessResult,
-      List<EntityRelationship> allRelationships) {
-    return allRelationships.stream().filter(
-        er -> !mediaRelationshipProcessResult.tombstonedRelationships().stream()
-            .map(EntityRelationship::getOdsRelatedResourceURI).toList()
-            .contains(er.getOdsRelatedResourceURI())).toList();
-  }
+	public void updateEqualSpecimen(Map<DigitalSpecimenRecord, DigitalSpecimenEvent> equalDigitalSpecimenMap) {
+		var idMap = equalDigitalSpecimenMap.entrySet()
+			.stream()
+			.collect(toMap(entry -> entry.getKey().id(), Entry::getValue));
+		repository.updateLastCheckedAndOriginalData(idMap);
+		log.info("Successfully updated lastChecked for {} existing digitalSpecimenWrapper",
+				equalDigitalSpecimenMap.size());
+	}
 
-  /* Transformations */
+	public Set<DigitalSpecimenRecord> createNewDigitalSpecimen(List<DigitalSpecimenEvent> events,
+			Map<String, PidProcessResult> pidMap) {
+		var digitalSpecimenRecords = events.stream()
+			.map(event -> mapToDigitalSpecimenRecord(event, pidMap))
+			.filter(Objects::nonNull)
+			.collect(Collectors.toSet());
+		if (digitalSpecimenRecords.isEmpty()) {
+			return Collections.emptySet();
+		}
+		log.info("Inserting {} new specimen into the database", digitalSpecimenRecords.size());
+		try {
+			repository.createDigitalSpecimenRecord(digitalSpecimenRecords);
+		}
+		catch (DataAccessException e) {
+			log.error("Unable to insert new specimens into the database. Rolling back PIDs", e);
+			rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, false, false);
+			return Collections.emptySet();
+		}
+		try {
+			log.info("Inserting {} new specimen into the elastic search", digitalSpecimenRecords.size());
+			var bulkResponse = elasticRepository.indexDigitalSpecimen(digitalSpecimenRecords);
+			if (!bulkResponse.errors()) {
+				handleSuccessfulElasticInsert(digitalSpecimenRecords);
+			}
+			else {
+				digitalSpecimenRecords = rollbackService
+					.handlePartiallyFailedElasticInsertSpecimen(digitalSpecimenRecords, bulkResponse);
+			}
+			log.info("Successfully created {} new digitalSpecimenRecord", digitalSpecimenRecords.size());
+			annotationPublisherService.publishAnnotationNewSpecimen(digitalSpecimenRecords);
+			return digitalSpecimenRecords;
+		}
+		catch (IOException | ElasticsearchException e) {
+			log.error("Rolling back, failed to insert records in elastic", e);
+			rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, false, true);
+			return Collections.emptySet();
+		}
+	}
 
-  private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event,
-      Map<String, PidProcessResult> pidMap) {
-    var pid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
-    if (pid == null) {
-      try {
-        log.error("PID not created for Digital Specimen {}",
-            event.digitalSpecimenWrapper().physicalSpecimenID());
-        publisherService.deadLetterEventSpecimen(event);
-      } catch (JacksonException _) {
-        log.error("DLQ failed for specimen {}",
-            event.digitalSpecimenWrapper().physicalSpecimenID());
-      }
-      return null;
-    }
-    return new DigitalSpecimenRecord(
-        pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()).doiOfTarget(),
-        midsService.calculateMids(event.digitalSpecimenWrapper()),
-        1,
-        Instant.now(),
-        determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap,
-            new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
-        event.masList(), event.forceMasSchedule(), event.isDataFromSourceSystem(),
-        event.digitalMediaEvents());
-  }
+	public Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
+			List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples, Map<String, PidProcessResult> pidMap) {
+		log.info("Persisting to PID Server");
+		var successfullyUpdatedPids = updatePids(updatedDigitalSpecimenTuples);
+		if (!successfullyUpdatedPids) {
+			return Set.of();
+		}
+		var digitalSpecimenRecords = getUpdatedDigitalSpecimenRecords(updatedDigitalSpecimenTuples, pidMap);
+		log.info("Persisting {} updated record to the database", digitalSpecimenRecords.size());
+		try {
+			repository.updateDigitalSpecimenRecord(digitalSpecimenRecords.stream()
+				.map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
+				.collect(Collectors.toSet()));
+		}
+		catch (DataAccessException e) {
+			log.error("Unable to update records into database. Rolling back updates", e);
+			rollbackService.rollbackUpdatedSpecimens(digitalSpecimenRecords, false, false);
+			return Collections.emptySet();
+		}
+		log.info("Persisting {} updated records to elastic", digitalSpecimenRecords.size());
+		try {
+			var bulkResponse = elasticRepository.indexDigitalSpecimen(digitalSpecimenRecords.stream()
+				.map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
+				.collect(Collectors.toSet()));
+			if (!bulkResponse.errors()) {
+				handleSuccessfulElasticUpdate(digitalSpecimenRecords);
+			}
+			else {
+				digitalSpecimenRecords = rollbackService
+					.handlePartiallyFailedElasticUpdateSpecimen(digitalSpecimenRecords, bulkResponse);
+			}
+			var successfullyProcessedRecords = digitalSpecimenRecords.stream()
+				.map(UpdatedDigitalSpecimenRecord::digitalSpecimenRecord)
+				.collect(Collectors.toSet());
+			log.info("Successfully updated {} digitalSpecimen records", successfullyProcessedRecords.size());
+			annotationPublisherService.publishAnnotationUpdatedSpecimen(digitalSpecimenRecords);
+			digitalMediaService.tombstoneSpecimenRelations(updatedDigitalSpecimenTuples);
+			return successfullyProcessedRecords;
+		}
+		catch (IOException | ElasticsearchException e) {
+			log.error("Rolling back, failed to insert records in elastic", e);
+			rollbackService.rollbackUpdatedSpecimens(digitalSpecimenRecords, false, true);
+			return Set.of();
+		}
+	}
 
-  // We remove the dcterms:modified from the comparison as it is generated and will always differ
-  private JsonNode createJsonPatch(DigitalSpecimen currentDigitalSpecimen,
-      DigitalSpecimen digitalSpecimen) {
-    var jsonCurrentSpecimen = (ObjectNode) mapper.valueToTree(currentDigitalSpecimen);
-    var jsonSpecimen = (ObjectNode) mapper.valueToTree(digitalSpecimen);
-    jsonCurrentSpecimen.set("dcterms:modified", null);
-    jsonSpecimen.set("dcterms:modified", null);
-    return Jackson3JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen);
-  }
+	/* Elastic */
 
-  private Set<UpdatedDigitalSpecimenRecord> getUpdatedDigitalSpecimenRecords(
-      List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples,
-      Map<String, PidProcessResult> pidMap) {
-    return updatedDigitalSpecimenTuples.stream().map(updateTuple -> {
-          var digitalSpecimenRecord = new DigitalSpecimenRecord(
-              updateTuple.currentSpecimen().id(),
-              midsService.calculateMids(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
-              updateTuple.currentSpecimen().version() + 1,
-              updateTuple.currentSpecimen().created(),
-              determineEntityRelationships(
-                  updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
-                  updateTuple.mediaRelationshipProcessResult()),
-              updateTuple.digitalSpecimenEvent().masList(),
-              updateTuple.digitalSpecimenEvent().forceMasSchedule(),
-              updateTuple.digitalSpecimenEvent().isDataFromSourceSystem(),
-              updateTuple.digitalSpecimenEvent().digitalMediaEvents());
-          return new UpdatedDigitalSpecimenRecord(
-              digitalSpecimenRecord,
-              updateTuple.digitalSpecimenEvent().masList(),
-              updateTuple.currentSpecimen(),
-              createJsonPatch(
-                  updateTuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
-                  updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
-              updateTuple.digitalSpecimenEvent().digitalMediaEvents(),
-              updateTuple.mediaRelationshipProcessResult(),
-              updateTuple.digitalSpecimenEvent().isDataFromSourceSystem());
-        }
-    ).collect(Collectors.toSet());
-  }
+	private void handleSuccessfulElasticInsert(Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
+		log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
+		Set<DigitalSpecimenRecord> rollbackRecords = new HashSet<>();
+		digitalSpecimenRecords.forEach(digitalSpecimenRecord -> {
+			if (!publishCreateSpecimenEvents(digitalSpecimenRecord)) {
+				rollbackRecords.add(digitalSpecimenRecord);
+			}
+		});
+		if (!rollbackRecords.isEmpty()) {
+			rollbackRecords.forEach(digitalSpecimenRecords::remove);
+			rollbackService.rollbackNewSpecimens(rollbackRecords, true, true);
+		}
+	}
 
-  /* PID Records */
+	private void handleSuccessfulElasticUpdate(Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords) {
+		log.debug("Successfully indexed {} specimens", digitalSpecimenRecords);
+		var failedRecords = new HashSet<UpdatedDigitalSpecimenRecord>();
+		for (var digitalSpecimenRecord : digitalSpecimenRecords) {
+			var successfullyPublished = publishUpdateEvent(digitalSpecimenRecord);
+			if (!successfullyPublished) {
+				failedRecords.add(digitalSpecimenRecord);
+			}
+		}
+		if (!failedRecords.isEmpty()) {
+			rollbackService.rollbackUpdatedSpecimens(failedRecords, true, true);
+			failedRecords.forEach(digitalSpecimenRecords::remove);
+		}
+	}
 
-  private boolean updatePids(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
-    var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream()
-        .filter(tuple -> fdoRecordService.pidNeedsUpdateSpecimen(
-            tuple.currentSpecimen().digitalSpecimenWrapper(),
-            tuple.digitalSpecimenEvent().digitalSpecimenWrapper()))
-        .toList();
+	/* Queue Publishing */
+	private boolean publishCreateSpecimenEvents(DigitalSpecimenRecord digitalSpecimenRecord) {
+		try {
+			publisherService.publishCreateEventSpecimen(digitalSpecimenRecord);
+		}
+		catch (JacksonException e) {
+			log.error("Rolling back, failed to publish Create event", e);
+			return false;
+		}
+		return true;
+	}
 
-    if (!digitalSpecimensToUpdate.isEmpty()) {
-      try {
-        log.info("Updating {} PID records", digitalSpecimensToUpdate.size());
-        var requests = fdoRecordService.buildUpdatePidRequest(digitalSpecimensToUpdate);
-        pidComponent.updatePid(requests);
-      } catch (PidException e) {
-        log.error("Unable to update PID record. Not proceeding with update. ", e);
-        updatedDigitalSpecimenTuples.forEach(
-            tuple -> publisherService.deadLetterEventSpecimen(tuple.digitalSpecimenEvent()));
-        return false;
-      }
-    }
-    return true;
-  }
+	private boolean publishUpdateEvent(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord) {
+		try {
+			publisherService.publishUpdateEventSpecimen(updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
+					updatedDigitalSpecimenRecord.jsonPatch());
+			return true;
+		}
+		catch (JacksonException e) {
+			log.error("Failed to publish update event", e);
+			return false;
+		}
+	}
+
+	/* Entity Relationship */
+	private DigitalSpecimenWrapper determineEntityRelationships(DigitalSpecimenWrapper digitalSpecimenWrapper,
+			Map<String, PidProcessResult> pidMap, MediaRelationshipProcessResult mediaRelationshipProcessResult) {
+		var mediaPids = pidMap.get(digitalSpecimenWrapper.physicalSpecimenID()).doisOfRelatedObjects();
+		var existingMediaRelationshipPids = mediaRelationshipProcessResult.unchangedRelationships()
+			.stream()
+			.map(EntityRelationship::getDwcRelatedResourceID)
+			.toList();
+		var newEntityRelationships = mediaPids.stream()
+			.filter(pid -> !existingMediaRelationshipPids.contains(pid))
+			.map(doi -> DigitalObjectUtils.buildEntityRelationship(HAS_MEDIA.getRelationshipName(), doi));
+		var attributes = digitalSpecimenWrapper.attributes();
+		var allRelationships = Stream.concat(newEntityRelationships, attributes.getOdsHasEntityRelationships().stream())
+			.toList();
+		allRelationships = removeTombstonedRelationships(mediaRelationshipProcessResult, allRelationships);
+		if (allRelationships.stream()
+			.noneMatch(er -> er.getDwcRelationshipOfResource().equals(HAS_MEDIA.getRelationshipName()))) {
+			attributes.setOdsIsKnownToContainMedia(Boolean.FALSE);
+		}
+		else {
+			attributes.setOdsIsKnownToContainMedia(Boolean.TRUE);
+		}
+		attributes.setOdsHasEntityRelationships(allRelationships);
+		return new DigitalSpecimenWrapper(digitalSpecimenWrapper.physicalSpecimenID(), digitalSpecimenWrapper.type(),
+				attributes, digitalSpecimenWrapper.originalAttributes());
+	}
+
+	private List<EntityRelationship> removeTombstonedRelationships(
+			MediaRelationshipProcessResult mediaRelationshipProcessResult, List<EntityRelationship> allRelationships) {
+		return allRelationships.stream()
+			.filter(er -> !mediaRelationshipProcessResult.tombstonedRelationships()
+				.stream()
+				.map(EntityRelationship::getOdsRelatedResourceURI)
+				.toList()
+				.contains(er.getOdsRelatedResourceURI()))
+			.toList();
+	}
+
+	/* Transformations */
+
+	private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event,
+			Map<String, PidProcessResult> pidMap) {
+		var pid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
+		if (pid == null) {
+			try {
+				log.error("PID not created for Digital Specimen {}",
+						event.digitalSpecimenWrapper().physicalSpecimenID());
+				publisherService.deadLetterEventSpecimen(event);
+			}
+			catch (JacksonException _) {
+				log.error("DLQ failed for specimen {}", event.digitalSpecimenWrapper().physicalSpecimenID());
+			}
+			return null;
+		}
+		return new DigitalSpecimenRecord(pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()).doiOfTarget(),
+				midsService.calculateMids(event.digitalSpecimenWrapper()), 1, Instant.now(),
+				determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap,
+						new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
+				event.masList(), event.forceMasSchedule(), event.isDataFromSourceSystem(), event.digitalMediaEvents());
+	}
+
+	// We remove the dcterms:modified from the comparison as it is generated and will
+	// always differ
+	private JsonNode createJsonPatch(DigitalSpecimen currentDigitalSpecimen, DigitalSpecimen digitalSpecimen) {
+		var jsonCurrentSpecimen = (ObjectNode) mapper.valueToTree(currentDigitalSpecimen);
+		var jsonSpecimen = (ObjectNode) mapper.valueToTree(digitalSpecimen);
+		jsonCurrentSpecimen.set("dcterms:modified", null);
+		jsonSpecimen.set("dcterms:modified", null);
+		return Jackson3JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen);
+	}
+
+	private Set<UpdatedDigitalSpecimenRecord> getUpdatedDigitalSpecimenRecords(
+			List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples, Map<String, PidProcessResult> pidMap) {
+		return updatedDigitalSpecimenTuples.stream().map(updateTuple -> {
+			var digitalSpecimenRecord = new DigitalSpecimenRecord(updateTuple.currentSpecimen().id(),
+					midsService.calculateMids(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
+					updateTuple.currentSpecimen().version() + 1, updateTuple.currentSpecimen().created(),
+					determineEntityRelationships(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
+							updateTuple.mediaRelationshipProcessResult()),
+					updateTuple.digitalSpecimenEvent().masList(), updateTuple.digitalSpecimenEvent().forceMasSchedule(),
+					updateTuple.digitalSpecimenEvent().isDataFromSourceSystem(),
+					updateTuple.digitalSpecimenEvent().digitalMediaEvents());
+			return new UpdatedDigitalSpecimenRecord(digitalSpecimenRecord, updateTuple.digitalSpecimenEvent().masList(),
+					updateTuple.currentSpecimen(),
+					createJsonPatch(updateTuple.currentSpecimen().digitalSpecimenWrapper().attributes(),
+							updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
+					updateTuple.digitalSpecimenEvent().digitalMediaEvents(),
+					updateTuple.mediaRelationshipProcessResult(),
+					updateTuple.digitalSpecimenEvent().isDataFromSourceSystem());
+		}).collect(Collectors.toSet());
+	}
+
+	/* PID Records */
+
+	private boolean updatePids(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+		var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream()
+			.filter(tuple -> fdoRecordService.pidNeedsUpdateSpecimen(tuple.currentSpecimen().digitalSpecimenWrapper(),
+					tuple.digitalSpecimenEvent().digitalSpecimenWrapper()))
+			.toList();
+
+		if (!digitalSpecimensToUpdate.isEmpty()) {
+			try {
+				log.info("Updating {} PID records", digitalSpecimensToUpdate.size());
+				var requests = fdoRecordService.buildUpdatePidRequest(digitalSpecimensToUpdate);
+				pidComponent.updatePid(requests);
+			}
+			catch (PidException e) {
+				log.error("Unable to update PID record. Not proceeding with update. ", e);
+				updatedDigitalSpecimenTuples
+					.forEach(tuple -> publisherService.deadLetterEventSpecimen(tuple.digitalSpecimenEvent()));
+				return false;
+			}
+		}
+		return true;
+	}
 
 }

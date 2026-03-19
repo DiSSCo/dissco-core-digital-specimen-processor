@@ -51,274 +51,265 @@ import tools.jackson.databind.node.ObjectNode;
 @RequiredArgsConstructor
 public class FdoRecordService {
 
-  private static final String ATTRIBUTES = "attributes";
-  private static final String TYPE = "type";
-  private static final String ID = "id";
-  private static final String DATA = "data";
-  private static final String URL_PATTERN = "http(s)?://.+";
-    private final JsonMapper mapper;
-  private final FdoProperties fdoProperties;
+	private static final String ATTRIBUTES = "attributes";
 
-  private static boolean isEqualString(String currentValue, String newValue) {
-    return currentValue != null && !currentValue.equals(newValue);
-  }
+	private static final String TYPE = "type";
 
-  private static void setLicense(ObjectNode attributes, DigitalMedia media) {
-    if (media.getDctermsRights() != null && media.getDctermsRights().matches(URL_PATTERN)) {
-      attributes.put(LICENSE_URL.getAttribute(), media.getDctermsRights());
-    } else if (media.getDctermsRights() != null) {
-      attributes.put(LICENSE_NAME.getAttribute(), media.getDctermsRights());
-    }
-  }
+	private static final String ID = "id";
 
-  private static void setRightsHolder(ObjectNode attributes, DigitalMedia media) {
-    var rightsHolderId = collectRightsHolder(media, false);
-    var rightsHolderName = collectRightsHolder(media, true);
-    if (rightsHolderId != null) {
-      attributes.put(RIGHTS_HOLDER_PID.getAttribute(), rightsHolderId);
-    }
-    if (rightsHolderName != null) {
-      attributes.put(RIGHTS_HOLDER.getAttribute(), rightsHolderName);
-    }
-  }
+	private static final String DATA = "data";
 
-  private static String collectRightsHolder(DigitalMedia media, boolean name) {
-    var rightsHolderStream = media.getOdsHasAgents().stream()
-        .filter(agent -> agent.getOdsHasRoles().stream()
-            .anyMatch(role -> role.getSchemaRoleName().equals(RIGHTS_OWNER.getName())));
-    if (name) {
-      return rightsHolderStream.map(Agent::getSchemaName).filter(Objects::nonNull)
-          .reduce((a, b) -> a + " | " + b)
-          .orElse(null);
-    } else {
-      return rightsHolderStream.map(Agent::getId).filter(Objects::nonNull)
-          .reduce((a, b) -> a + " | " + b).orElse(null);
-    }
-  }
+	private static final String URL_PATTERN = "http(s)?://.+";
 
-  public List<JsonNode> buildPostPidRequest(List<DigitalSpecimenWrapper> digitalSpecimens) {
-    return digitalSpecimens.stream().map(this::buildSinglePostPidRequest).toList();
-  }
+	private final JsonMapper mapper;
 
-  public List<JsonNode> buildPostRequestMedia(List<DigitalMediaEvent> digitalMediaList) {
-    var requests = new ArrayList<JsonNode>();
-    for (var mediaEvent : digitalMediaList) {
-      var media = mediaEvent.digitalMediaWrapper().attributes();
-      requests.add(mapper.createObjectNode().set("data",
-          mapper.createObjectNode()
-              .put("type", fdoProperties.getMediaFdoType())
-              .set(ATTRIBUTES, generateMediaAttributes(media))));
-    }
-    return requests;
-  }
+	private final FdoProperties fdoProperties;
 
-  private JsonNode generateMediaAttributes(DigitalMedia media) {
-    var attributes = mapper.createObjectNode()
-        .put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
-        .put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
-        .put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
-        .put(PRIMARY_MEDIA_ID.getAttribute(), media.getAcAccessURI())
-        .put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
-        .put(PRIMARY_MEDIA_ID_NAME.getAttribute(), "ac:accessURI")
-        .put(MEDIA_TYPE.getAttribute(), fdoProperties.getDefaultMediaType())
-        .put(MIME_TYPE.getAttribute(), media.getDctermsFormat());
-    setLicense(attributes, media);
-    setRightsHolder(attributes, media);
-    return attributes;
-  }
+	private static boolean isEqualString(String currentValue, String newValue) {
+		return currentValue != null && !currentValue.equals(newValue);
+	}
 
-  public List<JsonNode> buildUpdatePidRequest(
-      List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
-    return digitalSpecimens.stream().map(this::buildSingleUpdatePidRequest).toList();
-  }
+	private static void setLicense(ObjectNode attributes, DigitalMedia media) {
+		if (media.getDctermsRights() != null && media.getDctermsRights().matches(URL_PATTERN)) {
+			attributes.put(LICENSE_URL.getAttribute(), media.getDctermsRights());
+		}
+		else if (media.getDctermsRights() != null) {
+			attributes.put(LICENSE_NAME.getAttribute(), media.getDctermsRights());
+		}
+	}
 
-  public List<JsonNode> buildUpdatePidRequestMedia(
-      List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
-    return digitalMediaTuples.stream()
-        .map(media -> buildSingleUpdateRequestMedia(media.digitalMediaEvent(),
-            media.currentDigitalMediaRecord().id()))
-        .toList();
-  }
+	private static void setRightsHolder(ObjectNode attributes, DigitalMedia media) {
+		var rightsHolderId = collectRightsHolder(media, false);
+		var rightsHolderName = collectRightsHolder(media, true);
+		if (rightsHolderId != null) {
+			attributes.put(RIGHTS_HOLDER_PID.getAttribute(), rightsHolderId);
+		}
+		if (rightsHolderName != null) {
+			attributes.put(RIGHTS_HOLDER.getAttribute(), rightsHolderName);
+		}
+	}
 
-  public List<JsonNode> buildRollbackUpdateRequest(
-      List<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequestSpecimen)
-        .toList();
-  }
+	private static String collectRightsHolder(DigitalMedia media, boolean name) {
+		var rightsHolderStream = media.getOdsHasAgents()
+			.stream()
+			.filter(agent -> agent.getOdsHasRoles()
+				.stream()
+				.anyMatch(role -> role.getSchemaRoleName().equals(RIGHTS_OWNER.getName())));
+		if (name) {
+			return rightsHolderStream.map(Agent::getSchemaName)
+				.filter(Objects::nonNull)
+				.reduce((a, b) -> a + " | " + b)
+				.orElse(null);
+		}
+		else {
+			return rightsHolderStream.map(Agent::getId)
+				.filter(Objects::nonNull)
+				.reduce((a, b) -> a + " | " + b)
+				.orElse(null);
+		}
+	}
 
-  public List<JsonNode> buildRollbackUpdateRequestMedia(
-      List<DigitalMediaRecord> digitalMediaRecords) {
-    return digitalMediaRecords.stream().map(this::buildSingleRollbackUpdateRequestMedia).toList();
-  }
+	public List<JsonNode> buildPostPidRequest(List<DigitalSpecimenWrapper> digitalSpecimens) {
+		return digitalSpecimens.stream().map(this::buildSinglePostPidRequest).toList();
+	}
 
-  public List<String> buildRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
-    return digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
-  }
+	public List<JsonNode> buildPostRequestMedia(List<DigitalMediaEvent> digitalMediaList) {
+		var requests = new ArrayList<JsonNode>();
+		for (var mediaEvent : digitalMediaList) {
+			var media = mediaEvent.digitalMediaWrapper().attributes();
+			requests.add(mapper.createObjectNode()
+				.set("data",
+						mapper.createObjectNode()
+							.put("type", fdoProperties.getMediaFdoType())
+							.set(ATTRIBUTES, generateMediaAttributes(media))));
+		}
+		return requests;
+	}
 
-  private JsonNode buildSinglePostPidRequest(DigitalSpecimenWrapper specimen) {
-    return mapper.createObjectNode()
-        .set(DATA, mapper.createObjectNode()
-            .put(TYPE, fdoProperties.getSpecimenFdoType())
-            .set(ATTRIBUTES, genRequestAttributes(specimen)));
-  }
+	private JsonNode generateMediaAttributes(DigitalMedia media) {
+		var attributes = mapper.createObjectNode()
+			.put(REFERENT_NAME.getAttribute(), media.getAcAccessURI())
+			.put(MEDIA_HOST.getAttribute(), media.getOdsOrganisationID())
+			.put(MEDIA_HOST_NAME.getAttribute(), media.getOdsOrganisationName())
+			.put(PRIMARY_MEDIA_ID.getAttribute(), media.getAcAccessURI())
+			.put(PRIMARY_MEDIA_ID_TYPE.getAttribute(), "Resolvable")
+			.put(PRIMARY_MEDIA_ID_NAME.getAttribute(), "ac:accessURI")
+			.put(MEDIA_TYPE.getAttribute(), fdoProperties.getDefaultMediaType())
+			.put(MIME_TYPE.getAttribute(), media.getDctermsFormat());
+		setLicense(attributes, media);
+		setRightsHolder(attributes, media);
+		return attributes;
+	}
 
-  private JsonNode buildSingleUpdateRequestMedia(DigitalMediaEvent mediaEvent, String id) {
-    return mapper.createObjectNode()
-        .set("data", mapper.createObjectNode()
-            .put("type", fdoProperties.getMediaFdoType())
-            .put("id", id.replace(DOI_PROXY, ""))
-            .set(ATTRIBUTES,
-                generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
-  }
+	public List<JsonNode> buildUpdatePidRequest(List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
+		return digitalSpecimens.stream().map(this::buildSingleUpdatePidRequest).toList();
+	}
 
-  private JsonNode buildSingleUpdatePidRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
-    var request = mapper.createObjectNode();
-    var data = mapper.createObjectNode();
-    data.put(ID, specimenTuple.currentSpecimen().id().replace(DOI_PROXY, ""));
-    data.put(TYPE, fdoProperties.getSpecimenFdoType());
-    var attributes = genRequestAttributes(
-        specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
-    data.set(ATTRIBUTES, attributes);
-    request.set(DATA, data);
-    return request;
-  }
+	public List<JsonNode> buildUpdatePidRequestMedia(List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
+		return digitalMediaTuples.stream()
+			.map(media -> buildSingleUpdateRequestMedia(media.digitalMediaEvent(),
+					media.currentDigitalMediaRecord().id()))
+			.toList();
+	}
 
-  private JsonNode buildSingleRollbackUpdateRequestSpecimen(DigitalSpecimenRecord specimen) {
-    return mapper.createObjectNode()
-        .set(DATA, mapper.createObjectNode()
-            .put(ID, specimen.id().replace(DOI_PROXY, ""))
-            .put(TYPE, fdoProperties.getSpecimenFdoType())
-            .set(ATTRIBUTES, genRequestAttributes(specimen.digitalSpecimenWrapper())));
+	public List<JsonNode> buildRollbackUpdateRequest(List<DigitalSpecimenRecord> digitalSpecimenRecords) {
+		return digitalSpecimenRecords.stream().map(this::buildSingleRollbackUpdateRequestSpecimen).toList();
+	}
 
-  }
+	public List<JsonNode> buildRollbackUpdateRequestMedia(List<DigitalMediaRecord> digitalMediaRecords) {
+		return digitalMediaRecords.stream().map(this::buildSingleRollbackUpdateRequestMedia).toList();
+	}
 
-  private JsonNode buildSingleRollbackUpdateRequestMedia(DigitalMediaRecord media) {
-    return mapper.createObjectNode()
-        .set("data", mapper.createObjectNode()
-            .put("type", fdoProperties.getMediaFdoType())
-            .put("id", media.id().replace(DOI_PROXY, ""))
-            .set(ATTRIBUTES, generateMediaAttributes(media.attributes())));
+	public List<String> buildRollbackCreationRequest(List<DigitalSpecimenRecord> digitalSpecimens) {
+		return digitalSpecimens.stream().map(DigitalSpecimenRecord::id).toList();
+	}
 
-  }
+	private JsonNode buildSinglePostPidRequest(DigitalSpecimenWrapper specimen) {
+		return mapper.createObjectNode()
+			.set(DATA,
+					mapper.createObjectNode()
+						.put(TYPE, fdoProperties.getSpecimenFdoType())
+						.set(ATTRIBUTES, genRequestAttributes(specimen)));
+	}
 
-  private JsonNode genRequestAttributes(DigitalSpecimenWrapper specimen) {
-    var attributes = mapper.createObjectNode()
-        .put(FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
-            specimen.attributes().getOdsNormalisedPhysicalSpecimenID())
-        .put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getOdsOrganisationID());
-    // Optional
-    addOptionalAttributes(specimen, attributes);
-    return attributes;
-  }
+	private JsonNode buildSingleUpdateRequestMedia(DigitalMediaEvent mediaEvent, String id) {
+		return mapper.createObjectNode()
+			.set("data",
+					mapper.createObjectNode()
+						.put("type", fdoProperties.getMediaFdoType())
+						.put("id", id.replace(DOI_PROXY, ""))
+						.set(ATTRIBUTES, generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
+	}
 
-  private void addOptionalAttributes(DigitalSpecimenWrapper specimen, ObjectNode attributes) {
-    if (specimen.attributes().getOdsOrganisationName() != null) {
-      attributes.put(SPECIMEN_HOST_NAME.getAttribute(),
-          specimen.attributes().getOdsOrganisationName());
-    }
-    if (specimen.attributes().getOdsTopicOrigin() != null) {
-      attributes.put(TOPIC_ORIGIN.getAttribute(),
-          specimen.attributes().getOdsTopicOrigin().value());
-    }
-    if (specimen.attributes().getOdsTopicDomain() != null) {
-      attributes.put(TOPIC_DOMAIN.getAttribute(),
-          specimen.attributes().getOdsTopicDomain().value());
-    }
-    if (specimen.attributes().getOdsTopicDiscipline() != null) {
-      attributes.put(TOPIC_DISCIPLINE.getAttribute(),
-          specimen.attributes().getOdsTopicDiscipline().value());
-    }
-    if (specimen.attributes().getOdsLivingOrPreserved() != null) {
-      attributes.put(LIVING_OR_PRESERVED.getAttribute(),
-          specimen.attributes().getOdsLivingOrPreserved().value());
-    }
-    if (specimen.attributes().getOdsIsMarkedAsType() != null) {
-      attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsIsMarkedAsType());
-    }
-    if (specimen.attributes().getOdsSpecimenName() != null) {
-      attributes.put(REFERENT_NAME.getAttribute(),
-          specimen.attributes().getOdsSpecimenName());
-    } else if (specimen.attributes().getOdsOrganisationName() != null) {
-      attributes.put(REFERENT_NAME.getAttribute(),
-          "Specimen from " + specimen.attributes().getOdsOrganisationName());
-    } else {
-      attributes.put(REFERENT_NAME.getAttribute(),
-          "Specimen from " + specimen.attributes().getOdsOrganisationID());
-    }
-    if (specimen.attributes().getOdsHasIdentifiers() != null) {
-      for (var identifier : specimen.attributes().getOdsHasIdentifiers()) {
-        if ("dwc:catalogNumber".equals(identifier.getDctermsTitle())) {
-          attributes.put(CATALOG_NUMBER.getAttribute(), identifier.getDctermsIdentifier());
-        }
-      }
-    }
-    attributes.set("otherSpecimenIds", buildOtherSpecimenIdArray(specimen));
-  }
+	private JsonNode buildSingleUpdatePidRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
+		var request = mapper.createObjectNode();
+		var data = mapper.createObjectNode();
+		data.put(ID, specimenTuple.currentSpecimen().id().replace(DOI_PROXY, ""));
+		data.put(TYPE, fdoProperties.getSpecimenFdoType());
+		var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
+		data.set(ATTRIBUTES, attributes);
+		request.set(DATA, data);
+		return request;
+	}
 
-  private ArrayNode buildOtherSpecimenIdArray(DigitalSpecimenWrapper specimen) {
-    var otherSpecimenIds = new HashSet<OtherSpecimenId>();
-    otherSpecimenIds.add(new OtherSpecimenId(
-        "physical specimen identifier",
-        specimen.attributes().getOdsPhysicalSpecimenID(),
-        specimen.attributes().getOdsPhysicalSpecimenIDType()
-            .equals(OdsPhysicalSpecimenIDType.RESOLVABLE))
-    );
-    if (specimen.attributes().getOdsHasIdentifiers() != null) {
-      for (var id : specimen.attributes().getOdsHasIdentifiers()) {
-        otherSpecimenIds.add(new OtherSpecimenId(
-            id.getDctermsTitle(),
-            id.getDctermsIdentifier(),
-            id.getDctermsIdentifier().matches(URL_PATTERN)
-        ));
-      }
-    }
-    return mapper.convertValue(otherSpecimenIds, ArrayNode.class);
-  }
+	private JsonNode buildSingleRollbackUpdateRequestSpecimen(DigitalSpecimenRecord specimen) {
+		return mapper.createObjectNode()
+			.set(DATA,
+					mapper.createObjectNode()
+						.put(ID, specimen.id().replace(DOI_PROXY, ""))
+						.put(TYPE, fdoProperties.getSpecimenFdoType())
+						.set(ATTRIBUTES, genRequestAttributes(specimen.digitalSpecimenWrapper())));
 
-  public boolean pidNeedsUpdateSpecimen(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
-      DigitalSpecimenWrapper digitalSpecimenWrapper) {
-    var currentAttributes = currentDigitalSpecimenWrapper.attributes();
-    var attributes = digitalSpecimenWrapper.attributes();
-    return isEqualString(currentDigitalSpecimenWrapper.physicalSpecimenID(),
-        digitalSpecimenWrapper.physicalSpecimenID())
-        || isEqualString(
-        currentDigitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID(),
-        digitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID())
-        || isEqualString(currentAttributes.getOdsOrganisationID(),
-        attributes.getOdsOrganisationID())
-        || isEqualString(currentAttributes.getOdsOrganisationName(),
-        attributes.getOdsOrganisationName())
-        || (currentAttributes.getOdsTopicDiscipline() != null
-        && !currentAttributes.getOdsTopicDiscipline().equals(attributes.getOdsTopicDiscipline()))
-        || (currentAttributes.getOdsPhysicalSpecimenIDType() != null
-        && !currentAttributes.getOdsPhysicalSpecimenIDType()
-        .equals(attributes.getOdsPhysicalSpecimenIDType()))
-        || (currentAttributes.getOdsLivingOrPreserved() != null && isEqualString(
-        currentAttributes.getOdsLivingOrPreserved().value(),
-        attributes.getOdsLivingOrPreserved().value()))
-        || isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
-        || (currentAttributes.getOdsIsMarkedAsType() != null
-        && !currentAttributes.getOdsIsMarkedAsType().equals(attributes.getOdsIsMarkedAsType()));
-  }
+	}
 
-  public boolean pidNeedsUpdateMedia(DigitalMedia currentMediaObject,
-      DigitalMedia mediaObject) {
-    return (
-        (currentMediaObject.getDctermsRights() != null
-            && !currentMediaObject.getDctermsRights()
-            .equals(mediaObject.getDctermsRights()))
-            || (currentMediaObject.getDctermsType() != null
-            && !currentMediaObject.getDctermsType()
-            .equals(mediaObject.getDctermsType()))
-            || (currentMediaObject.getOdsOrganisationID() != null
-            && !currentMediaObject.getOdsOrganisationID()
-            .equals(mediaObject.getOdsOrganisationID())));
-  }
+	private JsonNode buildSingleRollbackUpdateRequestMedia(DigitalMediaRecord media) {
+		return mapper.createObjectNode()
+			.set("data",
+					mapper.createObjectNode()
+						.put("type", fdoProperties.getMediaFdoType())
+						.put("id", media.id().replace(DOI_PROXY, ""))
+						.set(ATTRIBUTES, generateMediaAttributes(media.attributes())));
 
-  private record OtherSpecimenId(
-      String identifierType, String identifierValue, boolean resolvable
-  ) {
+	}
 
-  }
+	private JsonNode genRequestAttributes(DigitalSpecimenWrapper specimen) {
+		var attributes = mapper.createObjectNode()
+			.put(FdoProfileAttributes.NORMALISED_PRIMARY_SPECIMEN_OBJECT_ID.getAttribute(),
+					specimen.attributes().getOdsNormalisedPhysicalSpecimenID())
+			.put(SPECIMEN_HOST.getAttribute(), specimen.attributes().getOdsOrganisationID());
+		// Optional
+		addOptionalAttributes(specimen, attributes);
+		return attributes;
+	}
+
+	private void addOptionalAttributes(DigitalSpecimenWrapper specimen, ObjectNode attributes) {
+		if (specimen.attributes().getOdsOrganisationName() != null) {
+			attributes.put(SPECIMEN_HOST_NAME.getAttribute(), specimen.attributes().getOdsOrganisationName());
+		}
+		if (specimen.attributes().getOdsTopicOrigin() != null) {
+			attributes.put(TOPIC_ORIGIN.getAttribute(), specimen.attributes().getOdsTopicOrigin().value());
+		}
+		if (specimen.attributes().getOdsTopicDomain() != null) {
+			attributes.put(TOPIC_DOMAIN.getAttribute(), specimen.attributes().getOdsTopicDomain().value());
+		}
+		if (specimen.attributes().getOdsTopicDiscipline() != null) {
+			attributes.put(TOPIC_DISCIPLINE.getAttribute(), specimen.attributes().getOdsTopicDiscipline().value());
+		}
+		if (specimen.attributes().getOdsLivingOrPreserved() != null) {
+			attributes.put(LIVING_OR_PRESERVED.getAttribute(), specimen.attributes().getOdsLivingOrPreserved().value());
+		}
+		if (specimen.attributes().getOdsIsMarkedAsType() != null) {
+			attributes.put(MARKED_AS_TYPE.getAttribute(), specimen.attributes().getOdsIsMarkedAsType());
+		}
+		if (specimen.attributes().getOdsSpecimenName() != null) {
+			attributes.put(REFERENT_NAME.getAttribute(), specimen.attributes().getOdsSpecimenName());
+		}
+		else if (specimen.attributes().getOdsOrganisationName() != null) {
+			attributes.put(REFERENT_NAME.getAttribute(),
+					"Specimen from " + specimen.attributes().getOdsOrganisationName());
+		}
+		else {
+			attributes.put(REFERENT_NAME.getAttribute(),
+					"Specimen from " + specimen.attributes().getOdsOrganisationID());
+		}
+		if (specimen.attributes().getOdsHasIdentifiers() != null) {
+			for (var identifier : specimen.attributes().getOdsHasIdentifiers()) {
+				if ("dwc:catalogNumber".equals(identifier.getDctermsTitle())) {
+					attributes.put(CATALOG_NUMBER.getAttribute(), identifier.getDctermsIdentifier());
+				}
+			}
+		}
+		attributes.set("otherSpecimenIds", buildOtherSpecimenIdArray(specimen));
+	}
+
+	private ArrayNode buildOtherSpecimenIdArray(DigitalSpecimenWrapper specimen) {
+		var otherSpecimenIds = new HashSet<OtherSpecimenId>();
+		otherSpecimenIds
+			.add(new OtherSpecimenId("physical specimen identifier", specimen.attributes().getOdsPhysicalSpecimenID(),
+					specimen.attributes().getOdsPhysicalSpecimenIDType().equals(OdsPhysicalSpecimenIDType.RESOLVABLE)));
+		if (specimen.attributes().getOdsHasIdentifiers() != null) {
+			for (var id : specimen.attributes().getOdsHasIdentifiers()) {
+				otherSpecimenIds.add(new OtherSpecimenId(id.getDctermsTitle(), id.getDctermsIdentifier(),
+						id.getDctermsIdentifier().matches(URL_PATTERN)));
+			}
+		}
+		return mapper.convertValue(otherSpecimenIds, ArrayNode.class);
+	}
+
+	public boolean pidNeedsUpdateSpecimen(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+			DigitalSpecimenWrapper digitalSpecimenWrapper) {
+		var currentAttributes = currentDigitalSpecimenWrapper.attributes();
+		var attributes = digitalSpecimenWrapper.attributes();
+		return isEqualString(currentDigitalSpecimenWrapper.physicalSpecimenID(),
+				digitalSpecimenWrapper.physicalSpecimenID())
+				|| isEqualString(currentDigitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID(),
+						digitalSpecimenWrapper.attributes().getOdsNormalisedPhysicalSpecimenID())
+				|| isEqualString(currentAttributes.getOdsOrganisationID(), attributes.getOdsOrganisationID())
+				|| isEqualString(currentAttributes.getOdsOrganisationName(), attributes.getOdsOrganisationName())
+				|| (currentAttributes.getOdsTopicDiscipline() != null
+						&& !currentAttributes.getOdsTopicDiscipline().equals(attributes.getOdsTopicDiscipline()))
+				|| (currentAttributes.getOdsPhysicalSpecimenIDType() != null
+						&& !currentAttributes.getOdsPhysicalSpecimenIDType()
+							.equals(attributes.getOdsPhysicalSpecimenIDType()))
+				|| (currentAttributes.getOdsLivingOrPreserved() != null
+						&& isEqualString(currentAttributes.getOdsLivingOrPreserved().value(),
+								attributes.getOdsLivingOrPreserved().value()))
+				|| isEqualString(currentAttributes.getOdsSpecimenName(), attributes.getOdsSpecimenName())
+				|| (currentAttributes.getOdsIsMarkedAsType() != null
+						&& !currentAttributes.getOdsIsMarkedAsType().equals(attributes.getOdsIsMarkedAsType()));
+	}
+
+	public boolean pidNeedsUpdateMedia(DigitalMedia currentMediaObject, DigitalMedia mediaObject) {
+		return ((currentMediaObject.getDctermsRights() != null
+				&& !currentMediaObject.getDctermsRights().equals(mediaObject.getDctermsRights()))
+				|| (currentMediaObject.getDctermsType() != null
+						&& !currentMediaObject.getDctermsType().equals(mediaObject.getDctermsType()))
+				|| (currentMediaObject.getOdsOrganisationID() != null
+						&& !currentMediaObject.getOdsOrganisationID().equals(mediaObject.getOdsOrganisationID())));
+	}
+
+	private record OtherSpecimenId(String identifierType, String identifierValue, boolean resolvable) {
+
+	}
 
 }

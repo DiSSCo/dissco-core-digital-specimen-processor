@@ -40,308 +40,275 @@ import tools.jackson.databind.node.ObjectNode;
 @RequiredArgsConstructor
 public class AnnotationPublisherService {
 
-  public static final String NEW_INFORMATION_MESSAGE = "Received new information from Source System with id: ";
-  public static final String OP = "op";
-  public static final String FROM = "from";
-  private static final String VALUE = "value";
-  private static final String TYPE = "@type";
-  private final Pattern numericPattern = Pattern.compile("\\d+");
+	public static final String NEW_INFORMATION_MESSAGE = "Received new information from Source System with id: ";
 
-  private final RabbitMqPublisherService publisherService;
-  private final ApplicationProperties applicationProperties;
-  private final JsonMapper mapper;
+	public static final String OP = "op";
 
-  public void publishAnnotationNewSpecimen(Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    digitalSpecimenRecords.forEach(
-        specimenRecord -> {
-          var annotationProcessingRequest = mapNewSpecimenToAnnotation(specimenRecord);
-          publisherService.publishAcceptedAnnotation(
-              new AutoAcceptedAnnotation(
-                  createMachineAgent(applicationProperties.getName(),
-                      applicationProperties.getPid(), PROCESSING_SERVICE, DOI,
-                      SCHEMA_SOFTWARE_APPLICATION),
-                  annotationProcessingRequest));
-        }
-    );
-  }
+	public static final String FROM = "from";
 
-  public void publishAnnotationNewMedia(Set<DigitalMediaRecord> digitalMediaRecords) {
-    digitalMediaRecords.forEach(mediaRecord -> {
-      var annotationProcessingRequest = mapNewMediaToAnnotation(mediaRecord);
-      publisherService.publishAcceptedAnnotation(
-          new AutoAcceptedAnnotation(
-              createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
-                  PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
-              annotationProcessingRequest));
-    });
-  }
+	private static final String VALUE = "value";
 
-  private AnnotationProcessingRequest mapNewSpecimenToAnnotation(
-      DigitalSpecimenRecord digitalSpecimenRecord) {
-    var sourceSystemID = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsSourceSystemID();
-    var sourceSystemName = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsSourceSystemName();
-    return new AnnotationProcessingRequest()
-        .withOaMotivation(OaMotivation.ODS_ADDING)
-        .withOaMotivatedBy("New information received from Source System with id: "
-            + sourceSystemID)
-        .withOaHasBody(buildBody(mapper.writeValueAsString(
-            DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord)), sourceSystemID))
-        .withOaHasTarget(
-            buildTarget(digitalSpecimenRecord.id(), FdoType.SPECIMEN, buildNewSelector()))
-        .withDctermsCreated(Date.from(Instant.now()))
-        .withDctermsCreator(
-            createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
-                SCHEMA_SOFTWARE_APPLICATION));
-  }
+	private static final String TYPE = "@type";
 
-  private AnnotationProcessingRequest mapNewMediaToAnnotation(
-      DigitalMediaRecord digitalMediaRecord) {
-    var sourceSystemID = digitalMediaRecord.attributes()
-        .getOdsSourceSystemID();
-    var sourceSystemName = digitalMediaRecord.attributes()
-        .getOdsSourceSystemName();
-    return new AnnotationProcessingRequest()
-        .withOaMotivation(OaMotivation.ODS_ADDING)
-        .withOaMotivatedBy("New information received from Source System with id: "
-            + sourceSystemID)
-        .withOaHasBody(
-            buildBody(mapper.writeValueAsString(digitalMediaRecord.attributes()), sourceSystemID))
-        .withOaHasTarget(buildTarget(digitalMediaRecord.id(), FdoType.MEDIA, buildNewSelector()))
-        .withDctermsCreated(Date.from(Instant.now()))
-        .withDctermsCreator(
-            createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
-                SCHEMA_SOFTWARE_APPLICATION));
-  }
+	private final Pattern numericPattern = Pattern.compile("\\d+");
 
-  private AnnotationBody buildBody(String value, String sourceSystemID) {
-    return new AnnotationBody()
-        .withType("oa:TextualBody")
-        .withOaValue(List.of(value))
-        .withDctermsReferences(sourceSystemID);
-  }
+	private final RabbitMqPublisherService publisherService;
 
-  private AnnotationTarget buildTarget(String id, FdoType type,
-      OaHasSelector selector) {
-    var targetId = DOI_PROXY + id;
-    return new AnnotationTarget()
-        .withId(targetId)
-        .withDctermsIdentifier(targetId)
-        .withType(type.getType())
-        .withOdsFdoType(type.getPid())
-        .withOaHasSelector(selector);
-  }
+	private final ApplicationProperties applicationProperties;
 
-  public void publishAnnotationUpdatedSpecimen(
-      Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords) {
-    updatedDigitalSpecimenRecords.stream()
-        .map(updatedDigitalSpecimenRecord -> convertJsonPatchToAnnotations(
-            updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
-            updatedDigitalSpecimenRecord.jsonPatch()))
-        .flatMap(Collection::stream)
-        .forEach(annotationRequest -> publisherService.publishAcceptedAnnotation(
-            new AutoAcceptedAnnotation(
-                createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
-                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
-                annotationRequest)));
-  }
+	private final JsonMapper mapper;
 
-  public void publishAnnotationUpdatedMedia(
-      Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords) {
-    updatedDigitalMediaRecords.stream()
-        .map(updatedDigitalMediaRecord -> convertJsonPatchToAnnotations(
-            updatedDigitalMediaRecord.digitalMediaRecord(),
-            updatedDigitalMediaRecord.jsonPatch()))
-        .flatMap(Collection::stream)
-        .forEach(annotationRequest -> publisherService.publishAcceptedAnnotation(
-            new AutoAcceptedAnnotation(
-                createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
-                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
-                annotationRequest)));
-  }
+	public void publishAnnotationNewSpecimen(Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
+		digitalSpecimenRecords.forEach(specimenRecord -> {
+			var annotationProcessingRequest = mapNewSpecimenToAnnotation(specimenRecord);
+			publisherService.publishAcceptedAnnotation(
+					new AutoAcceptedAnnotation(
+							createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+									PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
+							annotationProcessingRequest));
+		});
+	}
 
-  private List<AnnotationProcessingRequest> convertJsonPatchToAnnotations(
-      DigitalSpecimenRecord digitalSpecimenRecord, JsonNode jsonNode) {
-    var annotations = new ArrayList<AnnotationProcessingRequest>();
-    var sourceSystemID = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsSourceSystemID();
-    var sourceSystemName = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
-        .getOdsSourceSystemName();
-    var recordNode = (ObjectNode) mapper.convertValue(
-        digitalSpecimenRecord.digitalSpecimenWrapper().attributes(), JsonNode.class);
-    recordNode.put("id", digitalSpecimenRecord.id());
-    for (JsonNode action : jsonNode) {
-      var annotationProcessingRequest = new AnnotationProcessingRequest()
-          .withOaHasTarget(buildTarget(digitalSpecimenRecord.id(), FdoType.SPECIMEN,
-              buildSelector(action.get("path").asString())))
-          .withDctermsCreated(Date.from(Instant.now()))
-          .withDctermsCreator(
-              createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
-                  SCHEMA_SOFTWARE_APPLICATION));
-      processOperation(recordNode, action, annotationProcessingRequest, sourceSystemID,
-          sourceSystemName, annotations);
-    }
-    return annotations;
-  }
+	public void publishAnnotationNewMedia(Set<DigitalMediaRecord> digitalMediaRecords) {
+		digitalMediaRecords.forEach(mediaRecord -> {
+			var annotationProcessingRequest = mapNewMediaToAnnotation(mediaRecord);
+			publisherService.publishAcceptedAnnotation(
+					new AutoAcceptedAnnotation(
+							createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+									PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
+							annotationProcessingRequest));
+		});
+	}
 
+	private AnnotationProcessingRequest mapNewSpecimenToAnnotation(DigitalSpecimenRecord digitalSpecimenRecord) {
+		var sourceSystemID = digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID();
+		var sourceSystemName = digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemName();
+		return new AnnotationProcessingRequest().withOaMotivation(OaMotivation.ODS_ADDING)
+			.withOaMotivatedBy("New information received from Source System with id: " + sourceSystemID)
+			.withOaHasBody(buildBody(
+					mapper.writeValueAsString(DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord)),
+					sourceSystemID))
+			.withOaHasTarget(buildTarget(digitalSpecimenRecord.id(), FdoType.SPECIMEN, buildNewSelector()))
+			.withDctermsCreated(Date.from(Instant.now()))
+			.withDctermsCreator(createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+					SCHEMA_SOFTWARE_APPLICATION));
+	}
 
-  private List<AnnotationProcessingRequest> convertJsonPatchToAnnotations(
-      DigitalMediaRecord digitalMediaRecord, JsonNode jsonNode) {
-    var annotations = new ArrayList<AnnotationProcessingRequest>();
-    var sourceSystemID = digitalMediaRecord.attributes()
-        .getOdsSourceSystemID();
-    var sourceSystemName = digitalMediaRecord.attributes()
-        .getOdsSourceSystemName();
-    var recordNode = mapper.convertValue(digitalMediaRecord.attributes(), JsonNode.class);
-    for (JsonNode action : jsonNode) {
-      var annotationProcessingRequest = new AnnotationProcessingRequest()
-          .withOaHasTarget(buildTarget(digitalMediaRecord.id(), FdoType.MEDIA,
-              buildSelector(action.get("path").asString())))
-          .withDctermsCreated(Date.from(Instant.now()))
-          .withDctermsCreator(
-              createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
-                  SCHEMA_SOFTWARE_APPLICATION));
-      processOperation(recordNode, action, annotationProcessingRequest, sourceSystemID,
-          sourceSystemName, annotations);
-    }
-    return annotations;
-  }
+	private AnnotationProcessingRequest mapNewMediaToAnnotation(DigitalMediaRecord digitalMediaRecord) {
+		var sourceSystemID = digitalMediaRecord.attributes().getOdsSourceSystemID();
+		var sourceSystemName = digitalMediaRecord.attributes().getOdsSourceSystemName();
+		return new AnnotationProcessingRequest().withOaMotivation(OaMotivation.ODS_ADDING)
+			.withOaMotivatedBy("New information received from Source System with id: " + sourceSystemID)
+			.withOaHasBody(buildBody(mapper.writeValueAsString(digitalMediaRecord.attributes()), sourceSystemID))
+			.withOaHasTarget(buildTarget(digitalMediaRecord.id(), FdoType.MEDIA, buildNewSelector()))
+			.withDctermsCreated(Date.from(Instant.now()))
+			.withDctermsCreator(createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+					SCHEMA_SOFTWARE_APPLICATION));
+	}
 
-  private void processOperation(JsonNode recordNode, JsonNode action,
-      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID,
-      String sourceSystemName,
-      ArrayList<AnnotationProcessingRequest> annotations) {
-    if (action.get(OP).asString().equals("replace")) {
-      annotations.add(addReplaceOperation(action, annotationProcessingRequest, sourceSystemID));
-    } else if (action.get(OP).asString().equals("add")) {
-      annotations.add(addAddOperation(action, annotationProcessingRequest, sourceSystemID));
-    } else if (action.get(OP).asString().equals("remove")) {
-      annotations.add(addRemoveOperation(annotationProcessingRequest, sourceSystemID));
-    } else if (action.get(OP).asString().equals("copy")) {
-      var annotation = addCopyOperation(recordNode, action, annotationProcessingRequest,
-          sourceSystemID);
-      if (annotation != null) {
-        annotations.add(annotation);
-      }
-    } else if (action.get(OP).asString().equals("move")) {
-      annotations.addAll(
-          addMoveOperation(recordNode, action, annotationProcessingRequest,
-              sourceSystemID,
-              sourceSystemName, recordNode.get("id").asString()));
-    }
-  }
+	private AnnotationBody buildBody(String value, String sourceSystemID) {
+		return new AnnotationBody().withType("oa:TextualBody")
+			.withOaValue(List.of(value))
+			.withDctermsReferences(sourceSystemID);
+	}
 
-  private List<AnnotationProcessingRequest> addMoveOperation(
-      JsonNode recordNode, JsonNode action,
-      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID,
-      String sourceSystemName, String id) {
-    var valueNode = recordNode.at(action.get(FROM).asString());
-    annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
-    annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
-    annotationProcessingRequest.setOaHasBody(
-        buildBody(extractValueString(valueNode), sourceSystemID));
-    var additionalDeleteAnnotation = new AnnotationProcessingRequest()
-        .withOaHasTarget(buildTarget(id, FdoType.SPECIMEN,
-            buildSelector(action.get(FROM).asString())))
-        .withDctermsCreated(Date.from(Instant.now()))
-        .withDctermsCreator(
-            createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
-                SCHEMA_SOFTWARE_APPLICATION))
-        .withOaMotivation(OaMotivation.ODS_DELETING)
-        .withOaMotivatedBy(
-            "Received delete information from Source System with id: " + sourceSystemID);
-    return List.of(additionalDeleteAnnotation, annotationProcessingRequest);
-  }
+	private AnnotationTarget buildTarget(String id, FdoType type, OaHasSelector selector) {
+		var targetId = DOI_PROXY + id;
+		return new AnnotationTarget().withId(targetId)
+			.withDctermsIdentifier(targetId)
+			.withType(type.getType())
+			.withOdsFdoType(type.getPid())
+			.withOaHasSelector(selector);
+	}
 
-  private AnnotationProcessingRequest addCopyOperation(JsonNode recordNode,
-      JsonNode action, AnnotationProcessingRequest annotationProcessingRequest,
-      String sourceSystemID) {
-    var valueNode = recordNode.at(action.get(FROM).asString());
-    if (!valueNode.isMissingNode()) {
-      annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
-      annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
-      annotationProcessingRequest.setOaHasBody(
-          buildBody(extractValueString(valueNode), sourceSystemID));
-      return annotationProcessingRequest;
-    } else {
-      log.warn("Invalid copy operation in json patch: {} Ignoring this annotation", action);
-      return null;
-    }
-  }
+	public void publishAnnotationUpdatedSpecimen(Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords) {
+		updatedDigitalSpecimenRecords.stream()
+			.map(updatedDigitalSpecimenRecord -> convertJsonPatchToAnnotations(
+					updatedDigitalSpecimenRecord.digitalSpecimenRecord(), updatedDigitalSpecimenRecord.jsonPatch()))
+			.flatMap(Collection::stream)
+			.forEach(annotationRequest -> publisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
+					createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+							PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
+					annotationRequest)));
+	}
 
-  private AnnotationProcessingRequest addRemoveOperation(
-      AnnotationProcessingRequest annotationProcessingRequest,
-      String sourceSystemID) {
-    annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_DELETING);
-    annotationProcessingRequest.setOaMotivatedBy(
-        "Received delete information from Source System with id: " + sourceSystemID);
-    return annotationProcessingRequest;
-  }
+	public void publishAnnotationUpdatedMedia(Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords) {
+		updatedDigitalMediaRecords.stream()
+			.map(updatedDigitalMediaRecord -> convertJsonPatchToAnnotations(
+					updatedDigitalMediaRecord.digitalMediaRecord(), updatedDigitalMediaRecord.jsonPatch()))
+			.flatMap(Collection::stream)
+			.forEach(annotationRequest -> publisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
+					createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+							PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
+					annotationRequest)));
+	}
 
-  private AnnotationProcessingRequest addAddOperation(JsonNode action,
-      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID) {
-    annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
-    annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
-    annotationProcessingRequest.setOaHasBody(
-        buildBody(extractValueString(action.get(VALUE)), sourceSystemID));
-    return annotationProcessingRequest;
-  }
+	private List<AnnotationProcessingRequest> convertJsonPatchToAnnotations(DigitalSpecimenRecord digitalSpecimenRecord,
+			JsonNode jsonNode) {
+		var annotations = new ArrayList<AnnotationProcessingRequest>();
+		var sourceSystemID = digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemID();
+		var sourceSystemName = digitalSpecimenRecord.digitalSpecimenWrapper().attributes().getOdsSourceSystemName();
+		var recordNode = (ObjectNode) mapper.convertValue(digitalSpecimenRecord.digitalSpecimenWrapper().attributes(),
+				JsonNode.class);
+		recordNode.put("id", digitalSpecimenRecord.id());
+		for (JsonNode action : jsonNode) {
+			var annotationProcessingRequest = new AnnotationProcessingRequest()
+				.withOaHasTarget(buildTarget(digitalSpecimenRecord.id(), FdoType.SPECIMEN,
+						buildSelector(action.get("path").asString())))
+				.withDctermsCreated(Date.from(Instant.now()))
+				.withDctermsCreator(createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+						SCHEMA_SOFTWARE_APPLICATION));
+			processOperation(recordNode, action, annotationProcessingRequest, sourceSystemID, sourceSystemName,
+					annotations);
+		}
+		return annotations;
+	}
 
-  private AnnotationProcessingRequest addReplaceOperation(JsonNode action,
-      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID) {
-    annotationProcessingRequest.setOaMotivation(OaMotivation.OA_EDITING);
-    annotationProcessingRequest.setOaMotivatedBy(
-        "Received update information from Source System with id: " + sourceSystemID);
-    annotationProcessingRequest.setOaHasBody(
-        buildBody(extractValueString(action.get(VALUE)), sourceSystemID));
-    return annotationProcessingRequest;
-  }
+	private List<AnnotationProcessingRequest> convertJsonPatchToAnnotations(DigitalMediaRecord digitalMediaRecord,
+			JsonNode jsonNode) {
+		var annotations = new ArrayList<AnnotationProcessingRequest>();
+		var sourceSystemID = digitalMediaRecord.attributes().getOdsSourceSystemID();
+		var sourceSystemName = digitalMediaRecord.attributes().getOdsSourceSystemName();
+		var recordNode = mapper.convertValue(digitalMediaRecord.attributes(), JsonNode.class);
+		for (JsonNode action : jsonNode) {
+			var annotationProcessingRequest = new AnnotationProcessingRequest()
+				.withOaHasTarget(buildTarget(digitalMediaRecord.id(), FdoType.MEDIA,
+						buildSelector(action.get("path").asString())))
+				.withDctermsCreated(Date.from(Instant.now()))
+				.withDctermsCreator(createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+						SCHEMA_SOFTWARE_APPLICATION));
+			processOperation(recordNode, action, annotationProcessingRequest, sourceSystemID, sourceSystemName,
+					annotations);
+		}
+		return annotations;
+	}
 
-  private String extractValueString(JsonNode action) {
-    if (action.isString()) {
-      return action.asString();
-    } else {
-      return mapper.writeValueAsString(action);
-    }
-  }
+	private void processOperation(JsonNode recordNode, JsonNode action,
+			AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID, String sourceSystemName,
+			ArrayList<AnnotationProcessingRequest> annotations) {
+		if (action.get(OP).asString().equals("replace")) {
+			annotations.add(addReplaceOperation(action, annotationProcessingRequest, sourceSystemID));
+		}
+		else if (action.get(OP).asString().equals("add")) {
+			annotations.add(addAddOperation(action, annotationProcessingRequest, sourceSystemID));
+		}
+		else if (action.get(OP).asString().equals("remove")) {
+			annotations.add(addRemoveOperation(annotationProcessingRequest, sourceSystemID));
+		}
+		else if (action.get(OP).asString().equals("copy")) {
+			var annotation = addCopyOperation(recordNode, action, annotationProcessingRequest, sourceSystemID);
+			if (annotation != null) {
+				annotations.add(annotation);
+			}
+		}
+		else if (action.get(OP).asString().equals("move")) {
+			annotations.addAll(addMoveOperation(recordNode, action, annotationProcessingRequest, sourceSystemID,
+					sourceSystemName, recordNode.get("id").asString()));
+		}
+	}
 
-  private OaHasSelector buildSelector(String action) {
-    var path = convertJsonPointToJsonPath(action);
-    if (action.endsWith("/-")) {
-      return new OaHasSelector()
-          .withAdditionalProperty(TYPE, "ods:ClassSelector")
-          .withAdditionalProperty("ods:class", path);
-    } else {
-      return new OaHasSelector()
-          .withAdditionalProperty(TYPE, "ods:TermSelector")
-          .withAdditionalProperty("ods:term", path);
-    }
-  }
+	private List<AnnotationProcessingRequest> addMoveOperation(JsonNode recordNode, JsonNode action,
+			AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID, String sourceSystemName,
+			String id) {
+		var valueNode = recordNode.at(action.get(FROM).asString());
+		annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
+		annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
+		annotationProcessingRequest.setOaHasBody(buildBody(extractValueString(valueNode), sourceSystemID));
+		var additionalDeleteAnnotation = new AnnotationProcessingRequest()
+			.withOaHasTarget(buildTarget(id, FdoType.SPECIMEN, buildSelector(action.get(FROM).asString())))
+			.withDctermsCreated(Date.from(Instant.now()))
+			.withDctermsCreator(createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
+					SCHEMA_SOFTWARE_APPLICATION))
+			.withOaMotivation(OaMotivation.ODS_DELETING)
+			.withOaMotivatedBy("Received delete information from Source System with id: " + sourceSystemID);
+		return List.of(additionalDeleteAnnotation, annotationProcessingRequest);
+	}
 
-  private static OaHasSelector buildNewSelector() {
-    return new OaHasSelector()
-        .withAdditionalProperty(TYPE, "ods:ClassSelector")
-        .withAdditionalProperty("ods:class", "$");
-  }
+	private AnnotationProcessingRequest addCopyOperation(JsonNode recordNode, JsonNode action,
+			AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID) {
+		var valueNode = recordNode.at(action.get(FROM).asString());
+		if (!valueNode.isMissingNode()) {
+			annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
+			annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
+			annotationProcessingRequest.setOaHasBody(buildBody(extractValueString(valueNode), sourceSystemID));
+			return annotationProcessingRequest;
+		}
+		else {
+			log.warn("Invalid copy operation in json patch: {} Ignoring this annotation", action);
+			return null;
+		}
+	}
 
-  public String convertJsonPointToJsonPath(String jsonPointer) {
-    String[] parts = jsonPointer.split("/");
-    StringBuilder jsonPath = new StringBuilder("$");
+	private AnnotationProcessingRequest addRemoveOperation(AnnotationProcessingRequest annotationProcessingRequest,
+			String sourceSystemID) {
+		annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_DELETING);
+		annotationProcessingRequest
+			.setOaMotivatedBy("Received delete information from Source System with id: " + sourceSystemID);
+		return annotationProcessingRequest;
+	}
 
-    // Start from 1 to ignore the first root element
-    for (int i = 1; i < parts.length; i++) {
-      String part = parts[i];
-      if (isNumeric(part)) {
-        jsonPath.append("[").append(part).append("]");
-      } else if (!part.equals("-")) {
-        jsonPath.append("['").append(part).append("']");
-      }
-    }
-    return jsonPath.toString();
-  }
+	private AnnotationProcessingRequest addAddOperation(JsonNode action,
+			AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID) {
+		annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
+		annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
+		annotationProcessingRequest.setOaHasBody(buildBody(extractValueString(action.get(VALUE)), sourceSystemID));
+		return annotationProcessingRequest;
+	}
 
-  private boolean isNumeric(String str) {
-    return numericPattern.matcher(str).matches();
-  }
+	private AnnotationProcessingRequest addReplaceOperation(JsonNode action,
+			AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID) {
+		annotationProcessingRequest.setOaMotivation(OaMotivation.OA_EDITING);
+		annotationProcessingRequest
+			.setOaMotivatedBy("Received update information from Source System with id: " + sourceSystemID);
+		annotationProcessingRequest.setOaHasBody(buildBody(extractValueString(action.get(VALUE)), sourceSystemID));
+		return annotationProcessingRequest;
+	}
+
+	private String extractValueString(JsonNode action) {
+		if (action.isString()) {
+			return action.asString();
+		}
+		else {
+			return mapper.writeValueAsString(action);
+		}
+	}
+
+	private OaHasSelector buildSelector(String action) {
+		var path = convertJsonPointToJsonPath(action);
+		if (action.endsWith("/-")) {
+			return new OaHasSelector().withAdditionalProperty(TYPE, "ods:ClassSelector")
+				.withAdditionalProperty("ods:class", path);
+		}
+		else {
+			return new OaHasSelector().withAdditionalProperty(TYPE, "ods:TermSelector")
+				.withAdditionalProperty("ods:term", path);
+		}
+	}
+
+	private static OaHasSelector buildNewSelector() {
+		return new OaHasSelector().withAdditionalProperty(TYPE, "ods:ClassSelector")
+			.withAdditionalProperty("ods:class", "$");
+	}
+
+	public String convertJsonPointToJsonPath(String jsonPointer) {
+		String[] parts = jsonPointer.split("/");
+		StringBuilder jsonPath = new StringBuilder("$");
+
+		// Start from 1 to ignore the first root element
+		for (int i = 1; i < parts.length; i++) {
+			String part = parts[i];
+			if (isNumeric(part)) {
+				jsonPath.append("[").append(part).append("]");
+			}
+			else if (!part.equals("-")) {
+				jsonPath.append("['").append(part).append("']");
+			}
+		}
+		return jsonPath.toString();
+	}
+
+	private boolean isNumeric(String str) {
+		return numericPattern.matcher(str).matches();
+	}
+
 }

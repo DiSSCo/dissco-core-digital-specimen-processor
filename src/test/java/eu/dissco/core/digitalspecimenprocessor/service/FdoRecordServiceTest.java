@@ -75,414 +75,384 @@ import tools.jackson.databind.node.ObjectNode;
 @ExtendWith(MockitoExtension.class)
 class FdoRecordServiceTest {
 
-  private static final String REPLACEMENT_ATTRIBUTE = "this is different";
-  private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
-  private MockedStatic<Instant> mockedStatic;
-  private FdoRecordService fdoRecordService;
-  private MockedStatic<Clock> mockedClock;
+	private static final String REPLACEMENT_ATTRIBUTE = "this is different";
 
-  private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenDigitalSpecimenAttributesMinimal() {
-    return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
-        .withOdsOrganisationID(ORGANISATION_ID)
-        .withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)
-        .withOdsNormalisedPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID)
-        .withOdsPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID);
-  }
+	private final Instant instant = Instant.now(Clock.fixed(CREATED, ZoneOffset.UTC));
 
-  private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
-    var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false);
-    return Stream.of(Arguments.of(attributes.withOdsOrganisationID(REPLACEMENT_ATTRIBUTE)),
-        Arguments.of(attributes.withOdsOrganisationName(REPLACEMENT_ATTRIBUTE)),
-        Arguments.of(attributes.withOdsSpecimenName(REPLACEMENT_ATTRIBUTE)),
-        Arguments.of(attributes.withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY)),
-        Arguments.of(attributes.withOdsLivingOrPreserved(OdsLivingOrPreserved.LIVING)),
-        Arguments.of(attributes.withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)),
-        Arguments.of(attributes.withOdsIsMarkedAsType(false)));
-  }
+	private MockedStatic<Instant> mockedStatic;
 
-  private static Stream<Arguments> digitalMediaNeedsToBeChanged() {
-    var currentMedia = givenDigitalMedia(MEDIA_URL, false);
-    return Stream.of(
-        Arguments.of(currentMedia.withDctermsRights("Rights")),
-        Arguments.of(currentMedia.withDctermsType(DctermsType.COLLECTION)),
-        Arguments.of(currentMedia.withOdsOrganisationID("OtherOrgId"))
-    );
+	private FdoRecordService fdoRecordService;
 
-  }
+	private MockedStatic<Clock> mockedClock;
 
-  static Stream<Arguments> genLicense() {
-    return Stream.of(
-        Arguments.of(LICENSE_URL.getAttribute(), "https://spdx.org/licenses/Apache-2.0.html"),
-        Arguments.of(LICENSE_NAME.getAttribute(), "Apache 2.0"));
-  }
+	private static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenDigitalSpecimenAttributesMinimal() {
+		return new eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen()
+			.withOdsOrganisationID(ORGANISATION_ID)
+			.withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)
+			.withOdsNormalisedPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID)
+			.withOdsPhysicalSpecimenID(PHYSICAL_SPECIMEN_ID);
+	}
 
-  static Stream<Arguments> genRightsHolder() {
-    return Stream.of(
-        Arguments.of(List.of(
-                createMachineAgent("Naturalis Biodiversity Center", "https://ror.org/0566bfb96",
-                    RIGHTS_OWNER, null,
-                    SCHEMA_ORGANIZATION)), "Naturalis Biodiversity Center",
-            "https://ror.org/0566bfb96"),
-        Arguments.of(List.of(
-            createMachineAgent("Naturalis Biodiversity Center", null, RIGHTS_OWNER, null,
-                SCHEMA_ORGANIZATION)), "Naturalis Biodiversity Center", null),
-        Arguments.of(List.of(
-            createMachineAgent(null, "https://ror.org/0566bfb96", RIGHTS_OWNER, null,
-                SCHEMA_ORGANIZATION)), null, "https://ror.org/0566bfb96"),
-        Arguments.of(List.of(
-                createMachineAgent("Naturalis Biodiversity Center", "https://ror.org/0566bfb96",
-                    RIGHTS_OWNER, null,
-                    SCHEMA_ORGANIZATION),
-                createMachineAgent("Natural History Museum Rotterdam", "https://ror.org/01s8f2180",
-                    RIGHTS_OWNER, null, SCHEMA_ORGANIZATION)),
-            "Naturalis Biodiversity Center | Natural History Museum Rotterdam",
-            "https://ror.org/0566bfb96 | https://ror.org/01s8f2180"));
-  }
+	private static Stream<Arguments> digitalSpecimensNeedToBeChanged() {
+		var attributes = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, false);
+		return Stream.of(Arguments.of(attributes.withOdsOrganisationID(REPLACEMENT_ATTRIBUTE)),
+				Arguments.of(attributes.withOdsOrganisationName(REPLACEMENT_ATTRIBUTE)),
+				Arguments.of(attributes.withOdsSpecimenName(REPLACEMENT_ATTRIBUTE)),
+				Arguments.of(attributes.withOdsTopicDiscipline(OdsTopicDiscipline.ECOLOGY)),
+				Arguments.of(attributes.withOdsLivingOrPreserved(OdsLivingOrPreserved.LIVING)),
+				Arguments.of(attributes.withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL)),
+				Arguments.of(attributes.withOdsIsMarkedAsType(false)));
+	}
 
-  @BeforeEach
-  void setup() {
-    fdoRecordService = new FdoRecordService(MAPPER, new FdoProperties());
-    Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
-    mockedStatic = mockStatic(Instant.class);
-    mockedStatic.when(Instant::now).thenReturn(instant);
-    mockedClock = mockStatic(Clock.class);
-    mockedClock.when(Clock::systemUTC).thenReturn(clock);
-  }
+	private static Stream<Arguments> digitalMediaNeedsToBeChanged() {
+		var currentMedia = givenDigitalMedia(MEDIA_URL, false);
+		return Stream.of(Arguments.of(currentMedia.withDctermsRights("Rights")),
+				Arguments.of(currentMedia.withDctermsType(DctermsType.COLLECTION)),
+				Arguments.of(currentMedia.withOdsOrganisationID("OtherOrgId")));
 
-  @AfterEach
-  void destroy() {
-    mockedStatic.close();
-    mockedClock.close();
-  }
+	}
 
-  @Test
-  void testGenRequestMedia() {
-    // Given
-    var expected = List.of(givenHandleMediaRequest());
+	static Stream<Arguments> genLicense() {
+		return Stream.of(Arguments.of(LICENSE_URL.getAttribute(), "https://spdx.org/licenses/Apache-2.0.html"),
+				Arguments.of(LICENSE_NAME.getAttribute(), "Apache 2.0"));
+	}
 
-    // When
-    var result = fdoRecordService.buildPostRequestMedia(List.of(givenDigitalMediaEvent()));
+	static Stream<Arguments> genRightsHolder() {
+		return Stream.of(
+				Arguments.of(
+						List.of(createMachineAgent("Naturalis Biodiversity Center", "https://ror.org/0566bfb96",
+								RIGHTS_OWNER, null, SCHEMA_ORGANIZATION)),
+						"Naturalis Biodiversity Center", "https://ror.org/0566bfb96"),
+				Arguments.of(List.of(createMachineAgent("Naturalis Biodiversity Center", null, RIGHTS_OWNER, null,
+						SCHEMA_ORGANIZATION)), "Naturalis Biodiversity Center", null),
+				Arguments.of(List
+					.of(createMachineAgent(null, "https://ror.org/0566bfb96", RIGHTS_OWNER, null, SCHEMA_ORGANIZATION)),
+						null, "https://ror.org/0566bfb96"),
+				Arguments.of(
+						List.of(createMachineAgent("Naturalis Biodiversity Center", "https://ror.org/0566bfb96",
+								RIGHTS_OWNER, null, SCHEMA_ORGANIZATION),
+								createMachineAgent("Natural History Museum Rotterdam", "https://ror.org/01s8f2180",
+										RIGHTS_OWNER, null, SCHEMA_ORGANIZATION)),
+						"Naturalis Biodiversity Center | Natural History Museum Rotterdam",
+						"https://ror.org/0566bfb96 | https://ror.org/01s8f2180"));
+	}
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+	@BeforeEach
+	void setup() {
+		fdoRecordService = new FdoRecordService(MAPPER, new FdoProperties());
+		Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
+		mockedStatic = mockStatic(Instant.class);
+		mockedStatic.when(Instant::now).thenReturn(instant);
+		mockedClock = mockStatic(Clock.class);
+		mockedClock.when(Clock::systemUTC).thenReturn(clock);
+	}
 
-  @ParameterizedTest
-  @MethodSource("genLicense")
-  void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
-    // Given
-    var media = new DigitalMediaEvent(
-        Set.of("image-metadata"),
-        new DigitalMediaWrapper(
-            "StillImage",
-            new DigitalMedia()
-                .withAcAccessURI(MEDIA_URL)
-                .withOdsOrganisationID(ORGANISATION_ID)
-                .withDctermsRights(fieldValue),
-            MAPPER.createObjectNode()
-        ),
-        false,
-        true);
-    var expected = List.of(MAPPER.createObjectNode()
-        .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE_MEDIA)
-            .set("attributes", ((ObjectNode) givenHandleMediaRequestAttributes())
-                .put(licenseField, fieldValue))));
+	@AfterEach
+	void destroy() {
+		mockedStatic.close();
+		mockedClock.close();
+	}
 
-    // When
-    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
+	@Test
+	void testGenRequestMedia() {
+		// Given
+		var expected = List.of(givenHandleMediaRequest());
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// When
+		var result = fdoRecordService.buildPostRequestMedia(List.of(givenDigitalMediaEvent()));
 
-  @ParameterizedTest
-  @MethodSource("genRightsHolder")
-  void testGenRequestLicenseAndRightsHolder(List<Agent> rightHolders, String expectedName,
-      String expectedId) {
-    // Given
-    var media = new DigitalMediaEvent(
-        Set.of("image-metadata"),
-        new DigitalMediaWrapper(
-            "StillImage",
-            new DigitalMedia()
-                .withAcAccessURI(MEDIA_URL)
-                .withOdsOrganisationID(ORGANISATION_ID)
-                .withOdsHasAgents(rightHolders),
-            MAPPER.createObjectNode()
-        ),
-        false,
-        true);
-    var attributes = (ObjectNode) givenHandleMediaRequestAttributes();
-    if (expectedName != null) {
-      attributes.put(RIGHTS_HOLDER.getAttribute(), expectedName);
-    }
-    if (expectedId != null) {
-      attributes.put(RIGHTS_HOLDER_PID.getAttribute(), expectedId);
-    }
-    var expected = List.of(MAPPER.createObjectNode()
-        .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE_MEDIA)
-            .set("attributes", attributes)));
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-    // When
-    var result = fdoRecordService.buildPostRequestMedia(List.of(media));
+	@ParameterizedTest
+	@MethodSource("genLicense")
+	void testGenRequestLicenseAndRightsHolder(String licenseField, String fieldValue) {
+		// Given
+		var media = new DigitalMediaEvent(Set.of("image-metadata"),
+				new DigitalMediaWrapper("StillImage",
+						new DigitalMedia().withAcAccessURI(MEDIA_URL)
+							.withOdsOrganisationID(ORGANISATION_ID)
+							.withDctermsRights(fieldValue),
+						MAPPER.createObjectNode()),
+				false, true);
+		var expected = List.of(MAPPER.createObjectNode()
+			.set("data", MAPPER.createObjectNode()
+				.put("type", TYPE_MEDIA)
+				.set("attributes", ((ObjectNode) givenHandleMediaRequestAttributes()).put(licenseField, fieldValue))));
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// When
+		var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
-  @Test
-  void testGenRequestMinimal()  {
-    // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
-        givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
-    var expected = new ArrayList<>(
-        List.of(givenHandleRequestMin()));
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-    // When
-    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
+	@ParameterizedTest
+	@MethodSource("genRightsHolder")
+	void testGenRequestLicenseAndRightsHolder(List<Agent> rightHolders, String expectedName, String expectedId) {
+		// Given
+		var media = new DigitalMediaEvent(Set.of("image-metadata"),
+				new DigitalMediaWrapper("StillImage",
+						new DigitalMedia().withAcAccessURI(MEDIA_URL)
+							.withOdsOrganisationID(ORGANISATION_ID)
+							.withOdsHasAgents(rightHolders),
+						MAPPER.createObjectNode()),
+				false, true);
+		var attributes = (ObjectNode) givenHandleMediaRequestAttributes();
+		if (expectedName != null) {
+			attributes.put(RIGHTS_HOLDER.getAttribute(), expectedName);
+		}
+		if (expectedId != null) {
+			attributes.put(RIGHTS_HOLDER_PID.getAttribute(), expectedId);
+		}
+		var expected = List.of(MAPPER.createObjectNode()
+			.set("data", MAPPER.createObjectNode().put("type", TYPE_MEDIA).set("attributes", attributes)));
 
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
+		// When
+		var result = fdoRecordService.buildPostRequestMedia(List.of(media));
 
-  @Test
-  void testBuildUpdateHandleRequest()  {
-    // Given
-    var tupleList = List.of(
-        new UpdatedDigitalSpecimenTuple(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent(),
-            givenEmptyMediaProcessResult()));
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-    // When
-    var response = fdoRecordService.buildUpdatePidRequest(tupleList);
+	@Test
+	void testGenRequestMinimal() {
+		// Given
+		var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+				givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
+		var expected = new ArrayList<>(List.of(givenHandleRequestMin()));
 
-    // Then
-    assertThat(response).isEqualTo(List.of(givenUpdateHandleRequest(true)));
-  }
+		// When
+		var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
-  @Test
-  void testGenRequestMinimalCombined()  {
-    // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
-        givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
-    specimen.attributes().setOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL);
-    var expected = new ArrayList<>(
-        List.of(givenHandleRequestMin()));
+		// Then
+		assertThat(response).isEqualTo(expected);
+	}
 
-    // When
-    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
+	@Test
+	void testBuildUpdateHandleRequest() {
+		// Given
+		var tupleList = List.of(new UpdatedDigitalSpecimenTuple(givenDigitalSpecimenRecord(),
+				givenDigitalSpecimenEvent(), givenEmptyMediaProcessResult()));
 
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
+		// When
+		var response = fdoRecordService.buildUpdatePidRequest(tupleList);
 
-  @Test
-  void testRollbackUpdate()  {
-    var specimen = givenDigitalSpecimenWrapper();
-    var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen, Set.of(),
-        false, true, List.of());
-    var expected = givenUpdateHandleRequest(true);
+		// Then
+		assertThat(response).isEqualTo(List.of(givenUpdateHandleRequest(true)));
+	}
 
-    // When
-    var result = fdoRecordService.buildRollbackUpdateRequest(List.of(specimenRecord));
+	@Test
+	void testGenRequestMinimalCombined() {
+		// Given
+		var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+				givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
+		specimen.attributes().setOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.LOCAL);
+		var expected = new ArrayList<>(List.of(givenHandleRequestMin()));
 
-    // Then
-    assertThat(result).isEqualTo(List.of(expected));
-  }
+		// When
+		var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
-  @Test
-  void testRollbackUpdateMedia() {
-    // Given
-    var expected = MAPPER.createObjectNode()
-        .set("data", MAPPER.createObjectNode()
-            .put("id", MEDIA_PID)
-            .put("type", TYPE_MEDIA)
-            .set("attributes", givenHandleMediaRequestAttributes()));
+		// Then
+		assertThat(response).isEqualTo(expected);
+	}
 
-    // When
-    var result = fdoRecordService.buildRollbackUpdateRequestMedia(
-        List.of(givenDigitalMediaRecord()));
+	@Test
+	void testRollbackUpdate() {
+		var specimen = givenDigitalSpecimenWrapper();
+		var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen, Set.of(), false, true,
+				List.of());
+		var expected = givenUpdateHandleRequest(true);
 
-    // Then
-    assertThat(result).isEqualTo(List.of(expected));
-  }
+		// When
+		var result = fdoRecordService.buildRollbackUpdateRequest(List.of(specimenRecord));
 
-  @Test
-  void testUpdateRequestMedia() {
-    // Given
-    var expected = MAPPER.createObjectNode()
-        .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE_MEDIA)
-            .put("id", MEDIA_PID)
-            .set("attributes", givenHandleMediaRequestAttributes()));
+		// Then
+		assertThat(result).isEqualTo(List.of(expected));
+	}
 
-    // When
-    var result = fdoRecordService.buildUpdatePidRequestMedia(
-        List.of(givenUpdatedDigitalMediaTuple(false))
-    );
+	@Test
+	void testRollbackUpdateMedia() {
+		// Given
+		var expected = MAPPER.createObjectNode()
+			.set("data",
+					MAPPER.createObjectNode()
+						.put("id", MEDIA_PID)
+						.put("type", TYPE_MEDIA)
+						.set("attributes", givenHandleMediaRequestAttributes()));
 
-    // Then
-    assertThat(result).isEqualTo(List.of(expected));
-  }
+		// When
+		var result = fdoRecordService.buildRollbackUpdateRequestMedia(List.of(givenDigitalMediaRecord()));
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testGenRequestFull(boolean markedAsType) {
-    // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false, false)
-            .withOdsTopicDomain(OdsTopicDomain.EARTH_SYSTEM)
-            .withOdsTopicOrigin(OdsTopicOrigin.NATURAL),
-        ORIGINAL_DATA);
-    var expectedAttributes = (ObjectNode) givenHandleAttributes(markedAsType);
-    expectedAttributes.put("topicDomain", OdsTopicDomain.EARTH_SYSTEM.value());
-    expectedAttributes.put("topicOrigin", OdsTopicOrigin.NATURAL.value());
-    var expected = List.of(MAPPER.createObjectNode()
-        .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE_PID)
-            .set("attributes", expectedAttributes)));
+		// Then
+		assertThat(result).isEqualTo(List.of(expected));
+	}
 
-    // When
-    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
+	@Test
+	void testUpdateRequestMedia() {
+		// Given
+		var expected = MAPPER.createObjectNode()
+			.set("data",
+					MAPPER.createObjectNode()
+						.put("type", TYPE_MEDIA)
+						.put("id", MEDIA_PID)
+						.set("attributes", givenHandleMediaRequestAttributes()));
 
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
+		// When
+		var result = fdoRecordService.buildUpdatePidRequestMedia(List.of(givenUpdatedDigitalMediaTuple(false)));
 
-  @Test
-  void testGenRequestIdentifier() {
-    // Given
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
-        givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, false, false, false)
-            .withOdsHasIdentifiers(List.of(
-                new Identifier().withDctermsTitle("Other id").withDctermsIdentifier("123"),
-                new Identifier().withDctermsTitle("dwc:catalogNumber").withDctermsIdentifier(HANDLE)
-            )),
-        ORIGINAL_DATA);
-    var expectedAttributes = MAPPER.readTree("""
-        {
-          "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-          "specimenHost": "https://ror.org/0443cwa12",
-          "specimenHostName": "National Museum of Natural History",
-          "topicDiscipline": "Botany",
-          "livingOrPreserved": "Preserved",
-          "markedAsType": false,
-          "referentName": "Biota",
-          "catalogNumber":"20.5000.1025/V1Z-176-LL4",
-          "otherSpecimenIds":[{"identifierType":"Other id", "identifierValue":"123","resolvable":false},
-            {"identifierType":"dwc:catalogNumber","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},
-            {"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]
-        }
-        """);
-    var expected = List.of(MAPPER.createObjectNode()
-        .set("data", MAPPER.createObjectNode()
-            .put("type", TYPE_PID)
-            .set("attributes", expectedAttributes)));
+		// Then
+		assertThat(result).isEqualTo(List.of(expected));
+	}
 
-    // When
-    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
+	@ParameterizedTest
+	@ValueSource(booleans = { true, false })
+	void testGenRequestFull(boolean markedAsType) {
+		// Given
+		var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+				givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false, false)
+					.withOdsTopicDomain(OdsTopicDomain.EARTH_SYSTEM)
+					.withOdsTopicOrigin(OdsTopicOrigin.NATURAL),
+				ORIGINAL_DATA);
+		var expectedAttributes = (ObjectNode) givenHandleAttributes(markedAsType);
+		expectedAttributes.put("topicDomain", OdsTopicDomain.EARTH_SYSTEM.value());
+		expectedAttributes.put("topicOrigin", OdsTopicOrigin.NATURAL.value());
+		var expected = List.of(MAPPER.createObjectNode()
+			.set("data", MAPPER.createObjectNode().put("type", TYPE_PID).set("attributes", expectedAttributes)));
 
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
+		// When
+		var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
-  @Test
-  void testGenRequestIdentifiers() {
-    // Given
-    var markedAsType = false;
-    var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
-        givenAttributesPlusIdentifier(SPECIMEN_NAME, ORGANISATION_ID, markedAsType),
-        ORIGINAL_DATA);
-    var expectedJson = MAPPER.readTree(
-        """
-            {
-              "data": {
-                "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
-                "attributes": {
-                  "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
-                  "specimenHost": "https://ror.org/0443cwa12",
-                  "specimenHostName": "National Museum of Natural History",
-                  "topicDiscipline": "Botany",
-                  "referentName": "Biota",
-                  "livingOrPreserved": "Preserved",
-                  "markedAsType": false,
-                  "otherSpecimenIds": [{"identifierType":"Specimen label","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},{"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]
-                }
-              }
-            }
-            """
-    );
-    var expected = new ArrayList<>(List.of(expectedJson));
+		// Then
+		assertThat(response).isEqualTo(expected);
+	}
 
-    // When
-    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
+	@Test
+	void testGenRequestIdentifier() {
+		// Given
+		var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+				givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, false, false, false).withOdsHasIdentifiers(
+						List.of(new Identifier().withDctermsTitle("Other id").withDctermsIdentifier("123"),
+								new Identifier().withDctermsTitle("dwc:catalogNumber").withDctermsIdentifier(HANDLE))),
+				ORIGINAL_DATA);
+		var expectedAttributes = MAPPER.readTree(
+				"""
+						{
+						  "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
+						  "specimenHost": "https://ror.org/0443cwa12",
+						  "specimenHostName": "National Museum of Natural History",
+						  "topicDiscipline": "Botany",
+						  "livingOrPreserved": "Preserved",
+						  "markedAsType": false,
+						  "referentName": "Biota",
+						  "catalogNumber":"20.5000.1025/V1Z-176-LL4",
+						  "otherSpecimenIds":[{"identifierType":"Other id", "identifierValue":"123","resolvable":false},
+						    {"identifierType":"dwc:catalogNumber","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},
+						    {"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]
+						}
+						""");
+		var expected = List.of(MAPPER.createObjectNode()
+			.set("data", MAPPER.createObjectNode().put("type", TYPE_PID).set("attributes", expectedAttributes)));
 
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
+		// When
+		var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
-  @Test
-  void testGenRollbackCreationRequest() {
-    // Given
-    var digitalSpecimenRecords = List.of(givenDigitalSpecimenRecord());
-    var expected = List.of(HANDLE);
+		// Then
+		assertThat(response).isEqualTo(expected);
+	}
 
-    // When
-    var response = fdoRecordService.buildRollbackCreationRequest(digitalSpecimenRecords);
+	@Test
+	void testGenRequestIdentifiers() {
+		// Given
+		var markedAsType = false;
+		var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+				givenAttributesPlusIdentifier(SPECIMEN_NAME, ORGANISATION_ID, markedAsType), ORIGINAL_DATA);
+		var expectedJson = MAPPER.readTree(
+				"""
+						{
+						  "data": {
+						    "type": "https://doi.org/21.T11148/894b1e6cad57e921764e",
+						    "attributes": {
+						      "normalisedPrimarySpecimenObjectId":"https://geocollections.info/specimen/23602",
+						      "specimenHost": "https://ror.org/0443cwa12",
+						      "specimenHostName": "National Museum of Natural History",
+						      "topicDiscipline": "Botany",
+						      "referentName": "Biota",
+						      "livingOrPreserved": "Preserved",
+						      "markedAsType": false,
+						      "otherSpecimenIds": [{"identifierType":"Specimen label","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},{"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]
+						    }
+						  }
+						}
+						""");
+		var expected = new ArrayList<>(List.of(expectedJson));
 
-    // Then
-    assertThat(response).isEqualTo(expected);
-  }
+		// When
+		var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
-  @ParameterizedTest
-  @MethodSource("digitalSpecimensNeedToBeChanged")
-  void testPidNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
-    var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
-        currentAttributes,
-        ORIGINAL_DATA);
-    // Then
-    assertThat(
-        fdoRecordService.pidNeedsUpdateSpecimen(currentDigitalSpecimen,
-            givenDigitalSpecimenWrapper())).isTrue();
-  }
+		// Then
+		assertThat(response).isEqualTo(expected);
+	}
 
-  @ParameterizedTest
-  @MethodSource("digitalMediaNeedsToBeChanged")
-  void testPidNeedsUpdateMedia(DigitalMedia currentMedia) {
-    // Then
-    assertThat(
-        fdoRecordService.pidNeedsUpdateMedia(currentMedia,
-            givenDigitalMedia(MEDIA_URL, false))).isTrue();
-  }
+	@Test
+	void testGenRollbackCreationRequest() {
+		// Given
+		var digitalSpecimenRecords = List.of(givenDigitalSpecimenRecord());
+		var expected = List.of(HANDLE);
 
-  @Test
-  void testHandleDoesNotNeedsUpdate() {
-    // Given
-    var currentDigitalSpecimen = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID,
-        null, false, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
+		// When
+		var response = fdoRecordService.buildRollbackCreationRequest(digitalSpecimenRecords);
 
-    // Then
-    assertThat(fdoRecordService.pidNeedsUpdateSpecimen(
-        new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, currentDigitalSpecimen,
-            generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
-  }
+		// Then
+		assertThat(response).isEqualTo(expected);
+	}
 
-  @Test
-  void testHandleDoesNotNeedUpdateMedia() {
-    // Then
-    assertThat(fdoRecordService.pidNeedsUpdateMedia(givenDigitalMedia(MEDIA_URL, false),
-        givenDigitalMedia(MEDIA_URL, false))).isFalse();
-  }
+	@ParameterizedTest
+	@MethodSource("digitalSpecimensNeedToBeChanged")
+	void testPidNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
+		var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, currentAttributes,
+				ORIGINAL_DATA);
+		// Then
+		assertThat(fdoRecordService.pidNeedsUpdateSpecimen(currentDigitalSpecimen, givenDigitalSpecimenWrapper()))
+			.isTrue();
+	}
 
-  @Test
-  void testPhysicalSpecimenIdsDifferent() {
-    // Given
-    var currentSpecimen = givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME,
-        ORGANISATION_ID, false, false, ORIGINAL_DATA);
+	@ParameterizedTest
+	@MethodSource("digitalMediaNeedsToBeChanged")
+	void testPidNeedsUpdateMedia(DigitalMedia currentMedia) {
+		// Then
+		assertThat(fdoRecordService.pidNeedsUpdateMedia(currentMedia, givenDigitalMedia(MEDIA_URL, false))).isTrue();
+	}
 
-    // When/then
-    assertThat(fdoRecordService.pidNeedsUpdateSpecimen(currentSpecimen,
-        givenDigitalSpecimenWrapper())).isTrue();
-  }
+	@Test
+	void testHandleDoesNotNeedsUpdate() {
+		// Given
+		var currentDigitalSpecimen = givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, null, false, false)
+			.withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
+
+		// Then
+		assertThat(fdoRecordService.pidNeedsUpdateSpecimen(new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+				currentDigitalSpecimen, generateSpecimenOriginalData()), givenDigitalSpecimenWrapper()))
+			.isFalse();
+	}
+
+	@Test
+	void testHandleDoesNotNeedUpdateMedia() {
+		// Then
+		assertThat(fdoRecordService.pidNeedsUpdateMedia(givenDigitalMedia(MEDIA_URL, false),
+				givenDigitalMedia(MEDIA_URL, false)))
+			.isFalse();
+	}
+
+	@Test
+	void testPhysicalSpecimenIdsDifferent() {
+		// Given
+		var currentSpecimen = givenDigitalSpecimenWrapper("ALT ID", SPECIMEN_NAME, ORGANISATION_ID, false, false,
+				ORIGINAL_DATA);
+
+		// When/then
+		assertThat(fdoRecordService.pidNeedsUpdateSpecimen(currentSpecimen, givenDigitalSpecimenWrapper())).isTrue();
+	}
+
 }

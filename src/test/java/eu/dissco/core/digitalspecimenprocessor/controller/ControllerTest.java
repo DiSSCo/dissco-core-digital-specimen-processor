@@ -24,69 +24,63 @@ import org.springframework.http.HttpStatus;
 @ExtendWith(MockitoExtension.class)
 class ControllerTest {
 
-  @Mock
-  private ProcessingService processingService;
+	@Mock
+	private ProcessingService processingService;
 
-  private Controller controller;
+	private Controller controller;
 
-  @BeforeEach
-  void setup() {
-    controller = new Controller(processingService);
-  }
+	@BeforeEach
+	void setup() {
+		controller = new Controller(processingService);
+	}
 
-  @Test
-  void testDigitalSpecimenCreation() throws NoChangesFoundException {
-    // Given
-    var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
-    given(processingService.handleMessages(
-        List.of(digitalSpecimenEvent))).willReturn(
-        new SpecimenProcessResult(Map.of(), List.of(), List.of(givenDigitalSpecimenRecord())));
+	@Test
+	void testDigitalSpecimenCreation() throws NoChangesFoundException {
+		// Given
+		var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
+		given(processingService.handleMessages(List.of(digitalSpecimenEvent)))
+			.willReturn(new SpecimenProcessResult(Map.of(), List.of(), List.of(givenDigitalSpecimenRecord())));
 
-    // When
-    var result = controller.upsertDigitalSpecimen(digitalSpecimenEvent);
+		// When
+		var result = controller.upsertDigitalSpecimen(digitalSpecimenEvent);
 
-    // Then
-    assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-  }
+		// Then
+		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+	}
 
-  @Test
-  void testDigitalMediaCreation() throws NoChangesFoundException {
-    // Given
-    var digitalmediaEvent = TestUtils.givenDigitalMediaEvent();
-    given(processingService.handleMessagesMedia(
-        List.of(digitalmediaEvent))).willReturn(
-        new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaRecord())));
+	@Test
+	void testDigitalMediaCreation() throws NoChangesFoundException {
+		// Given
+		var digitalmediaEvent = TestUtils.givenDigitalMediaEvent();
+		given(processingService.handleMessagesMedia(List.of(digitalmediaEvent)))
+			.willReturn(new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaRecord())));
 
-    // When
-    var result = controller.upsertDigitalMedia(digitalmediaEvent);
+		// When
+		var result = controller.upsertDigitalMedia(digitalmediaEvent);
 
-    // Then
-    assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-  }
+		// Then
+		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+	}
 
-  @Test
-  void testNoChanges() {
-    // Given
-    var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
-    given(processingService.handleMessages(
-        List.of(digitalSpecimenEvent))).willReturn(
-        new SpecimenProcessResult(Map.of(), List.of(), List.of()));
+	@Test
+	void testNoChanges() {
+		// Given
+		var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
+		given(processingService.handleMessages(List.of(digitalSpecimenEvent)))
+			.willReturn(new SpecimenProcessResult(Map.of(), List.of(), List.of()));
 
-    // When / Then
-    assertThrows(NoChangesFoundException.class,
-        () -> controller.upsertDigitalSpecimen(digitalSpecimenEvent));
-  }
+		// When / Then
+		assertThrows(NoChangesFoundException.class, () -> controller.upsertDigitalSpecimen(digitalSpecimenEvent));
+	}
 
-  @Test
-  void testNoChangesMedia() {
-    // Given
-    given(processingService.handleMessagesMedia(
-        List.of(givenDigitalMediaEvent()))).willReturn(
-        new MediaProcessResult(List.of(), List.of(), List.of()));
+	@Test
+	void testNoChangesMedia() {
+		// Given
+		given(processingService.handleMessagesMedia(List.of(givenDigitalMediaEvent())))
+			.willReturn(new MediaProcessResult(List.of(), List.of(), List.of()));
 
-    // When / Then
-    assertThrows(NoChangesFoundException.class,
-        () -> controller.upsertDigitalMedia(givenDigitalMediaEvent()));
-  }
+		// When / Then
+		assertThrows(NoChangesFoundException.class, () -> controller.upsertDigitalMedia(givenDigitalMediaEvent()));
+	}
 
 }

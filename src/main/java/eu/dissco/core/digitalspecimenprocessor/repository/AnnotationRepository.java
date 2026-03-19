@@ -20,25 +20,24 @@ import tools.jackson.databind.json.JsonMapper;
 @Slf4j
 public class AnnotationRepository {
 
-  private final DSLContext context;
-  private final JsonMapper mapper;
+	private final DSLContext context;
 
-  public Map<String, List<Annotation>> getAcceptedAnnotationsForObject(
-      Set<String> targetIdsWithProxy) {
-    return context.select(ANNOTATION.asterisk())
-        .from(ANNOTATION)
-        .where(ANNOTATION.TARGET_ID.in(targetIdsWithProxy))
-        .and(ANNOTATION.ANNOTATION_STATUS.eq(AnnotationStatusEnum.ACCEPTED))
-        .fetchGroups(AnnotationRepository::stripProxyFromTargetId, this::mapToAnnotation);
-  }
+	private final JsonMapper mapper;
 
-  private static String stripProxyFromTargetId(Record dbRecord) {
-    return dbRecord.get(ANNOTATION.TARGET_ID).replace(DOI_PROXY, "");
-  }
+	public Map<String, List<Annotation>> getAcceptedAnnotationsForObject(Set<String> targetIdsWithProxy) {
+		return context.select(ANNOTATION.asterisk())
+			.from(ANNOTATION)
+			.where(ANNOTATION.TARGET_ID.in(targetIdsWithProxy))
+			.and(ANNOTATION.ANNOTATION_STATUS.eq(AnnotationStatusEnum.ACCEPTED))
+			.fetchGroups(AnnotationRepository::stripProxyFromTargetId, this::mapToAnnotation);
+	}
 
-  private Annotation mapToAnnotation(Record dbRecord) {
-    return mapper.readValue(dbRecord.get(ANNOTATION.DATA).data(),
-        Annotation.class);
-  }
+	private static String stripProxyFromTargetId(Record dbRecord) {
+		return dbRecord.get(ANNOTATION.TARGET_ID).replace(DOI_PROXY, "");
+	}
+
+	private Annotation mapToAnnotation(Record dbRecord) {
+		return mapper.readValue(dbRecord.get(ANNOTATION.DATA).data(), Annotation.class);
+	}
 
 }

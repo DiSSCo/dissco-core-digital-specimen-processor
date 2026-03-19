@@ -1,8 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.exception;
 
-public class JsonMappingException extends RuntimeException{
+public class JsonMappingException extends RuntimeException {
 
-  public JsonMappingException(Throwable cause) {
-    super(cause);
-  }
+	public JsonMappingException(Throwable cause) {
+		super(cause);
+	}
+
 }

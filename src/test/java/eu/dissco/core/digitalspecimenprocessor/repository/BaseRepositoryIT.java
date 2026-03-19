@@ -17,28 +17,31 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 class BaseRepositoryIT {
 
-  private static final DockerImageName POSTGIS =
-      DockerImageName.parse("postgres:17.5").asCompatibleSubstituteFor(IMAGE);
+	private static final DockerImageName POSTGIS = DockerImageName.parse("postgres:17.5")
+		.asCompatibleSubstituteFor(IMAGE);
 
-  @Container
-  private static final PostgreSQLContainer CONTAINER = new PostgreSQLContainer(POSTGIS);
-  protected DSLContext context;
-  private HikariDataSource dataSource;
+	@Container
+	private static final PostgreSQLContainer CONTAINER = new PostgreSQLContainer(POSTGIS);
 
-  @BeforeEach
-  void prepareDatabase() {
-    dataSource = new HikariDataSource();
-    dataSource.setJdbcUrl(CONTAINER.getJdbcUrl());
-    dataSource.setUsername(CONTAINER.getUsername());
-    dataSource.setPassword(CONTAINER.getPassword());
-    dataSource.setMaximumPoolSize(2);
-    dataSource.setConnectionInitSql(CONTAINER.getTestQueryString());
-    Flyway.configure().mixed(true).dataSource(dataSource).load().migrate();
-    context = new DefaultDSLContext(dataSource, SQLDialect.POSTGRES);
-  }
+	protected DSLContext context;
 
-  @AfterEach
-  void disposeDataSource() {
-    dataSource.close();
-  }
+	private HikariDataSource dataSource;
+
+	@BeforeEach
+	void prepareDatabase() {
+		dataSource = new HikariDataSource();
+		dataSource.setJdbcUrl(CONTAINER.getJdbcUrl());
+		dataSource.setUsername(CONTAINER.getUsername());
+		dataSource.setPassword(CONTAINER.getPassword());
+		dataSource.setMaximumPoolSize(2);
+		dataSource.setConnectionInitSql(CONTAINER.getTestQueryString());
+		Flyway.configure().mixed(true).dataSource(dataSource).load().migrate();
+		context = new DefaultDSLContext(dataSource, SQLDialect.POSTGRES);
+	}
+
+	@AfterEach
+	void disposeDataSource() {
+		dataSource.close();
+	}
+
 }
