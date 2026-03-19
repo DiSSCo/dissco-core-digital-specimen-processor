@@ -22,8 +22,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
@@ -36,6 +34,7 @@ import org.jooq.Record1;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
 
@@ -89,7 +88,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdateVersionSpecimens() throws JsonProcessingException {
+  void testUpdateVersionSpecimens()  {
     // Given
     repository.createDigitalSpecimenRecord(
         Set.of(
@@ -111,7 +110,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdateVersionSpecimensNotFromSourceSystem() throws JsonProcessingException {
+  void testUpdateVersionSpecimensNotFromSourceSystem()  {
     // Given
     repository.createDigitalSpecimenRecord(
         Set.of(
@@ -135,15 +134,15 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdateLastCheckedAndOriginalData() throws Exception {
+  void testUpdateLastCheckedAndOriginalData() {
     // Given
     repository.createDigitalSpecimenRecord(
         Set.of(
             givenDigitalSpecimenRecord(),
             givenDigitalSpecimenRecord(SECOND_HANDLE, "TEST_1", false),
             givenDigitalSpecimenRecord(THIRD_HANDLE, "TEST_2", false)));
-    var expectedOriginalData = MAPPER.createObjectNode()
-        .put("new field", "new data");
+    var expectedOriginalData = (JsonNode) (MAPPER.createObjectNode()
+        .put("new field", "new data"));
     var updatedEvent = new DigitalSpecimenEvent(
         Set.of(),
         new DigitalSpecimenWrapper(
@@ -170,7 +169,7 @@ class DigitalSpecimenRepositoryIT extends BaseRepositoryIT {
   }
 
   @Test
-  void testUpdateLastCheckedOnly() throws Exception {
+  void testUpdateLastCheckedOnly() {
     // Given
     repository.createDigitalSpecimenRecord(
         Set.of(

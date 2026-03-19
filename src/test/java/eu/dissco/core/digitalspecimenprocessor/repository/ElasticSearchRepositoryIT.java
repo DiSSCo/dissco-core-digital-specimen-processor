@@ -13,7 +13,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequ
 import static org.assertj.core.api.Assertions.assertThat;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.json.jackson.Jackson3JsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest5_client.Rest5ClientTransport;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
@@ -21,6 +21,7 @@ import eu.dissco.core.digitalspecimenprocessor.property.ElasticSearchProperties;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Set;
 import org.apache.hc.core5.http.Header;
@@ -44,7 +45,7 @@ class ElasticSearchRepositoryIT {
   private static final String ELASTICSEARCH_USERNAME = "elastic";
   private static final String ELASTICSEARCH_PASSWORD = "s3cret";
   private static final ElasticsearchContainer container = new ElasticsearchContainer(
-      ELASTIC_IMAGE).withPassword(ELASTICSEARCH_PASSWORD);
+      ELASTIC_IMAGE).withPassword(ELASTICSEARCH_PASSWORD).withStartupTimeout(Duration.ofMinutes(2));
   private static ElasticsearchClient client;
   private static Rest5Client restClient;
   private final ElasticSearchProperties esProperties = new ElasticSearchProperties();
@@ -64,7 +65,7 @@ class ElasticSearchRepositoryIT {
         .setSSLContext(container.createSslContextFromCa()).build();
 
     ElasticsearchTransport transport = new Rest5ClientTransport(restClient,
-        new JacksonJsonpMapper(MAPPER));
+        new Jackson3JsonpMapper(MAPPER));
 
     client = new ElasticsearchClient(transport);
   }
@@ -101,7 +102,7 @@ class ElasticSearchRepositoryIT {
     // Then
     assertThat(result.errors()).isFalse();
     assertThat(document.source()).isEqualTo(expected);
-    assertThat(result.items().get(0).result()).isEqualTo("created");
+    assertThat(result.items().getFirst().result()).isEqualTo("created");
   }
 
   @Test
@@ -118,7 +119,7 @@ class ElasticSearchRepositoryIT {
     // Then
     assertThat(result.errors()).isFalse();
     assertThat(document.source()).isEqualTo(expected);
-    assertThat(result.items().get(0).result()).isEqualTo("created");
+    assertThat(result.items().getFirst().result()).isEqualTo("created");
   }
 
   @Test

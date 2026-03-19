@@ -3,11 +3,7 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_SPECIMEN;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.fge.jsonpatch.diff.JsonDiff;
+import com.flipkart.zjsonpatch.Jackson3JsonDiff;
 import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
@@ -27,13 +23,17 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class EqualityService {
 
-  private final ObjectMapper mapper;
+  private final JsonMapper mapper;
   private static final Set<String> IGNORED_FIELDS = Set.of(
       "dcterms:created",
       "dcterms:modified",
@@ -160,7 +160,7 @@ public class EqualityService {
     var isEqual = currentJson.equals(json);
     if (!isEqual) {
       log.debug("Object {} has changed. JsonDiff: {}", id,
-          JsonDiff.asJson(currentJson, json));
+          Jackson3JsonDiff.asJson(currentJson, json));
     }
     return isEqual;
   }
@@ -217,7 +217,7 @@ public class EqualityService {
     var filteredEntityRelationships = mapper.createArrayNode();
     for (var er : entityRelationshipArray) {
       if (!targetRelationship.getRelationshipName()
-          .equals(er.get("dwc:relationshipOfResource").asText())) {
+          .equals(er.get("dwc:relationshipOfResource").asString())) {
         filteredEntityRelationships.add(er);
       }
     }

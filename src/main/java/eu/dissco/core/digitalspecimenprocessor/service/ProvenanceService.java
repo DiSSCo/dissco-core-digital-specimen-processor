@@ -7,9 +7,6 @@ import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsT
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -32,12 +29,15 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 @RequiredArgsConstructor
 public class ProvenanceService {
 
-  private final ObjectMapper mapper;
+  private final JsonMapper mapper;
   private final ApplicationProperties properties;
 
   public CreateUpdateTombstoneEvent generateCreateEventSpecimen(
@@ -152,7 +152,8 @@ public class ProvenanceService {
     });
   }
 
-  public CreateUpdateTombstoneEvent generateUpdateEventSpecimen(DigitalSpecimenRecord digitalSpecimenRecord,
+  public CreateUpdateTombstoneEvent generateUpdateEventSpecimen(
+      DigitalSpecimenRecord digitalSpecimenRecord,
       JsonNode jsonPatch) {
     var digitalSpecimen = DigitalObjectUtils.flattenToDigitalSpecimen(digitalSpecimenRecord);
     return generateCreateUpdateTombStoneEventSpecimen(digitalSpecimen, ProvActivity.Type.ODS_UPDATE,
@@ -163,7 +164,8 @@ public class ProvenanceService {
       DigitalMediaRecord digitalMediaRecord,
       JsonNode jsonPatch) {
     var digitalMediaService = DigitalObjectUtils.flattenToDigitalMedia(digitalMediaRecord);
-    return generateCreateUpdateTombstoneEventMedia(digitalMediaService, ProvActivity.Type.ODS_UPDATE,
+    return generateCreateUpdateTombstoneEventMedia(digitalMediaService,
+        ProvActivity.Type.ODS_UPDATE,
         jsonPatch);
   }
 

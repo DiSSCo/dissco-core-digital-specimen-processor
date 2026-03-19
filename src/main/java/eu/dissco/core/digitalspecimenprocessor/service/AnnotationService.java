@@ -2,7 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
@@ -22,6 +21,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 @Slf4j
@@ -30,7 +30,7 @@ public class AnnotationService {
 
   private final AnnotationRepository annotationRepository;
   private final AnnotationValidator annotationValidator;
-  private final ObjectMapper mapper;
+    private final JsonMapper mapper;
   private final AnnotationProperties properties;
 
   public Map<String, List<Annotation>> getAnnotationsForSpecimens(

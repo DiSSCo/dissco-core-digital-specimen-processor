@@ -18,7 +18,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequ
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
@@ -75,7 +74,7 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void testGenerateUpdateEventSpecimen() throws JsonProcessingException {
+  void testGenerateUpdateEventSpecimen()  {
     // Given
     given(properties.getName()).willReturn(APP_NAME);
     given(properties.getPid()).willReturn(APP_HANDLE);
@@ -87,7 +86,7 @@ class ProvenanceServiceTest {
     // Then
     assertThat(event.getDctermsIdentifier()).isEqualTo(
         DOI_PREFIX + HANDLE + "/" + VERSION);
-    assertThat(event.getProvActivity().getOdsChangeValue()).isEqualTo(givenChangeValue());
+    assertThat(event.getProvActivity().getOdsChangeValue()).hasSameElementsAs(givenChangeValue());
     assertThat(event.getProvEntity().getProvValue()).isNotNull();
     assertThat(event.getOdsHasAgents()).isEqualTo(givenExpectedAgents());
   }

@@ -6,7 +6,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static org.mockito.BDDMockito.then;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,8 +26,7 @@ class RabbitMqConsumerServiceTest {
 
   @BeforeEach
   void setup() {
-    rabbitMqConsumerServiceTest = new RabbitMqConsumerService(MAPPER, processingService,
-        rabbitMqPublisherService);
+    rabbitMqConsumerServiceTest = new RabbitMqConsumerService(MAPPER, processingService);
   }
 
   @Test
@@ -44,7 +42,7 @@ class RabbitMqConsumerServiceTest {
   }
 
   @Test
-  void testGetMessagesMedia() throws JsonProcessingException {
+  void testGetMessagesMedia()  {
     // Given
     var message = MAPPER.writeValueAsString(givenDigitalMediaEvent());
 
@@ -56,33 +54,7 @@ class RabbitMqConsumerServiceTest {
   }
 
   @Test
-  void testGetInvalidMessages() {
-    // Given
-    var message = givenInvalidMessage();
-
-    // When
-    rabbitMqConsumerServiceTest.getMessages(List.of(message));
-
-    // Then
-    then(rabbitMqPublisherService).should().deadLetterRaw(message);
-    then(processingService).should().handleMessages(List.of());
-  }
-
-  @Test
-  void testGetInvalidMessagesMedia() {
-    // Given
-    var message = givenInvalidMessage();
-
-    // When
-    rabbitMqConsumerServiceTest.getMessagesMedia(List.of(message));
-
-    // Then
-    then(rabbitMqPublisherService).should().deadLetterRawMedia(message);
-    then(processingService).should().handleMessagesMedia(List.of());
-  }
-
-  @Test
-  void testGetMessagesDigitalMediaRelationshipTombstone() throws JsonProcessingException {
+  void testGetMessagesDigitalMediaRelationshipTombstone()  {
     // Given
     var message = MAPPER.writeValueAsString(givenDigitalMediaTombstoneEvent());
 
@@ -92,43 +64,6 @@ class RabbitMqConsumerServiceTest {
     // Then
     then(rabbitMqPublisherService).shouldHaveNoInteractions();
     then(processingService).should().handleMessagesMediaRelationshipTombstone(List.of(givenDigitalMediaTombstoneEvent()));
-  }
-
-  @Test
-  void testGetInvalidMessagesDigitalMediaRelationshipTombstone() {
-    // Given
-    var message = givenInvalidMessage();
-
-    // When
-    rabbitMqConsumerServiceTest.getMessagesDigitalMediaRelationshipTombstone(List.of(message));
-
-    // Then
-    then(rabbitMqPublisherService).should().deadLetterRawDigitalMediaRelationshipTombstone(message);
-    then(processingService).should().handleMessagesMediaRelationshipTombstone(List.of());
-  }
-
-
-  private String givenInvalidMessage() {
-    return """
-        {
-          "masList": [
-            "https://hdl.handle.net/20.5000.1025/TG2-A9R-ZDD"
-          ],
-          "forceMasSchedule": false,
-          "digitalSpecimen": {
-            "type": "GeologyRockSpecimen",
-            "physicalSpecimenID": "https://geocollections.info/specimen/23602",
-            "physicalSpecimenIDType": "global",
-            "specimenName": "Biota",
-            "organisationID": "https://ror.org/0443cwa12",
-            "datasetId": null,
-            "physicalSpecimenCollection": null,
-            "sourceSystemID": "20.5000.1025/MN0-5XP-FFD",
-            "data": {},
-            "originalData": {},
-            "dwcaID": null
-          }
-        }""";
   }
 
   private String givenMessage() {

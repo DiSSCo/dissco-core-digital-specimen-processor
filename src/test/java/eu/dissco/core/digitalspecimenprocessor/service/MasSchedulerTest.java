@@ -15,12 +15,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenWrapper;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.doThrow;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.enums.MjrTargetType;
 import eu.dissco.core.digitalspecimenprocessor.domain.mas.MasJobRequest;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
@@ -53,7 +49,7 @@ class MasSchedulerTest {
   }
 
   @Test
-  void testPublishSpecimenForced() throws Exception {
+  void testPublishSpecimenForced() {
     // Given
     var forcedRecord = new DigitalSpecimenRecord(
         HANDLE,
@@ -81,7 +77,7 @@ class MasSchedulerTest {
   }
 
   @Test
-  void testPublishSpecimenNotForced() throws Exception {
+  void testPublishSpecimenNotForced() {
     // Given
     var specimenProcessResult = new SpecimenProcessResult(
         Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
@@ -98,7 +94,7 @@ class MasSchedulerTest {
   }
 
   @Test
-  void testPublishMediaNotForced() throws Exception {
+  void testPublishMediaNotForced() {
     // Given
     var mediaProcessResult = new MediaProcessResult(
         List.of(givenDigitalMediaRecord()), List.of(), List.of(givenDigitalMediaRecord(
@@ -116,7 +112,7 @@ class MasSchedulerTest {
   }
 
   @Test
-  void testPublishMediaForced() throws Exception {
+  void testPublishMediaForced() {
     // Given
     var forcedRecord = new DigitalMediaRecord(
         HANDLE, MEDIA_URL, 1, CREATED, Set.of(MEDIA_MAS),
@@ -140,15 +136,4 @@ class MasSchedulerTest {
     ));
   }
 
-  @Test
-  void testPublishSpecimenPublishingFails() throws Exception {
-    // Given
-    var specimenProcessResult = new SpecimenProcessResult(
-        Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()), List.of(),
-        List.of(givenDigitalSpecimenRecord(SECOND_HANDLE)));
-    doThrow(JsonProcessingException.class).when(publisherService).publishMasJobRequest(any());
-
-    // When / then
-    assertDoesNotThrow(() -> masSchedulerService.scheduleMasForSpecimen(specimenProcessResult));
-  }
 }

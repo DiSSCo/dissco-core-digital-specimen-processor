@@ -1,8 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.domain.media;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
+import tools.jackson.databind.JsonNode;
 
 
 public record DigitalMediaWrapper(

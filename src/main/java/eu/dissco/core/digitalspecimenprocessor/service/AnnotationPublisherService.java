@@ -8,10 +8,6 @@ import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsT
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.AutoAcceptedAnnotation;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
@@ -27,6 +23,7 @@ import eu.dissco.core.digitalspecimenprocessor.schema.OaHasSelector;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +31,9 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @Slf4j
 @Service
@@ -49,43 +49,35 @@ public class AnnotationPublisherService {
 
   private final RabbitMqPublisherService publisherService;
   private final ApplicationProperties applicationProperties;
-  private final ObjectMapper mapper;
+  private final JsonMapper mapper;
 
   public void publishAnnotationNewSpecimen(Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
-    for (DigitalSpecimenRecord digitalSpecimenRecord : digitalSpecimenRecords) {
-      try {
-        var annotationProcessingRequest = mapNewSpecimenToAnnotation(digitalSpecimenRecord);
-        publisherService.publishAcceptedAnnotation(
-            new AutoAcceptedAnnotation(
-                createMachineAgent(applicationProperties.getName(),
-                    applicationProperties.getPid(), PROCESSING_SERVICE, DOI,
-                    SCHEMA_SOFTWARE_APPLICATION),
-                annotationProcessingRequest));
-      } catch (JsonProcessingException e) {
-        log.error("Unable to send auto-accepted annotation for new specimen: {}",
-            digitalSpecimenRecord.id(), e);
-      }
-    }
+    digitalSpecimenRecords.forEach(
+        specimenRecord -> {
+          var annotationProcessingRequest = mapNewSpecimenToAnnotation(specimenRecord);
+          publisherService.publishAcceptedAnnotation(
+              new AutoAcceptedAnnotation(
+                  createMachineAgent(applicationProperties.getName(),
+                      applicationProperties.getPid(), PROCESSING_SERVICE, DOI,
+                      SCHEMA_SOFTWARE_APPLICATION),
+                  annotationProcessingRequest));
+        }
+    );
   }
 
   public void publishAnnotationNewMedia(Set<DigitalMediaRecord> digitalMediaRecords) {
-    for (DigitalMediaRecord digitalMediaRecord : digitalMediaRecords) {
-      try {
-        var annotationProcessingRequest = mapNewMediaToAnnotation(digitalMediaRecord);
-        publisherService.publishAcceptedAnnotation(
-            new AutoAcceptedAnnotation(
-                createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
-                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
-                annotationProcessingRequest));
-      } catch (JsonProcessingException e) {
-        log.error("Unable to send auto-accepted annotation for new media: {}",
-            digitalMediaRecord.id(), e);
-      }
-    }
+    digitalMediaRecords.forEach(mediaRecord -> {
+      var annotationProcessingRequest = mapNewMediaToAnnotation(mediaRecord);
+      publisherService.publishAcceptedAnnotation(
+          new AutoAcceptedAnnotation(
+              createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+                  PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
+              annotationProcessingRequest));
+    });
   }
 
   private AnnotationProcessingRequest mapNewSpecimenToAnnotation(
-      DigitalSpecimenRecord digitalSpecimenRecord) throws JsonProcessingException {
+      DigitalSpecimenRecord digitalSpecimenRecord) {
     var sourceSystemID = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
         .getOdsSourceSystemID();
     var sourceSystemName = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
@@ -105,7 +97,7 @@ public class AnnotationPublisherService {
   }
 
   private AnnotationProcessingRequest mapNewMediaToAnnotation(
-      DigitalMediaRecord digitalMediaRecord) throws JsonProcessingException {
+      DigitalMediaRecord digitalMediaRecord) {
     var sourceSystemID = digitalMediaRecord.attributes()
         .getOdsSourceSystemID();
     var sourceSystemName = digitalMediaRecord.attributes()
@@ -143,47 +135,34 @@ public class AnnotationPublisherService {
 
   public void publishAnnotationUpdatedSpecimen(
       Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords) {
-    for (var updatedDigitalSpecimenRecord : updatedDigitalSpecimenRecords) {
-      try {
-        var annotations = convertJsonPatchToAnnotations(
+    updatedDigitalSpecimenRecords.stream()
+        .map(updatedDigitalSpecimenRecord -> convertJsonPatchToAnnotations(
             updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
-            updatedDigitalSpecimenRecord.jsonPatch());
-        for (var annotationProcessingRequest : annotations) {
-          publisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
-              createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
-                  PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
-              annotationProcessingRequest));
-        }
-      } catch (JsonProcessingException e) {
-        log.error("Unable to send auto-accepted annotation for updated specimen: {}",
-            updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(), e);
-      }
-    }
+            updatedDigitalSpecimenRecord.jsonPatch()))
+        .flatMap(Collection::stream)
+        .forEach(annotationRequest -> publisherService.publishAcceptedAnnotation(
+            new AutoAcceptedAnnotation(
+                createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
+                annotationRequest)));
   }
 
   public void publishAnnotationUpdatedMedia(
       Set<UpdatedDigitalMediaRecord> updatedDigitalMediaRecords) {
-    for (var updatedDigitalMediaRecord : updatedDigitalMediaRecords) {
-      try {
-        var annotations = convertJsonPatchToAnnotations(
+    updatedDigitalMediaRecords.stream()
+        .map(updatedDigitalMediaRecord -> convertJsonPatchToAnnotations(
             updatedDigitalMediaRecord.digitalMediaRecord(),
-            updatedDigitalMediaRecord.jsonPatch());
-        for (var annotationProcessingRequest : annotations) {
-         publisherService.publishAcceptedAnnotation(new AutoAcceptedAnnotation(
-              createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
-                  PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
-              annotationProcessingRequest));
-        }
-      } catch (JsonProcessingException e) {
-        log.error("Unable to send auto-accepted annotation for updated media: {}",
-            updatedDigitalMediaRecord.digitalMediaRecord().id(), e);
-      }
-    }
+            updatedDigitalMediaRecord.jsonPatch()))
+        .flatMap(Collection::stream)
+        .forEach(annotationRequest -> publisherService.publishAcceptedAnnotation(
+            new AutoAcceptedAnnotation(
+                createMachineAgent(applicationProperties.getName(), applicationProperties.getPid(),
+                    PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION),
+                annotationRequest)));
   }
 
   private List<AnnotationProcessingRequest> convertJsonPatchToAnnotations(
-      DigitalSpecimenRecord digitalSpecimenRecord, JsonNode jsonNode)
-      throws JsonProcessingException {
+      DigitalSpecimenRecord digitalSpecimenRecord, JsonNode jsonNode) {
     var annotations = new ArrayList<AnnotationProcessingRequest>();
     var sourceSystemID = digitalSpecimenRecord.digitalSpecimenWrapper().attributes()
         .getOdsSourceSystemID();
@@ -195,7 +174,7 @@ public class AnnotationPublisherService {
     for (JsonNode action : jsonNode) {
       var annotationProcessingRequest = new AnnotationProcessingRequest()
           .withOaHasTarget(buildTarget(digitalSpecimenRecord.id(), FdoType.SPECIMEN,
-              buildSelector(action.get("path").asText())))
+              buildSelector(action.get("path").asString())))
           .withDctermsCreated(Date.from(Instant.now()))
           .withDctermsCreator(
               createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
@@ -208,8 +187,7 @@ public class AnnotationPublisherService {
 
 
   private List<AnnotationProcessingRequest> convertJsonPatchToAnnotations(
-      DigitalMediaRecord digitalMediaRecord, JsonNode jsonNode)
-      throws JsonProcessingException {
+      DigitalMediaRecord digitalMediaRecord, JsonNode jsonNode) {
     var annotations = new ArrayList<AnnotationProcessingRequest>();
     var sourceSystemID = digitalMediaRecord.attributes()
         .getOdsSourceSystemID();
@@ -219,7 +197,7 @@ public class AnnotationPublisherService {
     for (JsonNode action : jsonNode) {
       var annotationProcessingRequest = new AnnotationProcessingRequest()
           .withOaHasTarget(buildTarget(digitalMediaRecord.id(), FdoType.MEDIA,
-              buildSelector(action.get("path").asText())))
+              buildSelector(action.get("path").asString())))
           .withDctermsCreated(Date.from(Instant.now()))
           .withDctermsCreator(
               createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
@@ -233,41 +211,39 @@ public class AnnotationPublisherService {
   private void processOperation(JsonNode recordNode, JsonNode action,
       AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID,
       String sourceSystemName,
-      ArrayList<AnnotationProcessingRequest> annotations)
-      throws JsonProcessingException {
-    if (action.get(OP).asText().equals("replace")) {
+      ArrayList<AnnotationProcessingRequest> annotations) {
+    if (action.get(OP).asString().equals("replace")) {
       annotations.add(addReplaceOperation(action, annotationProcessingRequest, sourceSystemID));
-    } else if (action.get(OP).asText().equals("add")) {
+    } else if (action.get(OP).asString().equals("add")) {
       annotations.add(addAddOperation(action, annotationProcessingRequest, sourceSystemID));
-    } else if (action.get(OP).asText().equals("remove")) {
+    } else if (action.get(OP).asString().equals("remove")) {
       annotations.add(addRemoveOperation(annotationProcessingRequest, sourceSystemID));
-    } else if (action.get(OP).asText().equals("copy")) {
+    } else if (action.get(OP).asString().equals("copy")) {
       var annotation = addCopyOperation(recordNode, action, annotationProcessingRequest,
           sourceSystemID);
       if (annotation != null) {
         annotations.add(annotation);
       }
-    } else if (action.get(OP).asText().equals("move")) {
+    } else if (action.get(OP).asString().equals("move")) {
       annotations.addAll(
           addMoveOperation(recordNode, action, annotationProcessingRequest,
               sourceSystemID,
-              sourceSystemName, recordNode.get("id").asText()));
+              sourceSystemName, recordNode.get("id").asString()));
     }
   }
 
   private List<AnnotationProcessingRequest> addMoveOperation(
       JsonNode recordNode, JsonNode action,
       AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID,
-      String sourceSystemName, String id)
-      throws JsonProcessingException {
-    var valueNode = recordNode.at(action.get(FROM).asText());
+      String sourceSystemName, String id) {
+    var valueNode = recordNode.at(action.get(FROM).asString());
     annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
     annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
     annotationProcessingRequest.setOaHasBody(
         buildBody(extractValueString(valueNode), sourceSystemID));
     var additionalDeleteAnnotation = new AnnotationProcessingRequest()
         .withOaHasTarget(buildTarget(id, FdoType.SPECIMEN,
-            buildSelector(action.get(FROM).asText())))
+            buildSelector(action.get(FROM).asString())))
         .withDctermsCreated(Date.from(Instant.now()))
         .withDctermsCreator(
             createMachineAgent(sourceSystemName, sourceSystemID, SOURCE_SYSTEM, HANDLE,
@@ -280,9 +256,8 @@ public class AnnotationPublisherService {
 
   private AnnotationProcessingRequest addCopyOperation(JsonNode recordNode,
       JsonNode action, AnnotationProcessingRequest annotationProcessingRequest,
-      String sourceSystemID)
-      throws JsonProcessingException {
-    var valueNode = recordNode.at(action.get(FROM).asText());
+      String sourceSystemID) {
+    var valueNode = recordNode.at(action.get(FROM).asString());
     if (!valueNode.isMissingNode()) {
       annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
       annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
@@ -305,8 +280,7 @@ public class AnnotationPublisherService {
   }
 
   private AnnotationProcessingRequest addAddOperation(JsonNode action,
-      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID)
-      throws JsonProcessingException {
+      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID) {
     annotationProcessingRequest.setOaMotivation(OaMotivation.ODS_ADDING);
     annotationProcessingRequest.setOaMotivatedBy(NEW_INFORMATION_MESSAGE + sourceSystemID);
     annotationProcessingRequest.setOaHasBody(
@@ -315,8 +289,7 @@ public class AnnotationPublisherService {
   }
 
   private AnnotationProcessingRequest addReplaceOperation(JsonNode action,
-      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID)
-      throws JsonProcessingException {
+      AnnotationProcessingRequest annotationProcessingRequest, String sourceSystemID) {
     annotationProcessingRequest.setOaMotivation(OaMotivation.OA_EDITING);
     annotationProcessingRequest.setOaMotivatedBy(
         "Received update information from Source System with id: " + sourceSystemID);
@@ -325,9 +298,9 @@ public class AnnotationPublisherService {
     return annotationProcessingRequest;
   }
 
-  private String extractValueString(JsonNode action) throws JsonProcessingException {
-    if (action.isTextual()) {
-      return action.textValue();
+  private String extractValueString(JsonNode action) {
+    if (action.isString()) {
+      return action.asString();
     } else {
       return mapper.writeValueAsString(action);
     }

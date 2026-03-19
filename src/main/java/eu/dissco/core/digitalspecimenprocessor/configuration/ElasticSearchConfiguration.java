@@ -1,10 +1,9 @@
 package eu.dissco.core.digitalspecimenprocessor.configuration;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.json.jackson.Jackson3JsonpMapper;
 import co.elastic.clients.transport.rest5_client.Rest5ClientTransport;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.property.ElasticSearchProperties;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +12,13 @@ import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @RequiredArgsConstructor
 public class ElasticSearchConfiguration {
 
-  private final ObjectMapper mapper;
+    private final JsonMapper mapper;
   private final ElasticSearchProperties properties;
 
   @Bean
@@ -31,7 +31,7 @@ public class ElasticSearchConfiguration {
             new BasicHeader("Authorization", "Basic " + creds)
         });
     var transport = new Rest5ClientTransport(restClient.build(),
-        new JacksonJsonpMapper(mapper));
+        new Jackson3JsonpMapper(mapper));
     return new ElasticsearchClient(transport);
   }
 

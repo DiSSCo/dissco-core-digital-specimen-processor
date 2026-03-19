@@ -2,8 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.repository;
 
 import static eu.dissco.core.digitalspecimenprocessor.database.jooq.Tables.DIGITAL_MEDIA_OBJECT;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import java.time.Instant;
@@ -16,6 +14,8 @@ import org.jooq.JSONB;
 import org.jooq.Query;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Repository;
 public class DigitalMediaRepository {
 
   private final DSLContext context;
-  private final ObjectMapper mapper;
+    private final JsonMapper mapper;
 
   // Maps Media URI to its DOI
   public List<DigitalMediaRecord> getExistingDigitalMedia(Set<String> mediaURIs) {
@@ -49,7 +49,7 @@ public class DigitalMediaRepository {
           mapper.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data()),
           null,
           null);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException _) {
       log.error("Unable to map record data to json: {}", dbRecord);
       return null;
     }

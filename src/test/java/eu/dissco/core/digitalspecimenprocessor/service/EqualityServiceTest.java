@@ -80,7 +80,7 @@ class EqualityServiceTest {
   @ParameterizedTest
   @MethodSource("provideEqualSpecimens")
   void testParser(DigitalSpecimenRecord currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimen, MediaRelationshipProcessResult mediaProcessResult) throws Exception {
+      DigitalSpecimenWrapper digitalSpecimen, MediaRelationshipProcessResult mediaProcessResult) {
 
     // When
     var result = equalityService.removeGeneratedTimestamps(MAPPER.valueToTree(digitalSpecimen.attributes()));

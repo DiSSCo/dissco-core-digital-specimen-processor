@@ -3,9 +3,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
 import static java.util.stream.Collectors.toMap;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
@@ -22,7 +19,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessRe
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.AnnotationProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.DisscoRepositoryException;
-import eu.dissco.core.digitalspecimenprocessor.exception.JsonMappingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.exception.TooManyObjectsException;
 import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
@@ -30,7 +26,7 @@ import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalMedia;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
-import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import io.github.dissco.core.annotationlogic.schema.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,13 +46,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class ProcessingService {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
   private final DigitalSpecimenRepository repository;
   private final DigitalMediaRepository mediaRepository;
   private final DigitalSpecimenService digitalSpecimenService;
@@ -65,7 +63,7 @@ public class ProcessingService {
   private final EqualityService equalityService;
   private final RabbitMqPublisherService publisherService;
   private final FdoRecordService fdoRecordService;
-  private final HandleComponent handleComponent;
+  private final PidComponent pidComponent;
   private final ApplicationProperties applicationProperties;
   private final MasSchedulerService masSchedulerService;
   private final AnnotationService annotationService;
@@ -234,14 +232,10 @@ public class ProcessingService {
           .values()
           .stream()
           .anyMatch(e -> e.size() > 1)) {
-        try {
-          log.error(
-              "Found duplicate media in single specimen event for specimen id: {}. Dead lettering event",
-              event.digitalSpecimenWrapper().physicalSpecimenID());
-          publisherService.deadLetterEventSpecimen(event);
-        } catch (JsonProcessingException e) {
-          log.error("Fatal exception, unable to dead letter queue: {}", event, e);
-        }
+        log.error(
+            "Found duplicate media in single specimen event for specimen id: {}. Dead lettering event",
+            event.digitalSpecimenWrapper().physicalSpecimenID());
+        publisherService.deadLetterEventSpecimen(event);
       } else {
         validEvent.add(event);
       }
@@ -457,7 +451,8 @@ public class ProcessingService {
       } else {
         var currentDigitalSpecimen = currentSpecimens.get(
             event.digitalSpecimenWrapper().physicalSpecimenID());
-        var processedMediaRelationships = getMediaRelationships(event, currentSpecimens, currentMedia);
+        var processedMediaRelationships = getMediaRelationships(event, currentSpecimens,
+            currentMedia);
         event = applyAcceptedAnnotationsToEvent(event, currentDigitalSpecimen, acceptedAnnotations);
         if (event != null) {
           if (equalityService.specimensAreEqual(currentDigitalSpecimen,
@@ -488,20 +483,17 @@ public class ProcessingService {
     try {
       return annotationService.applyAcceptedAnnotations(event,
           currentDigitalSpecimen, acceptedAnnotations);
-    } catch (AnnotationProcessingException e) {
+    } catch (AnnotationProcessingException _) {
       log.info("Failed to apply annotations to specimen {}. Moving to DLQ",
           currentDigitalSpecimen.id());
-      try {
-        publisherService.deadLetterEventSpecimen(event);
-      } catch (JsonProcessingException ex) {
-        log.error("Critical error. Unable to DLQ specimen {}", currentDigitalSpecimen.id());
-      }
+      publisherService.deadLetterEventSpecimen(event);
       return null;
     }
   }
 
   private MediaRelationshipProcessResult getMediaRelationships(DigitalSpecimenEvent event,
-      Map<String, DigitalSpecimenRecord> currentSpecimens, Map<String, DigitalMediaRecord> currentMedia) {
+      Map<String, DigitalSpecimenRecord> currentSpecimens,
+      Map<String, DigitalMediaRecord> currentMedia) {
     MediaRelationshipProcessResult processedMediaRelationships;
     if (Boolean.TRUE.equals(event.isDataFromSourceSystem())) {
       processedMediaRelationships = entityRelationshipService.processMediaRelationshipsForSpecimen(
@@ -518,10 +510,10 @@ public class ProcessingService {
     }
     var specimenList = events.stream().map(DigitalSpecimenEvent::digitalSpecimenWrapper).toList();
     var pidMap = new HashMap<String, String>();
-    for (int i = 0; i < specimenList.size(); i += applicationProperties.getMaxHandles()) {
-      int j = Math.min(i + applicationProperties.getMaxHandles(), specimenList.size());
+    for (int i = 0; i < specimenList.size(); i += applicationProperties.getMaxPids()) {
+      int j = Math.min(i + applicationProperties.getMaxPids(), specimenList.size());
       var sublist = specimenList.subList(i, j);
-      var request = fdoRecordService.buildPostHandleRequest(sublist);
+      var request = fdoRecordService.buildPostPidRequest(sublist);
       pidMap.putAll(createNewPids(request, true));
     }
     return pidMap;
@@ -543,8 +535,8 @@ public class ProcessingService {
       return Map.of();
     }
     var pidMap = new HashMap<String, String>();
-    for (int i = 0; i < digitalMediaEvents.size(); i += applicationProperties.getMaxHandles()) {
-      int j = Math.min(i + applicationProperties.getMaxHandles(), digitalMediaEvents.size());
+    for (int i = 0; i < digitalMediaEvents.size(); i += applicationProperties.getMaxPids()) {
+      int j = Math.min(i + applicationProperties.getMaxPids(), digitalMediaEvents.size());
       var sublist = digitalMediaEvents.subList(i, j);
       var request = fdoRecordService.buildPostRequestMedia(sublist);
       pidMap.putAll(createNewPids(request, false));
@@ -554,7 +546,7 @@ public class ProcessingService {
 
   private Map<String, String> createNewPids(List<JsonNode> request, boolean isSpecimen) {
     try {
-      var pidMap = handleComponent.postHandle(request, isSpecimen);
+      var pidMap = pidComponent.postPid(request, isSpecimen);
       log.info("Successfully minted {} {} PIDs", pidMap.size(), isSpecimen ? "specimen" : "media");
       return pidMap; // map localId : doiOfTarget
     } catch (PidException e) {
@@ -598,20 +590,11 @@ public class ProcessingService {
   }
 
   private void republishSpecimenEvent(DigitalSpecimenEvent event) {
-    try {
-      publisherService.republishSpecimenEvent(event);
-    } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to republish specimen message due to invalid json", e);
-    }
+    publisherService.republishSpecimenEvent(event);
   }
 
   private void republishMediaEvent(DigitalMediaEvent event) {
-    try {
-      publisherService.republishMediaEvent(event);
-    } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to republish media message due to invalid json", e);
-    }
-
+    publisherService.republishMediaEvent(event);
   }
 
   private Map<String, DigitalSpecimenRecord> getCurrentSpecimen(Set<DigitalSpecimenEvent> events)
@@ -694,15 +677,7 @@ public class ProcessingService {
         .stream()
         .collect(Collectors.toMap(DigitalMediaRecord::id, Function.identity()));
     var updatedDigitalMediaTuples = uniqueEvents.stream()
-        .map(event -> {
-          try {
-            return createDigitalMediaEventWithoutER(event, currentDigitalMediaRecords);
-          } catch (JsonProcessingException e) {
-            log.error("Failed to process media tombstone event for media id {}",
-                event.mediaDoi(), e);
-            throw new JsonMappingException(e);
-          }
-        })
+        .map(event -> createDigitalMediaEventWithoutER(event, currentDigitalMediaRecords))
         .filter(Optional::isPresent).map(Optional::get).toList();
     if (updatedDigitalMediaTuples.isEmpty()) {
       log.info("No media relationships to tombstone");
@@ -756,16 +731,11 @@ public class ProcessingService {
 
   private void republishMediaRelationshipTombstoneEvent(
       DigitalMediaRelationshipTombstoneEvent event) {
-    try {
-      publisherService.publishDigitalMediaRelationTombstone(event);
-    } catch (JsonProcessingException e) {
-      log.error("Fatal exception, unable to republish specimen message due to invalid json", e);
-    }
+    publisherService.publishDigitalMediaRelationTombstone(event);
   }
 
   private Optional<UpdatedDigitalMediaTuple> createDigitalMediaEventWithoutER(
-      DigitalMediaRelationshipTombstoneEvent event, Map<String, DigitalMediaRecord> existingMedia)
-      throws JsonProcessingException {
+      DigitalMediaRelationshipTombstoneEvent event, Map<String, DigitalMediaRecord> existingMedia) {
     var currentDigitalMediaRecord = existingMedia.get(event.mediaDoi());
     var updatedDigitalMediaEvent = generatedUpdatedMediaEvent(event, currentDigitalMediaRecord);
     if (Objects.equals(currentDigitalMediaRecord.attributes(),
@@ -780,7 +750,7 @@ public class ProcessingService {
   }
 
   private DigitalMediaEvent generatedUpdatedMediaEvent(DigitalMediaRelationshipTombstoneEvent event,
-      DigitalMediaRecord currentDigitalMediaRecord) throws JsonProcessingException {
+      DigitalMediaRecord currentDigitalMediaRecord) {
     var updatedDigitalMediaAttributes = deepCopy(currentDigitalMediaRecord.attributes());
     updatedDigitalMediaAttributes.setOdsHasEntityRelationships(
         removeRelationship(event, updatedDigitalMediaAttributes));
@@ -793,8 +763,7 @@ public class ProcessingService {
         false);
   }
 
-  private DigitalMedia deepCopy(DigitalMedia currentDigitalMedia)
-      throws JsonProcessingException {
+  private DigitalMedia deepCopy(DigitalMedia currentDigitalMedia) {
     return objectMapper
         .readValue(objectMapper.writeValueAsString(currentDigitalMedia), DigitalMedia.class);
   }

@@ -37,7 +37,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdat
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
@@ -71,6 +70,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.node.ObjectNode;
 
 @ExtendWith(MockitoExtension.class)
 class FdoRecordServiceTest {
@@ -233,7 +233,7 @@ class FdoRecordServiceTest {
   }
 
   @Test
-  void testGenRequestMinimal() throws Exception {
+  void testGenRequestMinimal()  {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
@@ -241,28 +241,28 @@ class FdoRecordServiceTest {
         List.of(givenHandleRequestMin()));
 
     // When
-    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
   }
 
   @Test
-  void testBuildUpdateHandleRequest() throws Exception {
+  void testBuildUpdateHandleRequest()  {
     // Given
     var tupleList = List.of(
         new UpdatedDigitalSpecimenTuple(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent(),
             givenEmptyMediaProcessResult()));
 
     // When
-    var response = fdoRecordService.buildUpdateHandleRequest(tupleList);
+    var response = fdoRecordService.buildUpdatePidRequest(tupleList);
 
     // Then
     assertThat(response).isEqualTo(List.of(givenUpdateHandleRequest(true)));
   }
 
   @Test
-  void testGenRequestMinimalCombined() throws Exception {
+  void testGenRequestMinimalCombined()  {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenDigitalSpecimenAttributesMinimal(), ORIGINAL_DATA);
@@ -271,14 +271,14 @@ class FdoRecordServiceTest {
         List.of(givenHandleRequestMin()));
 
     // When
-    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
   }
 
   @Test
-  void testRollbackUpdate() throws Exception {
+  void testRollbackUpdate()  {
     var specimen = givenDigitalSpecimenWrapper();
     var specimenRecord = new DigitalSpecimenRecord(HANDLE, 1, 1, CREATED, specimen, Set.of(),
         false, true, List.of());
@@ -313,12 +313,12 @@ class FdoRecordServiceTest {
     // Given
     var expected = MAPPER.createObjectNode()
         .set("data", MAPPER.createObjectNode()
-            .put("id", MEDIA_PID)
             .put("type", TYPE_MEDIA)
+            .put("id", MEDIA_PID)
             .set("attributes", givenHandleMediaRequestAttributes()));
 
     // When
-    var result = fdoRecordService.buildUpdateHandleRequestMedia(
+    var result = fdoRecordService.buildUpdatePidRequestMedia(
         List.of(givenUpdatedDigitalMediaTuple(false))
     );
 
@@ -328,7 +328,7 @@ class FdoRecordServiceTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testGenRequestFull(boolean markedAsType) throws Exception {
+  void testGenRequestFull(boolean markedAsType) {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, markedAsType, false, false)
@@ -344,14 +344,14 @@ class FdoRecordServiceTest {
             .set("attributes", expectedAttributes)));
 
     // When
-    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
   }
 
   @Test
-  void testGenRequestIdentifier() throws Exception {
+  void testGenRequestIdentifier() {
     // Given
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, false, false, false)
@@ -381,14 +381,14 @@ class FdoRecordServiceTest {
             .set("attributes", expectedAttributes)));
 
     // When
-    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
   }
 
   @Test
-  void testGenRequestIdentifiers() throws Exception {
+  void testGenRequestIdentifiers() {
     // Given
     var markedAsType = false;
     var specimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
@@ -407,7 +407,7 @@ class FdoRecordServiceTest {
                   "referentName": "Biota",
                   "livingOrPreserved": "Preserved",
                   "markedAsType": false,
-                  "otherSpecimenIds": [{"identifierType":"Specimen label","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},{"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]}}}]
+                  "otherSpecimenIds": [{"identifierType":"Specimen label","identifierValue":"20.5000.1025/V1Z-176-LL4","resolvable":false},{"identifierType":"physical specimen identifier","identifierValue":"https://geocollections.info/specimen/23602","resolvable":false}]
                 }
               }
             }
@@ -416,7 +416,7 @@ class FdoRecordServiceTest {
     var expected = new ArrayList<>(List.of(expectedJson));
 
     // When
-    var response = fdoRecordService.buildPostHandleRequest(List.of(specimen));
+    var response = fdoRecordService.buildPostPidRequest(List.of(specimen));
 
     // Then
     assertThat(response).isEqualTo(expected);
@@ -437,22 +437,22 @@ class FdoRecordServiceTest {
 
   @ParameterizedTest
   @MethodSource("digitalSpecimensNeedToBeChanged")
-  void testHandleNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
+  void testPidNeedsUpdateSpecimen(DigitalSpecimen currentAttributes) {
     var currentDigitalSpecimen = new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
         currentAttributes,
         ORIGINAL_DATA);
     // Then
     assertThat(
-        fdoRecordService.handleNeedsUpdateSpecimen(currentDigitalSpecimen,
+        fdoRecordService.pidNeedsUpdateSpecimen(currentDigitalSpecimen,
             givenDigitalSpecimenWrapper())).isTrue();
   }
 
   @ParameterizedTest
   @MethodSource("digitalMediaNeedsToBeChanged")
-  void testHandleNeedsUpdateMedia(DigitalMedia currentMedia) {
+  void testPidNeedsUpdateMedia(DigitalMedia currentMedia) {
     // Then
     assertThat(
-        fdoRecordService.handleNeedsUpdateMedia(currentMedia,
+        fdoRecordService.pidNeedsUpdateMedia(currentMedia,
             givenDigitalMedia(MEDIA_URL, false))).isTrue();
   }
 
@@ -463,7 +463,7 @@ class FdoRecordServiceTest {
         null, false, false).withDwcCollectionID(REPLACEMENT_ATTRIBUTE);
 
     // Then
-    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(
+    assertThat(fdoRecordService.pidNeedsUpdateSpecimen(
         new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, currentDigitalSpecimen,
             generateSpecimenOriginalData()), givenDigitalSpecimenWrapper())).isFalse();
   }
@@ -471,7 +471,7 @@ class FdoRecordServiceTest {
   @Test
   void testHandleDoesNotNeedUpdateMedia() {
     // Then
-    assertThat(fdoRecordService.handleNeedsUpdateMedia(givenDigitalMedia(MEDIA_URL, false),
+    assertThat(fdoRecordService.pidNeedsUpdateMedia(givenDigitalMedia(MEDIA_URL, false),
         givenDigitalMedia(MEDIA_URL, false))).isFalse();
   }
 
@@ -482,7 +482,7 @@ class FdoRecordServiceTest {
         ORGANISATION_ID, false, false, ORIGINAL_DATA);
 
     // When/then
-    assertThat(fdoRecordService.handleNeedsUpdateSpecimen(currentSpecimen,
+    assertThat(fdoRecordService.pidNeedsUpdateSpecimen(currentSpecimen,
         givenDigitalSpecimenWrapper())).isTrue();
   }
 }

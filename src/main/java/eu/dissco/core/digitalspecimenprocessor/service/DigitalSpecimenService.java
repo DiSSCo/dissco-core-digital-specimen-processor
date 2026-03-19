@@ -1,15 +1,10 @@
 package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
-import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DLQ_FAILED;
 import static java.util.stream.Collectors.toMap;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.fge.jsonpatch.diff.JsonDiff;
+import com.flipkart.zjsonpatch.Jackson3JsonDiff;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
@@ -23,7 +18,7 @@ import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepositor
 import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils;
-import eu.dissco.core.digitalspecimenprocessor.web.HandleComponent;
+import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
@@ -39,6 +34,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.exception.DataAccessException;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @Service
 @RequiredArgsConstructor
@@ -50,13 +49,14 @@ public class DigitalSpecimenService {
   private final ElasticSearchRepository elasticRepository;
   private final FdoRecordService fdoRecordService;
   private final RabbitMqPublisherService publisherService;
-  private final HandleComponent handleComponent;
+  private final PidComponent pidComponent;
   private final AnnotationPublisherService annotationPublisherService;
   private final MidsService midsService;
-  private final ObjectMapper mapper;
+  private final JsonMapper mapper;
   private final DigitalMediaService digitalMediaService;
 
-  public void updateEqualSpecimen(Map<DigitalSpecimenRecord, DigitalSpecimenEvent> equalDigitalSpecimenMap) {
+  public void updateEqualSpecimen(
+      Map<DigitalSpecimenRecord, DigitalSpecimenEvent> equalDigitalSpecimenMap) {
     var idMap = equalDigitalSpecimenMap.entrySet().stream()
         .collect(toMap(
             entry ->
@@ -82,7 +82,7 @@ public class DigitalSpecimenService {
     try {
       repository.createDigitalSpecimenRecord(digitalSpecimenRecords);
     } catch (DataAccessException e) {
-      log.error("Unable to insert new specimens into the database. Rolling back handles", e);
+      log.error("Unable to insert new specimens into the database. Rolling back PIDs", e);
       rollbackService.rollbackNewSpecimens(digitalSpecimenRecords, false, false);
       return Collections.emptySet();
     }
@@ -112,9 +112,9 @@ public class DigitalSpecimenService {
   public Set<DigitalSpecimenRecord> updateExistingDigitalSpecimen(
       List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples,
       Map<String, PidProcessResult> pidMap) {
-    log.info("Persisting to Handle Server");
-    var successfullyUpdatedHandles = updateHandles(updatedDigitalSpecimenTuples);
-    if (!successfullyUpdatedHandles) {
+    log.info("Persisting to PID Server");
+    var successfullyUpdatedPids = updatePids(updatedDigitalSpecimenTuples);
+    if (!successfullyUpdatedPids) {
       return Set.of();
     }
     var digitalSpecimenRecords = getUpdatedDigitalSpecimenRecords(updatedDigitalSpecimenTuples,
@@ -192,7 +192,7 @@ public class DigitalSpecimenService {
   private boolean publishCreateSpecimenEvents(DigitalSpecimenRecord digitalSpecimenRecord) {
     try {
       publisherService.publishCreateEventSpecimen(digitalSpecimenRecord);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.error("Rolling back, failed to publish Create event", e);
       return false;
     }
@@ -205,7 +205,7 @@ public class DigitalSpecimenService {
           updatedDigitalSpecimenRecord.digitalSpecimenRecord(),
           updatedDigitalSpecimenRecord.jsonPatch());
       return true;
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.error("Failed to publish update event", e);
       return false;
     }
@@ -257,13 +257,13 @@ public class DigitalSpecimenService {
 
   private DigitalSpecimenRecord mapToDigitalSpecimenRecord(DigitalSpecimenEvent event,
       Map<String, PidProcessResult> pidMap) {
-    var handle = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
-    if (handle == null) {
+    var pid = pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID());
+    if (pid == null) {
       try {
-        log.error("handle not created for Digital Specimen {}",
+        log.error("PID not created for Digital Specimen {}",
             event.digitalSpecimenWrapper().physicalSpecimenID());
         publisherService.deadLetterEventSpecimen(event);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException _) {
         log.error("DLQ failed for specimen {}",
             event.digitalSpecimenWrapper().physicalSpecimenID());
       }
@@ -287,7 +287,7 @@ public class DigitalSpecimenService {
     var jsonSpecimen = (ObjectNode) mapper.valueToTree(digitalSpecimen);
     jsonCurrentSpecimen.set("dcterms:modified", null);
     jsonSpecimen.set("dcterms:modified", null);
-    return JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen);
+    return Jackson3JsonDiff.asJson(jsonCurrentSpecimen, jsonSpecimen);
   }
 
   private Set<UpdatedDigitalSpecimenRecord> getUpdatedDigitalSpecimenRecords(
@@ -322,27 +322,22 @@ public class DigitalSpecimenService {
 
   /* PID Records */
 
-  private boolean updateHandles(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+  private boolean updatePids(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
     var digitalSpecimensToUpdate = updatedDigitalSpecimenTuples.stream()
-        .filter(tuple -> fdoRecordService.handleNeedsUpdateSpecimen(
+        .filter(tuple -> fdoRecordService.pidNeedsUpdateSpecimen(
             tuple.currentSpecimen().digitalSpecimenWrapper(),
             tuple.digitalSpecimenEvent().digitalSpecimenWrapper()))
         .toList();
 
     if (!digitalSpecimensToUpdate.isEmpty()) {
       try {
-        log.info("Updating {} handle records", digitalSpecimensToUpdate.size());
-        var requests = fdoRecordService.buildUpdateHandleRequest(digitalSpecimensToUpdate);
-        handleComponent.updateHandle(requests);
+        log.info("Updating {} PID records", digitalSpecimensToUpdate.size());
+        var requests = fdoRecordService.buildUpdatePidRequest(digitalSpecimensToUpdate);
+        pidComponent.updatePid(requests);
       } catch (PidException e) {
-        log.error("Unable to update Handle record. Not proceeding with update. ", e);
-        try {
-          for (var tuple : updatedDigitalSpecimenTuples) {
-            publisherService.deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
-          }
-        } catch (JsonProcessingException jsonEx) {
-          log.error(DLQ_FAILED, updatedDigitalSpecimenTuples, jsonEx);
-        }
+        log.error("Unable to update PID record. Not proceeding with update. ", e);
+        updatedDigitalSpecimenTuples.forEach(
+            tuple -> publisherService.deadLetterEventSpecimen(tuple.digitalSpecimenEvent()));
         return false;
       }
     }
