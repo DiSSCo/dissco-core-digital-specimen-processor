@@ -174,7 +174,7 @@ public class AnnotationTestUtils {
 			.withDwcCollectionID(PHYSICAL_SPECIMEN_COLLECTION)
 			.withDwcDatasetName(DATASET_ID)
 			.withOdsIsMarkedAsType(true)
-			.withOdsIsKnownToContainMedia(false)
+			.withOdsIsKnownToContainMedia(true)
 			.withDctermsModified("2022-11-01T09:59:24.000Z");
 		if (motivation.equals(OaMotivation.OA_EDITING)) {
 			specimen.withDwcCollectionID(NEW_VALUE);
