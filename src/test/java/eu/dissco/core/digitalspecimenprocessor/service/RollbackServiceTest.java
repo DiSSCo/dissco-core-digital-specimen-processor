@@ -205,6 +205,23 @@ class RollbackServiceTest {
 	}
 
 	@Test
+	void rollbackUpdatedSpecimenCase1NoRepublish() {
+		// Given
+		var specimenRecords = Set.of(givenUpdatedDigitalSpecimenRecord(false));
+		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(false);
+
+		// When
+		rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, false, false);
+
+		// Then
+		then(elasticSearchRepository).shouldHaveNoInteractions();
+		then(specimenRepository).shouldHaveNoInteractions();
+		then(handleComponent).shouldHaveNoInteractions();
+		then(rabbitMqService).shouldHaveNoInteractions();
+	}
+
+
+	@Test
 	void rollbackUpdatedSpecimenCase2() {
 		// Given
 		var specimenRecords = Set.of(givenUpdatedDigitalSpecimenRecord(false));
