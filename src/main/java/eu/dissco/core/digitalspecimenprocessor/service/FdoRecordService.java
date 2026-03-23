@@ -142,7 +142,11 @@ public class FdoRecordService {
 	}
 
 	public List<JsonNode> buildUpdatePidRequest(List<UpdatedDigitalSpecimenTuple> digitalSpecimens) {
-		return digitalSpecimens.stream().map(this::buildSingleUpdatePidRequest).toList();
+		return digitalSpecimens.stream()
+			.map(digitalSpecimenTuple -> buildSingleUpdatePidRequest(
+					digitalSpecimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper(),
+					digitalSpecimenTuple.currentSpecimen().id()))
+			.toList();
 	}
 
 	public List<JsonNode> buildUpdatePidRequestMedia(List<UpdatedDigitalMediaTuple> digitalMediaTuples) {
@@ -181,12 +185,12 @@ public class FdoRecordService {
 						.set(ATTRIBUTES, generateMediaAttributes(mediaEvent.digitalMediaWrapper().attributes())));
 	}
 
-	private JsonNode buildSingleUpdatePidRequest(UpdatedDigitalSpecimenTuple specimenTuple) {
+	public JsonNode buildSingleUpdatePidRequest(DigitalSpecimenWrapper digitalSpecimenWrapper, String id) {
 		var request = mapper.createObjectNode();
 		var data = mapper.createObjectNode();
-		data.put(ID, specimenTuple.currentSpecimen().id().replace(DOI_PROXY, ""));
+		data.put(ID, id);
 		data.put(TYPE, fdoProperties.getSpecimenFdoType());
-		var attributes = genRequestAttributes(specimenTuple.digitalSpecimenEvent().digitalSpecimenWrapper());
+		var attributes = genRequestAttributes(digitalSpecimenWrapper);
 		data.set(ATTRIBUTES, attributes);
 		request.set(DATA, data);
 		return request;

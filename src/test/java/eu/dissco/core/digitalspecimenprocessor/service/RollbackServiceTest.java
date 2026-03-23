@@ -195,7 +195,7 @@ class RollbackServiceTest {
 		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(false);
 
 		// When
-		rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, false);
+		rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, false, true);
 
 		// Then
 		then(elasticSearchRepository).shouldHaveNoInteractions();
@@ -211,7 +211,7 @@ class RollbackServiceTest {
 		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(false);
 
 		// When
-		rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, true);
+		rollbackService.rollbackUpdatedSpecimens(specimenRecords, false, true, true);
 
 		// Then
 		then(elasticSearchRepository).shouldHaveNoInteractions();
@@ -227,7 +227,7 @@ class RollbackServiceTest {
 		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(false);
 
 		// When
-		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
+		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true, true);
 
 		// Then
 		then(elasticSearchRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
@@ -243,7 +243,7 @@ class RollbackServiceTest {
 		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
 
 		// When
-		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
+		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true, true);
 
 		// Then
 		then(elasticSearchRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
@@ -260,7 +260,7 @@ class RollbackServiceTest {
 		doThrow(PidException.class).when(handleComponent).rollbackPidUpdate(any());
 
 		// When
-		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
+		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true, true);
 
 		// Then
 		then(elasticSearchRepository).should().rollbackVersion(givenUnequalDigitalSpecimenRecord());
@@ -277,7 +277,7 @@ class RollbackServiceTest {
 			.rollbackVersion(givenUnequalDigitalSpecimenRecord());
 
 		// When
-		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true);
+		rollbackService.rollbackUpdatedSpecimens(specimenRecords, true, true, true);
 
 		// Then
 		then(specimenRepository).should().updateDigitalSpecimenRecord(Set.of(givenUnequalDigitalSpecimenRecord()));
@@ -420,7 +420,7 @@ class RollbackServiceTest {
 
 		// When
 		var result = rollbackService.handlePartiallyFailedElasticUpdateSpecimen(Set.of(successfulRecord, failedRecord),
-				bulkResponse);
+				bulkResponse, true);
 
 		// Then
 		assertThat(result).isEqualTo(Set.of(successfulRecord));

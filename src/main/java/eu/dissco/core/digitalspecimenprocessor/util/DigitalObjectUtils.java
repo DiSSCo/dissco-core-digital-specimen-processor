@@ -1,6 +1,7 @@
 package eu.dissco.core.digitalspecimenprocessor.util;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
+import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 
@@ -57,6 +58,17 @@ public class DigitalObjectUtils {
 					applicationProperties.getPid(), PROCESSING_SERVICE, DOI, SCHEMA_SOFTWARE_APPLICATION)))
 			.withDwcRelatedResourceID(DOI_PROXY + relatedResourceId)
 			.withOdsRelatedResourceURI(URI.create(DOI_PROXY + relatedResourceId));
+	}
+
+	public static List<EntityRelationship> getMediaEntityRelationshipsForSpecimen(
+			DigitalSpecimenRecord digitalSpecimenRecord) {
+		return digitalSpecimenRecord.digitalSpecimenWrapper()
+				.attributes()
+				.getOdsHasEntityRelationships()
+				.stream()
+				.filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
+						.equals(HAS_MEDIA.getRelationshipName()))
+				.toList();
 	}
 
 }
