@@ -60,15 +60,4 @@ public class DigitalObjectUtils {
 			.withOdsRelatedResourceURI(URI.create(DOI_PROXY + relatedResourceId));
 	}
 
-	public static List<EntityRelationship> getMediaEntityRelationshipsForSpecimen(
-			DigitalSpecimenRecord digitalSpecimenRecord) {
-		return digitalSpecimenRecord.digitalSpecimenWrapper()
-				.attributes()
-				.getOdsHasEntityRelationships()
-				.stream()
-				.filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
-						.equals(HAS_MEDIA.getRelationshipName()))
-				.toList();
-	}
-
 }
