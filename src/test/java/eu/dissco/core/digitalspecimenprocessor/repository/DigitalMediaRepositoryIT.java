@@ -24,136 +24,134 @@ import org.junit.jupiter.api.Test;
 
 class DigitalMediaRepositoryIT extends BaseRepositoryIT {
 
-  private DigitalMediaRepository mediaRepository;
+	private DigitalMediaRepository mediaRepository;
 
+	@BeforeEach
+	void setup() {
+		mediaRepository = new DigitalMediaRepository(context, MAPPER);
+	}
 
-  @BeforeEach
-  void setup() {
-    mediaRepository = new DigitalMediaRepository(context, MAPPER);
-  }
+	@AfterEach
+	void destroy() {
+		context.truncate(DIGITAL_MEDIA_OBJECT).execute();
+	}
 
-  @AfterEach
-  void destroy() {
-    context.truncate(DIGITAL_MEDIA_OBJECT).execute();
-  }
+	@Test
+	void testCreateDigitalMediaRecord() {
+		// Given
+		var digitalMedia = givenDigitalMediaRecord();
 
-  @Test
-  void testCreateDigitalMediaRecord() {
-    // Given
-    var digitalMedia = givenDigitalMediaRecord();
+		// When
+		mediaRepository.createDigitalMediaRecord(Set.of(digitalMedia));
+		var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+			.fetchOne();
+		var result = dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL);
 
-    // When
-    mediaRepository.createDigitalMediaRecord(Set.of(digitalMedia));
-    var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
-        .fetchOne();
-    var result = dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL);
+		// Then
+		assertThat(result).isEqualTo(MEDIA_URL);
+	}
 
-    // Then
-    assertThat(result).isEqualTo(MEDIA_URL);
-  }
+	@Test
+	void testUpdatedDigitalMediaRecord() {
+		// Given
+		mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+		var updatedMediaRecord = givenUnequalDigitalMediaRecord();
 
-  @Test
-  void testUpdatedDigitalMediaRecord()  {
-    // Given
-    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
-    var updatedMediaRecord = givenUnequalDigitalMediaRecord();
+		// When
+		mediaRepository.updateDigitalMediaRecord(Set.of(updatedMediaRecord));
+		var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+			.fetchOne();
+		var sourceSystemId = dbRecord.get(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID);
+		var originalData = MAPPER.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data());
 
-    // When
-    mediaRepository.updateDigitalMediaRecord(Set.of(updatedMediaRecord));
-    var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
-        .fetchOne();
-    var sourceSystemId = dbRecord.get(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID);
-    var originalData = MAPPER.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data());
+		// Then
+		assertThat(sourceSystemId).isEqualTo(ANOTHER_SOURCE_SYSTEM_ID);
+		assertThat(originalData).isEqualTo(UPDATED_ORIGINAL_DATA_MEDIA);
+	}
 
-    // Then
-    assertThat(sourceSystemId).isEqualTo(ANOTHER_SOURCE_SYSTEM_ID);
-    assertThat(originalData).isEqualTo(UPDATED_ORIGINAL_DATA_MEDIA);
-  }
+	@Test
+	void testUpdatedDigitalMediaRecordNotFromSourceSystem() {
+		// Given
+		mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+		var updatedMediaRecord = new DigitalMediaRecord(MEDIA_PID, MEDIA_URL, 1, Instant.now(), null,
+				givenUnequalDigitalMedia(MEDIA_URL, true), null, false, false);
 
-  @Test
-  void testUpdatedDigitalMediaRecordNotFromSourceSystem()  {
-    // Given
-    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
-    var updatedMediaRecord = new DigitalMediaRecord(
-        MEDIA_PID, MEDIA_URL, 1, Instant.now(), null, givenUnequalDigitalMedia(MEDIA_URL, true),
-        null, false, false);
+		// When
+		mediaRepository.updateDigitalMediaRecord(Set.of(updatedMediaRecord));
+		var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+			.fetchOne();
+		var sourceSystemId = dbRecord.get(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID);
+		var originalData = MAPPER.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data());
 
-    // When
-    mediaRepository.updateDigitalMediaRecord(Set.of(updatedMediaRecord));
-    var dbRecord = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
-        .fetchOne();
-    var sourceSystemId = dbRecord.get(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID);
-    var originalData = MAPPER.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data());
+		// Then
+		assertThat(sourceSystemId).isEqualTo(ANOTHER_SOURCE_SYSTEM_ID);
+		assertThat(originalData).isEqualTo(ORIGINAL_DATA_MEDIA);
+	}
 
-    // Then
-    assertThat(sourceSystemId).isEqualTo(ANOTHER_SOURCE_SYSTEM_ID);
-    assertThat(originalData).isEqualTo(ORIGINAL_DATA_MEDIA);
-  }
+	@Test
+	void testGetExistingDigitalMedia() {
+		// Given
+		mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
 
-  @Test
-  void testGetExistingDigitalMedia() {
-    // Given
-    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+		// When
+		var result = mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL));
 
-    // When
-    var result = mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL));
+		// Then
+		assertThat(result).isEqualTo(List.of(givenDigitalMediaRecordNoMas()));
+	}
 
-    // Then
-    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecordNoMas()));
-  }
+	@Test
+	void testRollbackMedia() {
+		// Given
+		mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
 
-  @Test
-  void testRollbackMedia() {
-    // Given
-    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+		// When
+		mediaRepository.rollBackDigitalMedia(MEDIA_PID);
+		var result = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+			.fetchOne();
 
-    // When
-    mediaRepository.rollBackDigitalMedia(MEDIA_PID);
-    var result = context.select(DIGITAL_MEDIA_OBJECT.asterisk())
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
-        .fetchOne();
+		// Then
+		assertThat(result).isNull();
+	}
 
-    // Then
-    assertThat(result).isNull();
-  }
+	@Test
+	void testUpdateLastChecked() {
+		// Given
+		mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+		var lastChecked = context.select(DIGITAL_MEDIA_OBJECT.LAST_CHECKED)
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+			.fetchOne(Record1::value1);
 
-  @Test
-  void testUpdateLastChecked() {
-    // Given
-    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
-    var lastChecked = context.select(DIGITAL_MEDIA_OBJECT.LAST_CHECKED)
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
-        .fetchOne(Record1::value1);
+		// When
+		mediaRepository.updateLastChecked(List.of(MEDIA_PID));
+		var result = context.select(DIGITAL_MEDIA_OBJECT.LAST_CHECKED)
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
+			.fetchOne(Record1::value1);
 
-    // When
-    mediaRepository.updateLastChecked(List.of(MEDIA_PID));
-    var result = context.select(DIGITAL_MEDIA_OBJECT.LAST_CHECKED)
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.eq(MEDIA_PID))
-        .fetchOne(Record1::value1);
+		// Then
+		assertThat(result).isAfter(lastChecked);
+	}
 
-    // Then
-    assertThat(result).isAfter(lastChecked);
-  }
+	@Test
+	void testGetExistingDigitalMediaByDoi() {
+		// Given
+		mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
 
-  @Test
-  void testGetExistingDigitalMediaByDoi() {
-    // Given
-    mediaRepository.createDigitalMediaRecord(Set.of(givenDigitalMediaRecord()));
+		// When
+		var result = mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID));
 
-    // When
-    var result = mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID));
-
-    // Then
-    assertThat(result).isEqualTo(List.of(givenDigitalMediaRecordNoMas()));
-  }
+		// Then
+		assertThat(result).isEqualTo(List.of(givenDigitalMediaRecordNoMas()));
+	}
 
 }

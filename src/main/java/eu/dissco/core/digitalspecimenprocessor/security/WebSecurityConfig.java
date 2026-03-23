@@ -15,20 +15,22 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class WebSecurityConfig {
 
-    private final JwtAuthConverter jwtAuthConverter;
+	private final JwtAuthConverter jwtAuthConverter;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-        http.authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
-                .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
-            .anyRequest().authenticated());
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+		http.authorizeHttpRequests(
+				authorizeHttpRequests -> authorizeHttpRequests.requestMatchers(EndpointRequest.to(HealthEndpoint.class))
+					.permitAll()
+					.anyRequest()
+					.authenticated());
 
-        http.oauth2ResourceServer(jwtoauth2ResourceServer -> jwtoauth2ResourceServer.jwt((
-                jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter)
-                )));
+		http.oauth2ResourceServer(jwtoauth2ResourceServer -> jwtoauth2ResourceServer
+			.jwt((jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter))));
 
-        http.sessionManagement(sessionManagement -> sessionManagement
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        return http.build();
-    }
+		http.sessionManagement(
+				sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+		return http.build();
+	}
+
 }

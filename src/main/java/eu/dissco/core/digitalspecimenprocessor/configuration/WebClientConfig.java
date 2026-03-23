@@ -22,47 +22,43 @@ import reactor.netty.http.client.HttpClient;
 @Configuration
 public class WebClientConfig {
 
-  @Value("${doi.endpoint}")
-  private String doiEndpoint;
+	@Value("${doi.endpoint}")
+	private String doiEndpoint;
 
-  @Bean
-  public OAuth2AuthorizedClientManager authorizedClientManager(
-      ClientRegistrationRepository clientRegistrationRepository,
-      OAuth2AuthorizedClientService clientService) {
-    var authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder
-        .builder()
-        .refreshToken()
-        .clientCredentials()
-        .build();
-    var authorizedClientManager = new AuthorizedClientServiceOAuth2AuthorizedClientManager(
-        clientRegistrationRepository, clientService
-    );
-    authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
-    return authorizedClientManager;
-  }
+	@Bean
+	public OAuth2AuthorizedClientManager authorizedClientManager(
+			ClientRegistrationRepository clientRegistrationRepository, OAuth2AuthorizedClientService clientService) {
+		var authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder.builder()
+			.refreshToken()
+			.clientCredentials()
+			.build();
+		var authorizedClientManager = new AuthorizedClientServiceOAuth2AuthorizedClientManager(
+				clientRegistrationRepository, clientService);
+		authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+		return authorizedClientManager;
+	}
 
+	@Bean
+	public PidClient doiClient(OAuth2AuthorizedClientManager authorizedClientManager) {
+		var errorResponseFilter = ExchangeFilterFunction
+			.ofResponseProcessor(WebClientErrorHandling::exchangeFilterResponseProcessor);
+		// Set up Oauth2
+		var oauth2Client = new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+		oauth2Client.setDefaultClientRegistrationId("dissco");
+		// Build web client
+		var webClient = WebClient.builder()
+			.apply(oauth2Client.oauth2Configuration())
+			.filter(errorResponseFilter)
+			.clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true)))
+			.baseUrl(doiEndpoint)
+			.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+			.build();
+		// Create factory for client proxies
+		var proxyFactory = HttpServiceProxyFactory.builder()
+			.exchangeAdapter(WebClientAdapter.create(webClient))
+			.build();
+		// Create client proxy
+		return proxyFactory.createClient(PidClient.class);
+	}
 
-  @Bean
-  public PidClient doiClient(OAuth2AuthorizedClientManager authorizedClientManager) {
-    var errorResponseFilter = ExchangeFilterFunction
-        .ofResponseProcessor(WebClientErrorHandling::exchangeFilterResponseProcessor);
-    // Set up Oauth2
-    var oauth2Client = new ServletOAuth2AuthorizedClientExchangeFilterFunction(
-        authorizedClientManager);
-    oauth2Client.setDefaultClientRegistrationId("dissco");
-    // Build web client
-    var webClient = WebClient.builder()
-        .apply(oauth2Client.oauth2Configuration())
-        .filter(errorResponseFilter)
-        .clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true)))
-        .baseUrl(doiEndpoint)
-        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-        .build();
-    // Create factory for client proxies
-    var proxyFactory = HttpServiceProxyFactory.builder()
-        .exchangeAdapter(WebClientAdapter.create(webClient))
-        .build();
-    // Create client proxy
-    return proxyFactory.createClient(PidClient.class);
-  }
 }

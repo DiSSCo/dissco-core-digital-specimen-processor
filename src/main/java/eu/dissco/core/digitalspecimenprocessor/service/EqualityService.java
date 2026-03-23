@@ -33,195 +33,175 @@ import tools.jackson.databind.node.ObjectNode;
 @Slf4j
 public class EqualityService {
 
-  private final JsonMapper mapper;
-  private static final Set<String> IGNORED_FIELDS = Set.of(
-      "dcterms:created",
-      "dcterms:modified",
-      "dwc:relationshipEstablishedDate"
-  );
+	private final JsonMapper mapper;
 
-  public boolean specimensAreEqual(DigitalSpecimenRecord currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimenWrapper,
-      MediaRelationshipProcessResult mediaRelationshipProcessResult) {
-    return specimensAreEqual(currentDigitalSpecimen, digitalSpecimenWrapper)
-        && mediaRelationshipProcessResult.newLinkedObjects().isEmpty()
-        && mediaRelationshipProcessResult.tombstonedRelationships().isEmpty();
-  }
+	private static final Set<String> IGNORED_FIELDS = Set.of("dcterms:created", "dcterms:modified",
+			"dwc:relationshipEstablishedDate");
 
-  public boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
-      DigitalMediaWrapper digitalMedia,
-      Set<String> newSpecimenRelationships) {
-    return mediaAreEqual(currentDigitalMedia, digitalMedia)
-        && newSpecimenRelationships.isEmpty();
-  }
+	public boolean specimensAreEqual(DigitalSpecimenRecord currentDigitalSpecimen,
+			DigitalSpecimenWrapper digitalSpecimenWrapper,
+			MediaRelationshipProcessResult mediaRelationshipProcessResult) {
+		return specimensAreEqual(currentDigitalSpecimen, digitalSpecimenWrapper)
+				&& mediaRelationshipProcessResult.newLinkedObjects().isEmpty()
+				&& mediaRelationshipProcessResult.tombstonedRelationships().isEmpty();
+	}
 
-  public DigitalSpecimenEvent setExistingEventDatesSpecimen(
-      DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
-      DigitalSpecimenEvent digitalSpecimenEvent,
-      MediaRelationshipProcessResult mediaRelationships) {
-    var digitalSpecimen = digitalSpecimenEvent.digitalSpecimenWrapper().attributes();
-    setEntityRelationshipDates( // Set dates of ERs to previous version
-        currentDigitalSpecimenWrapper.attributes().getOdsHasEntityRelationships(),
-        digitalSpecimen.getOdsHasEntityRelationships());
-    digitalSpecimen.setOdsHasEntityRelationships(
-        addExistingMediaRelationships(mediaRelationships, // add existing media ers
-            digitalSpecimen.getOdsHasEntityRelationships()));
-    // Set dcterms:created to original date
-    digitalSpecimen.withDctermsCreated(
-        currentDigitalSpecimenWrapper.attributes().getDctermsCreated());
-    // We create a new object because the events/wrappers are immutable, and we don't want the hash code to be out of sync
-    return new DigitalSpecimenEvent(digitalSpecimenEvent.masList(),
-        new DigitalSpecimenWrapper(
-            digitalSpecimenEvent.digitalSpecimenWrapper().physicalSpecimenID(),
-            digitalSpecimenEvent.digitalSpecimenWrapper().type(),
-            digitalSpecimen,
-            digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
-        digitalSpecimenEvent.digitalMediaEvents(),
-        digitalSpecimenEvent.forceMasSchedule(),
-        digitalSpecimenEvent.isDataFromSourceSystem());
-  }
+	public boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia, DigitalMediaWrapper digitalMedia,
+			Set<String> newSpecimenRelationships) {
+		return mediaAreEqual(currentDigitalMedia, digitalMedia) && newSpecimenRelationships.isEmpty();
+	}
 
-  public DigitalMediaEvent setExistingEventDatesMedia(
-      DigitalMediaRecord currentDigitalMediaRecord,
-      DigitalMediaEvent digitalMediaEvent) {
-    var digitalMedia = digitalMediaEvent.digitalMediaWrapper().attributes();
-    setEntityRelationshipDates(
-        currentDigitalMediaRecord.attributes().getOdsHasEntityRelationships(),
-        digitalMedia.getOdsHasEntityRelationships());
-    // Set dcterms:created to original date
-    digitalMedia.withDctermsCreated(
-        currentDigitalMediaRecord.attributes().getDctermsCreated());
-    // We create a new object because the events/wrappers are immutable, and we don't want the hash code to be out of sync
-    return new DigitalMediaEvent(digitalMediaEvent.masList(),
-        new DigitalMediaWrapper(
-            digitalMediaEvent.digitalMediaWrapper().type(),
-            digitalMedia,
-            digitalMediaEvent.digitalMediaWrapper().originalAttributes()),
-        digitalMediaEvent.forceMasSchedule(),
-        digitalMediaEvent.isDataFromSourceSystem());
-  }
+	public DigitalSpecimenEvent setExistingEventDatesSpecimen(DigitalSpecimenWrapper currentDigitalSpecimenWrapper,
+			DigitalSpecimenEvent digitalSpecimenEvent, MediaRelationshipProcessResult mediaRelationships) {
+		var digitalSpecimen = digitalSpecimenEvent.digitalSpecimenWrapper().attributes();
+		setEntityRelationshipDates( // Set dates of ERs to previous version
+				currentDigitalSpecimenWrapper.attributes().getOdsHasEntityRelationships(),
+				digitalSpecimen.getOdsHasEntityRelationships());
+		digitalSpecimen.setOdsHasEntityRelationships(addExistingMediaRelationships(mediaRelationships, // add
+																										// existing
+																										// media
+																										// ers
+				digitalSpecimen.getOdsHasEntityRelationships()));
+		// Set dcterms:created to original date
+		digitalSpecimen.withDctermsCreated(currentDigitalSpecimenWrapper.attributes().getDctermsCreated());
+		// We create a new object because the events/wrappers are immutable, and we don't
+		// want the hash code to be out of sync
+		return new DigitalSpecimenEvent(digitalSpecimenEvent.masList(),
+				new DigitalSpecimenWrapper(digitalSpecimenEvent.digitalSpecimenWrapper().physicalSpecimenID(),
+						digitalSpecimenEvent.digitalSpecimenWrapper().type(), digitalSpecimen,
+						digitalSpecimenEvent.digitalSpecimenWrapper().originalAttributes()),
+				digitalSpecimenEvent.digitalMediaEvents(), digitalSpecimenEvent.forceMasSchedule(),
+				digitalSpecimenEvent.isDataFromSourceSystem());
+	}
 
-  private void setEntityRelationshipDates(List<EntityRelationship> currentEntityRelationships,
-      List<EntityRelationship> entityRelationships) {
-    // Create a map with relatedResourceID as a key so we only compare potentially equal ERs
-    // This reduces complexity compared to nested for-loops
-    var currentEntityRelationshipsMap = currentEntityRelationships.stream()
-        .collect(
-            Collectors.toMap(EntityRelationship::getDwcRelatedResourceID, Function.identity(),
-                (e1, e2) -> {
-                  log.debug("Duplicate entity relationship found for resource");
-                  // Return older of the two entity relationships
-                  return e1.getDwcRelationshipEstablishedDate()
-                      .after(e2.getDwcRelationshipEstablishedDate()) ? e1 : e2;
-                }));
-    entityRelationships.forEach(entityRelationship -> {
-      var currentEntityRelationship = currentEntityRelationshipsMap.get(
-          entityRelationship.getDwcRelatedResourceID());
-      if (entityRelationshipsAreEqual(currentEntityRelationship, entityRelationship)) {
-        entityRelationship.setDwcRelationshipEstablishedDate(
-            currentEntityRelationship.getDwcRelationshipEstablishedDate());
-      }
-    });
-  }
+	public DigitalMediaEvent setExistingEventDatesMedia(DigitalMediaRecord currentDigitalMediaRecord,
+			DigitalMediaEvent digitalMediaEvent) {
+		var digitalMedia = digitalMediaEvent.digitalMediaWrapper().attributes();
+		setEntityRelationshipDates(currentDigitalMediaRecord.attributes().getOdsHasEntityRelationships(),
+				digitalMedia.getOdsHasEntityRelationships());
+		// Set dcterms:created to original date
+		digitalMedia.withDctermsCreated(currentDigitalMediaRecord.attributes().getDctermsCreated());
+		// We create a new object because the events/wrappers are immutable, and we don't
+		// want the hash code to be out of sync
+		return new DigitalMediaEvent(digitalMediaEvent.masList(),
+				new DigitalMediaWrapper(digitalMediaEvent.digitalMediaWrapper().type(), digitalMedia,
+						digitalMediaEvent.digitalMediaWrapper().originalAttributes()),
+				digitalMediaEvent.forceMasSchedule(), digitalMediaEvent.isDataFromSourceSystem());
+	}
 
-  private List<EntityRelationship> addExistingMediaRelationships(
-      MediaRelationshipProcessResult mediaRelationship,
-      List<EntityRelationship> entityRelationships) {
-    return Stream.concat(
-            entityRelationships.stream(), mediaRelationship.unchangedRelationships().stream())
-        .filter(er -> er.getDwcRelatedResourceID() != null).toList();
-  }
+	private void setEntityRelationshipDates(List<EntityRelationship> currentEntityRelationships,
+			List<EntityRelationship> entityRelationships) {
+		// Create a map with relatedResourceID as a key so we only compare potentially
+		// equal ERs
+		// This reduces complexity compared to nested for-loops
+		var currentEntityRelationshipsMap = currentEntityRelationships.stream()
+			.collect(Collectors.toMap(EntityRelationship::getDwcRelatedResourceID, Function.identity(), (e1, e2) -> {
+				log.debug("Duplicate entity relationship found for resource");
+				// Return older of the two entity relationships
+				return e1.getDwcRelationshipEstablishedDate().after(e2.getDwcRelationshipEstablishedDate()) ? e1 : e2;
+			}));
+		entityRelationships.forEach(entityRelationship -> {
+			var currentEntityRelationship = currentEntityRelationshipsMap
+				.get(entityRelationship.getDwcRelatedResourceID());
+			if (entityRelationshipsAreEqual(currentEntityRelationship, entityRelationship)) {
+				entityRelationship
+					.setDwcRelationshipEstablishedDate(currentEntityRelationship.getDwcRelationshipEstablishedDate());
+			}
+		});
+	}
 
-  private boolean specimensAreEqual(DigitalSpecimenRecord currentDigitalSpecimen,
-      DigitalSpecimenWrapper digitalSpecimenWrapper) {
-    if (currentDigitalSpecimen == null
-        || currentDigitalSpecimen.digitalSpecimenWrapper().attributes() == null) {
-      return false;
-    }
-    var jsonCurrentSpecimen = normaliseJsonNodeSpecimen(
-        currentDigitalSpecimen.digitalSpecimenWrapper().attributes());
-    var jsonSpecimen = normaliseJsonNodeSpecimen(digitalSpecimenWrapper.attributes());
-    return isEqual(jsonCurrentSpecimen, jsonSpecimen, currentDigitalSpecimen.id());
-  }
+	private List<EntityRelationship> addExistingMediaRelationships(MediaRelationshipProcessResult mediaRelationship,
+			List<EntityRelationship> entityRelationships) {
+		return Stream.concat(entityRelationships.stream(), mediaRelationship.unchangedRelationships().stream())
+			.filter(er -> er.getDwcRelatedResourceID() != null)
+			.toList();
+	}
 
-  private boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia,
-      DigitalMediaWrapper digitalMedia) {
-    if (currentDigitalMedia == null
-        || currentDigitalMedia.attributes() == null) {
-      return false;
-    }
-    var jsonCurrentMedia = normaliseJsonNodeMedia(currentDigitalMedia.attributes());
-    var jsonMedia = normaliseJsonNodeMedia(digitalMedia.attributes());
-    return isEqual(jsonCurrentMedia, jsonMedia, currentDigitalMedia.id());
+	private boolean specimensAreEqual(DigitalSpecimenRecord currentDigitalSpecimen,
+			DigitalSpecimenWrapper digitalSpecimenWrapper) {
+		if (currentDigitalSpecimen == null || currentDigitalSpecimen.digitalSpecimenWrapper().attributes() == null) {
+			return false;
+		}
+		var jsonCurrentSpecimen = normaliseJsonNodeSpecimen(
+				currentDigitalSpecimen.digitalSpecimenWrapper().attributes());
+		var jsonSpecimen = normaliseJsonNodeSpecimen(digitalSpecimenWrapper.attributes());
+		return isEqual(jsonCurrentSpecimen, jsonSpecimen, currentDigitalSpecimen.id());
+	}
 
-  }
+	private boolean mediaAreEqual(DigitalMediaRecord currentDigitalMedia, DigitalMediaWrapper digitalMedia) {
+		if (currentDigitalMedia == null || currentDigitalMedia.attributes() == null) {
+			return false;
+		}
+		var jsonCurrentMedia = normaliseJsonNodeMedia(currentDigitalMedia.attributes());
+		var jsonMedia = normaliseJsonNodeMedia(digitalMedia.attributes());
+		return isEqual(jsonCurrentMedia, jsonMedia, currentDigitalMedia.id());
 
-  private static boolean isEqual(JsonNode currentJson, JsonNode json, String id) {
-    var isEqual = currentJson.equals(json);
-    if (!isEqual) {
-      log.debug("Object {} has changed. JsonDiff: {}", id,
-          Jackson3JsonDiff.asJson(currentJson, json));
-    }
-    return isEqual;
-  }
+	}
 
-  private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
-      EntityRelationship entityRelationship) {
-    if (currentEntityRelationship == null || entityRelationship == null) {
-      log.debug("Comparing null entity relationship");
-      return false;
-    }
-    var jsonCurrentEntityRelationship = removeGeneratedTimestamps(
-        mapper.valueToTree(currentEntityRelationship));
-    var jsonEntityRelationship = removeGeneratedTimestamps(mapper.valueToTree(entityRelationship));
-    return jsonCurrentEntityRelationship.equals(jsonEntityRelationship);
+	private static boolean isEqual(JsonNode currentJson, JsonNode json, String id) {
+		var isEqual = currentJson.equals(json);
+		if (!isEqual) {
+			log.debug("Object {} has changed. JsonDiff: {}", id, Jackson3JsonDiff.asJson(currentJson, json));
+		}
+		return isEqual;
+	}
 
-  }
+	private boolean entityRelationshipsAreEqual(EntityRelationship currentEntityRelationship,
+			EntityRelationship entityRelationship) {
+		if (currentEntityRelationship == null || entityRelationship == null) {
+			log.debug("Comparing null entity relationship");
+			return false;
+		}
+		var jsonCurrentEntityRelationship = removeGeneratedTimestamps(mapper.valueToTree(currentEntityRelationship));
+		var jsonEntityRelationship = removeGeneratedTimestamps(mapper.valueToTree(entityRelationship));
+		return jsonCurrentEntityRelationship.equals(jsonEntityRelationship);
 
-  private JsonNode normaliseJsonNodeSpecimen(DigitalSpecimen digitalSpecimen) {
-    var node = mapper.valueToTree(digitalSpecimen);
-    removeEntityRelationships((ObjectNode) node, HAS_MEDIA);
-    return removeGeneratedTimestamps(node);
-  }
+	}
 
-  private JsonNode normaliseJsonNodeMedia(DigitalMedia digitalMedia) {
-    var node = mapper.valueToTree(digitalMedia);
-    removeEntityRelationships((ObjectNode) node, HAS_SPECIMEN);
-    return removeGeneratedTimestamps(node);
-  }
+	private JsonNode normaliseJsonNodeSpecimen(DigitalSpecimen digitalSpecimen) {
+		var node = mapper.valueToTree(digitalSpecimen);
+		removeEntityRelationships((ObjectNode) node, HAS_MEDIA);
+		return removeGeneratedTimestamps(node);
+	}
 
-  public JsonNode removeGeneratedTimestamps(JsonNode node) {
-    if (node.isObject()) {
-      ObjectNode result = mapper.createObjectNode();
-      node.properties().forEach(entry -> {
-        if (!IGNORED_FIELDS.contains(entry.getKey())) {
-          result.set(entry.getKey(), removeGeneratedTimestamps(entry.getValue()));
-        }
-      });
-      return result;
-    } else if (node.isArray()) {
-      ArrayNode result = mapper.createArrayNode();
-      node.forEach(element -> result.add(removeGeneratedTimestamps(element)));
-      return result;
-    } else {
-      return node;
-    }
-  }
+	private JsonNode normaliseJsonNodeMedia(DigitalMedia digitalMedia) {
+		var node = mapper.valueToTree(digitalMedia);
+		removeEntityRelationships((ObjectNode) node, HAS_SPECIMEN);
+		return removeGeneratedTimestamps(node);
+	}
 
-  private void removeEntityRelationships(ObjectNode node,
-      EntityRelationshipType targetRelationship) {
-    var entityRelationshipArray = (ArrayNode) node.get("ods:hasEntityRelationships");
-    if (entityRelationshipArray == null) {
-      return;
-    }
-    var filteredEntityRelationships = mapper.createArrayNode();
-    for (var er : entityRelationshipArray) {
-      if (!targetRelationship.getRelationshipName()
-          .equals(er.get("dwc:relationshipOfResource").asString())) {
-        filteredEntityRelationships.add(er);
-      }
-    }
-    node.set("ods:hasEntityRelationships", filteredEntityRelationships);
-  }
+	public JsonNode removeGeneratedTimestamps(JsonNode node) {
+		if (node.isObject()) {
+			ObjectNode result = mapper.createObjectNode();
+			node.properties().forEach(entry -> {
+				if (!IGNORED_FIELDS.contains(entry.getKey())) {
+					result.set(entry.getKey(), removeGeneratedTimestamps(entry.getValue()));
+				}
+			});
+			return result;
+		}
+		else if (node.isArray()) {
+			ArrayNode result = mapper.createArrayNode();
+			node.forEach(element -> result.add(removeGeneratedTimestamps(element)));
+			return result;
+		}
+		else {
+			return node;
+		}
+	}
+
+	private void removeEntityRelationships(ObjectNode node, EntityRelationshipType targetRelationship) {
+		var entityRelationshipArray = (ArrayNode) node.get("ods:hasEntityRelationships");
+		if (entityRelationshipArray == null) {
+			return;
+		}
+		var filteredEntityRelationships = mapper.createArrayNode();
+		for (var er : entityRelationshipArray) {
+			if (!targetRelationship.getRelationshipName().equals(er.get("dwc:relationshipOfResource").asString())) {
+				filteredEntityRelationships.add(er);
+			}
+		}
+		node.set("ods:hasEntityRelationships", filteredEntityRelationships);
+	}
 
 }

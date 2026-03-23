@@ -16,22 +16,21 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationToken> {
-  private final JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
 
-  @Override
-  public AbstractAuthenticationToken convert(@NotNull Jwt jwt) {
-    Collection<GrantedAuthority> authorities =
-        converterToStream(jwt).collect(Collectors.toSet());
-    return new JwtAuthenticationToken(jwt, authorities, getPrincipalClaimName(jwt));
-  }
+	private final JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
 
-  private Stream<GrantedAuthority> converterToStream(Jwt jwt){
-    return Optional.of(jwtGrantedAuthoritiesConverter.convert(jwt)).stream()
-        .flatMap(Collection::stream);
-  }
+	@Override
+	public AbstractAuthenticationToken convert(@NotNull Jwt jwt) {
+		Collection<GrantedAuthority> authorities = converterToStream(jwt).collect(Collectors.toSet());
+		return new JwtAuthenticationToken(jwt, authorities, getPrincipalClaimName(jwt));
+	}
 
-  private String getPrincipalClaimName(Jwt jwt) {
-    return jwt.getClaim(JwtClaimNames.SUB);
-  }
+	private Stream<GrantedAuthority> converterToStream(Jwt jwt) {
+		return Optional.of(jwtGrantedAuthoritiesConverter.convert(jwt)).stream().flatMap(Collection::stream);
+	}
+
+	private String getPrincipalClaimName(Jwt jwt) {
+		return jwt.getClaim(JwtClaimNames.SUB);
+	}
 
 }

@@ -3,7 +3,6 @@
  */
 package eu.dissco.core.digitalspecimenprocessor.database.jooq;
 
-
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.Annotation;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalMediaObject;
 import eu.dissco.core.digitalspecimenprocessor.database.jooq.tables.DigitalSpecimen;
@@ -12,25 +11,57 @@ import org.jooq.OrderField;
 import org.jooq.impl.DSL;
 import org.jooq.impl.Internal;
 
-
 /**
  * A class modelling indexes of tables in public.
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Indexes {
 
-    // -------------------------------------------------------------------------
-    // INDEX definitions
-    // -------------------------------------------------------------------------
+	// -------------------------------------------------------------------------
+	// INDEX definitions
+	// -------------------------------------------------------------------------
 
-    public static final Index ANNOTATION_HASH_IDX = Internal.createIndex(DSL.name("annotation_hash_idx"), Annotation.ANNOTATION, new OrderField[] { Annotation.ANNOTATION.ANNOTATION_HASH }, false);
-    public static final Index ANNOTATION_ID_CREATOR_ID_INDEX = Internal.createIndex(DSL.name("annotation_id_creator_id_index"), Annotation.ANNOTATION, new OrderField[] { Annotation.ANNOTATION.CREATOR }, false);
-    public static final Index ANNOTATION_ID_TARGET_ID_INDEX = Internal.createIndex(DSL.name("annotation_id_target_id_index"), Annotation.ANNOTATION, new OrderField[] { Annotation.ANNOTATION.TARGET_ID }, false);
-    public static final Index ANNOTATION_STATUS_INDEX = Internal.createIndex(DSL.name("annotation_status_index"), Annotation.ANNOTATION, new OrderField[] { Annotation.ANNOTATION.TARGET_ID, Annotation.ANNOTATION.ANNOTATION_STATUS }, false);
-    public static final Index DIGITAL_MEDIA_OBJECT_ID_IDX = Internal.createIndex(DSL.name("digital_media_object_id_idx"), DigitalMediaObject.DIGITAL_MEDIA_OBJECT, new OrderField[] { DigitalMediaObject.DIGITAL_MEDIA_OBJECT.ID, DigitalMediaObject.DIGITAL_MEDIA_OBJECT.MEDIA_URL }, false);
-    public static final Index DIGITAL_MEDIA_OBJECT_ID_VERSION_URL = Internal.createIndex(DSL.name("digital_media_object_id_version_url"), DigitalMediaObject.DIGITAL_MEDIA_OBJECT, new OrderField[] { DigitalMediaObject.DIGITAL_MEDIA_OBJECT.ID, DigitalMediaObject.DIGITAL_MEDIA_OBJECT.VERSION, DigitalMediaObject.DIGITAL_MEDIA_OBJECT.MEDIA_URL }, true);
-    public static final Index DIGITAL_MEDIA_SOURCE_SYSTEM_ID_INDEX = Internal.createIndex(DSL.name("digital_media_source_system_id_index"), DigitalMediaObject.DIGITAL_MEDIA_OBJECT, new OrderField[] { DigitalMediaObject.DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID }, false);
-    public static final Index DIGITAL_SPECIMEN_CREATED_IDX = Internal.createIndex(DSL.name("digital_specimen_created_idx"), DigitalSpecimen.DIGITAL_SPECIMEN, new OrderField[] { DigitalSpecimen.DIGITAL_SPECIMEN.CREATED }, false);
-    public static final Index DIGITAL_SPECIMEN_PHYSICAL_SPECIMEN_ID_IDX = Internal.createIndex(DSL.name("digital_specimen_physical_specimen_id_idx"), DigitalSpecimen.DIGITAL_SPECIMEN, new OrderField[] { DigitalSpecimen.DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID }, false);
-    public static final Index DIGITAL_SPECIMEN_SOURCE_SYSTEM_ID_INDEX = Internal.createIndex(DSL.name("digital_specimen_source_system_id_index"), DigitalSpecimen.DIGITAL_SPECIMEN, new OrderField[] { DigitalSpecimen.DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID }, false);
+	public static final Index ANNOTATION_HASH_IDX = Internal.createIndex(DSL.name("annotation_hash_idx"),
+			Annotation.ANNOTATION, new OrderField[] { Annotation.ANNOTATION.ANNOTATION_HASH }, false);
+
+	public static final Index ANNOTATION_ID_CREATOR_ID_INDEX = Internal.createIndex(
+			DSL.name("annotation_id_creator_id_index"), Annotation.ANNOTATION,
+			new OrderField[] { Annotation.ANNOTATION.CREATOR }, false);
+
+	public static final Index ANNOTATION_ID_TARGET_ID_INDEX = Internal.createIndex(
+			DSL.name("annotation_id_target_id_index"), Annotation.ANNOTATION,
+			new OrderField[] { Annotation.ANNOTATION.TARGET_ID }, false);
+
+	public static final Index ANNOTATION_STATUS_INDEX = Internal.createIndex(DSL.name("annotation_status_index"),
+			Annotation.ANNOTATION,
+			new OrderField[] { Annotation.ANNOTATION.TARGET_ID, Annotation.ANNOTATION.ANNOTATION_STATUS }, false);
+
+	public static final Index DIGITAL_MEDIA_OBJECT_ID_IDX = Internal.createIndex(
+			DSL.name("digital_media_object_id_idx"), DigitalMediaObject.DIGITAL_MEDIA_OBJECT, new OrderField[] {
+					DigitalMediaObject.DIGITAL_MEDIA_OBJECT.ID, DigitalMediaObject.DIGITAL_MEDIA_OBJECT.MEDIA_URL },
+			false);
+
+	public static final Index DIGITAL_MEDIA_OBJECT_ID_VERSION_URL = Internal.createIndex(
+			DSL.name("digital_media_object_id_version_url"), DigitalMediaObject.DIGITAL_MEDIA_OBJECT,
+			new OrderField[] { DigitalMediaObject.DIGITAL_MEDIA_OBJECT.ID,
+					DigitalMediaObject.DIGITAL_MEDIA_OBJECT.VERSION,
+					DigitalMediaObject.DIGITAL_MEDIA_OBJECT.MEDIA_URL },
+			true);
+
+	public static final Index DIGITAL_MEDIA_SOURCE_SYSTEM_ID_INDEX = Internal.createIndex(
+			DSL.name("digital_media_source_system_id_index"), DigitalMediaObject.DIGITAL_MEDIA_OBJECT,
+			new OrderField[] { DigitalMediaObject.DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID }, false);
+
+	public static final Index DIGITAL_SPECIMEN_CREATED_IDX = Internal.createIndex(
+			DSL.name("digital_specimen_created_idx"), DigitalSpecimen.DIGITAL_SPECIMEN,
+			new OrderField[] { DigitalSpecimen.DIGITAL_SPECIMEN.CREATED }, false);
+
+	public static final Index DIGITAL_SPECIMEN_PHYSICAL_SPECIMEN_ID_IDX = Internal.createIndex(
+			DSL.name("digital_specimen_physical_specimen_id_idx"), DigitalSpecimen.DIGITAL_SPECIMEN,
+			new OrderField[] { DigitalSpecimen.DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID }, false);
+
+	public static final Index DIGITAL_SPECIMEN_SOURCE_SYSTEM_ID_INDEX = Internal.createIndex(
+			DSL.name("digital_specimen_source_system_id_index"), DigitalSpecimen.DIGITAL_SPECIMEN,
+			new OrderField[] { DigitalSpecimen.DIGITAL_SPECIMEN.SOURCE_SYSTEM_ID }, false);
+
 }

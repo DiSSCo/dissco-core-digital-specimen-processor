@@ -21,62 +21,62 @@ import tools.jackson.core.JacksonException;
 @Slf4j
 public class MasSchedulerService {
 
-  private final RabbitMqPublisherService publisherService;
-  private final ApplicationProperties applicationProperties;
+	private final RabbitMqPublisherService publisherService;
 
-  public void scheduleMasForSpecimen(SpecimenProcessResult processResult) {
-    var recordsToSchedule = getDigitalSpecimenRecordsToSchedule(processResult);
-    log.info("Scheduling MASs on {} specimens", recordsToSchedule.size());
-    for (var specimenRecord : recordsToSchedule) {
-      for (var masId : specimenRecord.masIds()) {
-        publishMas(masId, DOI_PROXY + specimenRecord.id(), MjrTargetType.DIGITAL_SPECIMEN);
-      }
-    }
-  }
+	private final ApplicationProperties applicationProperties;
 
-  public void scheduleMasForMedia(MediaProcessResult processResult) {
-    var recordsToSchedule = getDigitalMediaRecordsToSchedule(processResult);
-    log.info("Scheduling MASs on {} media", recordsToSchedule.size());
-    for (var mediaRecord : recordsToSchedule) {
-      for (var masId : mediaRecord.masIds()) {
-        publishMas(masId, DOI_PROXY + mediaRecord.id(), MjrTargetType.MEDIA_OBJECT);
-      }
-    }
-  }
+	public void scheduleMasForSpecimen(SpecimenProcessResult processResult) {
+		var recordsToSchedule = getDigitalSpecimenRecordsToSchedule(processResult);
+		log.info("Scheduling MASs on {} specimens", recordsToSchedule.size());
+		for (var specimenRecord : recordsToSchedule) {
+			for (var masId : specimenRecord.masIds()) {
+				publishMas(masId, DOI_PROXY + specimenRecord.id(), MjrTargetType.DIGITAL_SPECIMEN);
+			}
+		}
+	}
 
-  private static List<DigitalMediaRecord> getDigitalMediaRecordsToSchedule(
-      MediaProcessResult processResult) {
-    var recordsToSchedule = new ArrayList<>(processResult.newMedia());
-    recordsToSchedule.addAll(processResult.equalMedia().stream()
-        .filter(DigitalMediaRecord::forceMasSchedule).toList());
-    recordsToSchedule.addAll(processResult.updatedMedia().stream()
-        .filter(DigitalMediaRecord::forceMasSchedule).toList());
-    return recordsToSchedule.stream().filter(media -> !media.masIds().isEmpty()).toList();
-  }
+	public void scheduleMasForMedia(MediaProcessResult processResult) {
+		var recordsToSchedule = getDigitalMediaRecordsToSchedule(processResult);
+		log.info("Scheduling MASs on {} media", recordsToSchedule.size());
+		for (var mediaRecord : recordsToSchedule) {
+			for (var masId : mediaRecord.masIds()) {
+				publishMas(masId, DOI_PROXY + mediaRecord.id(), MjrTargetType.MEDIA_OBJECT);
+			}
+		}
+	}
 
-  private static List<DigitalSpecimenRecord> getDigitalSpecimenRecordsToSchedule(
-      SpecimenProcessResult processResult) {
-    var recordsToSchedule = new ArrayList<>(processResult.newDigitalSpecimens());
-    recordsToSchedule.addAll(processResult.equalDigitalSpecimens().keySet().stream()
-        .filter(DigitalSpecimenRecord::forceMasSchedule).toList());
-    recordsToSchedule.addAll(processResult.updatedDigitalSpecimens().stream()
-        .filter(DigitalSpecimenRecord::forceMasSchedule).toList());
-    return recordsToSchedule.stream().filter(specimen -> !specimen.masIds().isEmpty()).toList();
-  }
+	private static List<DigitalMediaRecord> getDigitalMediaRecordsToSchedule(MediaProcessResult processResult) {
+		var recordsToSchedule = new ArrayList<>(processResult.newMedia());
+		recordsToSchedule
+			.addAll(processResult.equalMedia().stream().filter(DigitalMediaRecord::forceMasSchedule).toList());
+		recordsToSchedule
+			.addAll(processResult.updatedMedia().stream().filter(DigitalMediaRecord::forceMasSchedule).toList());
+		return recordsToSchedule.stream().filter(media -> !media.masIds().isEmpty()).toList();
+	}
 
-  private void publishMas(String masId, String targetId, MjrTargetType targetType) {
-    var masJobRequest = new MasJobRequest(
-        masId,
-        targetId,
-        false,
-        applicationProperties.getPid(),
-        targetType
-    );
-    try {
-      publisherService.publishMasJobRequest(masJobRequest);
-    } catch (JacksonException e) {
-      log.error("Unable to publish mas job request {}", masJobRequest, e);
-    }
-  }
+	private static List<DigitalSpecimenRecord> getDigitalSpecimenRecordsToSchedule(
+			SpecimenProcessResult processResult) {
+		var recordsToSchedule = new ArrayList<>(processResult.newDigitalSpecimens());
+		recordsToSchedule.addAll(processResult.equalDigitalSpecimens()
+			.keySet()
+			.stream()
+			.filter(DigitalSpecimenRecord::forceMasSchedule)
+			.toList());
+		recordsToSchedule.addAll(processResult.updatedDigitalSpecimens()
+			.stream()
+			.filter(DigitalSpecimenRecord::forceMasSchedule)
+			.toList());
+		return recordsToSchedule.stream().filter(specimen -> !specimen.masIds().isEmpty()).toList();
+	}
+
+	private void publishMas(String masId, String targetId, MjrTargetType targetType) {
+		var masJobRequest = new MasJobRequest(masId, targetId, false, applicationProperties.getPid(), targetType);
+		try {
+			publisherService.publishMasJobRequest(masJobRequest);
+		}
+		catch (JacksonException e) {
+			log.error("Unable to publish mas job request {}", masJobRequest, e);
+		}
+	}
 
 }

@@ -11,22 +11,22 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("elasticsearch")
 public class ElasticSearchProperties {
 
-  @NotBlank
-  private String hostname;
+	@NotBlank
+	private String hostname;
 
-  @Positive
-  private int port;
+	@Positive
+	private int port;
 
-  @NotBlank
-  private String specimenIndexName="digital-specimen";
+	@NotBlank
+	private String specimenIndexName = "digital-specimen";
 
-  @NotBlank
-  private String mediaIndexName="digital-media";
+	@NotBlank
+	private String mediaIndexName = "digital-media";
 
-  @NotBlank
-  private String username;
+	@NotBlank
+	private String username;
 
-  @NotBlank
-  private String password;
+	@NotBlank
+	private String password;
 
 }

@@ -10,13 +10,13 @@ import tools.jackson.databind.JsonNode;
 
 public interface PidClient {
 
-  @PostExchange("/batch")
-  JsonNode postPids(@RequestBody List<JsonNode> requestBody) throws PidException;
+	@PostExchange("/batch")
+	JsonNode postPids(@RequestBody List<JsonNode> requestBody) throws PidException;
 
-  @PatchExchange("/")
-  void updatePids(@RequestBody List<JsonNode> requestBody) throws PidException;
+	@PatchExchange("/")
+	void updatePids(@RequestBody List<JsonNode> requestBody) throws PidException;
 
-  @DeleteExchange("/rollback/update")
-  void rollbackPidsUpdate(@RequestBody List<JsonNode> requestBody) throws PidException;
+	@DeleteExchange("/rollback/update")
+	void rollbackPidsUpdate(@RequestBody List<JsonNode> requestBody) throws PidException;
 
 }

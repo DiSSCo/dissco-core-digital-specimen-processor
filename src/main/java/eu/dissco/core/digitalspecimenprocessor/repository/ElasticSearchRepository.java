@@ -19,56 +19,45 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class ElasticSearchRepository {
 
-  private final ElasticsearchClient client;
-  private final ElasticSearchProperties properties;
+	private final ElasticsearchClient client;
 
-  public BulkResponse indexDigitalSpecimen(Set<DigitalSpecimenRecord> digitalSpecimenRecords)
-      throws IOException {
-    var bulkRequest = new BulkRequest.Builder();
-    for (var digitalSpecimenrecord : digitalSpecimenRecords) {
-      var digitalSpecimen = flattenToDigitalSpecimen(digitalSpecimenrecord);
-      bulkRequest.operations(op ->
-          op.index(idx -> idx
-              .index(properties.getSpecimenIndexName())
-              .id(digitalSpecimen.getId())
-              .document(digitalSpecimen))
-      );
-    }
-    return client.bulk(bulkRequest.build());
-  }
+	private final ElasticSearchProperties properties;
 
-  public void rollbackObject(String id, boolean isSpecimen)
-      throws IOException {
-    var index = isSpecimen ? properties.getSpecimenIndexName() : properties.getMediaIndexName();
-    client.delete(
-        d -> d.index(index).id(DOI_PROXY + id));
-  }
+	public BulkResponse indexDigitalSpecimen(Set<DigitalSpecimenRecord> digitalSpecimenRecords) throws IOException {
+		var bulkRequest = new BulkRequest.Builder();
+		for (var digitalSpecimenrecord : digitalSpecimenRecords) {
+			var digitalSpecimen = flattenToDigitalSpecimen(digitalSpecimenrecord);
+			bulkRequest.operations(op -> op.index(idx -> idx.index(properties.getSpecimenIndexName())
+				.id(digitalSpecimen.getId())
+				.document(digitalSpecimen)));
+		}
+		return client.bulk(bulkRequest.build());
+	}
 
-  public void rollbackVersion(DigitalSpecimenRecord currentDigitalSpecimen) throws IOException {
-    var digitalSpecimen = flattenToDigitalSpecimen(currentDigitalSpecimen);
-    client.index(i -> i.index(properties.getSpecimenIndexName()).id(digitalSpecimen.getId())
-        .document(digitalSpecimen));
-  }
+	public void rollbackObject(String id, boolean isSpecimen) throws IOException {
+		var index = isSpecimen ? properties.getSpecimenIndexName() : properties.getMediaIndexName();
+		client.delete(d -> d.index(index).id(DOI_PROXY + id));
+	}
 
-  public void rollbackVersion(DigitalMediaRecord currentDigitalMediaRecord)
-      throws IOException {
-    var digitalMedia = flattenToDigitalMedia(currentDigitalMediaRecord);
-    client.index(i -> i.index(properties.getMediaIndexName()).id(digitalMedia.getId())
-        .document(digitalMedia));
-  }
+	public void rollbackVersion(DigitalSpecimenRecord currentDigitalSpecimen) throws IOException {
+		var digitalSpecimen = flattenToDigitalSpecimen(currentDigitalSpecimen);
+		client.index(
+				i -> i.index(properties.getSpecimenIndexName()).id(digitalSpecimen.getId()).document(digitalSpecimen));
+	}
 
-  public BulkResponse indexDigitalMedia(
-      Set<DigitalMediaRecord> digitalMediaRecords) throws IOException {
-    var bulkRequest = new BulkRequest.Builder();
-    for (var digitalMediaRecord : digitalMediaRecords) {
-      var digitalMedia = flattenToDigitalMedia(digitalMediaRecord);
-      bulkRequest.operations(op ->
-          op.index(idx ->
-              idx.index(properties.getMediaIndexName())
-                  .id(digitalMedia.getId())
-                  .document(digitalMedia))
-      );
-    }
-    return client.bulk(bulkRequest.build());
-  }
+	public void rollbackVersion(DigitalMediaRecord currentDigitalMediaRecord) throws IOException {
+		var digitalMedia = flattenToDigitalMedia(currentDigitalMediaRecord);
+		client.index(i -> i.index(properties.getMediaIndexName()).id(digitalMedia.getId()).document(digitalMedia));
+	}
+
+	public BulkResponse indexDigitalMedia(Set<DigitalMediaRecord> digitalMediaRecords) throws IOException {
+		var bulkRequest = new BulkRequest.Builder();
+		for (var digitalMediaRecord : digitalMediaRecords) {
+			var digitalMedia = flattenToDigitalMedia(digitalMediaRecord);
+			bulkRequest.operations(op -> op.index(
+					idx -> idx.index(properties.getMediaIndexName()).id(digitalMedia.getId()).document(digitalMedia)));
+		}
+		return client.bulk(bulkRequest.build());
+	}
+
 }

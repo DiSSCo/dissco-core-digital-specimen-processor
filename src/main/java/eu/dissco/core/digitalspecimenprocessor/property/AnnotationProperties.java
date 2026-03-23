@@ -10,7 +10,7 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("annotation")
 public class AnnotationProperties {
 
-  @NotNull
-  private boolean applyAcceptedAnnotations = false;
+	@NotNull
+	private boolean applyAcceptedAnnotations = false;
 
 }

@@ -22,107 +22,90 @@ import tools.jackson.databind.json.JsonMapper;
 @Slf4j
 public class DigitalMediaRepository {
 
-  private final DSLContext context;
-    private final JsonMapper mapper;
+	private final DSLContext context;
 
-  // Maps Media URI to its DOI
-  public List<DigitalMediaRecord> getExistingDigitalMedia(Set<String> mediaURIs) {
-    return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.MEDIA_URL.in(mediaURIs))
-        .fetch(this::mapToDigitalMediaRecord);
-  }
+	private final JsonMapper mapper;
 
-  public void rollBackDigitalMedia(String id) {
-    context.delete(DIGITAL_MEDIA_OBJECT).where(DIGITAL_MEDIA_OBJECT.ID.eq(id)).execute();
-  }
+	// Maps Media URI to its DOI
+	public List<DigitalMediaRecord> getExistingDigitalMedia(Set<String> mediaURIs) {
+		return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.MEDIA_URL.in(mediaURIs))
+			.fetch(this::mapToDigitalMediaRecord);
+	}
 
-  private DigitalMediaRecord mapToDigitalMediaRecord(Record dbRecord) {
-    try {
-      return new DigitalMediaRecord(
-          dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),
-          dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL),
-          dbRecord.get(DIGITAL_MEDIA_OBJECT.VERSION),
-          dbRecord.get(DIGITAL_MEDIA_OBJECT.CREATED),
-          Set.of(),
-          mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class),
-          mapper.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data()),
-          null,
-          null);
-    } catch (JacksonException _) {
-      log.error("Unable to map record data to json: {}", dbRecord);
-      return null;
-    }
-  }
+	public void rollBackDigitalMedia(String id) {
+		context.delete(DIGITAL_MEDIA_OBJECT).where(DIGITAL_MEDIA_OBJECT.ID.eq(id)).execute();
+	}
 
-  public void updateLastChecked(List<String> currentDigitalMedia) {
-    context.update(DIGITAL_MEDIA_OBJECT)
-        .set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
-        .where(DIGITAL_MEDIA_OBJECT.ID.in(currentDigitalMedia))
-        .execute();
-  }
+	private DigitalMediaRecord mapToDigitalMediaRecord(Record dbRecord) {
+		try {
+			return new DigitalMediaRecord(dbRecord.get(DIGITAL_MEDIA_OBJECT.ID),
+					dbRecord.get(DIGITAL_MEDIA_OBJECT.MEDIA_URL), dbRecord.get(DIGITAL_MEDIA_OBJECT.VERSION),
+					dbRecord.get(DIGITAL_MEDIA_OBJECT.CREATED), Set.of(),
+					mapper.readValue(dbRecord.get(DIGITAL_MEDIA_OBJECT.DATA).data(), DigitalMedia.class),
+					mapper.readTree(dbRecord.get(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA).data()), null, null);
+		}
+		catch (JacksonException _) {
+			log.error("Unable to map record data to json: {}", dbRecord);
+			return null;
+		}
+	}
 
-  public void createDigitalMediaRecord(
-      Set<DigitalMediaRecord> digitalMediaRecords) {
-    var queries = digitalMediaRecords.stream().map(this::createDigitalMediaQuery).toList();
-    context.batch(queries).execute();
-  }
+	public void updateLastChecked(List<String> currentDigitalMedia) {
+		context.update(DIGITAL_MEDIA_OBJECT)
+			.set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
+			.where(DIGITAL_MEDIA_OBJECT.ID.in(currentDigitalMedia))
+			.execute();
+	}
 
-  public void updateDigitalMediaRecord(
-      Set<DigitalMediaRecord> digitalMediaRecords) {
-    var queries = digitalMediaRecords.stream().map(this::updateDigitalMediaQuery).toList();
-    context.batch(queries).execute();
-  }
+	public void createDigitalMediaRecord(Set<DigitalMediaRecord> digitalMediaRecords) {
+		var queries = digitalMediaRecords.stream().map(this::createDigitalMediaQuery).toList();
+		context.batch(queries).execute();
+	}
 
-  private Query createDigitalMediaQuery(DigitalMediaRecord digitalMediaRecord) {
-    return context.insertInto(DIGITAL_MEDIA_OBJECT)
-        .set(DIGITAL_MEDIA_OBJECT.ID, digitalMediaRecord.id())
-        .set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
-        .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
-        .set(DIGITAL_MEDIA_OBJECT.MEDIA_URL,
-            digitalMediaRecord.attributes().getAcAccessURI())
-        .set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.created())
-        .set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
-        .set(DIGITAL_MEDIA_OBJECT.DATA,
-            JSONB.jsonb(
-                mapper.valueToTree(digitalMediaRecord.attributes())
-                    .toString()))
-        .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now())
-        .set(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID,
-            digitalMediaRecord.attributes().getOdsSourceSystemID())
-        .set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA,
-            JSONB.jsonb(
-                digitalMediaRecord.originalAttributes().toString()));
-  }
+	public void updateDigitalMediaRecord(Set<DigitalMediaRecord> digitalMediaRecords) {
+		var queries = digitalMediaRecords.stream().map(this::updateDigitalMediaQuery).toList();
+		context.batch(queries).execute();
+	}
 
-  private Query updateDigitalMediaQuery(DigitalMediaRecord digitalMediaRecord) {
-    var updateQuery = context.update(DIGITAL_MEDIA_OBJECT)
-        .set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
-        .set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
-        .set(DIGITAL_MEDIA_OBJECT.MEDIA_URL,
-            digitalMediaRecord.attributes().getAcAccessURI())
-        .set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.created())
-        .set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
-        .set(DIGITAL_MEDIA_OBJECT.DATA,
-            JSONB.jsonb(
-                mapper.valueToTree(digitalMediaRecord.attributes())
-                    .toString()))
-        .set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now())
-        .set(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID,
-            digitalMediaRecord.attributes().getOdsSourceSystemID());
-    if (Boolean.TRUE.equals(digitalMediaRecord.isDataFromSourceSystem())) {
-      updateQuery = updateQuery.set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA,
-          JSONB.jsonb(
-              digitalMediaRecord.originalAttributes().toString()));
-    }
-    return updateQuery.where(DIGITAL_MEDIA_OBJECT.ID.eq(digitalMediaRecord.id()));
-  }
+	private Query createDigitalMediaQuery(DigitalMediaRecord digitalMediaRecord) {
+		return context.insertInto(DIGITAL_MEDIA_OBJECT)
+			.set(DIGITAL_MEDIA_OBJECT.ID, digitalMediaRecord.id())
+			.set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
+			.set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
+			.set(DIGITAL_MEDIA_OBJECT.MEDIA_URL, digitalMediaRecord.attributes().getAcAccessURI())
+			.set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.created())
+			.set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
+			.set(DIGITAL_MEDIA_OBJECT.DATA, JSONB.jsonb(mapper.valueToTree(digitalMediaRecord.attributes()).toString()))
+			.set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now())
+			.set(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID, digitalMediaRecord.attributes().getOdsSourceSystemID())
+			.set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA, JSONB.jsonb(digitalMediaRecord.originalAttributes().toString()));
+	}
 
-  public List<DigitalMediaRecord> getExistingDigitalMediaByDoi(
-      Set<String> tombstonedDigitalSpecimenToDigitalMediaRelationship) {
-    return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
-        .from(DIGITAL_MEDIA_OBJECT)
-        .where(DIGITAL_MEDIA_OBJECT.ID.in(tombstonedDigitalSpecimenToDigitalMediaRelationship))
-        .fetch(this::mapToDigitalMediaRecord);
-  }
+	private Query updateDigitalMediaQuery(DigitalMediaRecord digitalMediaRecord) {
+		var updateQuery = context.update(DIGITAL_MEDIA_OBJECT)
+			.set(DIGITAL_MEDIA_OBJECT.TYPE, digitalMediaRecord.attributes().getOdsFdoType())
+			.set(DIGITAL_MEDIA_OBJECT.VERSION, digitalMediaRecord.version())
+			.set(DIGITAL_MEDIA_OBJECT.MEDIA_URL, digitalMediaRecord.attributes().getAcAccessURI())
+			.set(DIGITAL_MEDIA_OBJECT.CREATED, digitalMediaRecord.created())
+			.set(DIGITAL_MEDIA_OBJECT.LAST_CHECKED, Instant.now())
+			.set(DIGITAL_MEDIA_OBJECT.DATA, JSONB.jsonb(mapper.valueToTree(digitalMediaRecord.attributes()).toString()))
+			.set(DIGITAL_MEDIA_OBJECT.MODIFIED, Instant.now())
+			.set(DIGITAL_MEDIA_OBJECT.SOURCE_SYSTEM_ID, digitalMediaRecord.attributes().getOdsSourceSystemID());
+		if (Boolean.TRUE.equals(digitalMediaRecord.isDataFromSourceSystem())) {
+			updateQuery = updateQuery.set(DIGITAL_MEDIA_OBJECT.ORIGINAL_DATA,
+					JSONB.jsonb(digitalMediaRecord.originalAttributes().toString()));
+		}
+		return updateQuery.where(DIGITAL_MEDIA_OBJECT.ID.eq(digitalMediaRecord.id()));
+	}
+
+	public List<DigitalMediaRecord> getExistingDigitalMediaByDoi(
+			Set<String> tombstonedDigitalSpecimenToDigitalMediaRelationship) {
+		return context.select(DIGITAL_MEDIA_OBJECT.asterisk())
+			.from(DIGITAL_MEDIA_OBJECT)
+			.where(DIGITAL_MEDIA_OBJECT.ID.in(tombstonedDigitalSpecimenToDigitalMediaRelationship))
+			.fetch(this::mapToDigitalMediaRecord);
+	}
+
 }

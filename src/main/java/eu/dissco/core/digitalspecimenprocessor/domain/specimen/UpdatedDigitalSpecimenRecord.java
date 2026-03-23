@@ -6,13 +6,9 @@ import java.util.List;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 
-public record UpdatedDigitalSpecimenRecord(
-    DigitalSpecimenRecord digitalSpecimenRecord,
-    Set<String> masList,
-    DigitalSpecimenRecord currentDigitalSpecimen,
-    JsonNode jsonPatch,
-    List<DigitalMediaEvent> digitalMediaObjectEvents,
-    MediaRelationshipProcessResult mediaRelationshipProcessResult,
-    Boolean isDataFromSourceSystem) {
+public record UpdatedDigitalSpecimenRecord(DigitalSpecimenRecord digitalSpecimenRecord, Set<String> masList,
+		DigitalSpecimenRecord currentDigitalSpecimen, JsonNode jsonPatch,
+		List<DigitalMediaEvent> digitalMediaObjectEvents, MediaRelationshipProcessResult mediaRelationshipProcessResult,
+		Boolean isDataFromSourceSystem) {
 
 }

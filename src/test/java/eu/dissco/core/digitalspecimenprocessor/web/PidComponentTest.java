@@ -26,130 +26,128 @@ import tools.jackson.databind.JsonNode;
 @ExtendWith(MockitoExtension.class)
 class PidComponentTest {
 
-  private PidComponent pidComponent;
-  @Mock
-  private PidClient pidClient;
+	private PidComponent pidComponent;
 
+	@Mock
+	private PidClient pidClient;
 
-  @BeforeEach
-  void setup() {
-    pidComponent = new PidComponent(pidClient);
-  }
+	@BeforeEach
+	void setup() {
+		pidComponent = new PidComponent(pidClient);
+	}
 
-  @Test
-  void testPostSpecimenPid() throws Exception {
-    // Given
-    given(pidClient.postPids(any())).willReturn(givenPidResponse());
-    var expected = Map.of(PHYSICAL_SPECIMEN_ID, HANDLE);
+	@Test
+	void testPostSpecimenPid() throws Exception {
+		// Given
+		given(pidClient.postPids(any())).willReturn(givenPidResponse());
+		var expected = Map.of(PHYSICAL_SPECIMEN_ID, HANDLE);
 
-    // When
-    var result = pidComponent.postPid(List.of(givenPidRequest()), true);
+		// When
+		var result = pidComponent.postPid(List.of(givenPidRequest()), true);
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-  @Test
-  void testPostMediaPid() throws Exception {
-    // Given
-    given(pidClient.postPids(any())).willReturn(givenPidResponseMedia());
-    var expected = Map.of(MEDIA_URL, MEDIA_PID);
+	@Test
+	void testPostMediaPid() throws Exception {
+		// Given
+		given(pidClient.postPids(any())).willReturn(givenPidResponseMedia());
+		var expected = Map.of(MEDIA_URL, MEDIA_PID);
 
-    // When
-    var result = pidComponent.postPid(List.of(givenPidRequest()), false);
+		// When
+		var result = pidComponent.postPid(List.of(givenPidRequest()), false);
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-  @Test
-  void testPostPidBadResponse() throws Exception {
-    // given
-    var response = MAPPER.readTree("""
-        {
-          "data": {
-            "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
-            "attributes": {
-              "digitalMediaKey": {
-                "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
-                "mediaUrl":"https://an-image.org"
-              }
-            }
-          }
-        }
-        """);
-    given(pidClient.postPids(any())).willReturn(response);
+	@Test
+	void testPostPidBadResponse() throws Exception {
+		// given
+		var response = MAPPER.readTree("""
+				{
+				  "data": {
+				    "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
+				    "attributes": {
+				      "digitalMediaKey": {
+				        "digitalSpecimenId":"20.5000.1025/V1Z-176-LL4",
+				        "mediaUrl":"https://an-image.org"
+				      }
+				    }
+				  }
+				}
+				""");
+		given(pidClient.postPids(any())).willReturn(response);
 
-    // When / Then
-    assertThrows(PidException.class,
-        () -> pidComponent.postPid(List.of(givenPidRequest()), true));
-  }
+		// When / Then
+		assertThrows(PidException.class, () -> pidComponent.postPid(List.of(givenPidRequest()), true));
+	}
 
-  @Test
-  void testPostPidNPE() throws Exception {
-    // given
-    var response = MAPPER.readTree("""
-        {
-          "data": [{
-          }]
-        }
-        """);
-    given(pidClient.postPids(any())).willReturn(response);
+	@Test
+	void testPostPidNPE() throws Exception {
+		// given
+		var response = MAPPER.readTree("""
+				{
+				  "data": [{
+				  }]
+				}
+				""");
+		given(pidClient.postPids(any())).willReturn(response);
 
-    // When / Then
-    assertThrows(PidException.class,
-        () -> pidComponent.postPid(List.of(givenPidRequest()), true));
-  }
-  
-  @Test
-  void testUpdatePid() throws Exception {
-    // Given
-    
-    // When 
-    pidComponent.updatePid(List.of(givenPidRequest()));
-    
-    // Then
-    then(pidClient).should().updatePids(List.of(givenPidRequest()));
-  }
+		// When / Then
+		assertThrows(PidException.class, () -> pidComponent.postPid(List.of(givenPidRequest()), true));
+	}
 
-  @Test
-  void testRollbackPid() throws Exception {
-    // Given
+	@Test
+	void testUpdatePid() throws Exception {
+		// Given
 
-    // When 
-    pidComponent.rollbackPidUpdate(List.of(givenPidRequest()));
+		// When
+		pidComponent.updatePid(List.of(givenPidRequest()));
 
-    // Then
-    then(pidClient).should().rollbackPidsUpdate(List.of(givenPidRequest()));
-  }
+		// Then
+		then(pidClient).should().updatePids(List.of(givenPidRequest()));
+	}
 
-  private JsonNode givenPidResponse() {
-    return MAPPER.readTree("""
-        {
-          "data": [
-            {
-              "id": "20.5000.1025/V1Z-176-LL4",
-              "attributes": {
-                "normalisedPrimarySpecimenObjectId" : "https://geocollections.info/specimen/23602"
-              }
-            }
-          ]
-        }
-        """);
-  }
+	@Test
+	void testRollbackPid() throws Exception {
+		// Given
 
-  private JsonNode givenPidResponseMedia() {
-    return MAPPER.readTree("""
-        {
-                      "data": [{
-                        "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
-                        "attributes": {
-                            "primaryMediaId":"https://an-image.org"
-                        }
-                      }]
-                    }
-        """);
+		// When
+		pidComponent.rollbackPidUpdate(List.of(givenPidRequest()));
 
-  }
+		// Then
+		then(pidClient).should().rollbackPidsUpdate(List.of(givenPidRequest()));
+	}
+
+	private JsonNode givenPidResponse() {
+		return MAPPER.readTree("""
+				{
+				  "data": [
+				    {
+				      "id": "20.5000.1025/V1Z-176-LL4",
+				      "attributes": {
+				        "normalisedPrimarySpecimenObjectId" : "https://geocollections.info/specimen/23602"
+				      }
+				    }
+				  ]
+				}
+				""");
+	}
+
+	private JsonNode givenPidResponseMedia() {
+		return MAPPER.readTree("""
+				{
+				              "data": [{
+				                "id":"20.5000.1025/ZZZ-ZZZ-ZZZ",
+				                "attributes": {
+				                    "primaryMediaId":"https://an-image.org"
+				                }
+				              }]
+				            }
+				""");
+
+	}
 
 }

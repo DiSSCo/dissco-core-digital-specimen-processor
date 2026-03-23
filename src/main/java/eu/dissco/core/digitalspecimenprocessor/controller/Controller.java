@@ -27,33 +27,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class Controller {
 
-  private final ProcessingService processingService;
+	private final ProcessingService processingService;
 
-  @PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<SpecimenProcessResult> upsertDigitalSpecimen(@RequestBody
-  DigitalSpecimenEvent event) throws NoChangesFoundException {
-    log.info("Received digitalSpecimenWrapper upsert: {}", event);
-    var result = processingService.handleMessages(List.of(event));
-    if (result.newDigitalSpecimens().isEmpty() &&
-        result.updatedDigitalSpecimens().isEmpty()) {
-      throw new NoChangesFoundException("No changes found for specimen");
-    }
-    return ResponseEntity.status(HttpStatus.CREATED).body(result);
-  }
+	@PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<SpecimenProcessResult> upsertDigitalSpecimen(@RequestBody DigitalSpecimenEvent event)
+			throws NoChangesFoundException {
+		log.info("Received digitalSpecimenWrapper upsert: {}", event);
+		var result = processingService.handleMessages(List.of(event));
+		if (result.newDigitalSpecimens().isEmpty() && result.updatedDigitalSpecimens().isEmpty()) {
+			throw new NoChangesFoundException("No changes found for specimen");
+		}
+		return ResponseEntity.status(HttpStatus.CREATED).body(result);
+	}
 
-  @PostMapping(value = "media", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<MediaProcessResult> upsertDigitalMedia(@RequestBody
-  DigitalMediaEvent event) throws NoChangesFoundException {
-    log.info("Received digitalMedia upsert: {}", event);
-    var result = processingService.handleMessagesMedia(List.of(event));
-    if (result.newMedia().isEmpty() && result.updatedMedia().isEmpty()) {
-      throw new NoChangesFoundException("No changes found for media");
-    }
-    return ResponseEntity.status(HttpStatus.CREATED).body(result);
-  }
+	@PostMapping(value = "media", consumes = MediaType.APPLICATION_JSON_VALUE,
+			produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<MediaProcessResult> upsertDigitalMedia(@RequestBody DigitalMediaEvent event)
+			throws NoChangesFoundException {
+		log.info("Received digitalMedia upsert: {}", event);
+		var result = processingService.handleMessagesMedia(List.of(event));
+		if (result.newMedia().isEmpty() && result.updatedMedia().isEmpty()) {
+			throw new NoChangesFoundException("No changes found for media");
+		}
+		return ResponseEntity.status(HttpStatus.CREATED).body(result);
+	}
 
-  @ExceptionHandler(NoChangesFoundException.class)
-  public ResponseEntity<String> handleException(NoChangesFoundException e) {
-    return ResponseEntity.status(HttpStatus.OK).body(e.getMessage());
-  }
+	@ExceptionHandler(NoChangesFoundException.class)
+	public ResponseEntity<String> handleException(NoChangesFoundException e) {
+		return ResponseEntity.status(HttpStatus.OK).body(e.getMessage());
+	}
+
 }

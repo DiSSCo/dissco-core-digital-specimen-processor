@@ -11,22 +11,22 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("application")
 public class ApplicationProperties {
 
-  @NotBlank
-  private String specimenBaseUrl = "https://doi.org/";
+	@NotBlank
+	private String specimenBaseUrl = "https://doi.org/";
 
-  @NotBlank
-  private String name = "DiSSCo Digital Specimen Processing Service";
+	@NotBlank
+	private String name = "DiSSCo Digital Specimen Processing Service";
 
-  @NotBlank
-  private String pid = "https://doi.org/10.5281/zenodo.14383054";
+	@NotBlank
+	private String pid = "https://doi.org/10.5281/zenodo.14383054";
 
-  @NotBlank
-  private String createUpdateTombstoneEventType = "https://doi.org/21.T11148/d7570227982f70256af3";
+	@NotBlank
+	private String createUpdateTombstoneEventType = "https://doi.org/21.T11148/d7570227982f70256af3";
 
-  @Positive
-  private Integer maxPids = 1000;
+	@Positive
+	private Integer maxPids = 1000;
 
-  @Positive
-  private Integer maxMedia = 10000;
+	@Positive
+	private Integer maxMedia = 10000;
 
 }

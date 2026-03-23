@@ -38,114 +38,102 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class EntityRelationshipServiceTest {
 
-  private EntityRelationshipService entityRelationshipService;
+	private EntityRelationshipService entityRelationshipService;
 
-  @BeforeEach
-  void setUp() {
-    entityRelationshipService = new EntityRelationshipService();
-  }
+	@BeforeEach
+	void setUp() {
+		entityRelationshipService = new EntityRelationshipService();
+	}
 
-  @Test
-  void testGetMediaErNullMediaEr() {
-    //Given
-    var specimen = givenAttributes(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, false, false, false);
-    specimen.setOdsHasEntityRelationships(List.of(givenEntityRelationship(null, HAS_MEDIA.getRelationshipName())));
-    var currentRecord = new DigitalSpecimenRecord(
-        HANDLE,
-        MIDS_LEVEL,
-        VERSION,
-        CREATED,
-        new DigitalSpecimenWrapper(
-            PHYSICAL_SPECIMEN_ID,
-            TYPE_PID,
-            specimen,
-            ORIGINAL_DATA
-        ),
-        Set.of(), false, true,
-        List.of());
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, currentRecord);
-    var digitalSpecimen = givenDigitalSpecimenEvent();
-    var expected = new MediaRelationshipProcessResult(
-        List.of(givenEntityRelationship(null, HAS_MEDIA.getRelationshipName())), List.of(), List.of());
+	@Test
+	void testGetMediaErNullMediaEr() {
+		// Given
+		var specimen = givenAttributes(PHYSICAL_SPECIMEN_ID, SPECIMEN_NAME, false, false, false);
+		specimen.setOdsHasEntityRelationships(List.of(givenEntityRelationship(null, HAS_MEDIA.getRelationshipName())));
+		var currentRecord = new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, VERSION, CREATED,
+				new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, specimen, ORIGINAL_DATA), Set.of(), false,
+				true, List.of());
+		var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, currentRecord);
+		var digitalSpecimen = givenDigitalSpecimenEvent();
+		var expected = new MediaRelationshipProcessResult(
+				List.of(givenEntityRelationship(null, HAS_MEDIA.getRelationshipName())), List.of(), List.of());
 
-    // When
-    var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
-        currentSpecimens, digitalSpecimen, Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalMediaRecord()));
+		// When
+		var result = entityRelationshipService.processMediaRelationshipsForSpecimen(currentSpecimens, digitalSpecimen,
+				Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalMediaRecord()));
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-  @Test
-  void testGetMediaErNoMedia() {
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
-    var digitalSpecimen = givenDigitalSpecimenEvent();
-    var expected = givenEmptyMediaProcessResult();
+	@Test
+	void testGetMediaErNoMedia() {
+		var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
+		var digitalSpecimen = givenDigitalSpecimenEvent();
+		var expected = givenEmptyMediaProcessResult();
 
-    // When
-    var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
-        currentSpecimens, digitalSpecimen, Map.of());
+		// When
+		var result = entityRelationshipService.processMediaRelationshipsForSpecimen(currentSpecimens, digitalSpecimen,
+				Map.of());
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-  @Test
-  void testGetMediaErNewEr() {
-    //Given
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
-    var digitalSpecimen = givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID);
-    var expected = new MediaRelationshipProcessResult(
-        List.of(), List.of(givenDigitalMediaEvent(MEDIA_URL)), List.of());
+	@Test
+	void testGetMediaErNewEr() {
+		// Given
+		var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecord());
+		var digitalSpecimen = givenDigitalSpecimenEvent(PHYSICAL_SPECIMEN_ID);
+		var expected = new MediaRelationshipProcessResult(List.of(), List.of(givenDigitalMediaEvent(MEDIA_URL)),
+				List.of());
 
-    // When
-    var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
-        currentSpecimens, digitalSpecimen, Map.of(MEDIA_URL, givenDigitalMediaRecord()));
+		// When
+		var result = entityRelationshipService.processMediaRelationshipsForSpecimen(currentSpecimens, digitalSpecimen,
+				Map.of(MEDIA_URL, givenDigitalMediaRecord()));
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-  @Test
-  void testGetMediaErTombstoneEr() {
-    //Given
-    var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecordWithMediaEr());
-    var digitalSpecimen = givenDigitalSpecimenEvent();
-    var expected = new MediaRelationshipProcessResult(
-        List.of(givenEntityRelationship(MEDIA_PID,
-            HAS_MEDIA.getRelationshipName())), List.of(), List.of());
+	@Test
+	void testGetMediaErTombstoneEr() {
+		// Given
+		var currentSpecimens = Map.of(PHYSICAL_SPECIMEN_ID, givenDigitalSpecimenRecordWithMediaEr());
+		var digitalSpecimen = givenDigitalSpecimenEvent();
+		var expected = new MediaRelationshipProcessResult(
+				List.of(givenEntityRelationship(MEDIA_PID, HAS_MEDIA.getRelationshipName())), List.of(), List.of());
 
-    // When
-    var result = entityRelationshipService.processMediaRelationshipsForSpecimen(
-        currentSpecimens, digitalSpecimen, Map.of(MEDIA_URL, givenDigitalMediaRecord()));
+		// When
+		var result = entityRelationshipService.processMediaRelationshipsForSpecimen(currentSpecimens, digitalSpecimen,
+				Map.of(MEDIA_URL, givenDigitalMediaRecord()));
 
-    // Then
-    assertThat(result).isEqualTo(expected);
-  }
+		// Then
+		assertThat(result).isEqualTo(expected);
+	}
 
-  @Test
-  void testFindNewSpecimenRelationshipsForMedia() {
-    // Given
+	@Test
+	void testFindNewSpecimenRelationshipsForMedia() {
+		// Given
 
-    // When
-    var result = entityRelationshipService.findNewSpecimenRelationshipsForMedia(
-        givenDigitalMediaRecord(), givenPidProcessResultMedia());
+		// When
+		var result = entityRelationshipService.findNewSpecimenRelationshipsForMedia(givenDigitalMediaRecord(),
+				givenPidProcessResultMedia());
 
-    // Then
-    assertThat(result).isEmpty();
-  }
+		// Then
+		assertThat(result).isEmpty();
+	}
 
-  @Test
-  void testFindNewSpecimenRelationshipsForMediaNoNewSpecimens() {
-    // Given
+	@Test
+	void testFindNewSpecimenRelationshipsForMediaNoNewSpecimens() {
+		// Given
 
-    // When
-    var result = entityRelationshipService.findNewSpecimenRelationshipsForMedia(
-        givenDigitalMediaRecord(),
-        new PidProcessResult(MEDIA_PID, Set.of(HANDLE, SECOND_HANDLE)));
+		// When
+		var result = entityRelationshipService.findNewSpecimenRelationshipsForMedia(givenDigitalMediaRecord(),
+				new PidProcessResult(MEDIA_PID, Set.of(HANDLE, SECOND_HANDLE)));
 
-    // Then
-    assertThat(result).isEqualTo(Set.of(SECOND_HANDLE));
-  }
+		// Then
+		assertThat(result).isEqualTo(Set.of(SECOND_HANDLE));
+	}
 
 }

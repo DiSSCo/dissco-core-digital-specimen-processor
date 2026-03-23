@@ -34,210 +34,196 @@ import org.testcontainers.rabbitmq.RabbitMQContainer;
 @ExtendWith(MockitoExtension.class)
 class RabbitMqPublisherServiceTest {
 
-  private static RabbitMQContainer container;
-  private static RabbitTemplate rabbitTemplate;
-  private RabbitMqPublisherService rabbitMqPublisherService;
-  @Mock
-  private ProvenanceService provenanceService;
+	private static RabbitMQContainer container;
 
-  @BeforeAll
-  static void setupContainer() throws IOException, InterruptedException {
-    container = new RabbitMQContainer("rabbitmq:4.0.8-management-alpine");
-    container.start();
-    // Declare digital specimen exchange, queue and binding
-    declareRabbitResources("digital-specimen-exchange", "digital-specimen-queue",
-        "digital-specimen", "direct");
-    // Declare dlq exchange, queue and binding
-    declareRabbitResources("digital-specimen-exchange-dlq", "digital-specimen-queue-dlq",
-        "digital-specimen-dlq", "direct");
-    // Declare digital media exchange, queue and binding
-    declareRabbitResources("digital-media-exchange", "digital-media-queue", "digital-media",
-        "direct");
-    // Declare auto annotation exchange, queue and binding
-    declareRabbitResources("auto-accepted-annotation-exchange", "auto-accepted-annotation-queue",
-        "auto-accepted-annotation", "direct");
-    // Declare create update tombstone exchange, queue and binding
-    declareRabbitResources("provenance-exchange", "provenance-queue",
-        "provenance.#", "topic");
-    // Declare mas ocr exchange, queue and binding
-    declareRabbitResources("mas-exchange", "mas-ocr-queue", "OCR", "direct");
-    declareRabbitResources("mas-scheduler-exchange", "mas-scheduler-queue", "mas-scheduler",
-        "direct");
-    declareRabbitResources("digital-media-relationship-tombstone-exchange", "digital-media-relationship-tombstone-queue", "digital-media-relationship-tombstone",
-        "direct");
-    declareRabbitResources("digital-media-relationship-tombstone-exchange-dlq", "digital-media-relationship-tombstone-queue-dlq", "digital-media-relationship-tombstone-dlq",
-        "direct");
+	private static RabbitTemplate rabbitTemplate;
 
-    CachingConnectionFactory factory = new CachingConnectionFactory(container.getHost());
-    factory.setPort(container.getAmqpPort());
-    factory.setUsername(container.getAdminUsername());
-    factory.setPassword(container.getAdminPassword());
-    rabbitTemplate = new RabbitTemplate(factory);
-    rabbitTemplate.setReceiveTimeout(100L);
-  }
+	private RabbitMqPublisherService rabbitMqPublisherService;
 
+	@Mock
+	private ProvenanceService provenanceService;
 
-  private static void declareRabbitResources(String exchangeName, String queueName,
-      String routingKey, String exchangeType)
-      throws IOException, InterruptedException {
-    container.execInContainer("rabbitmqadmin", "declare", "exchange", "name=" + exchangeName,
-        "type=" + exchangeType, "durable=true");
-    container.execInContainer("rabbitmqadmin", "declare", "queue", "name=" + queueName,
-        "queue_type=quorum", "durable=true");
-    container.execInContainer("rabbitmqadmin", "declare", "binding", "source=" + exchangeName,
-        "destination_type=queue", "destination=" + queueName, "routing_key=" + routingKey);
-  }
+	@BeforeAll
+	static void setupContainer() throws IOException, InterruptedException {
+		container = new RabbitMQContainer("rabbitmq:4.0.8-management-alpine");
+		container.start();
+		// Declare digital specimen exchange, queue and binding
+		declareRabbitResources("digital-specimen-exchange", "digital-specimen-queue", "digital-specimen", "direct");
+		// Declare dlq exchange, queue and binding
+		declareRabbitResources("digital-specimen-exchange-dlq", "digital-specimen-queue-dlq", "digital-specimen-dlq",
+				"direct");
+		// Declare digital media exchange, queue and binding
+		declareRabbitResources("digital-media-exchange", "digital-media-queue", "digital-media", "direct");
+		// Declare auto annotation exchange, queue and binding
+		declareRabbitResources("auto-accepted-annotation-exchange", "auto-accepted-annotation-queue",
+				"auto-accepted-annotation", "direct");
+		// Declare create update tombstone exchange, queue and binding
+		declareRabbitResources("provenance-exchange", "provenance-queue", "provenance.#", "topic");
+		// Declare mas ocr exchange, queue and binding
+		declareRabbitResources("mas-exchange", "mas-ocr-queue", "OCR", "direct");
+		declareRabbitResources("mas-scheduler-exchange", "mas-scheduler-queue", "mas-scheduler", "direct");
+		declareRabbitResources("digital-media-relationship-tombstone-exchange",
+				"digital-media-relationship-tombstone-queue", "digital-media-relationship-tombstone", "direct");
+		declareRabbitResources("digital-media-relationship-tombstone-exchange-dlq",
+				"digital-media-relationship-tombstone-queue-dlq", "digital-media-relationship-tombstone-dlq", "direct");
 
-  @AfterAll
-  static void shutdownContainer() {
-    container.stop();
-  }
+		CachingConnectionFactory factory = new CachingConnectionFactory(container.getHost());
+		factory.setPort(container.getAmqpPort());
+		factory.setUsername(container.getAdminUsername());
+		factory.setPassword(container.getAdminPassword());
+		rabbitTemplate = new RabbitTemplate(factory);
+		rabbitTemplate.setReceiveTimeout(100L);
+	}
 
-  @BeforeEach
-  void setup() {
-    rabbitMqPublisherService = new RabbitMqPublisherService(MAPPER, provenanceService,
-        rabbitTemplate, new RabbitMqProperties());
-  }
+	private static void declareRabbitResources(String exchangeName, String queueName, String routingKey,
+			String exchangeType) throws IOException, InterruptedException {
+		container.execInContainer("rabbitmqadmin", "declare", "exchange", "name=" + exchangeName,
+				"type=" + exchangeType, "durable=true");
+		container.execInContainer("rabbitmqadmin", "declare", "queue", "name=" + queueName, "queue_type=quorum",
+				"durable=true");
+		container.execInContainer("rabbitmqadmin", "declare", "binding", "source=" + exchangeName,
+				"destination_type=queue", "destination=" + queueName, "routing_key=" + routingKey);
+	}
 
-  @Test
-  void testPublishCreateEvent()  {
-    // Given
+	@AfterAll
+	static void shutdownContainer() {
+		container.stop();
+	}
 
-    // When
-    rabbitMqPublisherService.publishCreateEventSpecimen(givenDigitalSpecimenRecord());
+	@BeforeEach
+	void setup() {
+		rabbitMqPublisherService = new RabbitMqPublisherService(MAPPER, provenanceService, rabbitTemplate,
+				new RabbitMqProperties());
+	}
 
-    // Then
-    var message = rabbitTemplate.receive("provenance-queue");
-    assertThat(new String(message.getBody())).isNotNull();
-  }
+	@Test
+	void testPublishCreateEvent() {
+		// Given
 
-  @Test
-  void testPublishUpdateEvent()  {
-    // Given
+		// When
+		rabbitMqPublisherService.publishCreateEventSpecimen(givenDigitalSpecimenRecord());
 
-    // When
-    rabbitMqPublisherService.publishUpdateEventSpecimen(givenDigitalSpecimenRecord(2, false),
-        givenJsonPatchSpecimen());
+		// Then
+		var message = rabbitTemplate.receive("provenance-queue");
+		assertThat(new String(message.getBody())).isNotNull();
+	}
 
-    // Then
-    var dlqMessage = rabbitTemplate.receive("provenance-queue");
-    assertThat(new String(dlqMessage.getBody())).isNotNull();
-  }
+	@Test
+	void testPublishUpdateEvent() {
+		// Given
 
-  @Test
-  void testRepublishEvent()  {
-    // Given
-    var message = givenDigitalSpecimenEvent();
+		// When
+		rabbitMqPublisherService.publishUpdateEventSpecimen(givenDigitalSpecimenRecord(2, false),
+				givenJsonPatchSpecimen());
 
-    // When
-    rabbitMqPublisherService.republishSpecimenEvent(message);
+		// Then
+		var dlqMessage = rabbitTemplate.receive("provenance-queue");
+		assertThat(new String(dlqMessage.getBody())).isNotNull();
+	}
 
-    // Then
-    var result = rabbitTemplate.receive("digital-specimen-queue");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(
-        message);
-  }
+	@Test
+	void testRepublishEvent() {
+		// Given
+		var message = givenDigitalSpecimenEvent();
 
-  @Test
-  void testPublishMasJob()  {
-    // Given
+		// When
+		rabbitMqPublisherService.republishSpecimenEvent(message);
 
-    // When
-    rabbitMqPublisherService.publishMasJobRequest(givenMasJobRequestMedia());
+		// Then
+		var result = rabbitTemplate.receive("digital-specimen-queue");
+		assertThat(MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(message);
+	}
 
-    // Then
-    var result = rabbitTemplate.receive("mas-scheduler-queue");
-    assertThat(result.getBody()).isNotEmpty();
-  }
+	@Test
+	void testPublishMasJob() {
+		// Given
 
+		// When
+		rabbitMqPublisherService.publishMasJobRequest(givenMasJobRequestMedia());
 
-  @Test
-  void testRepublishEventMedia()  {
-    // Given
-    var message = givenDigitalMediaEvent();
+		// Then
+		var result = rabbitTemplate.receive("mas-scheduler-queue");
+		assertThat(result.getBody()).isNotEmpty();
+	}
 
-    // When
-    rabbitMqPublisherService.republishMediaEvent(message);
+	@Test
+	void testRepublishEventMedia() {
+		// Given
+		var message = givenDigitalMediaEvent();
 
-    // Then
-    var result = rabbitTemplate.receive("digital-media-queue");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), DigitalMediaEvent.class)).isEqualTo(
-        message);
-  }
+		// When
+		rabbitMqPublisherService.republishMediaEvent(message);
 
-  @Test
-  void testDeadLetterEvent()  {
-    // Given
-    var message = givenDigitalSpecimenEvent();
+		// Then
+		var result = rabbitTemplate.receive("digital-media-queue");
+		assertThat(MAPPER.readValue(new String(result.getBody()), DigitalMediaEvent.class)).isEqualTo(message);
+	}
 
-    // When
-    rabbitMqPublisherService.deadLetterEventSpecimen(message);
+	@Test
+	void testDeadLetterEvent() {
+		// Given
+		var message = givenDigitalSpecimenEvent();
 
-    // Then
-    var result = rabbitTemplate.receive("digital-specimen-queue-dlq");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(
-        message);
-  }
+		// When
+		rabbitMqPublisherService.deadLetterEventSpecimen(message);
 
-  @Test
-  void testPublishDigitalMediaObjectEvent()  {
-    // Given
-    var message = givenDigitalMediaEventWithRelationship();
+		// Then
+		var result = rabbitTemplate.receive("digital-specimen-queue-dlq");
+		assertThat(MAPPER.readValue(new String(result.getBody()), DigitalSpecimenEvent.class)).isEqualTo(message);
+	}
 
-    // When
-    rabbitMqPublisherService.republishMediaEvent(message);
+	@Test
+	void testPublishDigitalMediaObjectEvent() {
+		// Given
+		var message = givenDigitalMediaEventWithRelationship();
 
-    // Then
-    var result = rabbitTemplate.receive("digital-media-queue");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), DigitalMediaEvent.class)).isEqualTo(
-        message);
-  }
+		// When
+		rabbitMqPublisherService.republishMediaEvent(message);
 
-  @Test
-  void testPublishAcceptedAnnotation()  {
-    // Given
-    var message = givenAutoAcceptedAnnotation(givenNewAcceptedAnnotation());
+		// Then
+		var result = rabbitTemplate.receive("digital-media-queue");
+		assertThat(MAPPER.readValue(new String(result.getBody()), DigitalMediaEvent.class)).isEqualTo(message);
+	}
 
-    // When
-    rabbitMqPublisherService.publishAcceptedAnnotation(message);
+	@Test
+	void testPublishAcceptedAnnotation() {
+		// Given
+		var message = givenAutoAcceptedAnnotation(givenNewAcceptedAnnotation());
 
-    // Then
-    var result = rabbitTemplate.receive("auto-accepted-annotation-queue");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), AutoAcceptedAnnotation.class)).isEqualTo(
-        message);
-  }
+		// When
+		rabbitMqPublisherService.publishAcceptedAnnotation(message);
 
-  @Test
-  void testPublishDigitalMediaRelationTombstone()  {
-    // Given
-    var message = givenDigitalMediaTombstoneEvent();
+		// Then
+		var result = rabbitTemplate.receive("auto-accepted-annotation-queue");
+		assertThat(MAPPER.readValue(new String(result.getBody()), AutoAcceptedAnnotation.class)).isEqualTo(message);
+	}
 
-    // When
-    rabbitMqPublisherService.publishDigitalMediaRelationTombstone(message);
+	@Test
+	void testPublishDigitalMediaRelationTombstone() {
+		// Given
+		var message = givenDigitalMediaTombstoneEvent();
 
-    // Then
-    var result = rabbitTemplate.receive("digital-media-relationship-tombstone-queue");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), DigitalMediaRelationshipTombstoneEvent.class)).isEqualTo(
-        message);
-  }
-  @Test
-  void testDeadLetterRawDigitalMediaRelationTombstone()  {
-    // Given
-    var message = MAPPER.writeValueAsString(givenDigitalMediaTombstoneEvent());
+		// When
+		rabbitMqPublisherService.publishDigitalMediaRelationTombstone(message);
 
-    // When
-    rabbitMqPublisherService.deadLetterRawDigitalMediaRelationshipTombstone(message);
+		// Then
+		var result = rabbitTemplate.receive("digital-media-relationship-tombstone-queue");
+		assertThat(MAPPER.readValue(new String(result.getBody()), DigitalMediaRelationshipTombstoneEvent.class))
+			.isEqualTo(message);
+	}
 
-    // Then
-    var result = rabbitTemplate.receive("digital-media-relationship-tombstone-queue-dlq");
-    assertThat(
-        MAPPER.readValue(new String(result.getBody()), DigitalMediaRelationshipTombstoneEvent.class)).isEqualTo(
-        givenDigitalMediaTombstoneEvent());
-  }
+	@Test
+	void testDeadLetterRawDigitalMediaRelationTombstone() {
+		// Given
+		var message = MAPPER.writeValueAsString(givenDigitalMediaTombstoneEvent());
+
+		// When
+		rabbitMqPublisherService.deadLetterRawDigitalMediaRelationshipTombstone(message);
+
+		// Then
+		var result = rabbitTemplate.receive("digital-media-relationship-tombstone-queue-dlq");
+		assertThat(MAPPER.readValue(new String(result.getBody()), DigitalMediaRelationshipTombstoneEvent.class))
+			.isEqualTo(givenDigitalMediaTombstoneEvent());
+	}
+
 }

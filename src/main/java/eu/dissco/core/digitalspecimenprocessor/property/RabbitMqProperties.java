@@ -12,115 +12,127 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "rabbitmq")
 public class RabbitMqProperties {
 
-  @Positive
-  private int batchSize = 500;
-  @NotNull
-  private Specimen specimen = new Specimen();
-  @NotNull
-  private DigitalMedia digitalMedia = new DigitalMedia();
-  @NotNull
-  private AutoAcceptedAnnotation autoAcceptedAnnotation = new AutoAcceptedAnnotation();
-  @NotNull
-  private Provenance provenance = new Provenance();
-  @NotNull
-  private MasScheduler masScheduler = new MasScheduler();
-  @NotNull
-  private DigitalMediaRelationshipTombstone digitalMediaRelationshipTombstone = new DigitalMediaRelationshipTombstone();
+	@Positive
+	private int batchSize = 500;
 
-  @NotBlank
-  private String masExchangeName = "mas-exchange";
+	@NotNull
+	private Specimen specimen = new Specimen();
 
-  @Data
-  @Validated
-  public static class Specimen {
+	@NotNull
+	private DigitalMedia digitalMedia = new DigitalMedia();
 
-    @NotBlank
-    private String exchangeName = "digital-specimen-exchange";
+	@NotNull
+	private AutoAcceptedAnnotation autoAcceptedAnnotation = new AutoAcceptedAnnotation();
 
-    @NotNull
-    private String routingKeyName = "digital-specimen";
+	@NotNull
+	private Provenance provenance = new Provenance();
 
-    @NotBlank
-    private String queueName = "digital-specimen-queue";
+	@NotNull
+	private MasScheduler masScheduler = new MasScheduler();
 
-    @NotBlank
-    private String dlqExchangeName = "digital-specimen-exchange-dlq";
+	@NotNull
+	private DigitalMediaRelationshipTombstone digitalMediaRelationshipTombstone = new DigitalMediaRelationshipTombstone();
 
-    @NotBlank
-    private String dlqRoutingKeyName = "digital-specimen-dlq";
-  }
+	@NotBlank
+	private String masExchangeName = "mas-exchange";
 
-  @Data
-  @Validated
-  public static class DigitalMedia {
+	@Data
+	@Validated
+	public static class Specimen {
 
-    @NotBlank
-    private String exchangeName = "digital-media-exchange";
+		@NotBlank
+		private String exchangeName = "digital-specimen-exchange";
 
-    @NotNull
-    private String routingKeyName = "digital-media";
+		@NotNull
+		private String routingKeyName = "digital-specimen";
 
-    @NotBlank
-    private String queueName = "digital-media-queue";
+		@NotBlank
+		private String queueName = "digital-specimen-queue";
 
-    @NotBlank
-    private String dlqExchangeName = "digital-media-exchange-dlq";
+		@NotBlank
+		private String dlqExchangeName = "digital-specimen-exchange-dlq";
 
-    @NotBlank
-    private String dlqRoutingKeyName = "digital-media-dlq";
-  }
+		@NotBlank
+		private String dlqRoutingKeyName = "digital-specimen-dlq";
 
-  @Data
-  @Validated
-  public static class AutoAcceptedAnnotation {
+	}
 
-    @NotBlank
-    private String exchangeName = "auto-accepted-annotation-exchange";
+	@Data
+	@Validated
+	public static class DigitalMedia {
 
-    @NotNull
-    private String routingKeyName = "auto-accepted-annotation";
-  }
+		@NotBlank
+		private String exchangeName = "digital-media-exchange";
 
-  @Data
-  @Validated
-  public static class DigitalMediaRelationshipTombstone {
+		@NotNull
+		private String routingKeyName = "digital-media";
 
-    @NotBlank
-    private String queueName = "digital-media-relationship-tombstone-queue";
+		@NotBlank
+		private String queueName = "digital-media-queue";
 
-    @NotBlank
-    private String exchangeName = "digital-media-relationship-tombstone-exchange";
+		@NotBlank
+		private String dlqExchangeName = "digital-media-exchange-dlq";
 
-    @NotNull
-    private String routingKeyName = "digital-media-relationship-tombstone";
+		@NotBlank
+		private String dlqRoutingKeyName = "digital-media-dlq";
 
-    @NotBlank
-    private String dlqExchangeName = "digital-media-relationship-tombstone-exchange-dlq";
+	}
 
-    @NotBlank
-    private String dlqRoutingKeyName = "digital-media-relationship-tombstone-dlq";
-  }
+	@Data
+	@Validated
+	public static class AutoAcceptedAnnotation {
 
-  @Data
-  @Validated
-  public static class Provenance {
+		@NotBlank
+		private String exchangeName = "auto-accepted-annotation-exchange";
 
-    @NotBlank
-    private String exchangeName = "provenance-exchange";
+		@NotNull
+		private String routingKeyName = "auto-accepted-annotation";
 
-    @NotNull
-    private String routingKeyPrefix = "provenance";
-  }
+	}
 
-  @Data
-  @Validated
-  public static class MasScheduler {
+	@Data
+	@Validated
+	public static class DigitalMediaRelationshipTombstone {
 
-    @NotBlank
-    private String exchangeName = "mas-scheduler-exchange";
+		@NotBlank
+		private String queueName = "digital-media-relationship-tombstone-queue";
 
-    @NotNull
-    private String routingKeyName = "mas-scheduler";
-  }
+		@NotBlank
+		private String exchangeName = "digital-media-relationship-tombstone-exchange";
+
+		@NotNull
+		private String routingKeyName = "digital-media-relationship-tombstone";
+
+		@NotBlank
+		private String dlqExchangeName = "digital-media-relationship-tombstone-exchange-dlq";
+
+		@NotBlank
+		private String dlqRoutingKeyName = "digital-media-relationship-tombstone-dlq";
+
+	}
+
+	@Data
+	@Validated
+	public static class Provenance {
+
+		@NotBlank
+		private String exchangeName = "provenance-exchange";
+
+		@NotNull
+		private String routingKeyPrefix = "provenance";
+
+	}
+
+	@Data
+	@Validated
+	public static class MasScheduler {
+
+		@NotBlank
+		private String exchangeName = "mas-scheduler-exchange";
+
+		@NotNull
+		private String routingKeyName = "mas-scheduler";
+
+	}
 
 }

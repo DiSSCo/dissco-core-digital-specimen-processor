@@ -13,3 +13,7 @@ CVE-2026-25646
 # March 13, 2026
 # Issue with zlib, alpine image needs to update
 CVE-2026-22184
+
+# March 19, 2026
+# Issue with libexpat, alpine image needs to update
+CVE-2026-32767
