@@ -5,7 +5,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DATASET_ID
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE_PREFIX;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;

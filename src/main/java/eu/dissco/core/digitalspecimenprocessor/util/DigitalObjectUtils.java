@@ -1,7 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.util;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCESSING_SERVICE;
-import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 

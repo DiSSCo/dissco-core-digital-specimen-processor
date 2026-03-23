@@ -5,7 +5,6 @@ import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_S
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotatedDigitalSpecimenRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotatedLibrarySpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotatedSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotation;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
@@ -23,7 +22,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenNewAcceptedAnnotation;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
@@ -31,7 +29,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdat
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenTuple;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -42,12 +39,10 @@ import static org.mockito.Mockito.mockStatic;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
-import eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
 import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.io.IOException;

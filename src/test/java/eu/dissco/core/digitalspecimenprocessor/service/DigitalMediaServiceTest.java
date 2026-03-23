@@ -20,7 +20,6 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATI
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultMedia;
@@ -46,7 +45,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelat
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;

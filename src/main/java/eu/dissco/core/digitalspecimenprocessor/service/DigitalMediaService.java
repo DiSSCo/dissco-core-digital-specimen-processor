@@ -13,7 +13,6 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaT
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
