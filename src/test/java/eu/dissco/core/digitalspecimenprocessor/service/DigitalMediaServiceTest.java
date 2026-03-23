@@ -20,7 +20,7 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATI
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenJsonPatchMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalMediaEvent;
@@ -44,7 +44,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaT
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
@@ -346,21 +346,26 @@ class DigitalMediaServiceTest {
 	@Test
 	void testTombstoneSpecimenRelations() {
 		// Given
-		var tuple = new UpdatedDigitalSpecimenTuple(
+		var updatedRecord = new UpdatedDigitalSpecimenRecord(
 				givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
-				givenDigitalSpecimenEvent(true),
+				Set.of(),
+				givenDigitalSpecimenRecord(VERSION, true),
+				MAPPER.createObjectNode(),
+				List.of(givenDigitalMediaEvent()),
 				new MediaRelationshipProcessResult(List.of(new EntityRelationship().withType("ods:EntityRelationship")
-					.withDwcRelationshipOfResource("hasDigitalMedia")
-					.withDwcRelationshipEstablishedDate(Date.from(CREATED))
-					.withDwcRelatedResourceID(DOI_PREFIX + MEDIA_PID)
-					.withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
-					.withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE, DOI,
-							SCHEMA_SOFTWARE_APPLICATION)))),
-						List.of(), List.of()));
+						.withDwcRelationshipOfResource("hasDigitalMedia")
+						.withDwcRelationshipEstablishedDate(Date.from(CREATED))
+						.withDwcRelatedResourceID(DOI_PREFIX + MEDIA_PID)
+						.withOdsRelatedResourceURI(URI.create(DOI_PREFIX + MEDIA_PID))
+						.withOdsHasAgents(List.of(createMachineAgent(APP_NAME, APP_HANDLE, PROCESSING_SERVICE, DOI,
+								SCHEMA_SOFTWARE_APPLICATION)))),
+						List.of(), List.of()),
+				true
+				);
 		var expected = new DigitalMediaRelationshipTombstoneEvent(HANDLE, MEDIA_PID);
 
 		// When
-		mediaService.tombstoneSpecimenRelations(List.of(tuple));
+		mediaService.tombstoneSpecimenRelations(Set.of(updatedRecord));
 
 		// Then
 		then(publisherService).should().publishDigitalMediaRelationTombstone(expected);
@@ -369,12 +374,18 @@ class DigitalMediaServiceTest {
 	@Test
 	void testNoTombstoneSpecimenRelations() {
 		// Given
-		var tuple = new UpdatedDigitalSpecimenTuple(
+		var updatedRecord = new UpdatedDigitalSpecimenRecord(
 				givenUnequalDigitalSpecimenRecord(HANDLE, ANOTHER_SPECIMEN_NAME, ORGANISATION_ID, false),
-				givenDigitalSpecimenEvent(true), new MediaRelationshipProcessResult());
+				Set.of(),
+				givenDigitalSpecimenRecord(VERSION, true),
+				MAPPER.createObjectNode(),
+				List.of(givenDigitalMediaEvent()),
+				new MediaRelationshipProcessResult(),
+				true
+				);
 
 		// When
-		mediaService.tombstoneSpecimenRelations(List.of(tuple));
+		mediaService.tombstoneSpecimenRelations(Set.of(updatedRecord));
 
 		// Then
 		then(repository).shouldHaveNoInteractions();

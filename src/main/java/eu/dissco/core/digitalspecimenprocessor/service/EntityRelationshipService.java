@@ -2,7 +2,6 @@ package eu.dissco.core.digitalspecimenprocessor.service;
 
 import static eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType.HAS_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
-
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.MediaRelationshipProcessResult;
@@ -114,12 +113,12 @@ public class EntityRelationshipService {
 	private static List<EntityRelationship> getMediaEntityRelationshipsForSpecimen(
 			DigitalSpecimenRecord digitalSpecimenRecord) {
 		return digitalSpecimenRecord.digitalSpecimenWrapper()
-			.attributes()
-			.getOdsHasEntityRelationships()
-			.stream()
-			.filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
-				.equals(HAS_MEDIA.getRelationshipName()))
-			.toList();
+				.attributes()
+				.getOdsHasEntityRelationships()
+				.stream()
+				.filter(entityRelationship -> entityRelationship.getDwcRelationshipOfResource()
+						.equals(HAS_MEDIA.getRelationshipName()))
+				.toList();
 	}
 
 }

@@ -5,13 +5,19 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DATASET_ID
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.DOI_PREFIX;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE_PREFIX;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MIDS_LEVEL;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORGANISATION_ID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_COLLECTION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_ID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SOURCE_SYSTEM_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.TYPE_PID;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenAttributes;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenRecord;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper;
 import io.github.dissco.core.annotationlogic.schema.Agent;
 import io.github.dissco.core.annotationlogic.schema.Agent.Type;
 import io.github.dissco.core.annotationlogic.schema.Annotation;
@@ -28,6 +34,7 @@ import io.github.dissco.core.annotationlogic.schema.OaHasSelector;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 public class AnnotationTestUtils {
 
@@ -132,11 +139,26 @@ public class AnnotationTestUtils {
 		return new Agent().withSchemaName("Some agent").withId(ORCID).withType(type);
 	}
 
-	public static DigitalSpecimen givenAnnotatedSpecimen() {
-		return givenAnnotatedSpecimen(OaMotivation.ODS_ADDING);
+	public static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenAnnotatedSpecimen(){
+		return givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, true)
+				.withDwcOrganismRemarks(NEW_VALUE);
 	}
 
-	public static DigitalSpecimen givenAnnotatedSpecimen(OaMotivation motivation) {
+	public static DigitalSpecimenRecord givenAnnotatedDigitalSpecimenRecord(){
+		return new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, 2, CREATED, givenAnnotatedSpecimenWrapper(), Set.of(),
+				false, false, List.of());
+	}
+
+	public static DigitalSpecimen givenAnnotatedLibrarySpecimen() {
+		return givenAnnotatedLibrarySpecimen(OaMotivation.ODS_ADDING);
+	}
+
+	public static DigitalSpecimenWrapper givenAnnotatedSpecimenWrapper() {
+		return new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID,
+			givenAnnotatedSpecimen(),ORIGINAL_DATA);
+	}
+
+	public static DigitalSpecimen givenAnnotatedLibrarySpecimen(OaMotivation motivation) {
 		var specimen = new DigitalSpecimen().withOdsOrganisationID(ORGANISATION_ID)
 			.withOdsOrganisationName("National Museum of Natural History")
 			.withOdsPhysicalSpecimenIDType(OdsPhysicalSpecimenIDType.GLOBAL)
@@ -151,7 +173,7 @@ public class AnnotationTestUtils {
 			.withDwcCollectionID(PHYSICAL_SPECIMEN_COLLECTION)
 			.withDwcDatasetName(DATASET_ID)
 			.withOdsIsMarkedAsType(true)
-			.withOdsIsKnownToContainMedia(false)
+			.withOdsIsKnownToContainMedia(true)
 			.withDctermsModified("2022-11-01T09:59:24.000Z");
 		if (motivation.equals(OaMotivation.OA_EDITING)) {
 			specimen.withDwcCollectionID(NEW_VALUE);

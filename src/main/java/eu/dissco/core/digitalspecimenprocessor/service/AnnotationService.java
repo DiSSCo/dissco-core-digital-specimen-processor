@@ -66,7 +66,7 @@ public class AnnotationService {
 				digitalSpecimenEvent.isDataFromSourceSystem());
 	}
 
-	private DigitalSpecimen applySingleAnnotation(DigitalSpecimen digitalSpecimen, Annotation annotation,
+	public DigitalSpecimen applySingleAnnotation(DigitalSpecimen digitalSpecimen, Annotation annotation,
 			DigitalSpecimenRecord currentSpecimen) throws AnnotationProcessingException {
 		var digitalSpecimenConverted = mapper
 			.convertValue(digitalSpecimen, io.github.dissco.core.annotationlogic.schema.DigitalSpecimen.class)

@@ -48,16 +48,16 @@ public class RollbackService {
 	// Rollback updated specimen
 
 	public void rollbackUpdatedSpecimens(Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenRecords,
-			boolean elasticRollback, boolean databseRollback) {
+			boolean elasticRollback, boolean databseRollback, boolean republish) {
 		// Rollback in database and/or in elastic
 		updatedDigitalSpecimenRecords
-			.forEach(updatedRecord -> rollbackUpdatedSpecimen(updatedRecord, elasticRollback, databseRollback));
+			.forEach(updatedRecord -> rollbackUpdatedSpecimen(updatedRecord, elasticRollback, databseRollback, republish));
 		// Rollback PID records for those that need it
 		filterUpdatesAndRollbackPidsSpecimen(updatedDigitalSpecimenRecords);
 	}
 
 	private void rollbackUpdatedSpecimen(UpdatedDigitalSpecimenRecord updatedDigitalSpecimenRecord,
-			boolean elasticRollback, boolean databaseRollback) {
+			boolean elasticRollback, boolean databaseRollback, boolean republish) {
 		if (elasticRollback) {
 			try {
 				elasticRepository.rollbackVersion(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
@@ -70,8 +70,11 @@ public class RollbackService {
 		if (databaseRollback) {
 			rollBackToEarlierDatabaseVersionSpecimen(updatedDigitalSpecimenRecord.currentDigitalSpecimen());
 		}
-		publisherService
-			.deadLetterEventSpecimen(specimenEventFromRecord(updatedDigitalSpecimenRecord.digitalSpecimenRecord()));
+		if (republish){
+			publisherService
+					.deadLetterEventSpecimen(specimenEventFromRecord(updatedDigitalSpecimenRecord.digitalSpecimenRecord()));
+		}
+
 	}
 
 	private void rollBackToEarlierDatabaseVersionSpecimen(DigitalSpecimenRecord currentDigitalSpecimen) {
@@ -227,7 +230,8 @@ public class RollbackService {
 	}
 
 	public Set<UpdatedDigitalSpecimenRecord> handlePartiallyFailedElasticUpdateSpecimen(
-			Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords, BulkResponse bulkResponse) {
+			Set<UpdatedDigitalSpecimenRecord> digitalSpecimenRecords, BulkResponse bulkResponse,
+			boolean republishOnRollback) {
 		var digitalSpecimenMap = digitalSpecimenRecords.stream()
 			.collect(Collectors.toMap(
 					updatedDigitalSpecimenRecord -> updatedDigitalSpecimenRecord.digitalSpecimenRecord().id(),
@@ -240,7 +244,7 @@ public class RollbackService {
 				log.error("Failed to update item into elastic search: {} with errors {}",
 						digitalSpecimenRecord.digitalSpecimenRecord().id(), item.error().reason());
 				pidUpdatesToRollback.add(digitalSpecimenRecord);
-				rollbackUpdatedSpecimen(digitalSpecimenRecord, false, true);
+				rollbackUpdatedSpecimen(digitalSpecimenRecord, false, true, republishOnRollback);
 				mutableDigitalSpecimenRecords.remove(digitalSpecimenRecord);
 			}
 			else {
