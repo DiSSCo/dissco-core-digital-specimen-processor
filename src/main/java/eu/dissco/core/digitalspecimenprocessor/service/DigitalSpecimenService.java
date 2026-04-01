@@ -122,10 +122,13 @@ public class DigitalSpecimenService {
 		var currentSpecimen = repository.getDigitalSpecimenById(id);
 		var digitalSpecimen = annotationService
 			.applySingleAnnotation(currentSpecimen.digitalSpecimenWrapper().attributes(), annotation, currentSpecimen);
+		digitalSpecimen.withOdsMidsLevel(midsService.calculateMids(digitalSpecimen))
+			.withOdsVersion(currentSpecimen.version() + 1);
 		var digitalSpecimenWrapper = new DigitalSpecimenWrapper(digitalSpecimen.getOdsNormalisedPhysicalSpecimenID(),
 				currentSpecimen.digitalSpecimenWrapper().type(), digitalSpecimen,
 				currentSpecimen.digitalSpecimenWrapper().originalAttributes());
-		var digitalSpecimenRecord = new DigitalSpecimenRecord(id, midsService.calculateMids(digitalSpecimenWrapper),
+		var digitalSpecimenRecord = new DigitalSpecimenRecord(id,
+				midsService.calculateMids(digitalSpecimenWrapper.attributes()),
 				currentSpecimen.version() + 1, currentSpecimen.created(), digitalSpecimenWrapper, Set.of(), false,
 				false, List.of());
 		var jsonPatch = createJsonPatch(currentSpecimen.digitalSpecimenWrapper().attributes(), digitalSpecimen);
@@ -299,7 +302,7 @@ public class DigitalSpecimenService {
 			return null;
 		}
 		return new DigitalSpecimenRecord(pidMap.get(event.digitalSpecimenWrapper().physicalSpecimenID()).doiOfTarget(),
-				midsService.calculateMids(event.digitalSpecimenWrapper()), 1, Instant.now(),
+				midsService.calculateMids(event.digitalSpecimenWrapper().attributes()), 1, Instant.now(),
 				determineEntityRelationships(event.digitalSpecimenWrapper(), pidMap,
 						new MediaRelationshipProcessResult(List.of(), List.of(), List.of())),
 				event.masList(), event.forceMasSchedule(), event.isDataFromSourceSystem(), event.digitalMediaEvents());
@@ -319,7 +322,7 @@ public class DigitalSpecimenService {
 			List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples, Map<String, PidProcessResult> pidMap) {
 		return updatedDigitalSpecimenTuples.stream().map(updateTuple -> {
 			var digitalSpecimenRecord = new DigitalSpecimenRecord(updateTuple.currentSpecimen().id(),
-					midsService.calculateMids(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper()),
+					midsService.calculateMids(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper().attributes()),
 					updateTuple.currentSpecimen().version() + 1, updateTuple.currentSpecimen().created(),
 					determineEntityRelationships(updateTuple.digitalSpecimenEvent().digitalSpecimenWrapper(), pidMap,
 							updateTuple.mediaRelationshipProcessResult()),
@@ -364,7 +367,8 @@ public class DigitalSpecimenService {
 		if (fdoRecordService.pidNeedsUpdateSpecimen(currentDigitalSpecimen.digitalSpecimenWrapper(),
 				digitalSpecimenWrapper)) {
 			log.info("Updating digital specimen PID record");
-			var request = List.of(fdoRecordService.buildSingleUpdatePidRequest(digitalSpecimenWrapper, currentDigitalSpecimen.id()));
+			var request = List
+				.of(fdoRecordService.buildSingleUpdatePidRequest(digitalSpecimenWrapper, currentDigitalSpecimen.id()));
 			pidComponent.updatePid(request);
 		}
 	}

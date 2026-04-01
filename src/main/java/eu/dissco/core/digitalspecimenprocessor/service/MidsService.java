@@ -32,9 +32,7 @@ public class MidsService {
 		return !UNACCEPTED_VALUES.contains(value.toLowerCase());
 	}
 
-	public int calculateMids(
-			eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenWrapper digitalSpecimenWrapper) {
-		var attributes = digitalSpecimenWrapper.attributes();
+	public int calculateMids(DigitalSpecimen attributes) {
 		if (!compliesToMidsOne(attributes)) {
 			return 0;
 		}

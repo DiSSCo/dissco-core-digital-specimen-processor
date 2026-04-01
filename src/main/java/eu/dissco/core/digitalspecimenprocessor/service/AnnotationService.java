@@ -36,6 +36,8 @@ public class AnnotationService {
 
 	private final AnnotationProperties properties;
 
+	private static final int PLACEHOLDER = 1;
+
 	public Map<String, List<Annotation>> getAnnotationsForSpecimens(Set<DigitalSpecimenRecord> digitalSpecimenRecords) {
 		if (!properties.isApplyAcceptedAnnotations() || digitalSpecimenRecords.isEmpty()) {
 			return Map.of();
@@ -73,7 +75,9 @@ public class AnnotationService {
 			// Add required fields so that our annotation validator accepts the annotation
 			.withDctermsIdentifier(DOI_PROXY + currentSpecimen.id())
 			.withId(DOI_PROXY + currentSpecimen.id())
-			.withDctermsCreated(Date.from(currentSpecimen.created()));
+			.withDctermsCreated(Date.from(currentSpecimen.created()))
+			.withOdsVersion(PLACEHOLDER)
+			.withOdsMidsLevel(PLACEHOLDER);
 		try {
 			digitalSpecimenConverted = annotationValidator.applyAnnotation(digitalSpecimenConverted, annotation);
 		}

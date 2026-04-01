@@ -148,8 +148,8 @@ public class DigitalSpecimenRepository {
 	public DigitalSpecimenRecord getDigitalSpecimenById(String id) {
 		return context.select(DIGITAL_SPECIMEN.asterisk())
 			.from(DIGITAL_SPECIMEN)
-			.where(DIGITAL_SPECIMEN.PHYSICAL_SPECIMEN_ID.eq(id))
-			.fetchOne(this::mapToDigitalSpecimenRecord);
+			.where(DIGITAL_SPECIMEN.ID.eq(id))
+			.fetchSingle(this::mapToDigitalSpecimenRecord);
 	}
 
 	public void rollbackSpecimen(String pid) {

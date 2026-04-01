@@ -139,6 +139,10 @@ public class AnnotationTestUtils {
 		return new Agent().withSchemaName("Some agent").withId(ORCID).withType(type);
 	}
 
+	public static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenAnnotatedSpecimen(int version) {
+		return givenAnnotatedSpecimen().withOdsVersion(version).withOdsMidsLevel(MIDS_LEVEL);
+	}
+
 	public static eu.dissco.core.digitalspecimenprocessor.schema.DigitalSpecimen givenAnnotatedSpecimen(){
 		return givenAttributes(SPECIMEN_NAME, ORGANISATION_ID, true, false, true)
 				.withDwcOrganismRemarks(NEW_VALUE);
@@ -149,8 +153,18 @@ public class AnnotationTestUtils {
 				false, false, List.of());
 	}
 
+	public static DigitalSpecimenRecord givenAnnotatedDigitalSpecimenRecord(int version) {
+		return new DigitalSpecimenRecord(HANDLE, MIDS_LEVEL, version, CREATED, givenAnnotatedSpecimenWrapper(version),
+				Set.of(), false, false, List.of());
+	}
+
 	public static DigitalSpecimen givenAnnotatedLibrarySpecimen() {
 		return givenAnnotatedLibrarySpecimen(OaMotivation.ODS_ADDING);
+	}
+
+	public static DigitalSpecimenWrapper givenAnnotatedSpecimenWrapper(int version) {
+		return new DigitalSpecimenWrapper(PHYSICAL_SPECIMEN_ID, TYPE_PID, givenAnnotatedSpecimen(version),
+				ORIGINAL_DATA);
 	}
 
 	public static DigitalSpecimenWrapper givenAnnotatedSpecimenWrapper() {

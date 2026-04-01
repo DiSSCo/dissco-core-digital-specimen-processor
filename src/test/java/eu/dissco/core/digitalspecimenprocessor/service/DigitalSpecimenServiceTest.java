@@ -403,7 +403,8 @@ class DigitalSpecimenServiceTest {
 		given(annotationService.applySingleAnnotation(any(), any(), any()))
 				.willReturn(givenAnnotatedSpecimen());
 		given(midsService.calculateMids(any())).willReturn(1);
-		given(elasticRepository.indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord()))).willReturn(bulkResponse);
+		given(elasticRepository.indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2))))
+			.willReturn(bulkResponse);
 		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
 		given(fdoRecordService.buildSingleUpdatePidRequest(any(), any())).willReturn(givenPidRequest());
 
@@ -411,9 +412,9 @@ class DigitalSpecimenServiceTest {
 		digitalSpecimenService.applyAnnotation(givenAnnotation());
 
 		// Then
-		then(repository).should().updateDigitalSpecimenRecord(Set.of(givenAnnotatedDigitalSpecimenRecord()));
-		then(elasticRepository).should().indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord()));
-		then(publisherService).should().publishUpdateEventSpecimen(eq(givenAnnotatedDigitalSpecimenRecord()), any());
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(elasticRepository).should().indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(publisherService).should().publishUpdateEventSpecimen(eq(givenAnnotatedDigitalSpecimenRecord(2)), any());
 		then(rollbackService).shouldHaveNoInteractions();
 		then(handleComponent).should().updatePid(any());
 	}
@@ -425,16 +426,17 @@ class DigitalSpecimenServiceTest {
 		given(annotationService.applySingleAnnotation(any(), any(), any()))
 				.willReturn(givenAnnotatedSpecimen());
 		given(midsService.calculateMids(any())).willReturn(1);
-		given(elasticRepository.indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord()))).willReturn(bulkResponse);
+		given(elasticRepository.indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2))))
+			.willReturn(bulkResponse);
 		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(false);
 
 		// When
 		digitalSpecimenService.applyAnnotation(givenAnnotation());
 
 		// Then
-		then(repository).should().updateDigitalSpecimenRecord(Set.of(givenAnnotatedDigitalSpecimenRecord()));
-		then(elasticRepository).should().indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord()));
-		then(publisherService).should().publishUpdateEventSpecimen(eq(givenAnnotatedDigitalSpecimenRecord()), any());
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(elasticRepository).should().indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(publisherService).should().publishUpdateEventSpecimen(eq(givenAnnotatedDigitalSpecimenRecord(2)), any());
 		then(rollbackService).shouldHaveNoInteractions();
 		then(handleComponent).shouldHaveNoInteractions();
 	}
