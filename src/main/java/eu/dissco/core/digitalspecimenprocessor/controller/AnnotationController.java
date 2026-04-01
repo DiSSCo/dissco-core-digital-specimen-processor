@@ -1,7 +1,6 @@
 package eu.dissco.core.digitalspecimenprocessor.controller;
 
 
-
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.exception.AnnotationProcessingException;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
@@ -13,7 +12,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,7 +27,7 @@ public class AnnotationController {
   private final DigitalSpecimenService digitalSpecimenService;
 
   @PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Void> applyAnnotation(@RequestBody Annotation annotation, Authentication authentication)
+	public ResponseEntity<Void> applyAnnotation(@RequestBody Annotation annotation)
 			throws PidException, AnnotationProcessingException {
     log.info("Received request to apply annotation {} to its target", annotation.getDctermsIdentifier());
     digitalSpecimenService.applyAnnotation(annotation);
