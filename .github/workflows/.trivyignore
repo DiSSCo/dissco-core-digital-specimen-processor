@@ -17,3 +17,7 @@ CVE-2026-22184
 # March 19, 2026
 # Issue with libexpat, alpine image needs to update
 CVE-2026-32767
+
+# April 1
+Issue with libby, alpine image needs to upddate
+CVE-2026-33871
