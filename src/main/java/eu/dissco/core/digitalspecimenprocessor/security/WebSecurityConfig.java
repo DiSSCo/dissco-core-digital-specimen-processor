@@ -23,8 +23,12 @@ public class WebSecurityConfig {
 		http.authorizeHttpRequests(
 				authorizeHttpRequests -> authorizeHttpRequests.requestMatchers(EndpointRequest.to(HealthEndpoint.class))
 					.permitAll()
-					.requestMatchers(HttpMethod.POST, "/annotation/v1/{prefix}/{suffix}/accept")
-					.hasRole("dissco-admin")
+					.requestMatchers(HttpMethod.POST, "/specimen")
+					.hasRole("dissco-create-digital-objects")
+					.requestMatchers(HttpMethod.POST, "/media")
+					.hasRole("dissco-create-digital-objects")
+					.requestMatchers(HttpMethod.POST, "/annotation/")
+					.hasRole("dissco-annotation-accepter")
 					.anyRequest()
 					.authenticated());
 
