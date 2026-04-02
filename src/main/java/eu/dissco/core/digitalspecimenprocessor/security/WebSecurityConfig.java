@@ -5,6 +5,7 @@ import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,6 +23,12 @@ public class WebSecurityConfig {
 		http.authorizeHttpRequests(
 				authorizeHttpRequests -> authorizeHttpRequests.requestMatchers(EndpointRequest.to(HealthEndpoint.class))
 					.permitAll()
+					.requestMatchers(HttpMethod.POST, "/specimen")
+					.hasRole("dissco-create-digital-objects")
+					.requestMatchers(HttpMethod.POST, "/media")
+					.hasRole("dissco-create-digital-objects")
+					.requestMatchers(HttpMethod.POST, "/annotation/")
+					.hasRole("dissco-annotation-accepter")
 					.anyRequest()
 					.authenticated());
 

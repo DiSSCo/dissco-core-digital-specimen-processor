@@ -358,7 +358,7 @@ class MidsServiceTest {
 		// Given
 
 		// When
-		var result = midsService.calculateMids(digitalSpecimen);
+		var result = midsService.calculateMids(digitalSpecimen.attributes());
 
 		// Then
 		assertThat(result).isEqualTo(midsLevel);

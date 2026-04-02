@@ -4,6 +4,9 @@ import static eu.dissco.core.digitalspecimenprocessor.domain.AgentRoleType.PROCE
 import static eu.dissco.core.digitalspecimenprocessor.schema.Agent.Type.SCHEMA_SOFTWARE_APPLICATION;
 import static eu.dissco.core.digitalspecimenprocessor.schema.Identifier.DctermsType.DOI;
 import static eu.dissco.core.digitalspecimenprocessor.util.AgentUtils.createMachineAgent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotatedDigitalSpecimenRecord;
+import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotatedSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.AnnotationTestUtils.givenAnnotation;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.APP_NAME;
@@ -20,11 +23,13 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigit
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEmptyMediaProcessResult;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidProcessResultSpecimen;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenPidRequest;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUnequalDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenUpdatedDigitalSpecimenTuple;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -92,6 +97,9 @@ class DigitalSpecimenServiceTest {
 	@Mock
 	private DigitalMediaService digitalMediaService;
 
+	@Mock
+	private AnnotationService annotationService;
+
 	private static MockedStatic<Instant> mockedInstant;
 
 	private static MockedStatic<Clock> mockedClock;
@@ -102,7 +110,7 @@ class DigitalSpecimenServiceTest {
 	void setUp() {
 		digitalSpecimenService = new DigitalSpecimenService(repository, rollbackService, elasticRepository,
 				fdoRecordService, publisherService, handleComponent, annotationPublisherService, midsService, MAPPER,
-				digitalMediaService);
+				digitalMediaService, annotationService);
 	}
 
 	@BeforeAll
@@ -302,7 +310,7 @@ class DigitalSpecimenServiceTest {
 		// Then
 		assertThat(result).isEqualTo(Set.of(expectedRecord));
 		then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
-		then(digitalMediaService).should().tombstoneSpecimenRelations(List.of(tuple));
+		then(digitalMediaService).should().tombstoneSpecimenRelations(anySet());
 		then(publisherService).should().publishUpdateEventSpecimen(eq(expectedRecord), any());
 		then(rollbackService).shouldHaveNoInteractions();
 		then(handleComponent).should().updatePid(any());
@@ -325,7 +333,8 @@ class DigitalSpecimenServiceTest {
 		assertThat(result).isEmpty();
 		then(elasticRepository).shouldHaveNoInteractions();
 		then(publisherService).shouldHaveNoInteractions();
-		then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, false);
+		then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, false,
+				true);
 	}
 
 	@Test
@@ -345,7 +354,8 @@ class DigitalSpecimenServiceTest {
 		assertThat(result).isEmpty();
 		then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
 		then(publisherService).shouldHaveNoInteractions();
-		then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, true);
+		then(rollbackService).should().rollbackUpdatedSpecimens(Set.of(updatedRecord), false, true,
+				true);
 	}
 
 	@Test
@@ -366,7 +376,8 @@ class DigitalSpecimenServiceTest {
 		assertThat(result).isEmpty();
 		then(repository).should().updateDigitalSpecimenRecord(Set.of(expectedRecord));
 		then(publisherService).shouldHaveNoInteractions();
-		then(rollbackService).should().handlePartiallyFailedElasticUpdateSpecimen(Set.of(updatedRecord), bulkResponse);
+		then(rollbackService).should().handlePartiallyFailedElasticUpdateSpecimen(Set.of(updatedRecord), bulkResponse,
+				true);
 	}
 
 	@Test
@@ -383,6 +394,51 @@ class DigitalSpecimenServiceTest {
 		// Then
 		assertThat(result).isEmpty();
 		then(publisherService).should().deadLetterEventSpecimen(tuple.digitalSpecimenEvent());
+	}
+
+	@Test
+	void testApplyAnnotation() throws Exception {
+		// Given
+		given(repository.getDigitalSpecimenById(any())).willReturn(givenDigitalSpecimenRecord());
+		given(annotationService.applySingleAnnotation(any(), any(), any()))
+				.willReturn(givenAnnotatedSpecimen());
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(elasticRepository.indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2))))
+			.willReturn(bulkResponse);
+		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(true);
+		given(fdoRecordService.buildSingleUpdatePidRequest(any(), any())).willReturn(givenPidRequest());
+
+		// When
+		digitalSpecimenService.applyAnnotation(givenAnnotation());
+
+		// Then
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(elasticRepository).should().indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(publisherService).should().publishUpdateEventSpecimen(eq(givenAnnotatedDigitalSpecimenRecord(2)), any());
+		then(rollbackService).shouldHaveNoInteractions();
+		then(handleComponent).should().updatePid(any());
+	}
+
+	@Test
+	void testApplyAnnotationNoPidUpdate() throws Exception {
+		// Given
+		given(repository.getDigitalSpecimenById(any())).willReturn(givenDigitalSpecimenRecord());
+		given(annotationService.applySingleAnnotation(any(), any(), any()))
+				.willReturn(givenAnnotatedSpecimen());
+		given(midsService.calculateMids(any())).willReturn(1);
+		given(elasticRepository.indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2))))
+			.willReturn(bulkResponse);
+		given(fdoRecordService.pidNeedsUpdateSpecimen(any(), any())).willReturn(false);
+
+		// When
+		digitalSpecimenService.applyAnnotation(givenAnnotation());
+
+		// Then
+		then(repository).should().updateDigitalSpecimenRecord(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(elasticRepository).should().indexDigitalSpecimen(Set.of(givenAnnotatedDigitalSpecimenRecord(2)));
+		then(publisherService).should().publishUpdateEventSpecimen(eq(givenAnnotatedDigitalSpecimenRecord(2)), any());
+		then(rollbackService).shouldHaveNoInteractions();
+		then(handleComponent).shouldHaveNoInteractions();
 	}
 
 }

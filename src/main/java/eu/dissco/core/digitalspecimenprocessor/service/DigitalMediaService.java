@@ -12,7 +12,7 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaR
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
+import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenRecord;
 import eu.dissco.core.digitalspecimenprocessor.exception.PidException;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.ElasticSearchRepository;
@@ -293,14 +293,14 @@ public class DigitalMediaService {
 		return Jackson3JsonDiff.asJson(jsonCurrentMedia, jsonMedia);
 	}
 
-	public void tombstoneSpecimenRelations(List<UpdatedDigitalSpecimenTuple> updatedDigitalSpecimenTuples) {
+	public void tombstoneSpecimenRelations(Set<UpdatedDigitalSpecimenRecord> updatedDigitalSpecimenTuples) {
 		for (var updatedDigitalSpecimenTuple : updatedDigitalSpecimenTuples) {
 			updatedDigitalSpecimenTuple.mediaRelationshipProcessResult()
 				.tombstonedRelationships()
 				.stream()
 				.map(EntityRelationship::getOdsRelatedResourceURI)
 				.map(uri -> new DigitalMediaRelationshipTombstoneEvent(
-						updatedDigitalSpecimenTuple.currentSpecimen().id(), getIdForUri(uri)))
+						updatedDigitalSpecimenTuple.currentDigitalSpecimen().id(), getIdForUri(uri)))
 				.forEach(publisherService::publishDigitalMediaRelationTombstone);
 		}
 	}

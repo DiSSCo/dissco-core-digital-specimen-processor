@@ -145,6 +145,13 @@ public class DigitalSpecimenRepository {
 		}
 	}
 
+	public DigitalSpecimenRecord getDigitalSpecimenById(String id) {
+		return context.select(DIGITAL_SPECIMEN.asterisk())
+			.from(DIGITAL_SPECIMEN)
+			.where(DIGITAL_SPECIMEN.ID.eq(id))
+			.fetchSingle(this::mapToDigitalSpecimenRecord);
+	}
+
 	public void rollbackSpecimen(String pid) {
 		context.delete(DIGITAL_SPECIMEN).where(DIGITAL_SPECIMEN.ID.eq(pid)).execute();
 	}
