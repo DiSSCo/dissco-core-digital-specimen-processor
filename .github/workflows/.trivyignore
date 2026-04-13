@@ -25,3 +25,7 @@ CVE-2026-33636
 # April 13, 2025
 # Issue with jackson, spring boot needs update
 GHSA-2m67-wjpj-xhg9
+
+# April 13, 2025
+# Issue with openSSL, alpine image needs to update
+CVE-2026-28390
