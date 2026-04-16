@@ -6,7 +6,8 @@ import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
-import eu.dissco.core.digitalspecimenprocessor.service.ProcessingService;
+import eu.dissco.core.digitalspecimenprocessor.service.preprocessing.MediaPreprocessingService;
+import eu.dissco.core.digitalspecimenprocessor.service.preprocessing.SpecimenPreprocessingService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,14 +28,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class Controller {
 
-	private final ProcessingService processingService;
+	private final SpecimenPreprocessingService specimenService;
+
+	private final MediaPreprocessingService mediaService;
 
 	@PostMapping(value = "specimen", consumes = MediaType.APPLICATION_JSON_VALUE,
 			produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<SpecimenProcessResult> upsertDigitalSpecimen(@RequestBody DigitalSpecimenEvent event)
 			throws NoChangesFoundException {
 		log.info("Received digitalSpecimenWrapper upsert: {}", event);
-		var result = processingService.handleMessages(List.of(event));
+		var result = specimenService.handleMessages(List.of(event));
 		if (result.newDigitalSpecimens().isEmpty() && result.updatedDigitalSpecimens().isEmpty()) {
 			throw new NoChangesFoundException("No changes found for specimen");
 		}
@@ -46,7 +49,7 @@ public class Controller {
 	public ResponseEntity<MediaProcessResult> upsertDigitalMedia(@RequestBody DigitalMediaEvent event)
 			throws NoChangesFoundException {
 		log.info("Received digitalMedia upsert: {}", event);
-		var result = processingService.handleMessagesMedia(List.of(event));
+		var result = mediaService.handleMessagesMedia(List.of(event));
 		if (result.newMedia().isEmpty() && result.updatedMedia().isEmpty()) {
 			throw new NoChangesFoundException("No changes found for media");
 		}
