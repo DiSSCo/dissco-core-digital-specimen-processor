@@ -34,7 +34,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 @Slf4j
-@Profile(Profiles.WEB)
+@Profile(Profiles.ER_RABBIT_MQ)
 public class ErPreprocessingService extends AbstractPreprocessingService {
 
 	ErPreprocessingService(JsonMapper jsonMapper, DigitalMediaRepository mediaRepository,
