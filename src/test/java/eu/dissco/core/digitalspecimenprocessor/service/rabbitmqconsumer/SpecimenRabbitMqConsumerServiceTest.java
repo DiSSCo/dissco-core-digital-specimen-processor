@@ -1,34 +1,28 @@
-package eu.dissco.core.digitalspecimenprocessor.service;
+package eu.dissco.core.digitalspecimenprocessor.service.rabbitmqconsumer;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static org.mockito.BDDMockito.then;
 
+import eu.dissco.core.digitalspecimenprocessor.service.preprocessing.SpecimenPreprocessingService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
 @ExtendWith(MockitoExtension.class)
-class RabbitMqConsumerServiceTest {
+class SpecimenRabbitMqConsumerServiceTest {
 
 	@Mock
-	private ProcessingService processingService;
+	private SpecimenPreprocessingService processingService;
 
-	@Mock
-	private RabbitMqPublisherService rabbitMqPublisherService;
-
-	private RabbitMqConsumerService rabbitMqConsumerServiceTest;
+	private SpecimenRabbitMqConsumerService consumerService;
 
 	@BeforeEach
 	void setup() {
-		rabbitMqConsumerServiceTest = new RabbitMqConsumerService(MAPPER, processingService);
+		consumerService = new SpecimenRabbitMqConsumerService(MAPPER, processingService);
 	}
 
 	@Test
@@ -37,36 +31,10 @@ class RabbitMqConsumerServiceTest {
 		var message = givenMessage();
 
 		// When
-		rabbitMqConsumerServiceTest.getMessages(List.of(message));
+		consumerService.getMessages(List.of(message));
 
 		// Then
 		then(processingService).should().handleMessages(List.of(givenDigitalSpecimenEvent()));
-	}
-
-	@Test
-	void testGetMessagesMedia() {
-		// Given
-		var message = MAPPER.writeValueAsString(givenDigitalMediaEvent());
-
-		// When
-		rabbitMqConsumerServiceTest.getMessagesMedia(List.of(message));
-
-		// Then
-		then(processingService).should().handleMessagesMedia(List.of(givenDigitalMediaEvent()));
-	}
-
-	@Test
-	void testGetMessagesDigitalMediaRelationshipTombstone() {
-		// Given
-		var message = MAPPER.writeValueAsString(givenDigitalMediaTombstoneEvent());
-
-		// When
-		rabbitMqConsumerServiceTest.getMessagesDigitalMediaRelationshipTombstone(List.of(message));
-
-		// Then
-		then(rabbitMqPublisherService).shouldHaveNoInteractions();
-		then(processingService).should()
-			.handleMessagesMediaRelationshipTombstone(List.of(givenDigitalMediaTombstoneEvent()));
 	}
 
 	private String givenMessage() {
