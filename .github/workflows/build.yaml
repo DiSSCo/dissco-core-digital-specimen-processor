@@ -6,7 +6,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   schedule:
-    - cron: "0 4  * * MON" # run on Monday at 4 AM
+    - cron: "0 4 1 * *" # run on the first of the month at 4 AM
   workflow_dispatch:  # Allow manual triggering
 jobs:
   build:
