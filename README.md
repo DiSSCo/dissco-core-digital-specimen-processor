@@ -144,9 +144,9 @@ The container can be built with the Dockerfile, which can be found in the root o
 
 ## Profiles
 
-There are two profiles with which the application can be run:
+There are four profiles with which the application can be run:
 
-### Web
+### Web (Synchronous)
 
 `spring.profiles.active=web`  
 This listens to an API which has two endpoint:
@@ -169,11 +169,30 @@ If an exception occurs during processing, the message will be published to the R
 queue.
 We can than later evaluate why the exception was thrown and if needed, retry the object.
 
-### RabbitMQ
+### Specimen RabbitMQ (Asynchronous)
 
-`spring.profiles.active=rabbitMQ`
+`spring.profiles.active=specimen-rabbitmq`
 This will make the application listen to a specified queue and process the digital specimen events
 from the queue.
+We collect the objects in batches of between 300-500 (depending on the length of the queue).
+If any exception occurs we publish the event to a Dead Letter Queue where we can evaluate the
+failure and if needed retry the messages.
+
+### Media RabbitMQ (Asynchronous)
+
+`spring.profiles.active=media-rabbitmq`
+This will make the application listen to a specified queue and process the digital media events
+from the queue.
+We collect the objects in batches of between 300-500 (depending on the length of the queue).
+If any exception occurs we publish the event to a Dead Letter Queue where we can evaluate the
+failure and if needed retry the messages.
+
+### Entity Relationship RabbitMQ (Asynchronous)
+
+`spring.profiles.active=er-rabbitmq`
+This will make the application listen to a specified queue and process the digital media tombstone
+events
+from the queue. This queue unlinks media and specimen entity relationships/
 We collect the objects in batches of between 300-500 (depending on the length of the queue).
 If any exception occurs we publish the event to a Dead Letter Queue where we can evaluate the
 failure and if needed retry the messages.

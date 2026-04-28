@@ -1,11 +1,10 @@
-package eu.dissco.core.digitalspecimenprocessor.service;
+package eu.dissco.core.digitalspecimenprocessor.service.preprocessing;
 
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ANOTHER_SPECIMEN_NAME;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAS;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
@@ -16,10 +15,8 @@ import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_S
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.PHYSICAL_SPECIMEN_ID_ALT;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SPECIMEN_NAME;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
-import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenEvent;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalSpecimenRecordWithMediaEr;
@@ -44,16 +41,11 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
-import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
-import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
-import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
-import eu.dissco.core.digitalspecimenprocessor.domain.relation.PidProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.DigitalSpecimenEvent;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.UpdatedDigitalSpecimenTuple;
@@ -65,6 +57,14 @@ import eu.dissco.core.digitalspecimenprocessor.property.ApplicationProperties;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalMediaRepository;
 import eu.dissco.core.digitalspecimenprocessor.repository.DigitalSpecimenRepository;
 import eu.dissco.core.digitalspecimenprocessor.schema.EntityRelationship;
+import eu.dissco.core.digitalspecimenprocessor.service.AnnotationService;
+import eu.dissco.core.digitalspecimenprocessor.service.DigitalMediaService;
+import eu.dissco.core.digitalspecimenprocessor.service.DigitalSpecimenService;
+import eu.dissco.core.digitalspecimenprocessor.service.EntityRelationshipService;
+import eu.dissco.core.digitalspecimenprocessor.service.EqualityService;
+import eu.dissco.core.digitalspecimenprocessor.service.FdoRecordService;
+import eu.dissco.core.digitalspecimenprocessor.service.MasSchedulerService;
+import eu.dissco.core.digitalspecimenprocessor.service.RabbitMqPublisherService;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.net.URI;
@@ -72,7 +72,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,15 +81,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ProcessingServiceTest {
+class SpecimenPreprocessingServiceTest {
 
 	@Mock
 	private DigitalSpecimenRepository specimenRepository;
@@ -105,7 +101,7 @@ class ProcessingServiceTest {
 	private RabbitMqPublisherService publisherService;
 
 	@Mock
-	private PidComponent handleComponent;
+	private PidComponent pidComponent;
 
 	@Mock
 	private DigitalMediaService digitalMediaService;
@@ -127,29 +123,22 @@ class ProcessingServiceTest {
 
 	private MockedStatic<Instant> mockedInstant;
 
-	private MockedStatic<Clock> mockedClock;
-
-	private ProcessingService service;
+	private SpecimenPreprocessingService service;
 
 	@BeforeEach
 	void setup() {
-		service = new ProcessingService(MAPPER, specimenRepository, mediaRepository, digitalSpecimenService,
-				digitalMediaService, entityRelationshipService, equalityService, publisherService, fdoRecordService,
-				handleComponent, new ApplicationProperties(), masSchedulerService, annotationService);
+		service = new SpecimenPreprocessingService(MAPPER, mediaRepository, digitalMediaService, publisherService,
+				entityRelationshipService, equalityService, new ApplicationProperties(), fdoRecordService, pidComponent,
+				masSchedulerService, specimenRepository, annotationService, digitalSpecimenService);
 		Clock clock = Clock.fixed(CREATED, ZoneOffset.UTC);
 		Instant instant = Instant.now(clock);
-		mockedInstant = mockStatic(Instant.class);
+		mockedInstant = mockStatic(Instant.class, CALLS_REAL_METHODS);
 		mockedInstant.when(Instant::now).thenReturn(instant);
-		mockedInstant.when(() -> Instant.from(any())).thenReturn(instant);
-		mockedInstant.when(() -> Instant.parse(any())).thenReturn(instant);
-		mockedClock = mockStatic(Clock.class);
-		mockedClock.when(Clock::systemUTC).thenReturn(clock);
 	}
 
 	@AfterEach
 	void destroy() {
 		mockedInstant.close();
-		mockedClock.close();
 	}
 
 	@Test
@@ -171,7 +160,7 @@ class ProcessingServiceTest {
 		then(digitalSpecimenService).should()
 			.updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 		then(digitalMediaService).shouldHaveNoInteractions();
 	}
 
@@ -192,7 +181,7 @@ class ProcessingServiceTest {
 		assertThat(result).isEqualTo(new SpecimenProcessResult(Map.of(), List.of(), List.of()));
 		then(publisherService).should().deadLetterEventSpecimen(givenDigitalSpecimenEvent());
 		then(digitalSpecimenService).shouldHaveNoInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 		then(digitalMediaService).shouldHaveNoInteractions();
 	}
 
@@ -217,7 +206,7 @@ class ProcessingServiceTest {
 		then(digitalSpecimenService).should()
 			.updateEqualSpecimen(Map.of(givenDigitalSpecimenRecord(), givenDigitalSpecimenEvent()));
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 		then(digitalMediaService).shouldHaveNoInteractions();
 		then(publisherService).should().republishSpecimenEvent(givenDigitalSpecimenEvent());
 	}
@@ -225,7 +214,7 @@ class ProcessingServiceTest {
 	@Test
 	void testNewSpecimenNoMedia() throws Exception {
 		given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
-		given(handleComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
+		given(pidComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
 		given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
 		var pidMap = Map.of(PHYSICAL_SPECIMEN_ID, givenPidProcessResultSpecimen(false));
 		given(digitalSpecimenService.createNewDigitalSpecimen(any(), any()))
@@ -238,7 +227,7 @@ class ProcessingServiceTest {
 		then(digitalSpecimenService).should().createNewDigitalSpecimen(List.of(givenDigitalSpecimenEvent()), pidMap);
 		then(equalityService).shouldHaveNoInteractions();
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoMoreInteractions();
+		then(pidComponent).shouldHaveNoMoreInteractions();
 		then(digitalMediaService).shouldHaveNoInteractions();
 		then(masSchedulerService).should().scheduleMasForSpecimen(any());
 		then(masSchedulerService).should().scheduleMasForMedia(any());
@@ -248,7 +237,7 @@ class ProcessingServiceTest {
 	void testNewSpecimenNoMediaPidFails() throws Exception {
 		given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
 		given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
-		given(handleComponent.postPid(any(), eq(true))).willThrow(PidException.class);
+		given(pidComponent.postPid(any(), eq(true))).willThrow(PidException.class);
 
 		// When
 		var result = service.handleMessages(List.of(givenDigitalSpecimenEvent()));
@@ -257,7 +246,7 @@ class ProcessingServiceTest {
 		assertThat(result).isEqualTo(new SpecimenProcessResult(Map.of(), List.of(), List.of()));
 		then(digitalSpecimenService).shouldHaveNoInteractions();
 		then(equalityService).shouldHaveNoInteractions();
-		then(handleComponent).shouldHaveNoMoreInteractions();
+		then(pidComponent).shouldHaveNoMoreInteractions();
 		then(digitalMediaService).shouldHaveNoInteractions();
 	}
 
@@ -283,7 +272,7 @@ class ProcessingServiceTest {
 					List.of(givenUpdatedDigitalSpecimenTuple(false, givenEmptyMediaProcessResult())), pidMap);
 		then(equalityService).shouldHaveNoMoreInteractions();
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 		then(fdoRecordService).shouldHaveNoInteractions();
 		then(digitalMediaService).shouldHaveNoInteractions();
 	}
@@ -326,7 +315,7 @@ class ProcessingServiceTest {
 		then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
 		then(digitalMediaService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 	}
 
 	@Test
@@ -344,7 +333,7 @@ class ProcessingServiceTest {
 		then(digitalMediaService).shouldHaveNoInteractions();
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
 		then(digitalMediaService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 	}
 
 	@Test
@@ -357,8 +346,8 @@ class ProcessingServiceTest {
 				true);
 		given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
 		given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
-		given(handleComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
-		given(handleComponent.postPid(any(), eq(false))).willReturn(givenPidResponseMedia());
+		given(pidComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
+		given(pidComponent.postPid(any(), eq(false))).willReturn(givenPidResponseMedia());
 		given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
 		given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(TestUtils.givenPidRequest()));
 		given(digitalSpecimenService.createNewDigitalSpecimen(any(), any()))
@@ -397,9 +386,9 @@ class ProcessingServiceTest {
 		given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID, PHYSICAL_SPECIMEN_ID_ALT)))
 			.willReturn(List.of());
 		given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL, MEDIA_URL_ALT))).willReturn(List.of());
-		given(handleComponent.postPid(any(), eq(true))).willReturn(givenHandleResponse(
+		given(pidComponent.postPid(any(), eq(true))).willReturn(givenHandleResponse(
 				List.of(PHYSICAL_SPECIMEN_ID, PHYSICAL_SPECIMEN_ID_ALT), List.of(HANDLE, SECOND_HANDLE)));
-		given(handleComponent.postPid(any(), eq(false)))
+		given(pidComponent.postPid(any(), eq(false)))
 			.willReturn(givenHandleResponse(List.of(MEDIA_URL, MEDIA_URL_ALT), List.of(MEDIA_PID, MEDIA_PID_ALT)));
 		given(fdoRecordService.buildPostPidRequest(any()))
 			.willReturn(List.of(TestUtils.givenPidRequest(), TestUtils.givenPidRequest()));
@@ -449,7 +438,7 @@ class ProcessingServiceTest {
 		then(digitalMediaService).should()
 			.updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), true);
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 		then(fdoRecordService).shouldHaveNoInteractions();
 		then(digitalMediaService).shouldHaveNoMoreInteractions();
 	}
@@ -480,7 +469,7 @@ class ProcessingServiceTest {
 					digitalSpecimenEvent, givenEmptyMediaProcessResult())), pidMapSpecimen);
 		then(digitalMediaService).shouldHaveNoInteractions();
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 		then(fdoRecordService).shouldHaveNoInteractions();
 		then(digitalMediaService).shouldHaveNoMoreInteractions();
 	}
@@ -511,7 +500,7 @@ class ProcessingServiceTest {
 			.updateExistingDigitalMedia(List.of(givenUpdatedDigitalMediaTuple(false)), true);
 		then(digitalSpecimenService).shouldHaveNoMoreInteractions();
 		then(digitalMediaService).shouldHaveNoMoreInteractions();
-		then(handleComponent).shouldHaveNoInteractions();
+		then(pidComponent).shouldHaveNoInteractions();
 		then(fdoRecordService).shouldHaveNoInteractions();
 	}
 
@@ -519,8 +508,8 @@ class ProcessingServiceTest {
 	void testNewSpecimenNewMedia() throws Exception {
 		given(specimenRepository.getDigitalSpecimens(List.of(PHYSICAL_SPECIMEN_ID))).willReturn(List.of());
 		given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL))).willReturn(List.of());
-		given(handleComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
-		given(handleComponent.postPid(any(), eq(false))).willReturn(givenPidResponseMedia());
+		given(pidComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
+		given(pidComponent.postPid(any(), eq(false))).willReturn(givenPidResponseMedia());
 		given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
 		given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(TestUtils.givenPidRequest()));
 		given(digitalSpecimenService.createNewDigitalSpecimen(any(), any()))
@@ -545,115 +534,6 @@ class ProcessingServiceTest {
 	}
 
 	@Test
-	void testHandleMessagesMediaNew() throws Exception {
-		// Given
-		given(handleComponent.postPid(any(), eq(false))).willReturn(Map.of(MEDIA_URL, MEDIA_PID));
-		var events = List.of(givenDigitalMediaEvent());
-		given(digitalMediaService.createNewDigitalMedia(events,
-				Map.of(MEDIA_URL, new PidProcessResult(MEDIA_PID, Set.of()))))
-			.willReturn(Set.of(givenDigitalMediaRecord()));
-
-		// When
-		var result = service.handleMessagesMedia(events);
-
-		// Then
-		assertThat(result).isEqualTo(new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaRecord())));
-		then(handleComponent).shouldHaveNoMoreInteractions();
-		then(digitalMediaService).shouldHaveNoMoreInteractions();
-		then(masSchedulerService).should().scheduleMasForMedia(any());
-		then(masSchedulerService).shouldHaveNoMoreInteractions();
-	}
-
-	@Test
-	void testHandleMessagesMediaEqual() {
-		// Given
-		var events = List.of(givenDigitalMediaEvent());
-		given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL)))
-			.willReturn(List.of(givenDigitalMediaRecord()));
-		given(equalityService.mediaAreEqual(givenDigitalMediaRecord(), givenDigitalMediaEvent().digitalMediaWrapper(),
-				Set.of()))
-			.willReturn(true);
-
-		// When
-		var result = service.handleMessagesMedia(events);
-
-		// Then
-		assertThat(result).isEqualTo(new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
-		then(handleComponent).shouldHaveNoInteractions();
-		then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
-		then(digitalMediaService).shouldHaveNoMoreInteractions();
-	}
-
-	@Test
-	void testHandleMessagesMediaUpdate() {
-		// Given
-		var events = List.of(givenDigitalMediaEvent());
-		given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL)))
-			.willReturn(List.of(givenDigitalMediaRecord()));
-		given(equalityService.mediaAreEqual(givenDigitalMediaRecord(), givenDigitalMediaEvent().digitalMediaWrapper(),
-				Set.of()))
-			.willReturn(false);
-		given(digitalMediaService.updateExistingDigitalMedia(any(), eq(true)))
-			.willReturn(Set.of(givenDigitalMediaRecord()));
-
-		// When
-		var result = service.handleMessagesMedia(events);
-
-		// Then
-		assertThat(result).isEqualTo(new MediaProcessResult(List.of(), List.of(givenDigitalMediaRecord()), List.of()));
-		then(handleComponent).shouldHaveNoInteractions();
-		then(digitalMediaService).shouldHaveNoMoreInteractions();
-	}
-
-	@Test
-	void testHandleMessagesMediaEqualDuplicatesNoChanges() {
-		// Given
-		var events = List.of(givenDigitalMediaEvent(), givenDigitalMediaEvent());
-		given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL)))
-			.willReturn(List.of(givenDigitalMediaRecord()));
-		given(equalityService.mediaAreEqual(givenDigitalMediaRecord(), givenDigitalMediaEvent().digitalMediaWrapper(),
-				Set.of()))
-			.willReturn(true);
-
-		// When
-		var result = service.handleMessagesMedia(events);
-
-		// Then
-		assertThat(result).isEqualTo(new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
-		then(handleComponent).shouldHaveNoInteractions();
-		then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
-		then(digitalMediaService).shouldHaveNoMoreInteractions();
-		then(publisherService).shouldHaveNoMoreInteractions();
-	}
-
-	@Test
-	void testHandleMessagesMediaEqualDuplicatesWithChanges() {
-		// Given
-		var secondEvent = new DigitalMediaEvent(Set.of(MEDIA_MAS),
-				new DigitalMediaWrapper(FdoType.MEDIA.getPid(),
-						givenDigitalMedia(MEDIA_URL, false).withAcCaptureDevice("a camera"), MAPPER.createObjectNode()),
-				false, true);
-		var events = new ArrayList<DigitalMediaEvent>();
-		events.add(givenDigitalMediaEvent());
-		events.add(secondEvent);
-		given(mediaRepository.getExistingDigitalMedia(Set.of(MEDIA_URL)))
-			.willReturn(List.of(givenDigitalMediaRecord()));
-		given(equalityService.mediaAreEqual(givenDigitalMediaRecord(), givenDigitalMediaEvent().digitalMediaWrapper(),
-				Set.of()))
-			.willReturn(true);
-
-		// When
-		var result = service.handleMessagesMedia(events);
-
-		// Then
-		assertThat(result).isEqualTo(new MediaProcessResult(List.of(givenDigitalMediaRecord()), List.of(), List.of()));
-		then(handleComponent).shouldHaveNoInteractions();
-		then(digitalMediaService).should().updateEqualDigitalMedia(List.of(givenDigitalMediaRecord()));
-		then(digitalMediaService).shouldHaveNoMoreInteractions();
-		then(publisherService).should(times(1)).republishMediaEvent(secondEvent);
-	}
-
-	@Test
 	void testNewSpecimenTooManyNewMedia() {
 		// Given
 		var mediaEvents = new ArrayList<DigitalMediaEvent>();
@@ -670,7 +550,7 @@ class ProcessingServiceTest {
 	void testNewSpecimenNewMediaBatchedPid() throws Exception {
 		given(specimenRepository.getDigitalSpecimens(any())).willReturn(List.of());
 		given(mediaRepository.getExistingDigitalMedia(any())).willReturn(List.of());
-		given(handleComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
+		given(pidComponent.postPid(any(), eq(true))).willReturn(givenHandleResponseSpecimen());
 		given(fdoRecordService.buildPostPidRequest(any())).willReturn(List.of(TestUtils.givenPidRequest()));
 		given(fdoRecordService.buildPostRequestMedia(any())).willReturn(List.of(TestUtils.givenPidRequest()));
 		var mediaEvents = new ArrayList<DigitalMediaEvent>();
@@ -683,59 +563,7 @@ class ProcessingServiceTest {
 		service.handleMessages(specimenEvents);
 
 		// Then
-		then(handleComponent).should(times(4)).postPid(any(), anyBoolean());
-	}
-
-	@Test
-	void testHandleMessageMediaRelationshipTombstone() {
-		// Given
-		var event = givenDigitalMediaTombstoneEvent();
-		var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
-		given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID)))
-			.willReturn(List.of(givenDigitalMediaRecord()));
-		var digitalMediaEvent = new DigitalMediaEvent(Set.of(),
-				new DigitalMediaWrapper(FdoType.MEDIA.getPid(), givenDigitalMedia(MEDIA_URL, false), null), false,
-				false);
-		digitalMediaEvent.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(List.of());
-		var updatedMediaTuple = new UpdatedDigitalMediaTuple(givenDigitalMediaRecord(), digitalMediaEvent,
-				Collections.emptySet());
-
-		// When
-		service.handleMessagesMediaRelationshipTombstone(List.of(event, duplicateEvent));
-
-		// Then
-		then(publisherService).should().publishDigitalMediaRelationTombstone(duplicateEvent);
-		then(digitalMediaService).should().updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = { "null", " " })
-	@NullAndEmptySource
-	void testHandleMessageMediaRelationshipTombstoneNullMediaDoi(String mediaDoi) {
-		// Given
-		var event = new DigitalMediaRelationshipTombstoneEvent(HANDLE, mediaDoi);
-		given(mediaRepository.getExistingDigitalMediaByDoi(Set.of())).willReturn(List.of());
-
-		// When
-		service.handleMessagesMediaRelationshipTombstone(List.of(event));
-
-		// Then
-		then(publisherService).shouldHaveNoInteractions();
-		then(digitalMediaService).shouldHaveNoInteractions();
-	}
-
-	@Test
-	void testHandleMessageMediaRelationshipTombstoneNoChange() {
-		// Given
-		var event = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
-		given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID)))
-			.willReturn(List.of(givenDigitalMediaRecord()));
-
-		// When
-		service.handleMessagesMediaRelationshipTombstone(List.of(event));
-
-		// Then
-		then(digitalMediaService).shouldHaveNoInteractions();
+		then(pidComponent).should(times(4)).postPid(any(), anyBoolean());
 	}
 
 }

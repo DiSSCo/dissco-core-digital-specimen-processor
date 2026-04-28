@@ -10,7 +10,8 @@ import static org.mockito.BDDMockito.given;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.MediaProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.domain.specimen.SpecimenProcessResult;
 import eu.dissco.core.digitalspecimenprocessor.exception.NoChangesFoundException;
-import eu.dissco.core.digitalspecimenprocessor.service.ProcessingService;
+import eu.dissco.core.digitalspecimenprocessor.service.preprocessing.MediaPreprocessingService;
+import eu.dissco.core.digitalspecimenprocessor.service.preprocessing.SpecimenPreprocessingService;
 import eu.dissco.core.digitalspecimenprocessor.utils.TestUtils;
 import java.util.List;
 import java.util.Map;
@@ -25,20 +26,23 @@ import org.springframework.http.HttpStatus;
 class ControllerTest {
 
 	@Mock
-	private ProcessingService processingService;
+	private SpecimenPreprocessingService specimenService;
+
+	@Mock
+	private MediaPreprocessingService mediaService;
 
 	private Controller controller;
 
 	@BeforeEach
 	void setup() {
-		controller = new Controller(processingService);
+		controller = new Controller(specimenService, mediaService);
 	}
 
 	@Test
 	void testDigitalSpecimenCreation() throws NoChangesFoundException {
 		// Given
 		var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
-		given(processingService.handleMessages(List.of(digitalSpecimenEvent)))
+		given(specimenService.handleMessages(List.of(digitalSpecimenEvent)))
 			.willReturn(new SpecimenProcessResult(Map.of(), List.of(), List.of(givenDigitalSpecimenRecord())));
 
 		// When
@@ -52,7 +56,7 @@ class ControllerTest {
 	void testDigitalMediaCreation() throws NoChangesFoundException {
 		// Given
 		var digitalmediaEvent = TestUtils.givenDigitalMediaEvent();
-		given(processingService.handleMessagesMedia(List.of(digitalmediaEvent)))
+		given(mediaService.handleMessagesMedia(List.of(digitalmediaEvent)))
 			.willReturn(new MediaProcessResult(List.of(), List.of(), List.of(givenDigitalMediaRecord())));
 
 		// When
@@ -66,7 +70,7 @@ class ControllerTest {
 	void testNoChanges() {
 		// Given
 		var digitalSpecimenEvent = TestUtils.givenDigitalSpecimenEvent(true);
-		given(processingService.handleMessages(List.of(digitalSpecimenEvent)))
+		given(specimenService.handleMessages(List.of(digitalSpecimenEvent)))
 			.willReturn(new SpecimenProcessResult(Map.of(), List.of(), List.of()));
 
 		// When / Then
@@ -76,7 +80,7 @@ class ControllerTest {
 	@Test
 	void testNoChangesMedia() {
 		// Given
-		given(processingService.handleMessagesMedia(List.of(givenDigitalMediaEvent())))
+		given(mediaService.handleMessagesMedia(List.of(givenDigitalMediaEvent())))
 			.willReturn(new MediaProcessResult(List.of(), List.of(), List.of()));
 
 		// When / Then
