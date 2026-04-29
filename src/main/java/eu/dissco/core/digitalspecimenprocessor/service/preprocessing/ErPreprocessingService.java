@@ -20,11 +20,11 @@ import eu.dissco.core.digitalspecimenprocessor.service.RabbitMqPublisherService;
 import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -68,30 +68,11 @@ public class ErPreprocessingService extends AbstractPreprocessingService {
 		digitalMediaService.updateExistingDigitalMedia(updatedDigitalMediaTuples, false);
 	}
 
-	private List<DigitalMediaRelationshipTombstoneEvent> uniqueMediaRelationshipTombstoneEvents(
+	private Set<DigitalMediaRelationshipTombstoneEvent> uniqueMediaRelationshipTombstoneEvents(
 			List<DigitalMediaRelationshipTombstoneEvent> events) {
-		var uniqueSet = new LinkedHashSet<DigitalMediaRelationshipTombstoneEvent>();
-		var map = events.stream()
+		return events.stream()
 			.filter(ErPreprocessingService::mediaIsNotNull)
-			.collect(Collectors.groupingBy(DigitalMediaRelationshipTombstoneEvent::mediaDoi));
-		for (var entry : map.entrySet()) {
-			if (entry.getValue().size() > 1) {
-				log.warn("Found {} duplicate media relationship tombstone events in batch for media id {}",
-						entry.getValue().size(), entry.getKey());
-				for (int i = 0; i < entry.getValue().size(); i++) {
-					if (i == 0) {
-						uniqueSet.add(entry.getValue().get(i));
-					}
-					else {
-						republishMediaRelationshipTombstoneEvent(entry.getValue().get(i));
-					}
-				}
-			}
-			else {
-				uniqueSet.add(entry.getValue().getFirst());
-			}
-		}
-		return new ArrayList<>(uniqueSet);
+			.collect(Collectors.toSet());
 	}
 
 	private Optional<UpdatedDigitalMediaTuple> createDigitalMediaEventWithoutER(
@@ -115,10 +96,6 @@ public class ErPreprocessingService extends AbstractPreprocessingService {
 			.setOdsHasEntityRelationships(removeRelationship(event, updatedDigitalMediaAttributes));
 		return new DigitalMediaEvent(Collections.emptySet(), new DigitalMediaWrapper(
 				updatedDigitalMediaAttributes.getOdsFdoType(), updatedDigitalMediaAttributes, null), false, false);
-	}
-
-	private void republishMediaRelationshipTombstoneEvent(DigitalMediaRelationshipTombstoneEvent event) {
-		publisherService.publishDigitalMediaRelationTombstone(event);
 	}
 
 	/*

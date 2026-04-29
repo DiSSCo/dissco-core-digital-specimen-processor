@@ -13,6 +13,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
@@ -106,8 +107,7 @@ class ErPreprocessingServiceTest {
 		service.handleMessagesMediaRelationshipTombstone(List.of(event, duplicateEvent));
 
 		// Then
-		then(publisherService).should().publishDigitalMediaRelationTombstone(duplicateEvent);
-		then(digitalMediaService).should().updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
+		then(digitalMediaService).should(times(1)).updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
 	}
 
 	@ParameterizedTest
