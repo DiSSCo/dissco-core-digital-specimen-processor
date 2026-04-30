@@ -1,6 +1,8 @@
 package eu.dissco.core.digitalspecimenprocessor.service.preprocessing;
 
 import static eu.dissco.core.digitalspecimenprocessor.util.DigitalObjectUtils.DOI_PROXY;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toMap;
 
 import eu.dissco.core.digitalspecimenprocessor.Profiles;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
@@ -18,13 +20,13 @@ import eu.dissco.core.digitalspecimenprocessor.service.EqualityService;
 import eu.dissco.core.digitalspecimenprocessor.service.FdoRecordService;
 import eu.dissco.core.digitalspecimenprocessor.service.RabbitMqPublisherService;
 import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -48,14 +50,13 @@ public class ErPreprocessingService extends AbstractPreprocessingService {
 	public void handleMessagesMediaRelationshipTombstone(List<DigitalMediaRelationshipTombstoneEvent> events) {
 		log.info("Processing {} digital media relationship tombstone events", events.size());
 		var uniqueEvents = uniqueMediaRelationshipTombstoneEvents(events);
-		var mediaDois = uniqueEvents.stream()
-			.map(DigitalMediaRelationshipTombstoneEvent::mediaDoi)
-			.collect(Collectors.toSet());
-		var currentDigitalMediaRecords = mediaRepository.getExistingDigitalMediaByDoi(mediaDois)
+		var currentDigitalMediaRecords = mediaRepository.getExistingDigitalMediaByDoi(uniqueEvents.keySet())
 			.stream()
 			.collect(Collectors.toMap(DigitalMediaRecord::id, Function.identity()));
-		var updatedDigitalMediaTuples = uniqueEvents.stream()
-			.map(event -> createDigitalMediaEventWithoutER(event, currentDigitalMediaRecords))
+		var updatedDigitalMediaTuples = uniqueEvents.entrySet()
+			.stream()
+			.map(entry -> createDigitalMediaEventWithoutER(entry.getKey(), entry.getValue(),
+					currentDigitalMediaRecords))
 			.filter(Optional::isPresent)
 			.map(Optional::get)
 			.toList();
@@ -68,57 +69,41 @@ public class ErPreprocessingService extends AbstractPreprocessingService {
 		digitalMediaService.updateExistingDigitalMedia(updatedDigitalMediaTuples, false);
 	}
 
-	private List<DigitalMediaRelationshipTombstoneEvent> uniqueMediaRelationshipTombstoneEvents(
+	private Map<String, Set<String>> uniqueMediaRelationshipTombstoneEvents(
 			List<DigitalMediaRelationshipTombstoneEvent> events) {
-		var uniqueSet = new LinkedHashSet<DigitalMediaRelationshipTombstoneEvent>();
-		var map = events.stream()
+		return events.stream()
 			.filter(ErPreprocessingService::mediaIsNotNull)
-			.collect(Collectors.groupingBy(DigitalMediaRelationshipTombstoneEvent::mediaDoi));
-		for (var entry : map.entrySet()) {
-			if (entry.getValue().size() > 1) {
-				log.warn("Found {} duplicate media relationship tombstone events in batch for media id {}",
-						entry.getValue().size(), entry.getKey());
-				for (int i = 0; i < entry.getValue().size(); i++) {
-					if (i == 0) {
-						uniqueSet.add(entry.getValue().get(i));
-					}
-					else {
-						republishMediaRelationshipTombstoneEvent(entry.getValue().get(i));
-					}
-				}
-			}
-			else {
-				uniqueSet.add(entry.getValue().getFirst());
-			}
-		}
-		return new ArrayList<>(uniqueSet);
+			.collect(groupingBy(DigitalMediaRelationshipTombstoneEvent::mediaDoi))
+			.entrySet()
+			.stream()
+			.collect(toMap(Entry::getKey,
+					e -> e.getValue()
+						.stream()
+						.map(DigitalMediaRelationshipTombstoneEvent::specimenDoi)
+						.collect(Collectors.toSet())));
 	}
 
-	private Optional<UpdatedDigitalMediaTuple> createDigitalMediaEventWithoutER(
-			DigitalMediaRelationshipTombstoneEvent event, Map<String, DigitalMediaRecord> existingMedia) {
-		var currentDigitalMediaRecord = existingMedia.get(event.mediaDoi());
-		var updatedDigitalMediaEvent = generatedUpdatedMediaEvent(event, currentDigitalMediaRecord);
+	private Optional<UpdatedDigitalMediaTuple> createDigitalMediaEventWithoutER(String mediaDoi,
+			Set<String> specimenDois, Map<String, DigitalMediaRecord> existingMedia) {
+		var currentDigitalMediaRecord = existingMedia.get(mediaDoi);
+		var updatedDigitalMediaEvent = generatedUpdatedMediaEvent(specimenDois, currentDigitalMediaRecord);
 		if (Objects.equals(currentDigitalMediaRecord.attributes(),
 				updatedDigitalMediaEvent.digitalMediaWrapper().attributes())) {
-			log.warn("No change in digital media: {} after removing relationship to specimen {}", event.mediaDoi(),
-					event.specimenDoi());
+			log.warn("No change in digital media: {} after removing relationship to specimen(s) {}", mediaDoi,
+					specimenDois);
 			return Optional.empty();
 		}
 		return Optional.of(new UpdatedDigitalMediaTuple(currentDigitalMediaRecord, updatedDigitalMediaEvent,
 				Collections.emptySet()));
 	}
 
-	private DigitalMediaEvent generatedUpdatedMediaEvent(DigitalMediaRelationshipTombstoneEvent event,
+	private DigitalMediaEvent generatedUpdatedMediaEvent(Set<String> specimenDois,
 			DigitalMediaRecord currentDigitalMediaRecord) {
 		var updatedDigitalMediaAttributes = deepCopy(currentDigitalMediaRecord.attributes());
 		updatedDigitalMediaAttributes
-			.setOdsHasEntityRelationships(removeRelationship(event, updatedDigitalMediaAttributes));
+			.setOdsHasEntityRelationships(removeRelationships(specimenDois, updatedDigitalMediaAttributes));
 		return new DigitalMediaEvent(Collections.emptySet(), new DigitalMediaWrapper(
 				updatedDigitalMediaAttributes.getOdsFdoType(), updatedDigitalMediaAttributes, null), false, false);
-	}
-
-	private void republishMediaRelationshipTombstoneEvent(DigitalMediaRelationshipTombstoneEvent event) {
-		publisherService.publishDigitalMediaRelationTombstone(event);
 	}
 
 	/*
@@ -142,14 +127,12 @@ public class ErPreprocessingService extends AbstractPreprocessingService {
 		return objectMapper.readValue(objectMapper.writeValueAsString(currentDigitalMedia), DigitalMedia.class);
 	}
 
-	private static List<EntityRelationship> removeRelationship(DigitalMediaRelationshipTombstoneEvent event,
-			DigitalMedia updatedMedia) {
-		var newEntityRelationships = new ArrayList<EntityRelationship>();
-		updatedMedia.getOdsHasEntityRelationships()
+	private static List<EntityRelationship> removeRelationships(Set<String> speicmenDois, DigitalMedia updatedMedia) {
+		var specimenDoisWithProxy = speicmenDois.stream().map(doi -> DOI_PROXY + doi).collect(Collectors.toSet());
+		return updatedMedia.getOdsHasEntityRelationships()
 			.stream()
-			.filter(er -> !er.getOdsRelatedResourceURI().toString().equals(DOI_PROXY + event.specimenDoi()))
-			.forEach(newEntityRelationships::add);
-		return newEntityRelationships;
+			.filter(er -> !specimenDoisWithProxy.contains(er.getOdsRelatedResourceURI().toString()))
+			.toList();
 	}
 
 }

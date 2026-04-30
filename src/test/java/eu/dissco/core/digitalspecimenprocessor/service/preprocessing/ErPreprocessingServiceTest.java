@@ -3,19 +3,26 @@ package eu.dissco.core.digitalspecimenprocessor.service.preprocessing;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.CREATED;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.HANDLE;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MAPPER;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_MAS;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_PID;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.MEDIA_URL;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.ORIGINAL_DATA_MEDIA;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.SECOND_HANDLE;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.VERSION;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMedia;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaRecord;
 import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenDigitalMediaTombstoneEvent;
+import static eu.dissco.core.digitalspecimenprocessor.utils.TestUtils.givenEntityRelationship;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 
+import eu.dissco.core.digitalspecimenprocessor.domain.EntityRelationshipType;
 import eu.dissco.core.digitalspecimenprocessor.domain.FdoType;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaEvent;
+import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaRecord;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.DigitalMediaWrapper;
 import eu.dissco.core.digitalspecimenprocessor.domain.media.UpdatedDigitalMediaTuple;
 import eu.dissco.core.digitalspecimenprocessor.domain.relation.DigitalMediaRelationshipTombstoneEvent;
@@ -89,10 +96,9 @@ class ErPreprocessingServiceTest {
 	}
 
 	@Test
-	void testHandleMessageMediaRelationshipTombstone() {
+	void testHandleMessageMediaRelationshipTombstoneDuplicate() {
 		// Given
 		var event = givenDigitalMediaTombstoneEvent();
-		var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
 		given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID)))
 			.willReturn(List.of(givenDigitalMediaRecord()));
 		var digitalMediaEvent = new DigitalMediaEvent(Set.of(),
@@ -103,11 +109,36 @@ class ErPreprocessingServiceTest {
 				Collections.emptySet());
 
 		// When
+		service.handleMessagesMediaRelationshipTombstone(List.of(event, event));
+
+		// Then
+		then(digitalMediaService).should(times(1)).updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
+	}
+
+	@Test
+	void testHandleMessageMediaRelationshipTombstoneTwoSpecimens() {
+		// Given
+		var event = givenDigitalMediaTombstoneEvent();
+		var duplicateEvent = new DigitalMediaRelationshipTombstoneEvent(SECOND_HANDLE, MEDIA_PID);
+		var currentMediaRecord = new DigitalMediaRecord(MEDIA_PID, MEDIA_URL, VERSION, CREATED, Set.of(MEDIA_MAS),
+				givenDigitalMedia(MEDIA_URL, false).withOdsHasEntityRelationships(List.of(givenEntityRelationship(),
+						givenEntityRelationship(HANDLE, EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()),
+						givenEntityRelationship(SECOND_HANDLE,
+								EntityRelationshipType.HAS_SPECIMEN.getRelationshipName()))),
+				ORIGINAL_DATA_MEDIA, false, true);
+		given(mediaRepository.getExistingDigitalMediaByDoi(Set.of(MEDIA_PID))).willReturn(List.of(currentMediaRecord));
+		var digitalMediaEvent = new DigitalMediaEvent(Set.of(),
+				new DigitalMediaWrapper(FdoType.MEDIA.getPid(), givenDigitalMedia(MEDIA_URL, false), null), false,
+				false);
+		digitalMediaEvent.digitalMediaWrapper().attributes().setOdsHasEntityRelationships(List.of());
+		var updatedMediaTuple = new UpdatedDigitalMediaTuple(currentMediaRecord, digitalMediaEvent,
+				Collections.emptySet());
+
+		// When
 		service.handleMessagesMediaRelationshipTombstone(List.of(event, duplicateEvent));
 
 		// Then
-		then(publisherService).should().publishDigitalMediaRelationTombstone(duplicateEvent);
-		then(digitalMediaService).should().updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
+		then(digitalMediaService).should(times(1)).updateExistingDigitalMedia(List.of(updatedMediaTuple), false);
 	}
 
 	@ParameterizedTest
