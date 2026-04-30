@@ -20,7 +20,6 @@ import eu.dissco.core.digitalspecimenprocessor.service.EqualityService;
 import eu.dissco.core.digitalspecimenprocessor.service.FdoRecordService;
 import eu.dissco.core.digitalspecimenprocessor.service.RabbitMqPublisherService;
 import eu.dissco.core.digitalspecimenprocessor.web.PidComponent;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -130,12 +129,10 @@ public class ErPreprocessingService extends AbstractPreprocessingService {
 
 	private static List<EntityRelationship> removeRelationships(Set<String> speicmenDois, DigitalMedia updatedMedia) {
 		var specimenDoisWithProxy = speicmenDois.stream().map(doi -> DOI_PROXY + doi).collect(Collectors.toSet());
-		var newEntityRelationships = new ArrayList<EntityRelationship>();
-		updatedMedia.getOdsHasEntityRelationships()
+		return updatedMedia.getOdsHasEntityRelationships()
 			.stream()
 			.filter(er -> !specimenDoisWithProxy.contains(er.getOdsRelatedResourceURI().toString()))
-			.forEach(newEntityRelationships::add);
-		return newEntityRelationships;
+			.toList();
 	}
 
 }
