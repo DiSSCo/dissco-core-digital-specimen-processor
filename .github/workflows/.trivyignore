@@ -1,3 +1,21 @@
 ## July 2, 2026
 ## Issue with p11-kit
 CVE-2026-2100
+
+# July 27, 2026
+# Issue with libexpat, alpine to update
+CVE-2026-56131
+CVE-2026-56408
+
+# July 27, 2026
+# Issue with netty, spring boot to update
+CVE-2026-59901
+CVE-2026-55831
+CVE-2026-55833
+CVE-2026-56745
+CVE-2026-56816
+CVE-2026-56819
+
+# July 27, 2026
+# Issue with postgres, spring boot to update
+CVE-2026-54291
