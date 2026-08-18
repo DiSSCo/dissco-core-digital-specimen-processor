@@ -19,3 +19,8 @@ CVE-2026-56819
 # July 27, 2026
 # Issue with postgres, spring boot to update
 CVE-2026-54291
+
+# Aug 18
+Issue with Apache HTTP Components, need to update ElasticSearch
+CVE-2026-54399
+CVE-2026-54428
