@@ -2,6 +2,7 @@
 # Issue with libexpat, alpine to update
 CVE-2026-66046
 CVE-2026-76641
+CVE-2026-76641
 
 # Sep 3, 2026
 # Issue with libssl3/libcrypto3
