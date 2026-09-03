@@ -1,26 +1,20 @@
-## July 2, 2026
-## Issue with p11-kit
-CVE-2026-2100
-
-# July 27, 2026
+# Sep 3, 2026
 # Issue with libexpat, alpine to update
-CVE-2026-56131
-CVE-2026-56408
+CVE-2026-66046
+CVE-2026-76641
 
-# July 27, 2026
-# Issue with netty, spring boot to update
-CVE-2026-59901
-CVE-2026-55831
-CVE-2026-55833
-CVE-2026-56745
-CVE-2026-56816
-CVE-2026-56819
+# Sep 3, 2026
+# Issue with libssl3/libcrypto3
+CVE-2026-14456
 
-# July 27, 2026
-# Issue with postgres, spring boot to update
-CVE-2026-54291
+# Sep 3, 2026
+# Issue with Rabbitmq client, spring to update
+CVE-2026-63337
+CVE-2026-69219
+CVE-2026-69220
 
-# Aug 18
-Issue with Apache HTTP Components, need to update ElasticSearch
-CVE-2026-54399
-CVE-2026-54428
+# Sep 3, 2026
+# Issue with tomcat, spring boot to update
+CVE-2026-65182
+CVE-2026-65905
+CVE-2026-68525
